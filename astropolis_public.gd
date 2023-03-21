@@ -7,12 +7,12 @@ const EXTENSION_NAME := "Astropolis Public"
 const EXTENSION_VERSION := "0.0.1"
 const EXTENSION_BUILD := "" # hotfix or debug build
 const EXTENSION_STATE := "dev" # 'dev', 'alpha', 'beta', 'rc', ''
-const EXTENSION_YMD := 20230320
+const EXTENSION_YMD := 20230321
 
 const AI_VERBOSE := false
 const AI_VERBOSE2 := false
 const IVOYAGER_VERBOSE := false
-const USE_THREADS := false
+const USE_THREADS := true
 
 
 func _extension_init():
@@ -87,6 +87,7 @@ func _extension_init():
 	
 	# removed
 	IVProjectBuilder.prog_refs.erase("_CompositionBuilder_")
+	IVProjectBuilder.gui_nodes.erase("_CreditsPopup_")
 	IVProjectBuilder.procedural_classes.erase("_Composition_") # using total replacement
 	
 
