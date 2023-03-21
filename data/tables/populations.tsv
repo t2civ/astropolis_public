@@ -1,0 +1,8 @@
+name	carrying_capacity_group	carrying_capacity_group2	is_biological	is_android	is_corporeal	is_virtual	required_space	reproduction_rate	#comments
+Type	INT	INT	BOOL	BOOL	BOOL	BOOL	REAL	REAL	
+Unit								1/y	
+Default							1	0	
+Prefix/POPULATION_	CARRYING_CAPACITY_GROUP_	CARRYING_CAPACITY_GROUP_							
+BASE_HUMAN	STD_HUMAN		x		x			0.04	
+PRE_SENTIENT_ANDROID	STD_HUMAN	STD_ANDROID		x	x		0.2		
+# max 64									

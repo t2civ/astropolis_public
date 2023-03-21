@@ -1,0 +1,6 @@
+name	longitude_offset	model_scale
+Type	REAL	REAL
+Unit	deg	
+# hard-coded defaults:	0	1
+ISS.glb		1
+#		

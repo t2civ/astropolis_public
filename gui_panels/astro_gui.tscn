@@ -1,0 +1,21 @@
+[gd_scene load_steps=5 format=2]
+
+[ext_resource path="res://astropolis_public/gui_panels/astro_gui.gd" type="Script" id=1]
+[ext_resource path="res://astropolis_public/gui_panels/selection_panel.tscn" type="PackedScene" id=2]
+[ext_resource path="res://astropolis_public/gui_panels/navigation_panel.tscn" type="PackedScene" id=3]
+[ext_resource path="res://astropolis_public/gui_panels/development_panel.tscn" type="PackedScene" id=4]
+
+[node name="AstroGUI" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource( 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="DevelopmentPanel" parent="." instance=ExtResource( 4 )]
+
+[node name="NavigationPanel" parent="." instance=ExtResource( 3 )]
+
+[node name="SelectionPanel" parent="." instance=ExtResource( 2 )]
