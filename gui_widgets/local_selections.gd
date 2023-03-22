@@ -50,7 +50,7 @@ onready var _vbox: VBoxContainer = $VBox
 
 
 func _ready() -> void:
-	IVGlobal.connect("update_gui_requested", self, "_update")
+	IVGlobal.connect("simulator_started", self, "_update")
 	IVGlobal.connect("about_to_free_procedural_nodes", self, "_clear")
 	_update()
 
