@@ -5,7 +5,7 @@ Astropolis is a simulation game that explores human expansion and evolution in o
 
 Astropolis will be highly moddable. It is NOT open source!
 
-For more information, go [here](https://t2civ.com/about/).
+For information about Astropolis, go [here](https://t2civ.com/about/).
 
 ### Links
 * [Homepage & dev blog (t2civ.com)](https://t2civ.com/)
@@ -14,3 +14,6 @@ For more information, go [here](https://t2civ.com/about/).
 * [Discussion subforum at I, Voyager](https://www.ivoyager.dev/forum/index.php?p=/categories/astropolis)
 * [Public repository containing content data tables, GUI, and game AI](https://github.com/charliewhitfield/astropolis_public) (this repository)
 * [Public development builds (most definitely NOT alpha yet!)](https://github.com/charliewhitfield/astropolis_public/releases)
+
+### Development Plan for Modding
+In the future, our modding "software development kit" will be the Godot Editor with an Astropolis SDK add-on. You will be able to make mod changes, run the modified game directly from the editor, and then export the mod as a .pck file. This won't happen until we are much further in development. 
