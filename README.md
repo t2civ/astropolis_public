@@ -26,4 +26,4 @@ Astropolis has essentially a client-server architecture. AI and GUI are clients 
 The interface/AI classes are composed with (optional) objects Inventory, Operations, Financials, Composition, Population, Biome and Metaverse (find in [net_refs/](https://github.com/t2civ/astropolis_public/tree/main/net_refs)). These "NetRef" objects are optimized for network data sync.
 
 
-It's very likely that the NetRef and Interface classes will be ported to C++, becoming GDExtension classes. In true Godot-fashion, individual AI subclasses then can be coded in GDScript, C#, C++, or any other language that the [Godot community supports](https://godotengine.org/features/). Regardless of language chosen, it will be possible to interface with Python's AI libraries.
+It's very likely that the NetRef and Interface classes will be ported to C++, becoming GDExtension classes. In true Godot-fashion, individual AI subclasses then can be coded in GDScript, C#, C++, or any other language [supported by the Godot community](https://godotengine.org/features/). Regardless of language chosen, it will be possible to interface with Python's AI libraries.
