@@ -72,6 +72,7 @@ const PERSIST_PROPERTIES := [
 	"public_capacities",
 	"est_revenues",
 	"est_gross_incomes",
+	"est_gross_margins",
 	"op_logics",
 	"op_commands",
 	
@@ -90,6 +91,8 @@ const PERSIST_PROPERTIES := [
 	"_dirty_est_revenues_2",
 	"_dirty_est_gross_incomes_1",
 	"_dirty_est_gross_incomes_2",
+	"_dirty_est_gross_margins_1",
+	"_dirty_est_gross_margins_2",
 	"_dirty_op_logics_1",
 	"_dirty_op_logics_2",
 	"_dirty_op_commands_1",
@@ -117,6 +120,7 @@ var est_gross_incomes: Array # per year at current prices
 
 
 # Facility only
+var est_gross_margins: Array # at current prices (even if rate = 0)
 var op_logics: Array # enum; Facility only
 
 # Facility only. 'op_commands' are AI or player settable from FacilityInterface.
@@ -140,6 +144,8 @@ var _dirty_est_revenues_1 := 0
 var _dirty_est_revenues_2 := 0 # max 128
 var _dirty_est_gross_incomes_1 := 0
 var _dirty_est_gross_incomes_2 := 0 # max 128
+var _dirty_est_gross_margins_1 := 0
+var _dirty_est_gross_margins_2 := 0 # max 128
 var _dirty_op_logics_1 := 0
 var _dirty_op_logics_2 := 0 # max 128
 var _dirty_op_commands_1 := 0
@@ -167,6 +173,7 @@ func _init(is_new := false, has_financials_ := false, is_facility := false) -> v
 	est_gross_incomes = capacities.duplicate()
 	if !is_facility:
 		return
+	est_gross_margins = ivutils.init_array(_n_operations, NAN)
 	op_logics = ivutils.init_array(_n_operations, OpLogics.IS_IDLE_UNPROFITABLE)
 	op_commands = ivutils.init_array(_n_operations, OpCommands.AUTOMATE)
 
@@ -253,6 +260,8 @@ func get_est_gross_income(type: int) -> float:
 func get_est_gross_margin(type: int) -> float:
 	if !has_financials:
 		return NAN
+	if _is_facility: # facilities (only) have margin even if revenue = 0
+		return est_gross_margins[type]
 	if est_revenues[type] == 0.0:
 		return NAN
 	return est_gross_incomes[type] / est_revenues[type]
@@ -395,6 +404,14 @@ func change_est_gross_income(type: int, change: float) -> void:
 		_dirty_est_gross_incomes_2 |= 1 << (type - 64)
 
 
+func set_est_gross_margin(type: int, value: float) -> void:
+	est_gross_margins[type] = value
+	if type < 64:
+		_dirty_est_gross_margins_1 |= 1 << type
+	else:
+		_dirty_est_gross_margins_2 |= 1 << (type - 64)
+
+
 func get_dirty_capacities_1() -> int:
 	return _dirty_capacities_1
 
@@ -421,6 +438,7 @@ func get_server_init() -> Array:
 		public_capacities.duplicate(),
 		est_revenues.duplicate(),
 		est_gross_incomes.duplicate(),
+		est_gross_margins.duplicate(),
 		op_logics.duplicate(),
 		op_commands.duplicate(),
 	]
@@ -441,8 +459,9 @@ func sync_server_init(data: Array) -> void:
 	public_capacities = data[10]
 	est_revenues = data[11]
 	est_gross_incomes = data[12]
-	op_logics = data[13]
-	op_commands = data[14]
+	est_gross_margins = data[13]
+	op_logics = data[14]
+	op_commands = data[15]
 
 
 func propagate_component_init(data: Array) -> void:
@@ -500,8 +519,10 @@ func get_server_changes(data: Array) -> void:
 	netrefs.append_and_zero_dirty(data, est_revenues, _dirty_est_revenues_2, 64)
 	netrefs.append_and_zero_dirty(data, est_gross_incomes, _dirty_est_gross_incomes_1)
 	netrefs.append_and_zero_dirty(data, est_gross_incomes, _dirty_est_gross_incomes_2, 64)
+	netrefs.append_dirty(data, op_logics, _dirty_est_gross_margins_1) # not accumulator!
+	netrefs.append_dirty(data, op_logics, _dirty_est_gross_margins_2, 64) # not accumulator!
 	netrefs.append_dirty(data, op_logics, _dirty_op_logics_1) # not accumulator!
-	netrefs.append_dirty(data, op_logics, _dirty_op_logics_2, 64)
+	netrefs.append_dirty(data, op_logics, _dirty_op_logics_2, 64) # not accumulator!
 	_dirty_crews = 0
 	_dirty_capacities_1 = 0
 	_dirty_capacities_2 = 0
@@ -513,6 +534,8 @@ func get_server_changes(data: Array) -> void:
 	_dirty_est_revenues_2 = 0
 	_dirty_est_gross_incomes_1 = 0
 	_dirty_est_gross_incomes_2 = 0
+	_dirty_est_gross_margins_1 = 0
+	_dirty_est_gross_margins_2 = 0
 	_dirty_op_logics_1 = 0
 	_dirty_op_logics_2 = 0
 
@@ -549,7 +572,7 @@ func sync_server_changes(data: Array, k: int) -> int:
 	k = netrefs.add_dirty(data, rates, k)
 	k = netrefs.add_dirty(data, rates, k, 64)
 	if !has_financials:
-		return 0 # never used
+		return 0 # not used
 	k = netrefs.add_dirty(data, public_capacities, k)
 	k = netrefs.add_dirty(data, public_capacities, k, 64)
 	k = netrefs.add_dirty(data, est_revenues, k)
@@ -557,9 +580,11 @@ func sync_server_changes(data: Array, k: int) -> int:
 	k = netrefs.add_dirty(data, est_gross_incomes, k)
 	k = netrefs.add_dirty(data, est_gross_incomes, k, 64)
 	if !_is_facility:
-		return 0 # never used
+		return 0 # not used
+	k = netrefs.set_dirty(data, est_gross_margins, k) # not accumulator!
+	k = netrefs.set_dirty(data, est_gross_margins, k, 64) # not accumulator!
 	k = netrefs.set_dirty(data, op_logics, k) # not accumulator!
-	k = netrefs.set_dirty(data, op_logics, k, 64)
+	k = netrefs.set_dirty(data, op_logics, k, 64) # not accumulator!
 	return k
 
 

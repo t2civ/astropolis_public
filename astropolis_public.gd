@@ -12,7 +12,7 @@ const EXTENSION_YMD := 20230321
 const AI_VERBOSE := false
 const AI_VERBOSE2 := false
 const IVOYAGER_VERBOSE := false
-const USE_THREADS := true
+const USE_THREADS := false
 
 
 func _extension_init():
