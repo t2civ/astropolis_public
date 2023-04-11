@@ -3,6 +3,7 @@
 # Copyright 2019-2023 Charlie Whitfield, all rights reserved
 # *****************************************************************************
 class_name Operations
+extends NetRef
 
 # Arrays indexed by operation_type, except where noted.
 #
@@ -50,11 +51,6 @@ enum { # _dirty_values
 	DIRTY_MANUFACTURING = 1 << 4,
 	DIRTY_CONSTRUCTIONS = 1 << 5,
 }
-
-const ivutils := preload("res://ivoyager/static/utils.gd")
-const utils := preload("res://astropolis_public/static/utils.gd")
-const netrefs := preload("res://astropolis_public/static/netrefs.gd")
-
 
 # save/load persistence for server only
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
@@ -508,21 +504,21 @@ func get_server_changes(data: Array) -> void:
 		data.append(constructions)
 		constructions = 0.0
 	_dirty_values = 0
-	netrefs.append_and_zero_dirty_bshift(data, crews, _dirty_crews)
-	netrefs.append_and_zero_dirty(data, capacities, _dirty_capacities_1)
-	netrefs.append_and_zero_dirty(data, capacities, _dirty_capacities_2, 64)
-	netrefs.append_and_zero_dirty(data, rates, _dirty_rates_1)
-	netrefs.append_and_zero_dirty(data, rates, _dirty_rates_2, 64)
-	netrefs.append_and_zero_dirty(data, public_capacities, _dirty_public_capacities_1)
-	netrefs.append_and_zero_dirty(data, public_capacities, _dirty_public_capacities_2, 64)
-	netrefs.append_and_zero_dirty(data, est_revenues, _dirty_est_revenues_1)
-	netrefs.append_and_zero_dirty(data, est_revenues, _dirty_est_revenues_2, 64)
-	netrefs.append_and_zero_dirty(data, est_gross_incomes, _dirty_est_gross_incomes_1)
-	netrefs.append_and_zero_dirty(data, est_gross_incomes, _dirty_est_gross_incomes_2, 64)
-	netrefs.append_dirty(data, op_logics, _dirty_est_gross_margins_1) # not accumulator!
-	netrefs.append_dirty(data, op_logics, _dirty_est_gross_margins_2, 64) # not accumulator!
-	netrefs.append_dirty(data, op_logics, _dirty_op_logics_1) # not accumulator!
-	netrefs.append_dirty(data, op_logics, _dirty_op_logics_2, 64) # not accumulator!
+	_append_and_zero_dirty_bshift(data, crews, _dirty_crews)
+	_append_and_zero_dirty(data, capacities, _dirty_capacities_1)
+	_append_and_zero_dirty(data, capacities, _dirty_capacities_2, 64)
+	_append_and_zero_dirty(data, rates, _dirty_rates_1)
+	_append_and_zero_dirty(data, rates, _dirty_rates_2, 64)
+	_append_and_zero_dirty(data, public_capacities, _dirty_public_capacities_1)
+	_append_and_zero_dirty(data, public_capacities, _dirty_public_capacities_2, 64)
+	_append_and_zero_dirty(data, est_revenues, _dirty_est_revenues_1)
+	_append_and_zero_dirty(data, est_revenues, _dirty_est_revenues_2, 64)
+	_append_and_zero_dirty(data, est_gross_incomes, _dirty_est_gross_incomes_1)
+	_append_and_zero_dirty(data, est_gross_incomes, _dirty_est_gross_incomes_2, 64)
+	_append_dirty(data, op_logics, _dirty_est_gross_margins_1) # not accumulator!
+	_append_dirty(data, op_logics, _dirty_est_gross_margins_2, 64) # not accumulator!
+	_append_dirty(data, op_logics, _dirty_op_logics_1) # not accumulator!
+	_append_dirty(data, op_logics, _dirty_op_logics_2, 64) # not accumulator!
 	_dirty_crews = 0
 	_dirty_capacities_1 = 0
 	_dirty_capacities_2 = 0
@@ -566,33 +562,33 @@ func sync_server_changes(data: Array, k: int) -> int:
 		constructions += data[k]
 		k += 1
 
-	k = netrefs.add_dirty_bshift(data, crews, k)
-	k = netrefs.add_dirty(data, capacities, k)
-	k = netrefs.add_dirty(data, capacities, k, 64)
-	k = netrefs.add_dirty(data, rates, k)
-	k = netrefs.add_dirty(data, rates, k, 64)
+	k = _add_dirty_bshift(data, crews, k)
+	k = _add_dirty(data, capacities, k)
+	k = _add_dirty(data, capacities, k, 64)
+	k = _add_dirty(data, rates, k)
+	k = _add_dirty(data, rates, k, 64)
 	if !has_financials:
 		return 0 # not used
-	k = netrefs.add_dirty(data, public_capacities, k)
-	k = netrefs.add_dirty(data, public_capacities, k, 64)
-	k = netrefs.add_dirty(data, est_revenues, k)
-	k = netrefs.add_dirty(data, est_revenues, k, 64)
-	k = netrefs.add_dirty(data, est_gross_incomes, k)
-	k = netrefs.add_dirty(data, est_gross_incomes, k, 64)
+	k = _add_dirty(data, public_capacities, k)
+	k = _add_dirty(data, public_capacities, k, 64)
+	k = _add_dirty(data, est_revenues, k)
+	k = _add_dirty(data, est_revenues, k, 64)
+	k = _add_dirty(data, est_gross_incomes, k)
+	k = _add_dirty(data, est_gross_incomes, k, 64)
 	if !_is_facility:
 		return 0 # not used
-	k = netrefs.set_dirty(data, est_gross_margins, k) # not accumulator!
-	k = netrefs.set_dirty(data, est_gross_margins, k, 64) # not accumulator!
-	k = netrefs.set_dirty(data, op_logics, k) # not accumulator!
-	k = netrefs.set_dirty(data, op_logics, k, 64) # not accumulator!
+	k = _set_dirty(data, est_gross_margins, k) # not accumulator!
+	k = _set_dirty(data, est_gross_margins, k, 64) # not accumulator!
+	k = _set_dirty(data, op_logics, k) # not accumulator!
+	k = _set_dirty(data, op_logics, k, 64) # not accumulator!
 	return k
 
 
 func get_interface_dirty() -> Array:
 	# TODO: parallel pattern above to get FacilityInterface data
 	var data := []
-	netrefs.append_dirty(data, op_commands, _dirty_op_commands_1)
-	netrefs.append_dirty(data, op_commands, _dirty_op_commands_2, 64)
+	_append_dirty(data, op_commands, _dirty_op_commands_1)
+	_append_dirty(data, op_commands, _dirty_op_commands_2, 64)
 	_dirty_op_commands_1 = 0
 	_dirty_op_commands_2 = 0
 	return data
@@ -600,8 +596,8 @@ func get_interface_dirty() -> Array:
 
 func sync_interface_dirty(data: Array) -> void:
 	# TODO: parallel pattern above to set FacilityInterface data
-	var k := netrefs.set_dirty(data, op_commands, 0)
-	netrefs.set_dirty(data, op_commands, k, 64)
+	var k := _set_dirty(data, op_commands, 0)
+	_set_dirty(data, op_commands, k, 64)
 
 
 
