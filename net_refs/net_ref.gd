@@ -6,8 +6,9 @@ class_name NetRef
 extends Reference
 
 # Abstract base class for data classes that are optimized for network sync.
-# Changes (only) are synched at the FacilityInterface level and propagated to
-# BodyInterface, PlayerInterface and ProxyInterfaces.
+# Only changes are synched. Most NetRef changes are synched at Facility level
+# and propagated to Body, Player and Proxies. Exception: Compositions are
+# synched at Body level without propagation (TODO: propagate to Proxies).
 
 const ivutils := preload("res://ivoyager/static/utils.gd")
 const utils := preload("res://astropolis_public/static/utils.gd")

@@ -115,7 +115,7 @@ func _on_project_objects_instantiated() -> void:
 #	model_builder.model_tables.append("spacecrafts")
 	
 	
-	# table additions (useful items, subtables and indexing)
+	# table additions (subtables, re-indexings, or other useful table items)
 	var tables: Dictionary = IVGlobal.tables
 	var table_reader: TableReader = IVGlobal.program.TableReader
 	# unique items
@@ -139,7 +139,15 @@ func _on_project_objects_instantiated() -> void:
 			tables.n_op_groups) # an array of operations for each op_group
 	tables.resource_classes_resources = Utils.invert_many_to_one_indexing(tables.resources.resource_class,
 			tables.n_resource_classes) # an array of resources for each resource_class
-	# combined column arrays
+	
+	# tests
+	for i in tables.operations.input_resources:
+		assert(tables.operations.input_resources.size() == tables.operations.input_quantities.size())
+	for i in tables.operations.output_resources:
+		assert(tables.operations.output_resources.size() == tables.operations.output_quantities.size())
+
+	
+	# DEPRECIATE
 	tables.operations_inputs = [
 		tables.operations.input_1,
 		tables.operations.input_2,
