@@ -7,7 +7,7 @@ const EXTENSION_NAME := "Astropolis Public"
 const EXTENSION_VERSION := "0.0.1"
 const EXTENSION_BUILD := "" # hotfix or debug build
 const EXTENSION_STATE := "dev" # 'dev', 'alpha', 'beta', 'rc', ''
-const EXTENSION_YMD := 20230321
+const EXTENSION_YMD := 20230411
 
 const AI_VERBOSE := false
 const AI_VERBOSE2 := false
@@ -145,33 +145,6 @@ func _on_project_objects_instantiated() -> void:
 		assert(tables.operations.input_resources.size() == tables.operations.input_quantities.size())
 	for i in tables.operations.output_resources:
 		assert(tables.operations.output_resources.size() == tables.operations.output_quantities.size())
-
-	
-	# DEPRECIATE
-	tables.operations_inputs = [
-		tables.operations.input_1,
-		tables.operations.input_2,
-		tables.operations.input_3,
-		tables.operations.input_4,
-	]
-	tables.operations_input_qtys = [
-		tables.operations.input_1_qty,
-		tables.operations.input_2_qty,
-		tables.operations.input_3_qty,
-		tables.operations.input_4_qty,
-	]
-	tables.operations_outputs = [
-		tables.operations.output_1,
-		tables.operations.output_2,
-		tables.operations.output_3,
-		tables.operations.output_4,
-	]
-	tables.operations_output_qtys = [
-		tables.operations.output_1_qty,
-		tables.operations.output_2_qty,
-		tables.operations.output_3_qty,
-		tables.operations.output_4_qty,
-	]
 
 
 func _on_project_nodes_added() -> void:
