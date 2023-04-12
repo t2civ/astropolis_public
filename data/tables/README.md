@@ -1,32 +1,143 @@
 # Notes on table meanings & derivations
 
-ooma = "out of my ..." (my unsupported and uninformed guesses)
+#### Quality Ranking
+    +    Placeholder, just some value to get the sim running.   
+    ++   Guess, probably at least gave it some individual thought.   
+    +++  Some referencing, possibly dubious or mixed quality.   
+    ++++ Referenced and production ready.   
 
-Some numbers are researched and others are ooma placeholders just to get the sim running. Suggested fixes (with references!) are most welcome!
+Suggested fixes (with references!) are most welcome!
 
-For data related to Earth's nations and populations our target year is ~2010. We'll run the sim for ~10 years to have actual game start around ~2020. This will fill our simulation history (graphs, last-four-quarters financials, etc.) for GUI display. It will also help us tune our simulation parameters to roughly approximate more contemporary data.
+#### Note on value dates
+For data related to Earth's nations and populations our target year is ~2010. We'll run the sim for ~15 years to have actual game start around ~2025. This will fill our simulation history (graphs, last-four-quarters financials, etc.) for GUI display. It will also help us tune our simulation parameters to roughly approximate more contemporary data.
 
-## Incomplete list of abstrations (intentionally unrealistic elements)
+#### Incomplete list of abstrations (intentionally unrealistic elements)
 * ESA is treated as a space agency of the EU.
 * "CNSA" is a conflation of CNSA and CASC; NASA is in some places conflated with its contractors; etc.
 * Resource groupings "Industrial Metals", "Xenon/Krypton", etc. Substances of unique importance in the simulation are singular. (We do have conservation of mass, very roughly speaking.)
 * Ores always have the same percent target metal or mineral. E.g., Iron ores are 70%  iron; precious metal ores are 1% precious metals, etc. We assume benification occurs at the mine to produce exactly consistent "ore" commodities.
 
+#### Contents:
+[asset_adjustments_mod.tsv](#asset_adjustments_modtsv)   
+[carrying_capacity_groups.tsv](#carrying_capacity_groupstsv)   
+[compositions.tsv](#compositionstsv)  
+[compositions_resources_heterogeneities.tsv](compositions_resources_heterogeneitiestsv)
+[compositions_resources_percents.tsv](compositions_resources_percentstsv)
+[facilities.tsv](#facilitiestsv)  
+[facilities_operations_capacities.tsv](#facilities_operations_capacitiestsv)  
+[facilities_operations_utilizations.tsv](#facilities_operations_utilizationstsv)  
+[facilities_populations.tsv](#facilities_populationstsv)  
+[facilities_resources.tsv](#facilities_resourcestsv)  
 
-## Contents:  
-[facilities.tsv](#facilities.tsv)  
-[facilities_operations_capacities.tsv](#facilities_operations_capacities.tsv)  
-[facilities_operations_utilizations.tsv](#facilities_operations_utilizations.tsv)  
-[facilities_resources.tsv](#facilities_resources.tsv)  
-[facilities_populations.tsv](#facilities_populations.tsv)  
-[compositions.tsv](#compositions.tsv)  
-[modules.tsv](#modules.tsv)  
-[operations.tsv](#operations.tsv)  
-[resources.tsv](#resources.tsv)
+
+[modules.tsv](#modulestsv)  
+[operations.tsv](#operationstsv)  
+[resources.tsv](#resourcestsv)
+
+## asset_adjustments_mod.tsv
+Modifies ivoyager/data/solar_system/asset_adjustments.tsv.
+
+## carrying_capacity_groups.tsv
+Enumeration table that defines different population categories for carrying capacity.
+
+## compositions.tsv
+
+Compositions define all of the extractable resources in the solar system. Internally, 'Composition' is a data structure attached to a Body that defines resources for one 'stratum'. Strata correspond to both physical/geophysical structures and also practictical accessibility (on Earth this includes political boundaries). 
+
+Composition names are constructed:
+`COMPOSITION_<body_name or generic body_class>_<stratum_name>[_<owner_name>]`
+
+Field comments:
+\#volume, #mass: for info/QA only; internal values are calculated.
+thickness: if blank, imputed to be Body.m_radius.
+area: if blank, imputed to be 4 * PI * (Body.m_radius - outer_depth)^2.
+
+#### COMPOSITION_PLANET_EARTH_STRATUM_ATMOSPHERE +++
+
+Mass 5.15e18 kg. 3/4 mass under 11 km. https://en.wikipedia.org/wiki/Atmosphere_of_Earth.  
+Surface area of Earth: 5.10e8 km\^2.  
+We arbitrarily set thickness to include mesosphere at 82 km, then calculate:  
+Volume 5.10e8 km\^2 x 82 km = 4.18e10 km\^3  
+Density 5.15e18 kg / (4.18e10 km\^3 x 1e9 km\^3/m\^3)  
+   =0.123 kg/m\^3 = 1.23e-4 g/cm\^3
+
+#### COMPOSITION_PLANET_EARTH_STRATUM_OCEAN +++
+Mass of hydrosphere 1.386e18 t, of which 97.5% (=1.351e18 t) is ocean. Area is
+3.61e8 km^2. Density of seawater 1020 to >1050 kg/m^3 (=1.02 to >1.05 g/cm^3).
+https://en.wikipedia.org/wiki/Hydrosphere
+https://en.wikipedia.org/wiki/Seawater
+We use 1.03 g/cm^3 density. We calculate average depth:
+1.351e21 kg / (1030 kg/m^3 * 1e9 m^3/km^3 * 3.61e8 km^2) = 3.633 km
+Volume 3.61e8 km^2 * 3.633 km = 1.31e9 km^3
+Content:
+We consider 3.5% salt as "Industrial Minerals".
+Disolved gasses: (https://en.wikipedia.org/wiki/Ocean)
+Carbon dioxide: 14 mL/kg; x1.977 kg/m3 / (1e6  mL/m3) -> 2.8e-3%
+Nitrogen: 9 mL/kg; x1.25 kg/m3 / (1e6  mL/m3) -> 1.1e-3%
+Oxygen: 5 mL/kg; x1.429 kg/m3 / (1e6  mL/m3  -> 7.1e-4%
+
+96.5% Water
+3.5 Industrial Minerals (salt)
+
+#### COMPOSITION_PLANET_EARTH_STRATUM_OCEAN_FLOOR
+Arbitrarily set at 100m depth for mining potential (aka Hoover it up!):
+https://oceanminingintel.com/insights/ocean-mining-the-5-minute-what-why-where-how-and-who
+
+#### COMPOSITION_PLANET_EARTH_STRATUM_\<crust layers> +++
+Layers arbitrarily defined for extraction potential, considering deepest:   
+- pit mining: 1.2 km, but usually < 1 km. Conveniently, average continental altitude is 800 m. So we use that for "surface".
+- mining: ~4 km. Gets really tough below, but maybe we could go to 8 km with some wild engineering.
+- drilling: ~7.5 km (? check wiki).
+
+So we have strata for player exploitation as:
+ - CONT_SURFACE: -0.8 - 0 km (pit mining)
+ - CONT_SUBSURF: 0 - 4 km (mining)
+ - CONT_4KM_8KM: 4 - 8 km (drilling, but maybe mining with tech)
+And deeper strata not currently accessible:
+ - CONT_8KM_28KM: 8 - 28 km
+ - LOWER_CONT_CRUST: 28 - 40 km
+ 
+Our simplified Earth structure model:
+ - Ocean Crust: 7.5 km (real world 5-10 km)
+ - Upper Continental Crust: Surface - 28 km
+ - Lower Continental Crust: 28-40 km
+ (that's all we need for now...)
+
+Notes on upper/lower continental crust: There is a Conrad
+discontinuity at 15-20 km and "sima starts about 11 km below the Conrad
+discontinuity". The sial/sima transition is all about chemistry and
+density, so that is where we define the upper/lower transition.
+
+https://en.wikipedia.org/wiki/Earth%27s_crust   
+https://en.wikipedia.org/wiki/Continental_crust   
+https://en.wikipedia.org/wiki/Structure_of_Earth   
+https://en.wikipedia.org/wiki/Sial   
+https://en.wikipedia.org/wiki/Sima_(geology)   
+https://en.wikipedia.org/wiki/Structure_of_Earth#/media/File:RadialDensityPREM.jpg   
+
+Unowned part of continental surface is Antarctica (area 1.42e7 km^2). Subract
+Antarctica and 6 major players from total land area (1.49e8 km^2) gets us area
+of PLAYER_OTHER at 9.03e7 km^2.
+
+## compositions_resources_heterogeneities.tsv ++
+
+Row prefix: `COMPOSITION_`  
+Column prefix: `RESOURCE_` (is_extraction subset)  
+Table access: `table[composition_type][resource_type]`
+
+Defines heterogeneity of resources in each composition. Values are coefficient of variation of mass. Heterogeneity causes "deposits". Fully "mixed" strata (such as atmosphere) are omitted from table and have default heterogeneity = 0.0. 
+
+## compositions_resources_percents.tsv ++
+
+Row prefix: `COMPOSITION_`  
+Column prefix: `RESOURCE_` (is_extraction subset)  
+Table access: `table[composition_type][resource_type]`
+
+Defines mass percent for all resources in each composition. (Each row is summed and normalized to 100% internally, so its not necessary to add to exactly 100%.)
 
 ## facilities.tsv
 
-Name construction: FACILITY_<body_name>_<player_name>
+Name construction: `FACILITY_<body_name>_<player_name>`
 
 There is at most one "facility" for each player at each body, which combines all of that player's activity. 
 
@@ -59,10 +170,19 @@ Overrides Body.solar_occlusion if specified. These are set to give observed (or 
 
 ## facilities_operations_capacities.tsv
 
-Row prefix: OPERATION_  
-Column prefix: FACILITY_  
-Table is transposed internally, access: table[facility_type][operation_type]  
-Values are "operation units" defined in operations.tsv. For energy generation, this is 1 MW; for refining and manufacturing, 1 t/d total mass conversion; for extraction, deposits_percent/100 t/d ore extraction. Others are more abstract. Capacity is "peak" operation potential. Capacity x utilization = operation_rate.
+Row prefix: `OPERATION_`  
+Column prefix: `FACILITY_`  
+Table is transposed internally, access: `table[facility_type][operation_type]`
+
+Values are "operation rate units" defined in operations.tsv. In general, rate = 1.0 means:
+* energy generation, 1.0 MW
+* refining and manufacturing, 1.0 t/d total mass conversion
+* extraction, ([deposits_percent or mass_percent]/100) t/d ore extraction
+* others are more abstract
+
+Capacity is "peak" operation potential. Capacity x utilization = operation_rate.
+
+Note: This table is here for development convenience. Capacities are actually determined by modules. However, game start code will set appropriate module number in each game start facility to achieve capacities defined in this table.
 
 #### SOLAR_POWER
 World GWp (=capacity): ~40 in 2010, ~640 in 2019, ~1000 in 2022, roughly from charts at https://en.wikipedia.org/wiki/Solar_power.
@@ -105,14 +225,15 @@ Peak installed capacity from https://en.wikipedia.org/wiki/Wind_power_by_country
 
 Row prefix: OPERATION_  
 Column prefix: FACILITY_  
-Table is transposed internally, access: table[facility_type][operation_type]  
+Table is transposed internally, access: table[facility_type][operation_type]
+
 Internally, we convert utilization to rates (rate = capacity x utilization), then convert back to utilization(%) for GUI.
 
 utilization = ["capacity factor"](https://en.wikipedia.org/wiki/Capacity_factor)
 
 For renewables, utilization is environmentally determined. For solar, we calculate based on distance to sun and solar_occlusion (or really, solar_occlusion was back-calculated to give actual utilization). For other renewables, initial utilization set in table is maintained and never changes.
 
-For most other operations, utilization can be set manually or automated. Automation attempts to deal with projected internal usage, shortages and commitments, or (otherwise) maximize profitable operations and minimize unprofitable.
+For most other operations, utilization can be changed by player or game AI, assuming no input shortages. Game AI automation attempts to deal with projected internal usage, shortages and commitments, or (otherwise) maximize profitable operations and minimize unprofitable.
 
 https://en.wikipedia.org/wiki/List_of_renewable_energy_topics_by_country_and_territory
 
@@ -133,17 +254,17 @@ From https://en.wikipedia.org/wiki/Solar_power_in_India, installed capacity was 
 
 Didn't find generation estimationS for China or Japan.
 
-Combining above with some guesses:  
-USA    24%  
-Russia  8% (worse than EU I would think)  
-China  20% (mainly in west; I guess better than EU, but not quite US)  
-EU     10%  
-India  17.6%  
-Japan  14% (guess)  
-Other  30% (my guess for an average; should be quite good w/ Australia, Africa, Middle East, etc...)  
+Combining above with some guesses:
+
+    USA    24%  
+    Russia  8% (worse than EU I would think)  
+    China  20% (mainly in west; I guess better than EU, but not quite US)  
+    EU     10%  
+    India  17.6%  
+    Japan  14% (guess)  
+    Other  30% (my guess for an average; should be quite good w/ Australia, Africa, Middle East, etc...)  
 
 For spacecraft in low Earth orbit: 50%.
-
 
 #### WIND_POWER
 
@@ -160,15 +281,15 @@ From https://en.wikipedia.org/wiki/Wind_power_by_country, we use 2020-2021 energ
 | Other   | ?                          | 0.25 (low/middle of range)        |
 
 For reference, https://en.wikipedia.org/wiki/Capacity_factor lists values for:  
-USA: ~32-37%, average ~34%
-UK onshore: ~27-33%, average ~30%
-UK offshore: ~26-41%, average ~35%
+* USA: ~32-37%, average ~34%
+* UK onshore: ~27-33%, average ~30%
+* UK offshore: ~26-41%, average ~35%
 (But continental Europe is less than UK, I believe...)
 
 #### TIDAL_POWER, HYDROPOWER
 
 From https://en.wikipedia.org/wiki/Capacity_factor, typical values: 
-Wave & tidal in UK: ~0-9%, average ~5% (is it really this bad?!) 
+Wave & tidal in UK: ~0-9%, average ~5% (is it really this bad?!)   
 Hydro (US & UK): ~33-43%, average ~38%
 
 #### GEOTHERMAL_POWER (TODO)
@@ -182,7 +303,6 @@ Ooma numbers. Just gave everyone something...
 Electricity: ~1 day of their total production.
 
 ## facilities_populations.tsv
-
 
 Polity (non-playable) players: 
 
@@ -199,7 +319,7 @@ Polity (non-playable) players:
 Other 2010 = 6,843,522,711 (world) - 3,603,183,577 (6 listed)  
 Other 2020 = 7,795,000,000 (world) - 3,868,101,817 (6 listed)
 
-https://en.wikipedia.org/wiki/List_of_countries_by_population_in_2010
+https://en.wikipedia.org/wiki/List_of_countries_by_population_in_2010   
 https://en.wikipedia.org/wiki/Demographics_of_the_European_Union
 
 "Population" of space agency players on Earth is employees. Wiki plus guesswork:
@@ -219,149 +339,41 @@ NASA actual numbers for fy 2010, 2020: https://en.wikipedia.org/wiki/NASA#cite_n
 
 
 
-## compositions.tsv
 
-Compositions define all of the extractable resources in the solar system. Internally, 'Composition' is a data structure attached to a Body that defines resources for one 'stratum'. Strata correspond to both physical/geophysical structures and also practictical accessibility (on Earth this includes political boundaries). 
-
-Composition names are constructed:
-COMPOSITION_<body_name or generic body_class>_<stratum_name>[_<owner_name>]
-
-Field comments:
-\#volume, #mass: for info/QA only; internal values are calculated.
-thickness: if blank, imputed to be Body.m_radius.
-area: if blank, imputed to be 4 * PI * (Body.m_radius - outer_depth)^2.
-
-Prefix:
-COMPOSITION_
-
-#### PLANET_EARTH_STRATUM_ATMOSPHERE
-
-Mass 5.15e18 kg. 3/4 mass under 11 km. https://en.wikipedia.org/wiki/Atmosphere_of_Earth.  
-Surface area of Earth: 5.10e8 km\^2.  
-We arbitrarily set thickness to include mesosphere at 82 km, then calculate:  
-Volume 5.10e8 km\^2 x 82 km = 4.18e10 km\^3  
-Density 5.15e18 kg / (4.18e10 km\^3 x 1e9 km\^3/m\^3)  
-   =0.123 kg/m\^3 = 1.23e-4 g/cm\^3
-
-#### PLANET_EARTH_STRATUM_OCEAN
-Mass of hydrosphere 1.386e18 t, of which 97.5% (=1.351e18 t) is ocean. Area is
-3.61e8 km^2. Density of seawater 1020 to >1050 kg/m^3 (=1.02 to >1.05 g/cm^3).
-https://en.wikipedia.org/wiki/Hydrosphere
-https://en.wikipedia.org/wiki/Seawater
-We use 1.03 g/cm^3 density. We calculate average depth:
-1.351e21 kg / (1030 kg/m^3 * 1e9 m^3/km^3 * 3.61e8 km^2) = 3.633 km
-Volume 3.61e8 km^2 * 3.633 km = 1.31e9 km^3
-Content:
-We consider 3.5% salt as "Industrial Minerals".
-Disolved gasses: (https://en.wikipedia.org/wiki/Ocean)
-Carbon dioxide: 14 mL/kg; x1.977 kg/m3 / (1e6  mL/m3) -> 2.8e-3%
-Nitrogen: 9 mL/kg; x1.25 kg/m3 / (1e6  mL/m3) -> 1.1e-3%
-Oxygen: 5 mL/kg; x1.429 kg/m3 / (1e6  mL/m3  -> 7.1e-4%
-
-96.5% Water
-3.5 Industrial Minerals (salt)
-
-
-#### PLANET_EARTH_STRATUM_OCEAN_FLOOR
-Arbitrarily set at 100m depth for mining potential (aka Hoover it up!):
-https://oceanminingintel.com/insights/ocean-mining-the-5-minute-what-why-where-how-and-who
-
-#### PLANET_EARTH_STRATUM_\<crust layers>
-Layers arbitrarily defined for extraction potential, considering deepest:
- - pit mining: 1.2 km, but usually < 1 km. Conveniently, average continental
-               altitude is 800 m. So we use that for "surface".
- - mining:     ~4 km. Gets really tough below, but maybe we could go to 8 km
-               with some wild engineering.
- - drilling:   ~7.5 km (? check wiki).
-So we have strata for player exploitation as:
- - CONT_SURFACE: -0.8 - 0 km (pit mining)
- - CONT_SUBSURF: 0 - 4 km (mining)
- - CONT_4KM_8KM: 4 - 8 km (drilling, but maybe mining with tech)
-And deeper strata not currently accessible:
- - CONT_8KM_28KM: 8 - 28 km
- - LOWER_CONT_CRUST: 28 - 40 km
- 
-Our simplified Earth structure model:
- - Ocean Crust: 7.5 km (real world 5-10 km)
- - Upper Continental Crust: Surface - 28 km
- - Lower Continental Crust: 28-40 km
- (that's all we need for now...)
-
-Notes on upper/lower continental crust: There is a Conrad
-discontinuity at 15-20 km and "sima starts about 11 km below the Conrad
-discontinuity". The sial/sima transition is all about chemistry and
-density, so that is where we define the upper/lower transition.
-
-https://en.wikipedia.org/wiki/Earth%27s_crust
-https://en.wikipedia.org/wiki/Continental_crust
-https://en.wikipedia.org/wiki/Structure_of_Earth
-https://en.wikipedia.org/wiki/Sial
-https://en.wikipedia.org/wiki/Sima_(geology)
-https://en.wikipedia.org/wiki/Structure_of_Earth#/media/File:RadialDensityPREM.jpg
-
-Unowned part of continental surface is Antarctica (area 1.42e7 km^2). Subract
-Antarctica and 6 major players from total land area (1.49e8 km^2) gets us area
-of PLAYER_OTHER at 9.03e7 km^2.
 
 ## operations.tsv
 
-Operations define most of the things that "happen" on bodies with facilities,
-mainly involving resource extraction and conversion. Operations are allowed by
-Modules.
+Operations define most of the things that "happen" on bodies with facilities, mainly involving resource extraction and conversion. Operations are allowed by Modules.
  
-Internally in the 'Operations' object we have arrays 'capacities' and 'rates'.
-We are at 100% utilization when rate == capacity. 
+Internally in the 'Operations' object we have arrays 'capacities' and 'rates'. We are at 100% utilization when rate == capacity. 
 
 "One unit of capacity" is defined by op_class:
- ENERGY        - 1 MW electrical output (ie, MWe)
- EXTRACTION    - deposits/100 t/d extracted ore
- BIOME         - 1 km^2 equivilant Earth area
- REFINING      - 1 t/d total mass conversion (=input or output, always same)
- MANUFACTURING - 1 t/d total production (= mass conversion as above)
- SERVICES      - 1 unit/d of whatever intangible resource(s) is(are) produced
+
+    ENERGY        - 1 MW electrical output (ie, MWe)
+    EXTRACTION    - deposits/100 t/d extracted ore
+    BIOME         - 1 km^2 equivilant Earth area
+    REFINING      - 1 t/d total mass conversion (=input or output, always same)
+    MANUFACTURING - 1 t/d total production (= mass conversion as above)
+    SERVICES      - 1 unit/d of whatever intangible resource(s) is(are) produced
 
 #### SOLAR_POWER, WIND_POWER, TIDAL_POWER, HYDROPOWER
 
-Capacity unit is 1 GW by definition. Utilization is subject to the environment.
-See comments in facilities_operations_utilizations.tsv.
-For solar, utilization is a function of disance from sun and solar_occlusion (from bodies.tsv or override value from facilities.tsv).
+Capacity unit is 1 GW by definition. Utilization is subject to the environment.   
+See comments in facilities_operations_utilizations.tsv.   
+For solar, utilization is a function of disance from sun and solar_occlusion (from bodies.tsv or override value from facilities.tsv).   
 For other renewables, table value in facilities_operations_utilizations.tsv never changes.
 
 #### OIL_POWER
 
 #### IRON_MINING_, INDUST_METALS_MINING, PRECIOUS_METALS_MINING_
 
-Source for energy/t for gold, copper, nickle, iron (download pdf report):  
-https://www.ceecthefuture.org/resources/mining-energy-consumption-2021
-Iron magnetite:
-0.3 GJ/t ore(!)
-41% mining
-43% comminution
-16% other processing
-Iron hematite:
-0.15 GJ/t ore(!)
-90% mining
-10% processing
-Copper:
-24 GJ/t final copper (average)
-60% mining
-36% comminution (grinding/milling)
-4% other processing (smelting???)
-Nickel (leach):
-244 GJ/t final nickle (average)
-59% mining
-29% comminution
-12% other processing
-Lithium:
-15 GJ/t hydroxide (I think)
-48% mining
-47% comminution
-5% other processing
-Gold (underground, higher grade):
-130,000 GJ/t unrefined gold bars
-45% mining
-26% comminution
-29% other processing
+Source for energy/t for gold, copper, nickle, iron (download pdf report): https://www.ceecthefuture.org/resources/mining-energy-consumption-2021.
+* Iron magnetite: 0.3 GJ/t ore(!); 41% mining, 43% comminution, 16% other processing
+* Iron hematite: 0.15 GJ/t ore(!); 90% mining, 10% processing
+* Copper: 24 GJ/t final copper (average); 60% mining, 36% comminution (grinding/milling), 4% other processing (smelting???)
+* Nickel (leach): 244 GJ/t final nickle (average); 59% mining, 29% comminution, 12% other processing
+* Lithium: 15 GJ/t hydroxide (I think); 48% mining, 47% comminution, 5% other processing
+* Gold (underground, higher grade): 130,000 GJ/t unrefined gold bars; 45% mining, 26% comminution, 29% other processing
 
 The reason for the 6-orders-of-magnitude differences above is due mainly to differences in ore deposits. Rougly speaking, 500,000x more mining/comminution is needed to get a tonne of gold ore versus a tonne of iron ore. We simulate that by having extraction rate multiplied by "known deposits" level, with Earth deposits: ~33% (iron), 0.033% (indust metal), 1e-4% (precious metals).
 
@@ -369,17 +381,17 @@ Note: We tweeked compositions to give above deposits. If this gives us wrong tot
 
 For all but iron, "other processing" is smelting (converting ore to metal). We use average of the two iron ores, and use nickle and gold as our proxies for industrical and precious metals.
   
-1 MWh = 3.6 GJ.
-1 GJ/t at 1 t/d, x 1/3.6 MWh/GJ x 1/24 d/h = 1.157e-2 MW
+1 MWh = 3.6 GJ.   
+1 GJ/t at 1 t/d, x 1/3.6 MWh/GJ x 1/24 d/h = 1.157e-2 MW   
 For ops power, multiply above by the ore's power consumption (above) and the ore's typical Earth deposits fraction (from Compositions values). 
 
-For iron mining (1 t/d ore extraction):
+For iron mining (1 t/d ore extraction):   
 0.22 GJ/t x 0.33 -> 8.49e-4 MW
 
-For industrial metals mining (using 88% of Nickel power above):
+For industrial metals mining (using 88% of Nickel power above):   
 215 GJ/t -> 0.828 MW
 
-For precious metal ores (using 71% of Gold power above, x 1000 kg/t):
+For precious metal ores (using 71% of Gold power above, x 1000 kg/t):   
 102,700 GJ/t -> 396 MW
 
 
