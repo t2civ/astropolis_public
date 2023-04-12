@@ -3,12 +3,9 @@
 # Copyright 2019-2023 Charlie Whitfield, all rights reserved
 # *****************************************************************************
 class_name Population
+extends NetRef
 
 # Arrays indexed by population_type unless noted otherwise.
-
-const ivutils := preload("res://ivoyager/static/utils.gd")
-const utils := preload("res://astropolis_public/static/utils.gd")
-const netrefs := preload("res://astropolis_public/static/netrefs.gd")
 
 # save/load persistence for server only
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
@@ -235,11 +232,11 @@ func propagate_component_init(data: Array) -> void:
 func get_server_changes(data: Array) -> void:
 	# facility accumulator only; zero values and dirty flags
 	# optimized for right-biased dirty flags
-	netrefs.append_and_zero_dirty_bshift(data, numbers, _dirty_numbers)
-	netrefs.append_and_zero_dirty_bshift(data, growth_rates, _dirty_growth_rates)
-	netrefs.append_and_zero_dirty_bshift(data, carrying_capacities, _dirty_carrying_capacities)
-	netrefs.append_and_zero_dirty_bshift(data, immigration_attractions, _dirty_immigration_attractions)
-	netrefs.append_and_zero_dirty_bshift(data, emigration_pressures, _dirty_emigration_pressures)
+	_append_and_zero_dirty_bshift(data, numbers, _dirty_numbers)
+	_append_and_zero_dirty_bshift(data, growth_rates, _dirty_growth_rates)
+	_append_and_zero_dirty_bshift(data, carrying_capacities, _dirty_carrying_capacities)
+	_append_and_zero_dirty_bshift(data, immigration_attractions, _dirty_immigration_attractions)
+	_append_and_zero_dirty_bshift(data, emigration_pressures, _dirty_emigration_pressures)
 	_dirty_numbers = 0
 	_dirty_growth_rates = 0
 	_dirty_carrying_capacities = 0
@@ -253,15 +250,15 @@ func sync_server_changes(data: Array, k: int) -> int:
 	if yq < svr_yq:
 		_update_history(svr_yq) # before new quarter changes
 	
-	k = netrefs.add_dirty_bshift(data, numbers, k)
+	k = _add_dirty_bshift(data, numbers, k)
 	
 	if !_is_facility:
 		return 0 # not used
 	
-	k = netrefs.add_dirty_bshift(data, growth_rates, k)
-	k = netrefs.add_dirty_bshift(data, carrying_capacities, k)
-	k = netrefs.add_dirty_bshift(data, immigration_attractions, k)
-	k = netrefs.add_dirty_bshift(data, emigration_pressures, k)
+	k = _add_dirty_bshift(data, growth_rates, k)
+	k = _add_dirty_bshift(data, carrying_capacities, k)
+	k = _add_dirty_bshift(data, immigration_attractions, k)
+	k = _add_dirty_bshift(data, emigration_pressures, k)
 	
 	return k
 

@@ -3,6 +3,7 @@
 # Copyright 2019-2023 Charlie Whitfield, all rights reserved
 # *****************************************************************************
 class_name Financials
+extends NetRef
 
 # Changes propagate from Facility to Player only.
 #
@@ -12,10 +13,6 @@ class_name Financials
 enum { # _dirty_values
 	DIRTY_REVENUE = 1,
 }
-
-const ivutils := preload("res://ivoyager/static/utils.gd")
-const utils := preload("res://astropolis_public/static/utils.gd")
-const netrefs := preload("res://astropolis_public/static/netrefs.gd")
 
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 const PERSIST_PROPERTIES := [
@@ -81,7 +78,7 @@ func get_server_changes(data: Array) -> void:
 		data.append(revenue)
 		revenue = 0.0
 	_dirty_values = 0
-	netrefs.append_and_zero_dirty(data, accountings, _dirty_accountings)
+	_append_and_zero_dirty(data, accountings, _dirty_accountings)
 	_dirty_accountings = 0
 
 
@@ -94,7 +91,7 @@ func sync_server_changes(data: Array, k: int) -> int:
 	if flags & DIRTY_REVENUE:
 		revenue += data[k]
 		k += 1
-	k = netrefs.add_dirty(data, accountings, k)
+	k = _add_dirty(data, accountings, k)
 	return k
 
 

@@ -3,16 +3,13 @@
 # Copyright 2019-2023 Charlie Whitfield, all rights reserved
 # *****************************************************************************
 class_name Metaverse
+extends NetRef
 
 
 enum { # _dirty_values
 	DIRTY_COMPUTATIONS = 1,
 	DIRTY_DIVERSITY_MODEL = 1 << 1,
 }
-
-const ivutils := preload("res://ivoyager/static/utils.gd")
-const utils := preload("res://astropolis_public/static/utils.gd")
-const netrefs := preload("res://astropolis_public/static/netrefs.gd")
 
 # save/load persistence for server only
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL

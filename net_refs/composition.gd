@@ -3,6 +3,7 @@
 # Copyright 2019-2023 Charlie Whitfield, all rights reserved
 # *****************************************************************************
 class_name Composition
+extends NetRef
 
 # Follows "Net Ref" pattern for holding and syncing data. DON'T MODIFY!
 # This is a replacement (NOT a subclass) for I, Voyager's IVComposition class.
@@ -16,9 +17,6 @@ class_name Composition
 # Arrays are never resized after init, so they are threadsafe to read.
 # All data in this Net Ref flows server -> interface.
 
-const ivutils := preload("res://ivoyager/static/utils.gd")
-const utils := preload("res://astropolis_public/static/utils.gd")
-const netrefs := preload("res://astropolis_public/static/netrefs.gd")
 
 
 enum { # _dirty_values bit flags
@@ -27,7 +25,6 @@ enum { # _dirty_values bit flags
 	DIRTY_ESTIMATION = 1 << 2,
 }
 
-const LOG2_64 := Utils.LOG2_64
 
 const FOUR_THIRDS_PI := 4.0 / 3.0 * PI
 const FOUR_PI := 4.0 * PI

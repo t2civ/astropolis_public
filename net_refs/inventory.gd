@@ -3,15 +3,12 @@
 # Copyright 2019-2023 Charlie Whitfield, all rights reserved
 # *****************************************************************************
 class_name Inventory
+extends NetRef
 
 # Arrays indexed by resource_type. Facility and (sometimes) Proxy have an
 # Inventory. 'prices', 'bids' and 'asks' are common for polity at specific body.
 
 # In trade units or in internal units????
-
-const ivutils := preload("res://ivoyager/static/utils.gd")
-const utils := preload("res://astropolis_public/static/utils.gd")
-const netrefs := preload("res://astropolis_public/static/netrefs.gd")
 
 # save/load persistence for server only
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
@@ -153,20 +150,20 @@ func propagate_component_init(data: Array) -> void:
 func get_server_changes(data: Array) -> void:
 	# facility accumulator only; zero values and dirty flags
 	# optimized for sparse dirty flags (not right-biased)
-	netrefs.append_and_zero_dirty(data, reserves, _dirty_reserves_1)
-	netrefs.append_and_zero_dirty(data, reserves, _dirty_reserves_2, 64)
-	netrefs.append_and_zero_dirty(data, markets, _dirty_markets_1)
-	netrefs.append_and_zero_dirty(data, markets, _dirty_markets_2, 64)
-	netrefs.append_and_zero_dirty(data, in_transits, _dirty_in_transits_1)
-	netrefs.append_and_zero_dirty(data, in_transits, _dirty_in_transits_2, 64)
-	netrefs.append_and_zero_dirty(data, contracteds, _dirty_contracteds_1)
-	netrefs.append_and_zero_dirty(data, contracteds, _dirty_contracteds_2, 64)
-	netrefs.append_dirty(data, prices, _dirty_prices_1)     # not accumulator!
-	netrefs.append_dirty(data, prices, _dirty_prices_2, 64) # not accumulator!
-	netrefs.append_dirty(data, bids, _dirty_bids_1)     # not accumulator!
-	netrefs.append_dirty(data, bids, _dirty_bids_2, 64) # not accumulator!
-	netrefs.append_dirty(data, asks, _dirty_asks_1)     # not accumulator!
-	netrefs.append_dirty(data, asks, _dirty_asks_2, 64) # not accumulator!
+	_append_and_zero_dirty(data, reserves, _dirty_reserves_1)
+	_append_and_zero_dirty(data, reserves, _dirty_reserves_2, 64)
+	_append_and_zero_dirty(data, markets, _dirty_markets_1)
+	_append_and_zero_dirty(data, markets, _dirty_markets_2, 64)
+	_append_and_zero_dirty(data, in_transits, _dirty_in_transits_1)
+	_append_and_zero_dirty(data, in_transits, _dirty_in_transits_2, 64)
+	_append_and_zero_dirty(data, contracteds, _dirty_contracteds_1)
+	_append_and_zero_dirty(data, contracteds, _dirty_contracteds_2, 64)
+	_append_dirty(data, prices, _dirty_prices_1)     # not accumulator!
+	_append_dirty(data, prices, _dirty_prices_2, 64) # not accumulator!
+	_append_dirty(data, bids, _dirty_bids_1)     # not accumulator!
+	_append_dirty(data, bids, _dirty_bids_2, 64) # not accumulator!
+	_append_dirty(data, asks, _dirty_asks_1)     # not accumulator!
+	_append_dirty(data, asks, _dirty_asks_2, 64) # not accumulator!
 	_dirty_reserves_1 = 0
 	_dirty_reserves_2 = 0
 	_dirty_markets_1 = 0
@@ -188,20 +185,20 @@ func sync_server_changes(data: Array, k: int) -> int:
 	var svr_yq: int = data[0]
 	yq = svr_yq # TODO: histories
 
-	k = netrefs.add_dirty(data, reserves, k)
-	k = netrefs.add_dirty(data, reserves, k, 64)
-	k = netrefs.add_dirty(data, markets, k)
-	k = netrefs.add_dirty(data, markets, k, 64)
-	k = netrefs.add_dirty(data, in_transits, k)
-	k = netrefs.add_dirty(data, in_transits, k, 64)
-	k = netrefs.add_dirty(data, contracteds, k)
-	k = netrefs.add_dirty(data, contracteds, k, 64)
-	k = netrefs.set_dirty(data, prices, k)     # not accumulator!
-	k = netrefs.set_dirty(data, prices, k, 64) # not accumulator!
-	k = netrefs.set_dirty(data, bids, k)     # not accumulator!
-	k = netrefs.set_dirty(data, bids, k, 64) # not accumulator!
-	k = netrefs.set_dirty(data, asks, k)     # not accumulator!
-	k = netrefs.set_dirty(data, asks, k, 64) # not accumulator!
+	k = _add_dirty(data, reserves, k)
+	k = _add_dirty(data, reserves, k, 64)
+	k = _add_dirty(data, markets, k)
+	k = _add_dirty(data, markets, k, 64)
+	k = _add_dirty(data, in_transits, k)
+	k = _add_dirty(data, in_transits, k, 64)
+	k = _add_dirty(data, contracteds, k)
+	k = _add_dirty(data, contracteds, k, 64)
+	k = _set_dirty(data, prices, k)     # not accumulator!
+	k = _set_dirty(data, prices, k, 64) # not accumulator!
+	k = _set_dirty(data, bids, k)     # not accumulator!
+	k = _set_dirty(data, bids, k, 64) # not accumulator!
+	k = _set_dirty(data, asks, k)     # not accumulator!
+	k = _set_dirty(data, asks, k, 64) # not accumulator!
 	
 	return k
 
