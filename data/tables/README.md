@@ -1,38 +1,54 @@
 # Notes on table meanings & derivations
 
-#### Quality Ranking
-    +    Placeholder, just some value to get the sim running.   
-    ++   Guess, probably at least gave it some individual thought.   
-    +++  Some referencing, possibly dubious or mixed quality.   
-    ++++ Referenced and production ready.   
+## Contents:
 
-Suggested fixes (with references!) are most welcome!
-
-#### Note on value dates
-For data related to Earth's nations and populations our target year is ~2010. We'll run the sim for ~15 years to have actual game start around ~2025. This will fill our simulation history (graphs, last-four-quarters financials, etc.) for GUI display. It will also help us tune our simulation parameters to roughly approximate more contemporary data.
-
-#### Incomplete list of abstrations (intentionally unrealistic elements)
-* ESA is treated as a space agency of the EU.
-* "CNSA" is a conflation of CNSA and CASC; NASA is in some places conflated with its contractors; etc.
-* Resource groupings "Industrial Metals", "Xenon/Krypton", etc. Substances of unique importance in the simulation are singular. (We do have conservation of mass, very roughly speaking.)
-* Ores always have the same percent target metal or mineral. E.g., Iron ores are 70%  iron; precious metal ores are 1% precious metals, etc. We assume benification occurs at the mine to produce exactly consistent "ore" commodities.
-
-#### Contents:
+[Notes](#notes)   
 [asset_adjustments_mod.tsv](#asset_adjustments_modtsv)   
 [carrying_capacity_groups.tsv](#carrying_capacity_groupstsv)   
 [compositions.tsv](#compositionstsv)  
-[compositions_resources_heterogeneities.tsv](compositions_resources_heterogeneitiestsv)
-[compositions_resources_percents.tsv](compositions_resources_percentstsv)
+[compositions_resources_heterogeneities.tsv](#compositions_resources_heterogeneitiestsv)   
+[compositions_resources_percents.tsv](#compositions_resources_percentstsv)   
 [facilities.tsv](#facilitiestsv)  
 [facilities_operations_capacities.tsv](#facilities_operations_capacitiestsv)  
 [facilities_operations_utilizations.tsv](#facilities_operations_utilizationstsv)  
 [facilities_populations.tsv](#facilities_populationstsv)  
 [facilities_resources.tsv](#facilities_resourcestsv)  
-
-
-[modules.tsv](#modulestsv)  
+[major_strata.tsv](#major_stratatsv)   
+[mod_classes.tsv](#mod_classestsv)   
+[modules.tsv](#modulestsv)   
+[moons_mod.tsv](#moons_modtsv)   
+[op_classes.tsv](#op_classestsv)   
+[op_groups.tsv](#op_groupstsv)   
 [operations.tsv](#operationstsv)  
-[resources.tsv](#resourcestsv)
+[planets_mod.tsv](#planets_modtsv)   
+[players.tsv](#playerstsv)   
+[populations.tsv](#populationstsv)   
+[resource_classes.tsv](#resource_classestsv)   
+[resources.tsv](#resourcestsv)   
+[spacecrafts.tsv](#spacecraftstsv)   
+[strata.tsv](#stratatsv)   
+[surveys.tsv](#surveystsv)   
+[technologies.tsv](#technologiestsv)   
+
+## Notes
+
+Data Quality Ranking (WIP):
+
+    +    Placeholder, just some value to get the sim running.   
+    ++   Guess, probably at least gave it some individual thought.   
+    +++  Some referencing, possibly dubious or mixed quality.   
+    ++++ Referenced and production ready.   
+
+Suggested fixes with references are welcome!
+
+For data related to Earth's nations and populations our target year is ~2010. We'll run the sim for ~15 years to have actual game start around ~2025. This will fill our simulation history (graphs, last-four-quarters financials, etc.) for GUI display. It will also help us tune our simulation parameters to roughly approximate more contemporary data.
+
+Incomplete list of abstrations (i.e., intentionally unrealistic elements):
+
+* ESA is treated as a space agency of the EU.
+* "CNSA" is a conflation of CNSA and CASC; NASA is in some places conflated with its contractors; etc.
+* Resource groupings "Industrial Metals", "Xenon/Krypton", etc. Substances of unique importance in the simulation are singular. (We do have conservation of mass, very roughly speaking.)
+* Ores always have the same percent target metal or mineral. E.g., Iron ores are 70%  iron; precious metal ores are 1% precious metals, etc. We assume benification occurs at the mine to produce exactly consistent "ore" commodities.
 
 ## asset_adjustments_mod.tsv
 Modifies ivoyager/data/solar_system/asset_adjustments.tsv.
@@ -42,7 +58,7 @@ Enumeration table that defines different population categories for carrying capa
 
 ## compositions.tsv
 
-Compositions define all of the extractable resources in the solar system. Internally, 'Composition' is a data structure attached to a Body that defines resources for one 'stratum'. Strata correspond to both physical/geophysical structures and also practictical accessibility (on Earth this includes political boundaries). 
+Compositions define all of the extractable resources in solar system bodies. Internally, 'Composition' is a data structure attached to a Body that defines resources for one 'stratum'. Strata correspond to both physical/geophysical structures and also practictical accessibility (on Earth this includes political boundaries). 
 
 Composition names are constructed:
 `COMPOSITION_<body_name or generic body_class>_<stratum_name>[_<owner_name>]`
@@ -52,7 +68,7 @@ Field comments:
 thickness: if blank, imputed to be Body.m_radius.
 area: if blank, imputed to be 4 * PI * (Body.m_radius - outer_depth)^2.
 
-#### COMPOSITION_PLANET_EARTH_STRATUM_ATMOSPHERE +++
+#### COMPOSITION_PLANET_EARTH_STRATUM_ATMOSPHERE
 
 Mass 5.15e18 kg. 3/4 mass under 11 km. https://en.wikipedia.org/wiki/Atmosphere_of_Earth.  
 Surface area of Earth: 5.10e8 km\^2.  
@@ -61,29 +77,28 @@ Volume 5.10e8 km\^2 x 82 km = 4.18e10 km\^3
 Density 5.15e18 kg / (4.18e10 km\^3 x 1e9 km\^3/m\^3)  
    =0.123 kg/m\^3 = 1.23e-4 g/cm\^3
 
-#### COMPOSITION_PLANET_EARTH_STRATUM_OCEAN +++
-Mass of hydrosphere 1.386e18 t, of which 97.5% (=1.351e18 t) is ocean. Area is
-3.61e8 km^2. Density of seawater 1020 to >1050 kg/m^3 (=1.02 to >1.05 g/cm^3).
-https://en.wikipedia.org/wiki/Hydrosphere
-https://en.wikipedia.org/wiki/Seawater
-We use 1.03 g/cm^3 density. We calculate average depth:
-1.351e21 kg / (1030 kg/m^3 * 1e9 m^3/km^3 * 3.61e8 km^2) = 3.633 km
-Volume 3.61e8 km^2 * 3.633 km = 1.31e9 km^3
-Content:
-We consider 3.5% salt as "Industrial Minerals".
-Disolved gasses: (https://en.wikipedia.org/wiki/Ocean)
-Carbon dioxide: 14 mL/kg; x1.977 kg/m3 / (1e6  mL/m3) -> 2.8e-3%
-Nitrogen: 9 mL/kg; x1.25 kg/m3 / (1e6  mL/m3) -> 1.1e-3%
-Oxygen: 5 mL/kg; x1.429 kg/m3 / (1e6  mL/m3  -> 7.1e-4%
+#### COMPOSITION_PLANET_EARTH_STRATUM_OCEAN
+Mass of hydrosphere 1.386e18 t, of which 97.5% (=1.351e18 t) is ocean. Area is 3.61e8 km^2. Density of seawater 1020 to >1050 kg/m^3 (=1.02 to >1.05 g/cm^3).   
+https://en.wikipedia.org/wiki/Hydrosphere   
+https://en.wikipedia.org/wiki/Seawater   
+We use 1.03 g/cm^3 density. We calculate average depth:   
+1.351e21 kg / (1030 kg/m^3 * 1e9 m^3/km^3 * 3.61e8 km^2) = 3.633 km   
+Volume 3.61e8 km^2 * 3.633 km = 1.31e9 km^3   
+Content:   
+We consider 3.5% salt as "Industrial Minerals".   
+Disolved gasses: (https://en.wikipedia.org/wiki/Ocean)   
+Carbon dioxide: 14 mL/kg; x1.977 kg/m3 / (1e6  mL/m3) -> 2.8e-3%   
+Nitrogen: 9 mL/kg; x1.25 kg/m3 / (1e6  mL/m3) -> 1.1e-3%   
+Oxygen: 5 mL/kg; x1.429 kg/m3 / (1e6  mL/m3  -> 7.1e-4%   
 
-96.5% Water
-3.5 Industrial Minerals (salt)
+96.5% Water   
+3.5 Industrial Minerals (salt)   
 
 #### COMPOSITION_PLANET_EARTH_STRATUM_OCEAN_FLOOR
-Arbitrarily set at 100m depth for mining potential (aka Hoover it up!):
+Arbitrarily set at 100m depth for mining potential (aka Hoover it up!):   
 https://oceanminingintel.com/insights/ocean-mining-the-5-minute-what-why-where-how-and-who
 
-#### COMPOSITION_PLANET_EARTH_STRATUM_\<crust layers> +++
+#### COMPOSITION_PLANET_EARTH_STRATUM_\<crust layers>
 Layers arbitrarily defined for extraction potential, considering deepest:   
 - pit mining: 1.2 km, but usually < 1 km. Conveniently, average continental altitude is 800 m. So we use that for "surface".
 - mining: ~4 km. Gets really tough below, but maybe we could go to 8 km with some wild engineering.
@@ -119,7 +134,7 @@ Unowned part of continental surface is Antarctica (area 1.42e7 km^2). Subract
 Antarctica and 6 major players from total land area (1.49e8 km^2) gets us area
 of PLAYER_OTHER at 9.03e7 km^2.
 
-## compositions_resources_heterogeneities.tsv ++
+## compositions_resources_heterogeneities.tsv
 
 Row prefix: `COMPOSITION_`  
 Column prefix: `RESOURCE_` (is_extraction subset)  
@@ -127,7 +142,7 @@ Table access: `table[composition_type][resource_type]`
 
 Defines heterogeneity of resources in each composition. Values are coefficient of variation of mass. Heterogeneity causes "deposits". Fully "mixed" strata (such as atmosphere) are omitted from table and have default heterogeneity = 0.0. 
 
-## compositions_resources_percents.tsv ++
+## compositions_resources_percents.tsv
 
 Row prefix: `COMPOSITION_`  
 Column prefix: `RESOURCE_` (is_extraction subset)  
@@ -223,9 +238,9 @@ Peak installed capacity from https://en.wikipedia.org/wiki/Wind_power_by_country
 
 ## facilities_operations_utilizations.tsv
 
-Row prefix: OPERATION_  
-Column prefix: FACILITY_  
-Table is transposed internally, access: table[facility_type][operation_type]
+Row prefix: `OPERATION_`   
+Column prefix: `FACILITY_`  
+Table is transposed internally, access: `table[facility_type][operation_type]`
 
 Internally, we convert utilization to rates (rate = capacity x utilization), then convert back to utilization(%) for GUI.
 
@@ -252,7 +267,7 @@ From https://en.wikipedia.org/wiki/Solar_power_in_the_European_Union:
 
 From https://en.wikipedia.org/wiki/Solar_power_in_India, installed capacity was 39,083 MW as of Feb, 2021, and generation was 60.4 TWh from Apris 2020 to March 2021. From this we get 17.6% utilization.
 
-Didn't find generation estimationS for China or Japan.
+Didn't find generation estimations for China or Japan.
 
 Combining above with some guesses:
 
@@ -336,90 +351,17 @@ https://en.wikipedia.org/wiki/Demographics_of_the_European_Union
 Note: we are mixing CNSA and CASC, which are really two different entities.  
 NASA actual numbers for fy 2010, 2020: https://en.wikipedia.org/wiki/NASA#cite_note-3
 
+## major_strata.tsv
 
+Enumeration table for names of physical strata that may occur in any body.
 
+## mod_classes.tsv
 
+Enumeration table for module classes.
 
+## modules.tsv
 
-## operations.tsv
-
-Operations define most of the things that "happen" on bodies with facilities, mainly involving resource extraction and conversion. Operations are allowed by Modules.
- 
-Internally in the 'Operations' object we have arrays 'capacities' and 'rates'. We are at 100% utilization when rate == capacity. 
-
-"One unit of capacity" is defined by op_class:
-
-    ENERGY        - 1 MW electrical output (ie, MWe)
-    EXTRACTION    - deposits/100 t/d extracted ore
-    BIOME         - 1 km^2 equivilant Earth area
-    REFINING      - 1 t/d total mass conversion (=input or output, always same)
-    MANUFACTURING - 1 t/d total production (= mass conversion as above)
-    SERVICES      - 1 unit/d of whatever intangible resource(s) is(are) produced
-
-#### SOLAR_POWER, WIND_POWER, TIDAL_POWER, HYDROPOWER
-
-Capacity unit is 1 GW by definition. Utilization is subject to the environment.   
-See comments in facilities_operations_utilizations.tsv.   
-For solar, utilization is a function of disance from sun and solar_occlusion (from bodies.tsv or override value from facilities.tsv).   
-For other renewables, table value in facilities_operations_utilizations.tsv never changes.
-
-#### OIL_POWER
-
-#### IRON_MINING_, INDUST_METALS_MINING, PRECIOUS_METALS_MINING_
-
-Source for energy/t for gold, copper, nickle, iron (download pdf report): https://www.ceecthefuture.org/resources/mining-energy-consumption-2021.
-* Iron magnetite: 0.3 GJ/t ore(!); 41% mining, 43% comminution, 16% other processing
-* Iron hematite: 0.15 GJ/t ore(!); 90% mining, 10% processing
-* Copper: 24 GJ/t final copper (average); 60% mining, 36% comminution (grinding/milling), 4% other processing (smelting???)
-* Nickel (leach): 244 GJ/t final nickle (average); 59% mining, 29% comminution, 12% other processing
-* Lithium: 15 GJ/t hydroxide (I think); 48% mining, 47% comminution, 5% other processing
-* Gold (underground, higher grade): 130,000 GJ/t unrefined gold bars; 45% mining, 26% comminution, 29% other processing
-
-The reason for the 6-orders-of-magnitude differences above is due mainly to differences in ore deposits. Rougly speaking, 500,000x more mining/comminution is needed to get a tonne of gold ore versus a tonne of iron ore. We simulate that by having extraction rate multiplied by "known deposits" level, with Earth deposits: ~33% (iron), 0.033% (indust metal), 1e-4% (precious metals).
-
-Note: We tweeked compositions to give above deposits. If this gives us wrong total masses, we can re-adjust compositions and tweek energies here.
-
-For all but iron, "other processing" is smelting (converting ore to metal). We use average of the two iron ores, and use nickle and gold as our proxies for industrical and precious metals.
-  
-1 MWh = 3.6 GJ.   
-1 GJ/t at 1 t/d, x 1/3.6 MWh/GJ x 1/24 d/h = 1.157e-2 MW   
-For ops power, multiply above by the ore's power consumption (above) and the ore's typical Earth deposits fraction (from Compositions values). 
-
-For iron mining (1 t/d ore extraction):   
-0.22 GJ/t x 0.33 -> 8.49e-4 MW
-
-For industrial metals mining (using 88% of Nickel power above):   
-215 GJ/t -> 0.828 MW
-
-For precious metal ores (using 71% of Gold power above, x 1000 kg/t):   
-102,700 GJ/t -> 396 MW
-
-
-
-****BIOME****
-
-URBAN_DEVELOPED
-Allows 20000 humans / km^2, which is about the density of Paris proper:
-https://en.wikipedia.org/wiki/List_of_cities_proper_by_population_density
-In 2010 & 2020, 51% & 56% of humans were "urban":
-https://en.wikipedia.org/wiki/World_population
-
-For game start facility values, we assume urban capacity is 2x its present
-inhabitants (which is ~50% of total population).
-'rate' is n/a for this operation.
-TODO: Mechanism to grow urban capacity.
-
-SMALL_FOOD_FARMING
-Allows 100 humans / km^2. Capacity is ~1x total population.
-All private sector (is this way off for Russia, China?).
-
-
-
-
-*******************************************************************************
-modules.tsv
-*******************************************************************************
-Modules (mostly) represent real physical components (e.g., a nuclear plant) and
+Modules usually represent real physical components (e.g., a nuclear plant) and
 (mostly) have integral quantities. But we can have different modules that allow
 the same Operation in different contexts, each with its own 'op_quantity'. So,
 for example, we can have small portable nuclear reactors appropriate for small
@@ -487,271 +429,236 @@ MODULE_LAUNCH_FACILITIES
 
 
 
-*******************************************************************************
-processes.tsv
-*******************************************************************************
-Amounts are the rate that one "module" can process in tonnes per day, using or
-producing power in GJ/d. We drop /d here to do all calculations in t and GJ.
-Module is abstract but most modules will involve conversion of 1.0 t/d of
-material or production of 1000 GJ/d energy). Fractional modules are allowed so
-we aren't setting minumums here.
-Table field 'power' is positive for production and negative for useage.
+
+## moons_mod.tsv
+
+Modifies ivoyager/data/solar_system/moons.tsv.
+
+## op_classes.tsv
+
+Op classes define GUI tab groups for operations: Energy, Extraction, etc.
+
+## op_groups.tsv
+
+Op groups define GUI '>' subgrouping for operations.
+
+## operations.tsv
+
+Operations define most of the things that "happen" on bodies with facilities, mainly involving resource extraction and conversion. Operations are allowed by Modules.
+ 
+Internally in the 'Operations' object we have arrays 'capacities' and 'rates'. We are at 100% utilization when rate == capacity. 
+
+"One unit of capacity" is defined by op_class:
+
+    ENERGY        - 1 MW electrical output (ie, MWe)
+    EXTRACTION    - 1 t/d extracted ore x (deposits/100 if deposits, or mass fraction)
+    BIOME         - 1 km^2 equivilant Earth area
+    REFINING      - 1 t/d total mass conversion (=input or output, always same)
+    MANUFACTURING - 1 t/d total production (= mass conversion as above)
+    SERVICES      - 1 unit/d of whatever intangible resource(s) is(are) produced
+
+#### SOLAR_POWER, WIND_POWER, TIDAL_POWER, HYDROPOWER
+
+Capacity unit is 1 GW by definition. Utilization is subject to the environment.   
+See comments in facilities_operations_utilizations.tsv.   
+For solar, utilization is a function of disance from sun and solar_occlusion (from bodies.tsv or override value from facilities.tsv).   
+For other renewables, table value in facilities_operations_utilizations.tsv never changes.
+
+#### COAL_COMBUSTION_POWER
+Typical "bituminous" coal: 84.4% C, 5.4% H2, 6.7% O2, 1.8% S, 1.7% N2;   
+Energy density 24 MJ/kg, for 40% efficiency, "325 kg will power 100 W for yr";   
+https://en.wikipedia.org/wiki/Coal   
+0.325t/100Wyr x 1yr/365.25d x 10^6W/MW x 1MWd/86.4GJ -> 103 t coal/1000 GJ   
+Combustion:   
+(84% C) C + O2 -> CO2; mws 12.011 + 31.998 -> 44.009   
+(5.4% H2) 2 H2 + O2 -> 2 H2O; mws 4.032 + 31.998 -> 36.03   
+(1.8% S) S + O2 -> SO2; mws 32.06 + 31.998 -> 64.058   
+(1.7% N2) N2 -> N2 (ignoring NOx)   
+(6.7% O2) Assume cobusted so deduct from O2 input   
+Per 103 t coal,   
+86.5 C (in coal) + 230.5 O2 -> 317 CO2   
+5.56 H2 (in coal) + 44.1 O2 -> 49.7 H2O   
+1.85 S (in coal) + 1.85 O2 -> 3.70 SO2   
+6.90 O2 (in coal) - 6.90 O2 -> nothing   
+	-> + 1000 GJ power   
+t per 1000 GJ: 103 coal + 269 O2 -> 317 CO2 + 49.7 H2O + 3.70 SO2 + 1.75 N2   
+We could balance mass with 'ash' product if we want to go there.   
+This is close to wiki CO2 emmisions data: 1001 g CO2/kWh;   
+https://en.wikipedia.org/wiki/Electricity_generation   
+1001g/kWh x 10^-6t/g x 1e6kWh/3600 GJ -> 278 t CO2/1000 GJ   
+
+#### OIL_COMBUSTION_POWER
+We're simplifying and burning oil directly rather than processing to fuel oil.   
+84% C, 12% H2, 3% S, 1% O2, 1% N2   
+https://en.wikipedia.org/wiki/Petroleum   
+Specific energy ~42 versus ~30 of Coal (1.4x)   
+https://en.wikipedia.org/wiki/Energy_density   
+Ajusting totals from Coal (in t),   
+t per 1000 GJ: 73.6 oil + 197 O2 -> 226 CO2 + 78.9 H2O + 1.47 SO2 + 0.735 N2   
+(Assuming 40% efficiency. Is this ok?)   
+
+#### REFINED_FUELS_COMBUSTION_POWER
+Specific energy gasoline 46.4, kerosene 43 MJ/kg;   
+https://en.wikipedia.org/wiki/Energy_density   
+For octane, 1kg C8H18 + 3.51kg O2 -> 3.09kg CO2 + 1.42kg H20   
+https://en.wikipedia.org/wiki/Gasoline   
+If we use S.E. 44 MJ/kg, we have (in t):   
+t per 1000 GJ: 70.3 fuel + 247 O2 -> 217 CO2 + 99.8 H20   
+(Assuming 40% efficiency. Is this ok?)   
+
+#### ETHANOL_COMBUSTION_POWER
+Specific energy 30 MJ/kg HHV   
+https://en.wikipedia.org/wiki/Energy_density   
+C2H5OH + 3 O2 -> 2 CO2 + 3 H2O; mws 46.069 + 95.994 -> 88.018 + 54.045   
+t per 1000 GJ: 103 ethanol + 214 O2 -> 197 CO2 + 121 H2O   
+(Assuming 40% efficiency. Is this ok?)   
+
+#### METHANE_COMBUSTION_POWER
+Specific energy 55.6 MJ/kg HHV (natural gas 53.6)   
+https://en.wikipedia.org/wiki/Energy_density   
+CH4 + 2 O2 -> CO2 + 2 H2O; mws 16.043 + 63.996 -> 44.009 + 36.03   
+t per 1000 GJ: 55.6 methane + 222 O2 -> 153 CO2 + 125 H2O   
+This is close to wiki CO2 emmisions data: natural gas 669 g CO2/kWh,   
+-> 186 t CO2/1000 GJ   
+https://en.wikipedia.org/wiki/Electricity_generation   
+
+#### HYDROGEN_COMBUSTION_POWER
+aka, fuel cells   
+Specific energy 141.86 MJ/kg HHV   
+2 H2 + O2 -> 2 H2O; mws 4.032 + 31.998 -> 36.03   
+t per 1000 GJ: 21.8 H2 + 173 O2 -> 195 H2O   
+
+#### PROCESS_FISSION_POWER
+Our proxy "fission fuel" is yellowcake.   
+Total yellowcake volume for 2020 was 92 million lb;   
+https://www.yellowcakeplc.com/uranium-market/   
+Total nuclear power supplied in 2019 was 2,586 TWh   
+https://en.wikipedia.org/wiki/Nuclear_power   
+96e6 lbs/2586 TWh x 1 TWh/3.6e6 GJ x 1kg/2.20462 lbs -> 0.00468 kg/GJ   
+-> 4.68 kg / 1000 GJ   
+Assume 90% used for power, so 5.20 kg yellowcake / 1000 GJ power.   
+
+#### PROCESS_DT_FUSION_POWER
+#### PROCESS_DHe3_FUSION_POWER
+
+#### OIL_EXTRACTION
+
+#### COAL_MINING
+Coal Recovery ratio: 82%   
+Coal Btu/Ton mined: 370,628   
+Using this US study, 2000, mostly Exhibit 5 & 14:   
+https://www.energy.gov/sites/default/files/2013/11/f4/mining_bandwidth.pdf   
+Per t mined:   
+370,628 Btu/Ton x 1.06 GJ/1e6 Btu x 1 ton/0.907 t -> 0.433 GJ/t   
+0.82 t coal   
+0.18 t regolith   
 
 
-1 MWh = 3.6 GJ
-1 MW = 86.4 GJ/d
-1e6 Btu = 1.06 GJ
-1 ton = 0.907 tonne (t)
+1e6 Btu = 1.06 GJ   
+1 ton = 0.907 tonne (t)   
 
-PROCESS_SOLAR_POWER
-power = 1000 GJ/d is for in-space unshaded at 1 AU.
-Earth surface has 'is_local' solar power multiplier of x 0.25.
+#### FISSILE_FUELS_MINING
+#### HELIUM3_MINING
 
-PROCESS_COAL_COMBUSTION
-Typical "bituminous" coal: 84.4% C, 5.4% H2, 6.7% O2, 1.8% S, 1.7% N2;
-Energy density 24 MJ/kg, for 40% efficiency, "325 kg will power 100 W for yr";
-https://en.wikipedia.org/wiki/Coal
-0.325t/100Wyr x 1yr/365.25d x 10^6W/MW x 1MWd/86.4GJ -> 103 t coal/1000 GJ
-Combustion:
-(84% C) C + O2 -> CO2; mws 12.011 + 31.998 -> 44.009
-(5.4% H2) 2 H2 + O2 -> 2 H2O; mws 4.032 + 31.998 -> 36.03
-(1.8% S) S + O2 -> SO2; mws 32.06 + 31.998 -> 64.058
-(1.7% N2) N2 -> N2 (ignoring NOx)
-(6.7% O2) Assume cobusted so deduct from O2 input
-Per 103 t coal,
-86.5 C (in coal) + 230.5 O2 -> 317 CO2
-5.56 H2 (in coal) + 44.1 O2 -> 49.7 H2O
-1.85 S (in coal) + 1.85 O2 -> 3.70 SO2
-6.90 O2 (in coal) - 6.90 O2 -> nothing
-	-> + 1000 GJ power
-t per 1000 GJ: 103 coal + 269 O2 -> 317 CO2 + 49.7 H2O + 3.70 SO2 + 1.75 N2
-We could balance mass with 'ash' product if we want to go there.
-This is close to wiki CO2 emmisions data: 1001 g CO2/kWh;
-https://en.wikipedia.org/wiki/Electricity_generation
-1001g/kWh x 10^-6t/g x 1e6kWh/3600 GJ -> 278 t CO2/1000 GJ
+#### IRON_MINING_, INDUST_METALS_MINING, PRECIOUS_METALS_MINING_
 
-PROCESS_OIL_COMBUSTION
-We're simplifying and burning oil directly rather than processing to fuel oil.
-84% C, 12% H2, 3% S, 1% O2, 1% N2
-https://en.wikipedia.org/wiki/Petroleum
-Specific energy ~42 versus ~30 of Coal (1.4x)
-https://en.wikipedia.org/wiki/Energy_density
-Ajusting totals from Coal (in t),
-t per 1000 GJ: 73.6 oil + 197 O2 -> 226 CO2 + 78.9 H2O + 1.47 SO2 + 0.735 N2
-(Assuming 40% efficiency. Is this ok?)
+Source for energy/t for gold, copper, nickle, iron (download pdf report): https://www.ceecthefuture.org/resources/mining-energy-consumption-2021.
 
-PROCESS_REFINED_FUELS_COMBUSTION
-Specific energy gasoline 46.4, kerosene 43 MJ/kg;
-https://en.wikipedia.org/wiki/Energy_density
-For octane, 1kg C8H18 + 3.51kg O2 -> 3.09kg CO2 + 1.42kg H20
-https://en.wikipedia.org/wiki/Gasoline
-If we use S.E. 44 MJ/kg, we have (in t):
-t per 1000 GJ: 70.3 fuel + 247 O2 -> 217 CO2 + 99.8 H20
-(Assuming 40% efficiency. Is this ok?)
+* Iron magnetite: 0.3 GJ/t ore(!); 41% mining, 43% comminution, 16% other processing
+* Iron hematite: 0.15 GJ/t ore(!); 90% mining, 10% processing
+* Copper: 24 GJ/t final copper (average); 60% mining, 36% comminution (grinding/milling), 4% other processing (smelting???)
+* Nickel (leach): 244 GJ/t final nickle (average); 59% mining, 29% comminution, 12% other processing
+* Lithium: 15 GJ/t hydroxide (I think); 48% mining, 47% comminution, 5% other processing
+* Gold (underground, higher grade): 130,000 GJ/t unrefined gold bars; 45% mining, 26% comminution, 29% other processing
 
-PROCESS_ETHANOL_COMBUSTION
-Specific energy 30 MJ/kg HHV
-https://en.wikipedia.org/wiki/Energy_density
-C2H5OH + 3 O2 -> 2 CO2 + 3 H2O; mws 46.069 + 95.994 -> 88.018 + 54.045
-t per 1000 GJ: 103 ethanol + 214 O2 -> 197 CO2 + 121 H2O
-(Assuming 40% efficiency. Is this ok?)
+The reason for the 6-orders-of-magnitude differences above is due mainly to differences in ore deposits. Rougly speaking, 500,000x more mining/comminution is needed to get a tonne of gold ore versus a tonne of iron ore. We simulate that by having extraction rate multiplied by "known deposits" level, with Earth deposits: ~33% (iron), 0.033% (indust metal), 1e-4% (precious metals).
 
-PROCESS_METHANE_COMBUSTION
-Specific energy 55.6 MJ/kg HHV (natural gas 53.6)
-https://en.wikipedia.org/wiki/Energy_density
-CH4 + 2 O2 -> CO2 + 2 H2O; mws 16.043 + 63.996 -> 44.009 + 36.03
-t per 1000 GJ: 55.6 methane + 222 O2 -> 153 CO2 + 125 H2O
-This is close to wiki CO2 emmisions data: natural gas 669 g CO2/kWh,
--> 186 t CO2/1000 GJ
-https://en.wikipedia.org/wiki/Electricity_generation
+Note: We tweeked compositions to give above deposits. If this gives us wrong total masses, we can re-adjust compositions and tweek energies here.
 
-PROCESS_HYDROGEN_COMBUSTION
-Specific energy 141.86 MJ/kg HHV (assuming recondensing of H2O,
-BUT does not consider heating liquid H2 to gas)
-2 H2 + O2 -> 2 H2O; mws 4.032 + 31.998 -> 36.03
-t per 1000 GJ: 21.8 H2 + 173 O2 -> 195 H2O
+For all but iron, "other processing" is smelting (converting ore to metal). We use average of the two iron ores, and use nickle and gold as our proxies for industrical and precious metals.
+  
+1 MWh = 3.6 GJ.   
+1 GJ/t at 1 t/d, x 1/3.6 MWh/GJ x 1/24 d/h = 1.157e-2 MW   
+For ops power, multiply above by the ore's power consumption (above) and the ore's typical Earth deposits fraction (from Compositions values).   
 
-PROCESS_FISSION
-Our proxy "fission fuel" is yellowcake.
-Total yellowcake volume for 2020 was 92 million lb;
-https://www.yellowcakeplc.com/uranium-market/
-Total nuclear power supplied in 2019 was 2,586 TWh
-https://en.wikipedia.org/wiki/Nuclear_power
-96e6 lbs/2586 TWh x 1 TWh/3.6e6 GJ x 1kg/2.20462 lbs -> 0.00468 kg/GJ
--> 4.68 kg / 1000 GJ
-Assume 90% used for power, so 5.20 kg yellowcake / 1000 GJ power.
+For iron mining (1 t/d ore extraction):   
+0.22 GJ/t x 0.33 -> 8.49e-4 MW   
 
-# PROCESS_DT_FUSION
-# PROCESS_DHe3_FUSION
+For industrial metals mining (using 88% of Nickel power above):   
+215 GJ/t -> 0.828 MW   
 
-PROCESS_OIL_EXTRACTION
-
-PROCESS_COAL_MINING
-Coal Recovery ratio: 82%
-Coal Btu/Ton mined: 370,628
-Using this US study, 2000, mostly Exhibit 5 & 14:
-https://www.energy.gov/sites/default/files/2013/11/f4/mining_bandwidth.pdf
-Per t mined:
-370,628 Btu/Ton x 1.06 GJ/1e6 Btu x 1 ton/0.907 t -> 0.433 GJ/t
-0.82 t coal
-0.18 t regolith
-
-
-
-1e6 Btu = 1.06 GJ
-1 ton = 0.907 tonne (t)
-
-PROCESS_FISSILE_FUELS_MINING
-PROCESS_HELIUM3_MINING
-
-PROCESS_IRON_MINING
-Iron Recovery ratio: 19%
-Metals Btu/Ton mined: 342,200
-Using this US study, 2000, mostly Exhibit 5 & 14:
-https://www.energy.gov/sites/default/files/2013/11/f4/mining_bandwidth.pdf
-Per t mined:
-342,200 Btu/Ton x 1.06 GJ/1e6 Btu x 1 ton/0.907 t -> 0.400 GJ/t
-0.19 t iron ores
-0.81 t regolith
-
-
-PROCESS_METALS_MINING
-Most metals mines have some industrial metal as main product (by mass) and may
-or may not have precious metal as secondary product (by mass), even if the
-precious metal is the main economic value. So these mines are really industrial
-metals mines with bonus precious metals.
-Copper/Lead&Zinc Recovery ratios: 0.16%/8% (we use 1.5%)
-Gold & Silver Recovery ratios: 0.001%
-Metals Btu/Ton mined: 342,200
-Using this US study, 2000, mostly Exhibit 5 & 14:
-https://www.energy.gov/sites/default/files/2013/11/f4/mining_bandwidth.pdf
-Per t mined:
-342,200 Btu/Ton x 1.06 GJ/1e6 Btu x 1 ton/0.907 t -> 0.400 GJ/t
-0.015 t industrial metal ores
-0.00001 t precious metal ores
-0.985 t regolith
-
-
-PROCESS_RARE_EARTHS_MINING
-
-
-PROCESS_INDUSTRIAL_MINERALS_MINING
-Ind. Minerals Recovery ratio: 90%
-Ind. Minerals Btu/Ton mined: 58,757
-Using this US study, 2000, mostly Exhibit 5 & 14:
-https://www.energy.gov/sites/default/files/2013/11/f4/mining_bandwidth.pdf
-Per t mined:
-58,757 Btu/Ton x 1.06 GJ/1e6 Btu x 1 ton/0.907 t -> 0.0687 GJ/t
-0.90 t industrial minerals
-0.10 t regolith
-
-
-PROCESS_THOLINS_MINING
-PROCESS_WATER_MINING
-PROCESS_AGGREGATE_EXTRACTION
-PROCESS_REGOLITH_EXTRACTION
+For precious metal ores (using 71% of Gold power above, x 1000 kg/t):   
+102,700 GJ/t -> 396 MW   
 
 
 
-PROCESS_WATER_VAPOR_EXTRACTION
-PROCESS_OXYGEN_EXTRACTION
-PROCESS_NITROGEN_EXTRACTION
-PROCESS_CARBON_DIOXIDE_EXTRACTION
-PROCESS_CARBON_MONOXIDE_EXTRACTION
-PROCESS_ETHANE_EXTRACTION
-PROCESS_AMMONIA_EXTRACTION
-PROCESS_SULFER_DIOXIDE_EXTRACTION
-PROCESS_HELIUM_EXTRACTION
-PROCESS_ARGON_NEON_EXTRACTION
-PROCESS_KRYPTON_XENON_EXTRACTION
-PROCESS_BULK_FOODS_FARMING
-PROCESS_CRAFT_FOODS_FARMING
-PROCESS_WOOD_FARMING
-PROCESS_BIOFIBERS_FARMING
-PROCESS_BIOFEEDSTOCK_FARMING
-PROCESS_CRUDE_OIL_REFINING
-PROCESS_FISCHER_TROPSCH_PROCESS
-PROCESS_PLASTICS_POLYMERS_PRODUCTION
-PROCESS_COAL_GASIFICATION
-PROCESS_CRUDE_OIL_GASIFICATION
-PROCESS_REFINED_FUELS_GASIFICATION
-PROCESS_THOLINS_GASIFICATION
-PROCESS_BIOFEEDSTOCK_GASIFICATION
-PROCESS_WATER_ELECTROLYSIS
-PROCESS_SABATIER_PROCESS
-PROCESS_STEAM_REFORMING
-PROCESS_DRY_REFORMING
-PROCESS_WATER_GAS_SHIFT_REACTION
-PROCESS_REVERSE_WATER_GAS_SHIFT_REACTION
-PROCESS_HABER_BOSCH_PROCESS
-PROCESS_BASIC_OXYGEN_STEELMAKING
-PROCESS_H2_REDUCTION_STEELMAKING
-PROCESS_INDUSTRIAL_METALS_SMELTING
-PROCESS_SMELTING_W_PRECIOUS_METALS_SEPARATION
-PROCESS_RARE_EARTHS_REFINING
-PROCESS_FISSILE_FUELS_ENRICHMENT
-PROCESS_DEUTERIUM_SEPARATION
-PROCESS_HELIUM3_SEPARATION
-PROCESS_CONCRETE_PRODUCTION
-PROCESS_GLASSES_PRODUCTION
-PROCESS_ETHANOL_FERMENTATION
-PROCESS_BULK_FOODS_SYNTHESIS
-PROCESS_SEWAGE_TREATMENT
-PROCESS_INDUSTRIAL_SCRAP_RECYCLING
-PROCESS_SYNTHETIC_FIBERS_PRODUCTION
-PROCESS_FINISHED_STRUCTURES_PRODUCTION
-PROCESS_HEAVY_MACHINERY_PRODUCTION
-PROCESS_ROBOTICS_PRODUCTION
-PROCESS_BATTERIES_PRODUCTION
-PROCESS_CONSUMER_GOODS_PRODUCTION
-PROCESS_LUXURY_GOODS_PRODUCTION
-PROCESS_ELECTRONICS_PRODUCTION
-PROCESS_FERTILIZERS_PRODUCTION
-PROCESS_INDUSTRIAL_CHEMICALS_PRODUCTION
-PROCESS_FINE_CHEMICALS_PRODUCTION
-PROCESS_PHARMACEUTICALS_PRODUCTION
 
+#### URBAN_DEVELOPED
+Allows 20000 humans / km^2, which is about the density of Paris proper:
+https://en.wikipedia.org/wiki/List_of_cities_proper_by_population_density
+In 2010 & 2020, 51% & 56% of humans were "urban":
+https://en.wikipedia.org/wiki/World_population
+
+For game start facility values, we assume urban capacity is 2x its present
+inhabitants (which is ~50% of total population).
+'rate' is n/a for this operation.
+TODO: Mechanism to grow urban capacity.
+
+#### SMALL_FOOD_FARMING
+Allows 100 humans / km^2. Capacity is ~1x total population.
+All private sector (is this way off for Russia, China?).
+
+
+
+
+## planets_mod.tsv
+
+Modifies ivoyager/data/solar_system/planets.tsv.
+
+
+## players.tsv
+
+Game start only.
+
+## populations.tsv
+
+Different kinds of humans or non-humans, corporeal or virtual, that we want to count in total Population. Mostly sentient but for game flavor we also have sub-sentient androids.
+
+## resource_classes.tsv
+
+Categories for GUI tabs: Energy, Ores, Volatiles, etc.
 
 ## resources.tsv
 
-*******************************************************************************
-resources.tsv
-*******************************************************************************
-'trade_unit' is the quantity for 'price', the unit used for GUI display and the
-unit for internal representation in the Inventory object.
+'trade_unit' is the quantity for 'price', the unit used for GUI display and the unit for internal representation in the Inventory object.   
 'start_price' is on Earth only.
 
-TODO:
-PLAYER_OTHER -> PLAYER_NON_MAJORS
-RESOURCE_ARGON_NEON -> RESOURCE_ARGON_NEON_NEON ("Argon/Neon")
-RESOURCE_KRYPTON_XENON -> RESOURCE_KRIPTON_XENON ("Kripton/Xenon")
 
-
-RESOURCE_ELECTRICITY
+#### ELECTRICITY
 Cannot be transported, but traded w/in a Body. Special storage.
 LCOE on the order of $60/MWh (6 cents/kWh), say $100/MWh wholesale,
 x 1 MWh/3.6 GJ -> $27.8/GJ
 https://en.wikipedia.org/wiki/Cost_of_electricity_by_source
 
-RESOURCE_COAL
+#### COAL
 $189/t; 2/22
 
-RESOURCE_CRUDE_OIL
+#### OIL
 $70/barrel oil x 7.33 barrels/t = $513/t
 
-RESOURCE_REFINED_FUELS
+#### REFINED_FUELS
 $3.57/gallon for kerosine -> or $1180/t
 
-RESOURCE_ETHANOL
+#### ETHANOL
 $849/t; 2/22 chemanalyst.com
 
-RESOURCE_METHANE
+#### METHANE
 $4/MMBtu, ~$4/1000ft3, ~$4/GJ x 0.049 GJ/kg x 1000 kg/t = $196/t
 
-RESOURCE_HYDROGEN
+#### HYDROGEN
 $1390/t; https://en.wikipedia.org/wiki/Prices_of_chemical_elements
 
-RESOURCE_FISSILE_FUELS
+#### FISSILE_FUELS
 Prices for uranium oxide "yellowcake" bottomed in 2001 at $7/lb and topped in
 2007 at $137/lb;
 https://en.wikipedia.org/wiki/Uranium_market
@@ -760,180 +667,196 @@ x 2.20462 lb/t -> $93.54/kg
 
 
 
-RESOURCE_DEUTERIUM
+#### DEUTERIUM
 ?
 
-RESOURCE_HELIUM3
+#### HELIUM3
 Wiki - "historically about $100/liter" (gas?? Presure?) "59 gram per liter at 1 atm".
 Assume price is at 1atm. Then, $100/59g.
 
-RESOURCE_IRON_ORES
+#### IRON_ORES
 Defined as 70% Fe by weight (e.g., magnatite). We assume benefacation to this
 grade, with resource proportion being our abstraction for mine quality.
 $150/t, typical market pr, 2/22; .
 
-RESOURCE_INDUSTRIAL_METAL_ORES
+#### INDUSTRIAL_METAL_ORES
 Defined as 1% Industrial Metals by weight (Ni ores typically ~1%). (See
 _IRON_ORES note on grade and benefication.)
 Represents Al, Cu, Ni, etc. Using Ni as proxy.
 Nickle ore market pr $30 ("low grade") to $90, 2/22.
 
-RESOURCE_PRECIOUS_METAL_ORES
+#### PRECIOUS_METAL_ORES
 Defined as 0.003% Precious Metals by weight (the high end of Earth Au ores,
 0.0001-0.0030%). (See _IRON_ORES note on grade and benefication.)
 Au, Pl, etc., but we use Au as proxy.
 
-RESOURCE_RARE_EARTH_ORES
+#### RARE_EARTH_ORES
 Defined as 1% Rare Earths by weight. (See _IRON_ORES note on grade and
 benefication.)
 ooma price
 
-RESOURCE_INDUSTRIAL_MINERAL_ORES
-Defined as 30% Industrial Minerals by weight. (See _IRON_ORES note on grade and
+#### INDUSTRIAL_MINERAL_ORES
+Defined as 30% Industrial Minerals by weight. (See '_IRON_ORES note on grade and
 benefication.)
 ooma price
 
-RESOURCE_FISSILE_FUEL_ORES
+#### FISSILE_FUEL_ORES
 Defined as 1% Fissile Fuels by weight (Earth grades range from 0.1% up to 18%,
-but 1% is typical). (See _IRON_ORES note on grade and benefication.)
-https://en.wikipedia.org/wiki/Uranium_ore
-For price assume 1% grade and 10% price of yellowcake, giving $93/t.
-TODO: fix numbers given that we abstract away yellowcake, which is an
-intermediate form customarily produced at the mine (but not in our simulation).
+but 1% is typical). (See '_IRON_ORES note on grade and benefication.)   
+https://en.wikipedia.org/wiki/Uranium_ore   
+For price assume 1% grade and 10% price of yellowcake, giving $93/t.   
+TODO: fix numbers given that we abstract away yellowcake, which is an intermediate
+form customarily produced at the mine (but not in our simulation).
 
-RESOURCE_HELIUM3_REGOLITH
+#### HELIUM3_REGOLITH
 N/A Earth; no start price.
 
-RESOURCE_INDUSTRIAL_MINERALS
+#### INDUSTRIAL_MINERALS
 ooma price
 
-RESOURCE_THOLINS
+#### THOLINS
 N/A Earth; no start price.
 
-RESOURCE_ROCK_AGGREGATE
+#### ROCK_AGGREGATE
 $20/t is low range of prices in Google search. Assume $5/t for industry.
 
-RESOURCE_LOW_GRADE_REGOLITH
+#### LOW_GRADE_REGOLITH
 Dirt; give it $2/t for transport.
 
-RESOURCE_WATER
+#### WATER
 Wide range of pricing; trucked values as low as $1/t.
 
-RESOURCE_OXYGEN
+#### OXYGEN
 $154/t; https://en.wikipedia.org/wiki/Prices_of_chemical_elements
 
-RESOURCE_NITROGEN
+#### NITROGEN
 $140/t; https://en.wikipedia.org/wiki/Prices_of_chemical_elements
 
-RESOURCE_CARBON_DIOXIDE
+#### CARBON_DIOXIDE
 $182/t; chemanalyst.com
 
-RESOURCE_CARBON_MONOXIDE
+#### CARBON_MONOXIDE
 $28700/t; chemanalyst.com
 
-RESOURCE_ETHANE
+#### ETHANE
 Couldn't find price but $600/t for methanol; chemanalyst.com
 
-RESOURCE_AMMONIA
+#### AMMONIA
 $1000/t; chemanalyst.com
 
-RESOURCE_SULFER_DIOXIDE
+#### SULFER_DIOXIDE
 Couldn't find but $312/t for sulfur
 
-RESOURCE_HELIUM
+#### HELIUM
 $24,000/t; https://en.wikipedia.org/wiki/Prices_of_chemical_elements
 
-RESOURCE_ARGON_NEON
+#### ARGON_NEON
 $931/t; https://en.wikipedia.org/wiki/Prices_of_chemical_elements
 
-RESOURCE_KRYPTON_XENON
+#### KRYPTON_XENON
 Kr & Xe; Kr is cheaper (by far) at $290/kg;
 https://en.wikipedia.org/wiki/Prices_of_chemical_elements
 
-RESOURCE_STEEL
+#### STEEL
 $1500/t; random news article, early 2022.
 
-RESOURCE_INDUSTRIAL_METALS
+#### INDUSTRIAL_METALS
 Al $1790/t, Ni $13900/t, Cu $6000/t; use Cu as proxy price.
 https://en.wikipedia.org/wiki/Prices_of_chemical_elements
 
-RESOURCE_PRECIOUS_METALS
+#### PRECIOUS_METALS
 Use Au as proxy at $60000/kg, 2/22.
 
-RESOURCE_RARE_EARTHS
+#### RARE_EARTHS
 Light REs ~$41,000/kg; Heavy REs ~$21,0000/kg
 We split the difference and call it $100,000/kg.
 
-RESOURCE_CONCRETE
+#### CONCRETE
 random source?
 
-RESOURCE_GLASSES
+#### GLASSES
 ooma
 
-RESOURCE_PLASTICS_POLYMERS
+#### PLASTICS_POLYMERS
 $1200/t for styrene; chemanalyst.com
 
-RESOURCE_SYNTHETIC_FIBERS
+#### SYNTHETIC_FIBERS
 Random source "average cost of non- aerospace grade is around $21.5/kg"
 
-RESOURCE_INDUSTRIAL_SCRAP
+#### INDUSTRIAL_SCRAP
 Steel scrap $0.23/lb x 2204 lbs/t = $506/t; random online source.
 
-RESOURCE_SLAG
+#### SLAG
 $200/t; random online slag quote
 
-RESOURCE_BULK_FOODS
+#### BULK_FOODS
 Grain, etc.; source?
 
-RESOURCE_CRAFT_FOODS
+#### CRAFT_FOODS
 $20 bag of groceries. These are "luxury" in space.
 
-RESOURCE_WOOD
+#### WOOD
 ooma
 
-RESOURCE_BIOFIBERS
+#### BIOFIBERS
 ooma
 
-RESOURCE_BIOFEEDSTOCK
+#### BIOFEEDSTOCK
 ooma
 
-RESOURCE_SEWAGE
+#### SEWAGE
 ooma
 
-RESOURCE_FINISHED_STRUCTURES
+#### FINISHED_STRUCTURES
 ooma
 
-RESOURCE_HEAVY_MACHINERY
+#### HEAVY_MACHINERY
 ooma
 
-RESOURCE_ROBOTICS
+#### ROBOTICS
 ooma
 
-RESOURCE_ELECTRONICS
+#### ELECTRONICS
 ooma
 
-RESOURCE_BATTERIES
+#### BATTERIES
 Tesla car battery on the order of ~$3-4k; call it $2000/t. 
 
-RESOURCE_ADVANCED_COMPOSITES
+#### ADVANCED_COMPOSITES
 $85/kg; aerospace cabon fiber, 2022 news article
 
-RESOURCE_FERTILIZERS
+#### FERTILIZERS
 $717/t; 2022 news article.
 
-RESOURCE_INDUSTRIAL_CHEMICALS
+#### INDUSTRIAL_CHEMICALS
 ooma; presumably more than kerosine
 
-RESOURCE_FINE_CHEMICALS
+#### FINE_CHEMICALS
 ooma
 
-RESOURCE_PHARMACEUTICALS
+#### PHARMACEUTICALS
 ooma
 
-RESOURCE_CONSUMER_GOODS
+#### CONSUMER_GOODS
 ooma
 
-RESOURCE_LUXURY_GOODS
+#### LUXURY_GOODS
 ooma
+
+
+## spacecrafts.tsv
+
+Replaces ivoyager table of the same name. Game start only.
+
+## strata.tsv
+
+Specific geophysical layers for the purpose of defining Compositions (which define resources).
+
+## surveys.tsv
+
+Defines our knowledge about resources in a particular strata: both deposits (if applicable) and estimation errors.
+
+## technologies.tsv
+
 
 
