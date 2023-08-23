@@ -28,7 +28,7 @@ var facilities_by_holder := {} # [facility names] indexed by body & player names
 # *****************************************************************************
 
 func _ready() -> void:
-	IVGlobal.connect("about_to_free_procedural_nodes", self, "_clear")
+	IVGlobal.connect("about_to_free_procedural_nodes", Callable(self, "_clear"))
 
 
 func _clear() -> void:

@@ -20,16 +20,16 @@ var _header_suffix := "  -  " + tr("LABEL_DEVELOPMENT")
 var _state: Dictionary = IVGlobal.state
 var _selection_manager: SelectionManager
 
-onready var _stats_grid: MarginContainer = $StatsGrid
-onready var _no_dev_label: Label = $NoDevLabel
+@onready var _stats_grid: MarginContainer = $StatsGrid
+@onready var _no_dev_label: Label = $NoDevLabel
 
 
 func _ready() -> void:
-	IVGlobal.connect("update_gui_requested", self, "_update_selection")
-	connect("visibility_changed", self, "_update_selection")
-	_stats_grid.connect("has_stats_changed", self, "_update_no_development")
+	IVGlobal.connect("update_gui_requested", Callable(self, "_update_selection"))
+	connect("visibility_changed", Callable(self, "_update_selection"))
+	_stats_grid.connect("has_stats_changed", Callable(self, "_update_no_development"))
 	_selection_manager = IVWidgets.get_selection_manager(self)
-	_selection_manager.connect("selection_changed", self, "_update_selection")
+	_selection_manager.connect("selection_changed", Callable(self, "_update_selection"))
 	_stats_grid.min_columns = 4
 	_update_selection()
 

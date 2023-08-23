@@ -115,7 +115,7 @@ func process_ai(time: float) -> void:
 	if time > next_interval:
 		if next_interval == -INF: # init
 			last_interval = time
-			next_interval = time + rand_range(0.0, INTERVAL) # stagger AI processing
+			next_interval = time + randf_range(0.0, INTERVAL) # stagger AI processing
 			process_ai_init()
 		else:
 			var delta := time - last_interval

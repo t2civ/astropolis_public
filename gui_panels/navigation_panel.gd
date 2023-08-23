@@ -20,8 +20,8 @@ var _settings: Dictionary = IVGlobal.settings
 
 
 func _ready() -> void:
-	IVGlobal.connect("update_gui_requested", self, "_resize")
-	IVGlobal.connect("setting_changed", self, "_settings_listener")
+	IVGlobal.connect("update_gui_requested", Callable(self, "_resize"))
+	IVGlobal.connect("setting_changed", Callable(self, "_settings_listener"))
 	$"%AsteroidsHScroll".add_bodies_from_table("asteroids")
 	$"%SpacecraftsHScroll".add_bodies_from_table("spacecrafts")
 

@@ -26,9 +26,9 @@ var _selection_manager: IVSelectionManager
 
 
 func _ready() -> void:
-	IVGlobal.connect("about_to_start_simulator", self, "_connect_selection_manager")
-	IVGlobal.connect("update_gui_requested", self, "_update_image")
-	IVGlobal.connect("about_to_free_procedural_nodes", self, "_clear")
+	IVGlobal.connect("about_to_start_simulator", Callable(self, "_connect_selection_manager"))
+	IVGlobal.connect("update_gui_requested", Callable(self, "_update_image"))
+	IVGlobal.connect("about_to_free_procedural_nodes", Callable(self, "_clear"))
 	set_default_cursor_shape(CURSOR_POINTING_HAND)
 	_connect_selection_manager()
 
@@ -43,12 +43,12 @@ func _connect_selection_manager(_dummy := false) -> void:
 	_selection_manager = IVWidgets.get_selection_manager(self)
 	if !_selection_manager:
 		return
-	_selection_manager.connect("selection_changed", self, "_update_image")
+	_selection_manager.connect("selection_changed", Callable(self, "_update_image"))
 	_update_image()
 
 
 func _gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == BUTTON_LEFT:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		# image click centers and "levels" the target body
 		# Below modified from I, Voyager:
 		var body_name := _selection_manager.get_body_name()
@@ -63,7 +63,7 @@ func _gui_input(event: InputEvent) -> void:
 func _update_image(_suppress_camera_move := false) -> void:
 	if !_selection_manager.has_selection():
 		return
-	hint_tooltip = tr(_selection_manager.get_body_name()) + _hint_extension
+	tooltip_text = tr(_selection_manager.get_body_name()) + _hint_extension
 	var texture_2d := _selection_manager.get_texture_2d()
 	if texture_2d:
 		texture = texture_2d

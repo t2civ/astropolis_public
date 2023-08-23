@@ -65,9 +65,9 @@ var _trade_units: Array = _tables.resources.trade_unit
 var _resource_classes_resources: Array = _tables.resource_classes_resources # array of arrays
 var _qf: IVQuantityFormatter = IVGlobal.program.QuantityFormatter
 
-onready var _no_markets_label: Label = $NoMarkets
-onready var _tab_container: TabContainer = $TabContainer
-onready var _vboxes := [
+@onready var _no_markets_label: Label = $NoMarkets
+@onready var _tab_container: TabContainer = $TabContainer
+@onready var _vboxes := [
 	$"%EnergyVBox",
 	$"%OresVBox",
 	$"%VolatilesVBox",
@@ -76,7 +76,7 @@ onready var _vboxes := [
 	$"%BiologicalsVBox",
 	$"%CyberVBox",
 ]
-onready var _col0_spacers := [
+@onready var _col0_spacers := [
 	$TabContainer/Energy/Hdrs/Spacer,
 	$TabContainer/Ores/Hdrs/Spacer,
 	$TabContainer/Volatiles/Hdrs/Spacer,
@@ -88,11 +88,11 @@ onready var _col0_spacers := [
 
 
 func _ready() -> void:
-	IVGlobal.connect("about_to_free_procedural_nodes", self, "_clear")
-	connect("visibility_changed", self, "_update_tab")
+	IVGlobal.connect("about_to_free_procedural_nodes", Callable(self, "_clear"))
+	connect("visibility_changed", Callable(self, "_update_tab"))
 	_selection_manager = IVWidgets.get_selection_manager(self)
-	_selection_manager.connect("selection_changed", self, "_update_tab")
-	_tab_container.connect("tab_changed", self, "_select_tab")
+	_selection_manager.connect("selection_changed", Callable(self, "_update_tab"))
+	_tab_container.connect("tab_changed", Callable(self, "_select_tab"))
 	# rename tabs for abreviated localization
 	$TabContainer/Energy.name = "TAB_MKS_ENERGY"
 	$TabContainer/Ores.name = "TAB_MKS_ORES"
@@ -102,7 +102,7 @@ func _ready() -> void:
 	$TabContainer/Biologicals.name = "TAB_MKS_BIOLOGICALS"
 	$TabContainer/Cyber.name = "TAB_MKS_CYBER"
 	for col0_spacer in _col0_spacers:
-		col0_spacer.rect_min_size.x = _name_column_width - 10.0
+		col0_spacer.custom_minimum_size.x = _name_column_width - 10.0
 	_tab_container.set_current_tab(_on_ready_tab)
 	_suppress_tab_listener = false
 	_update_tab()
@@ -110,10 +110,10 @@ func _ready() -> void:
 
 func _clear() -> void:
 	if _selection_manager:
-		_selection_manager.disconnect("selection_changed", self, "_update_tab")
+		_selection_manager.disconnect("selection_changed", Callable(self, "_update_tab"))
 		_selection_manager = null
-	disconnect("visibility_changed", self, "_update_tab")
-	_tab_container.disconnect("tab_changed", self, "_select_tab")
+	disconnect("visibility_changed", Callable(self, "_update_tab"))
+	_tab_container.disconnect("tab_changed", Callable(self, "_select_tab"))
 
 
 func timer_update() -> void:
@@ -206,9 +206,9 @@ func _update_tab_display(data: Array) -> void:
 			var label := Label.new()
 			label.size_flags_horizontal = SIZE_EXPAND_FILL
 			if column == 0: # resource name
-				label.rect_min_size.x = _name_column_width
+				label.custom_minimum_size.x = _name_column_width
 			else: # value
-				label.align = Label.ALIGN_CENTER
+				label.align = Label.ALIGNMENT_CENTER
 			hbox.add_child(label)
 			column += 1
 		vbox.add_child(hbox)

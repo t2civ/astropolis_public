@@ -35,17 +35,17 @@ var header_text := ""
 var _build_subpanels := false
 var _selection: IVSelection
 
-onready var _header_label: Label = $HeaderLabel
+@onready var _header_label: Label = $HeaderLabel
 
 
 func _ready() -> void:
-	IVGlobal.connect("about_to_free_procedural_nodes", self, "_clear")
-	$TRButtons/Pin.connect("pressed", self, "_clone_and_pin")
+	IVGlobal.connect("about_to_free_procedural_nodes", Callable(self, "_clear"))
+	$TRButtons/Pin.connect("pressed", Callable(self, "_clone_and_pin"))
 	if is_pinned:
-		$TRButtons/Close.connect("pressed", self, "_close")
+		$TRButtons/Close.connect("pressed", Callable(self, "_close"))
 		_init_after_system()
 	else:
-		IVGlobal.connect("system_tree_ready", self, "_init_after_system", [], CONNECT_ONESHOT)
+		IVGlobal.connect("system_tree_ready", Callable(self, "_init_after_system").bind(), CONNECT_ONE_SHOT)
 		$TRButtons/Close.hide()
 	if header_text:
 		_set_header(header_text)
@@ -68,11 +68,11 @@ func _init_after_system(_dummy := false) -> void:
 	if _build_subpanels:
 		var info_tab_margin := InfoTabMargin.new(true)
 		add_child(info_tab_margin)
-	yield(get_tree(), "idle_frame")
+	await get_tree().idle_frame
 	var itc: InfoTabContainer = get_node("InfoTabMargin/InfoTabContainer")
 	var subpanels := itc.subpanels
 	for subpanel in subpanels:
-		subpanel.connect("header_changed", self, "_set_header")
+		subpanel.connect("header_changed", Callable(self, "_set_header"))
 
 
 func _set_header(header_text_: String) -> void:

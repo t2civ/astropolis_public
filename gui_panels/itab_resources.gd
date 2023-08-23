@@ -35,16 +35,16 @@ var _selection_manager: SelectionManager
 
 var _header_suffix := "  -  " + tr("LABEL_RESOURCES")
 
-onready var _vbox: VBoxContainer = $VBox
-onready var _no_resources: Label = $NoResources
-onready var _resource_vbox: VBoxContainer = $"%ResourceVBox"
-onready var _memory: Dictionary = get_parent().memory # open states
+@onready var _vbox: VBoxContainer = $VBox
+@onready var _no_resources: Label = $NoResources
+@onready var _resource_vbox: VBoxContainer = $"%ResourceVBox"
+@onready var _memory: Dictionary = get_parent().memory # open states
 
 
 func _ready() -> void:
-	connect("visibility_changed", self, "_update_selection")
+	connect("visibility_changed", Callable(self, "_update_selection"))
 	_selection_manager = IVWidgets.get_selection_manager(self)
-	_selection_manager.connect("selection_changed", self, "_update_selection")
+	_selection_manager.connect("selection_changed", Callable(self, "_update_selection"))
 	var table_reader: TableReader = IVGlobal.program.TableReader
 	_composition_types = table_reader.get_names_enumeration("compositions")
 	_update_selection()
@@ -131,7 +131,7 @@ func _get_ai_data(data: Array) -> void:
 			var resource_data := [resource_type, mean, uncertainty, heterogeneity, deposits]
 			resources_data.append(resource_data)
 		
-		resources_data.sort_custom(self, "_sort_resources")
+		resources_data.sort_custom(Callable(self, "_sort_resources"))
 		
 		# appends below will be popped so resources_data is ready for StratumVBox
 		var evidence: String = _survey_names[survey_type]
@@ -263,7 +263,7 @@ class PolityVBox extends VBoxContainer:
 	func _init(memory: Dictionary) -> void:
 		_memory = memory
 		size_flags_horizontal = SIZE_FILL
-		_polity_header.connect("button_down", self, "_toggle_open_close")
+		_polity_header.connect("button_down", Callable(self, "_toggle_open_close"))
 		_polity_header.flat = true
 		_polity_header.align = Button.ALIGN_LEFT
 		_polity_header.size_flags_horizontal = SIZE_FILL
@@ -341,7 +341,7 @@ class StratumVBox extends VBoxContainer:
 	func _init(memory: Dictionary) -> void:
 		_memory = memory
 		size_flags_horizontal = SIZE_FILL
-		_stratum_header.connect("button_down", self, "_toggle_open_close")
+		_stratum_header.connect("button_down", Callable(self, "_toggle_open_close"))
 		_stratum_header.flat = true
 		_stratum_header.align = Button.ALIGN_LEFT
 		_stratum_header.size_flags_horizontal = SIZE_FILL
@@ -364,7 +364,7 @@ class StratumVBox extends VBoxContainer:
 		else:
 			_stratum_header.text = STRATUM_CLOSED_PREFIX + tr(stratum_name)
 			_resource_grid.hide()
-		_stratum_header.hint_tooltip = hint
+		_stratum_header.tooltip_text = hint
 		var n_resources := resources_data.size()
 		var n_cells_needed := N_COLUMNS * n_resources
 		var n_cells := _resource_grid.get_child_count()
@@ -374,9 +374,9 @@ class StratumVBox extends VBoxContainer:
 			var label := Label.new()
 			label.size_flags_horizontal = SIZE_EXPAND_FILL
 			if n_cells % N_COLUMNS == 0:
-				label.rect_min_size.x = 230
+				label.custom_minimum_size.x = 230
 			else:
-				label.align = Label.ALIGN_CENTER
+				label.align = Label.ALIGNMENT_CENTER
 			_resource_grid.add_child(label)
 			n_cells += 1
 		

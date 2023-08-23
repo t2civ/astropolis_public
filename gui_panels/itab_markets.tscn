@@ -3,102 +3,102 @@
 [ext_resource path="res://astropolis_public/gui_panels/itab_markets.gd" type="Script" id=1]
 
 [node name="Markets" type="MarginContainer"]
-margin_left = 7.0
-margin_top = 7.0
-margin_right = 568.0
-margin_bottom = 347.0
+offset_left = 7.0
+offset_top = 7.0
+offset_right = 568.0
+offset_bottom = 347.0
 mouse_filter = 1
-custom_constants/margin_right = -4
-custom_constants/margin_top = -8
-custom_constants/margin_left = -4
-custom_constants/margin_bottom = -4
+theme_override_constants/margin_right = -4
+theme_override_constants/margin_top = -8
+theme_override_constants/margin_left = -4
+theme_override_constants/margin_bottom = -4
 script = ExtResource( 1 )
 __meta__ = {
 "_edit_use_anchors_": false
 }
 
 [node name="TabContainer" type="TabContainer" parent="."]
-margin_left = -4.0
-margin_top = -8.0
-margin_right = 565.0
-margin_bottom = 344.0
+offset_left = -4.0
+offset_top = -8.0
+offset_right = 565.0
+offset_bottom = 344.0
 
 [node name="Energy" type="VBoxContainer" parent="TabContainer"]
 anchor_right = 1.0
 anchor_bottom = 1.0
-margin_left = 4.0
-margin_top = 32.0
-margin_right = -4.0
-margin_bottom = -4.0
+offset_left = 4.0
+offset_top = 32.0
+offset_right = -4.0
+offset_bottom = -4.0
 
 [node name="Hdrs" type="HBoxContainer" parent="TabContainer/Energy"]
-margin_right = 561.0
-margin_bottom = 14.0
+offset_right = 561.0
+offset_bottom = 14.0
 
 [node name="Spacer" type="Control" parent="TabContainer/Energy/Hdrs"]
-margin_right = 200.0
-margin_bottom = 14.0
-rect_min_size = Vector2( 200, 0 )
+offset_right = 200.0
+offset_bottom = 14.0
+custom_minimum_size = Vector2( 200, 0 )
 size_flags_horizontal = 3
 
 [node name="Hdr1" type="Label" parent="TabContainer/Energy/Hdrs"]
-margin_left = 204.0
-margin_right = 270.0
-margin_bottom = 14.0
+offset_left = 204.0
+offset_right = 270.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Price"
 align = 1
 
 [node name="Hdr2" type="Label" parent="TabContainer/Energy/Hdrs"]
-margin_left = 274.0
-margin_right = 340.0
-margin_bottom = 14.0
+offset_left = 274.0
+offset_right = 340.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Bids"
 align = 1
 
 [node name="Hdr3" type="Label" parent="TabContainer/Energy/Hdrs"]
-margin_left = 344.0
-margin_right = 411.0
-margin_bottom = 14.0
+offset_left = 344.0
+offset_right = 411.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Asks"
 align = 1
 
 [node name="Hdr4" type="Label" parent="TabContainer/Energy/Hdrs"]
-margin_left = 415.0
-margin_right = 481.0
-margin_bottom = 14.0
+offset_left = 415.0
+offset_right = 481.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Inventory"
 align = 1
 
 [node name="Hdr5" type="Label" parent="TabContainer/Energy/Hdrs"]
-margin_left = 485.0
-margin_right = 552.0
-margin_bottom = 14.0
+offset_left = 485.0
+offset_right = 552.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Contracts"
 align = 1
 
 [node name="Spacer2" type="Control" parent="TabContainer/Energy/Hdrs"]
-margin_left = 556.0
-margin_right = 561.0
-margin_bottom = 14.0
-rect_min_size = Vector2( 5, 0 )
+offset_left = 556.0
+offset_right = 561.0
+offset_bottom = 14.0
+custom_minimum_size = Vector2( 5, 0 )
 
 [node name="Scroll" type="ScrollContainer" parent="TabContainer/Energy"]
-margin_top = 18.0
-margin_right = 561.0
-margin_bottom = 316.0
+offset_top = 18.0
+offset_right = 561.0
+offset_bottom = 316.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 scroll_horizontal_enabled = false
 
 [node name="EnergyVBox" type="VBoxContainer" parent="TabContainer/Energy/Scroll"]
 unique_name_in_owner = true
-margin_right = 561.0
-margin_bottom = 298.0
+offset_right = 561.0
+offset_bottom = 298.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
@@ -106,79 +106,79 @@ size_flags_vertical = 3
 visible = false
 anchor_right = 1.0
 anchor_bottom = 1.0
-margin_left = 4.0
-margin_top = 32.0
-margin_right = -4.0
-margin_bottom = -4.0
+offset_left = 4.0
+offset_top = 32.0
+offset_right = -4.0
+offset_bottom = -4.0
 
 [node name="Hdrs" type="HBoxContainer" parent="TabContainer/Ores"]
-margin_right = 561.0
-margin_bottom = 14.0
+offset_right = 561.0
+offset_bottom = 14.0
 
 [node name="Spacer" type="Control" parent="TabContainer/Ores/Hdrs"]
-margin_right = 200.0
-margin_bottom = 14.0
-rect_min_size = Vector2( 200, 0 )
+offset_right = 200.0
+offset_bottom = 14.0
+custom_minimum_size = Vector2( 200, 0 )
 size_flags_horizontal = 3
 
 [node name="Hdr1" type="Label" parent="TabContainer/Ores/Hdrs"]
-margin_left = 204.0
-margin_right = 267.0
-margin_bottom = 14.0
+offset_left = 204.0
+offset_right = 267.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Price"
 align = 1
 
 [node name="Hdr2" type="Label" parent="TabContainer/Ores/Hdrs"]
-margin_left = 271.0
-margin_right = 334.0
-margin_bottom = 14.0
+offset_left = 271.0
+offset_right = 334.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Bids"
 align = 1
 
 [node name="Hdr3" type="Label" parent="TabContainer/Ores/Hdrs"]
-margin_left = 338.0
-margin_right = 402.0
-margin_bottom = 14.0
+offset_left = 338.0
+offset_right = 402.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Asks"
 align = 1
 
 [node name="Hdr4" type="Label" parent="TabContainer/Ores/Hdrs"]
-margin_left = 406.0
-margin_right = 469.0
-margin_bottom = 14.0
+offset_left = 406.0
+offset_right = 469.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Inventory"
 align = 1
 
 [node name="Hdr5" type="Label" parent="TabContainer/Ores/Hdrs"]
-margin_left = 473.0
-margin_right = 537.0
-margin_bottom = 14.0
+offset_left = 473.0
+offset_right = 537.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Contracts"
 align = 1
 
 [node name="Spacer2" type="Control" parent="TabContainer/Ores/Hdrs"]
-margin_left = 541.0
-margin_right = 561.0
-margin_bottom = 14.0
-rect_min_size = Vector2( 5, 0 )
+offset_left = 541.0
+offset_right = 561.0
+offset_bottom = 14.0
+custom_minimum_size = Vector2( 5, 0 )
 
 [node name="Scroll" type="ScrollContainer" parent="TabContainer/Ores"]
-margin_top = 18.0
-margin_right = 561.0
-margin_bottom = 316.0
+offset_top = 18.0
+offset_right = 561.0
+offset_bottom = 316.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 scroll_horizontal_enabled = false
 
 [node name="OresVBox" type="VBoxContainer" parent="TabContainer/Ores/Scroll"]
 unique_name_in_owner = true
-margin_right = 561.0
-margin_bottom = 298.0
+offset_right = 561.0
+offset_bottom = 298.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
@@ -186,79 +186,79 @@ size_flags_vertical = 3
 visible = false
 anchor_right = 1.0
 anchor_bottom = 1.0
-margin_left = 4.0
-margin_top = 32.0
-margin_right = -4.0
-margin_bottom = -4.0
+offset_left = 4.0
+offset_top = 32.0
+offset_right = -4.0
+offset_bottom = -4.0
 
 [node name="Hdrs" type="HBoxContainer" parent="TabContainer/Volatiles"]
-margin_right = 561.0
-margin_bottom = 14.0
+offset_right = 561.0
+offset_bottom = 14.0
 
 [node name="Spacer" type="Control" parent="TabContainer/Volatiles/Hdrs"]
-margin_right = 200.0
-margin_bottom = 14.0
-rect_min_size = Vector2( 200, 0 )
+offset_right = 200.0
+offset_bottom = 14.0
+custom_minimum_size = Vector2( 200, 0 )
 size_flags_horizontal = 3
 
 [node name="Hdr1" type="Label" parent="TabContainer/Volatiles/Hdrs"]
-margin_left = 204.0
-margin_right = 267.0
-margin_bottom = 14.0
+offset_left = 204.0
+offset_right = 267.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Price"
 align = 1
 
 [node name="Hdr2" type="Label" parent="TabContainer/Volatiles/Hdrs"]
-margin_left = 271.0
-margin_right = 334.0
-margin_bottom = 14.0
+offset_left = 271.0
+offset_right = 334.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Bids"
 align = 1
 
 [node name="Hdr3" type="Label" parent="TabContainer/Volatiles/Hdrs"]
-margin_left = 338.0
-margin_right = 402.0
-margin_bottom = 14.0
+offset_left = 338.0
+offset_right = 402.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Asks"
 align = 1
 
 [node name="Hdr4" type="Label" parent="TabContainer/Volatiles/Hdrs"]
-margin_left = 406.0
-margin_right = 469.0
-margin_bottom = 14.0
+offset_left = 406.0
+offset_right = 469.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Inventory"
 align = 1
 
 [node name="Hdr5" type="Label" parent="TabContainer/Volatiles/Hdrs"]
-margin_left = 473.0
-margin_right = 537.0
-margin_bottom = 14.0
+offset_left = 473.0
+offset_right = 537.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Contracts"
 align = 1
 
 [node name="Spacer2" type="Control" parent="TabContainer/Volatiles/Hdrs"]
-margin_left = 541.0
-margin_right = 561.0
-margin_bottom = 14.0
-rect_min_size = Vector2( 5, 0 )
+offset_left = 541.0
+offset_right = 561.0
+offset_bottom = 14.0
+custom_minimum_size = Vector2( 5, 0 )
 
 [node name="Scroll" type="ScrollContainer" parent="TabContainer/Volatiles"]
-margin_top = 18.0
-margin_right = 561.0
-margin_bottom = 316.0
+offset_top = 18.0
+offset_right = 561.0
+offset_bottom = 316.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 scroll_horizontal_enabled = false
 
 [node name="VolatilesVBox" type="VBoxContainer" parent="TabContainer/Volatiles/Scroll"]
 unique_name_in_owner = true
-margin_right = 561.0
-margin_bottom = 298.0
+offset_right = 561.0
+offset_bottom = 298.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
@@ -266,79 +266,79 @@ size_flags_vertical = 3
 visible = false
 anchor_right = 1.0
 anchor_bottom = 1.0
-margin_left = 4.0
-margin_top = 32.0
-margin_right = -4.0
-margin_bottom = -4.0
+offset_left = 4.0
+offset_top = 32.0
+offset_right = -4.0
+offset_bottom = -4.0
 
 [node name="Hdrs" type="HBoxContainer" parent="TabContainer/Materials"]
-margin_right = 561.0
-margin_bottom = 14.0
+offset_right = 561.0
+offset_bottom = 14.0
 
 [node name="Spacer" type="Control" parent="TabContainer/Materials/Hdrs"]
-margin_right = 200.0
-margin_bottom = 14.0
-rect_min_size = Vector2( 200, 0 )
+offset_right = 200.0
+offset_bottom = 14.0
+custom_minimum_size = Vector2( 200, 0 )
 size_flags_horizontal = 3
 
 [node name="Hdr1" type="Label" parent="TabContainer/Materials/Hdrs"]
-margin_left = 204.0
-margin_right = 267.0
-margin_bottom = 14.0
+offset_left = 204.0
+offset_right = 267.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Price"
 align = 1
 
 [node name="Hdr2" type="Label" parent="TabContainer/Materials/Hdrs"]
-margin_left = 271.0
-margin_right = 334.0
-margin_bottom = 14.0
+offset_left = 271.0
+offset_right = 334.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Bids"
 align = 1
 
 [node name="Hdr3" type="Label" parent="TabContainer/Materials/Hdrs"]
-margin_left = 338.0
-margin_right = 402.0
-margin_bottom = 14.0
+offset_left = 338.0
+offset_right = 402.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Asks"
 align = 1
 
 [node name="Hdr4" type="Label" parent="TabContainer/Materials/Hdrs"]
-margin_left = 406.0
-margin_right = 469.0
-margin_bottom = 14.0
+offset_left = 406.0
+offset_right = 469.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Inventory"
 align = 1
 
 [node name="Hdr5" type="Label" parent="TabContainer/Materials/Hdrs"]
-margin_left = 473.0
-margin_right = 537.0
-margin_bottom = 14.0
+offset_left = 473.0
+offset_right = 537.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Contracts"
 align = 1
 
 [node name="Spacer2" type="Control" parent="TabContainer/Materials/Hdrs"]
-margin_left = 541.0
-margin_right = 561.0
-margin_bottom = 14.0
-rect_min_size = Vector2( 5, 0 )
+offset_left = 541.0
+offset_right = 561.0
+offset_bottom = 14.0
+custom_minimum_size = Vector2( 5, 0 )
 
 [node name="Scroll" type="ScrollContainer" parent="TabContainer/Materials"]
-margin_top = 18.0
-margin_right = 561.0
-margin_bottom = 316.0
+offset_top = 18.0
+offset_right = 561.0
+offset_bottom = 316.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 scroll_horizontal_enabled = false
 
 [node name="MaterialsVBox" type="VBoxContainer" parent="TabContainer/Materials/Scroll"]
 unique_name_in_owner = true
-margin_right = 561.0
-margin_bottom = 298.0
+offset_right = 561.0
+offset_bottom = 298.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
@@ -346,79 +346,79 @@ size_flags_vertical = 3
 visible = false
 anchor_right = 1.0
 anchor_bottom = 1.0
-margin_left = 4.0
-margin_top = 32.0
-margin_right = -4.0
-margin_bottom = -4.0
+offset_left = 4.0
+offset_top = 32.0
+offset_right = -4.0
+offset_bottom = -4.0
 
 [node name="Hdrs" type="HBoxContainer" parent="TabContainer/Manufactured"]
-margin_right = 561.0
-margin_bottom = 14.0
+offset_right = 561.0
+offset_bottom = 14.0
 
 [node name="Spacer" type="Control" parent="TabContainer/Manufactured/Hdrs"]
-margin_right = 200.0
-margin_bottom = 14.0
-rect_min_size = Vector2( 200, 0 )
+offset_right = 200.0
+offset_bottom = 14.0
+custom_minimum_size = Vector2( 200, 0 )
 size_flags_horizontal = 3
 
 [node name="Hdr1" type="Label" parent="TabContainer/Manufactured/Hdrs"]
-margin_left = 204.0
-margin_right = 267.0
-margin_bottom = 14.0
+offset_left = 204.0
+offset_right = 267.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Price"
 align = 1
 
 [node name="Hdr2" type="Label" parent="TabContainer/Manufactured/Hdrs"]
-margin_left = 271.0
-margin_right = 334.0
-margin_bottom = 14.0
+offset_left = 271.0
+offset_right = 334.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Bids"
 align = 1
 
 [node name="Hdr3" type="Label" parent="TabContainer/Manufactured/Hdrs"]
-margin_left = 338.0
-margin_right = 402.0
-margin_bottom = 14.0
+offset_left = 338.0
+offset_right = 402.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Asks"
 align = 1
 
 [node name="Hdr4" type="Label" parent="TabContainer/Manufactured/Hdrs"]
-margin_left = 406.0
-margin_right = 469.0
-margin_bottom = 14.0
+offset_left = 406.0
+offset_right = 469.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Inventory"
 align = 1
 
 [node name="Hdr5" type="Label" parent="TabContainer/Manufactured/Hdrs"]
-margin_left = 473.0
-margin_right = 537.0
-margin_bottom = 14.0
+offset_left = 473.0
+offset_right = 537.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Contracts"
 align = 1
 
 [node name="Spacer2" type="Control" parent="TabContainer/Manufactured/Hdrs"]
-margin_left = 541.0
-margin_right = 561.0
-margin_bottom = 14.0
-rect_min_size = Vector2( 5, 0 )
+offset_left = 541.0
+offset_right = 561.0
+offset_bottom = 14.0
+custom_minimum_size = Vector2( 5, 0 )
 
 [node name="Scroll" type="ScrollContainer" parent="TabContainer/Manufactured"]
-margin_top = 18.0
-margin_right = 561.0
-margin_bottom = 316.0
+offset_top = 18.0
+offset_right = 561.0
+offset_bottom = 316.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 scroll_horizontal_enabled = false
 
 [node name="ManufacturedVBox" type="VBoxContainer" parent="TabContainer/Manufactured/Scroll"]
 unique_name_in_owner = true
-margin_right = 561.0
-margin_bottom = 298.0
+offset_right = 561.0
+offset_bottom = 298.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
@@ -426,164 +426,164 @@ size_flags_vertical = 3
 visible = false
 anchor_right = 1.0
 anchor_bottom = 1.0
-margin_left = 4.0
-margin_top = 32.0
-margin_right = -4.0
-margin_bottom = -4.0
+offset_left = 4.0
+offset_top = 32.0
+offset_right = -4.0
+offset_bottom = -4.0
 
 [node name="Hdrs" type="HBoxContainer" parent="TabContainer/Biologicals"]
-margin_right = 561.0
-margin_bottom = 14.0
+offset_right = 561.0
+offset_bottom = 14.0
 
 [node name="Spacer" type="Control" parent="TabContainer/Biologicals/Hdrs"]
-margin_right = 200.0
-margin_bottom = 14.0
-rect_min_size = Vector2( 200, 0 )
+offset_right = 200.0
+offset_bottom = 14.0
+custom_minimum_size = Vector2( 200, 0 )
 size_flags_horizontal = 3
 
 [node name="Hdr1" type="Label" parent="TabContainer/Biologicals/Hdrs"]
-margin_left = 204.0
-margin_right = 267.0
-margin_bottom = 14.0
+offset_left = 204.0
+offset_right = 267.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Price"
 align = 1
 
 [node name="Hdr2" type="Label" parent="TabContainer/Biologicals/Hdrs"]
-margin_left = 271.0
-margin_right = 334.0
-margin_bottom = 14.0
+offset_left = 271.0
+offset_right = 334.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Bids"
 align = 1
 
 [node name="Hdr3" type="Label" parent="TabContainer/Biologicals/Hdrs"]
-margin_left = 338.0
-margin_right = 402.0
-margin_bottom = 14.0
+offset_left = 338.0
+offset_right = 402.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Asks"
 align = 1
 
 [node name="Hdr4" type="Label" parent="TabContainer/Biologicals/Hdrs"]
-margin_left = 406.0
-margin_right = 469.0
-margin_bottom = 14.0
+offset_left = 406.0
+offset_right = 469.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Inventory"
 align = 1
 
 [node name="Hdr5" type="Label" parent="TabContainer/Biologicals/Hdrs"]
-margin_left = 473.0
-margin_right = 537.0
-margin_bottom = 14.0
+offset_left = 473.0
+offset_right = 537.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Contracts"
 align = 1
 
 [node name="Spacer2" type="Control" parent="TabContainer/Biologicals/Hdrs"]
-margin_left = 541.0
-margin_right = 561.0
-margin_bottom = 14.0
-rect_min_size = Vector2( 5, 0 )
+offset_left = 541.0
+offset_right = 561.0
+offset_bottom = 14.0
+custom_minimum_size = Vector2( 5, 0 )
 
 [node name="Scroll" type="ScrollContainer" parent="TabContainer/Biologicals"]
-margin_top = 18.0
-margin_right = 561.0
-margin_bottom = 316.0
+offset_top = 18.0
+offset_right = 561.0
+offset_bottom = 316.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 scroll_horizontal_enabled = false
 
 [node name="BiologicalsVBox" type="VBoxContainer" parent="TabContainer/Biologicals/Scroll"]
 unique_name_in_owner = true
-margin_right = 561.0
-margin_bottom = 298.0
+offset_right = 561.0
+offset_bottom = 298.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
 [node name="Cyber" type="VBoxContainer" parent="TabContainer"]
 visible = false
-margin_right = 40.0
-margin_bottom = 40.0
+offset_right = 40.0
+offset_bottom = 40.0
 
 [node name="Hdrs" type="HBoxContainer" parent="TabContainer/Cyber"]
-margin_right = 561.0
-margin_bottom = 14.0
+offset_right = 561.0
+offset_bottom = 14.0
 
 [node name="Spacer" type="Control" parent="TabContainer/Cyber/Hdrs"]
-margin_right = 200.0
-margin_bottom = 14.0
-rect_min_size = Vector2( 200, 0 )
+offset_right = 200.0
+offset_bottom = 14.0
+custom_minimum_size = Vector2( 200, 0 )
 size_flags_horizontal = 3
 
 [node name="Hdr1" type="Label" parent="TabContainer/Cyber/Hdrs"]
-margin_left = 204.0
-margin_right = 267.0
-margin_bottom = 14.0
+offset_left = 204.0
+offset_right = 267.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Price"
 align = 1
 
 [node name="Hdr2" type="Label" parent="TabContainer/Cyber/Hdrs"]
-margin_left = 271.0
-margin_right = 334.0
-margin_bottom = 14.0
+offset_left = 271.0
+offset_right = 334.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Bids"
 align = 1
 
 [node name="Hdr3" type="Label" parent="TabContainer/Cyber/Hdrs"]
-margin_left = 338.0
-margin_right = 402.0
-margin_bottom = 14.0
+offset_left = 338.0
+offset_right = 402.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Asks"
 align = 1
 
 [node name="Hdr4" type="Label" parent="TabContainer/Cyber/Hdrs"]
-margin_left = 406.0
-margin_right = 469.0
-margin_bottom = 14.0
+offset_left = 406.0
+offset_right = 469.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Inventory"
 align = 1
 
 [node name="Hdr5" type="Label" parent="TabContainer/Cyber/Hdrs"]
-margin_left = 473.0
-margin_right = 537.0
-margin_bottom = 14.0
+offset_left = 473.0
+offset_right = 537.0
+offset_bottom = 14.0
 size_flags_horizontal = 3
 text = "Contracts"
 align = 1
 
 [node name="Spacer2" type="Control" parent="TabContainer/Cyber/Hdrs"]
-margin_left = 541.0
-margin_right = 561.0
-margin_bottom = 14.0
-rect_min_size = Vector2( 5, 0 )
+offset_left = 541.0
+offset_right = 561.0
+offset_bottom = 14.0
+custom_minimum_size = Vector2( 5, 0 )
 
 [node name="Scroll" type="ScrollContainer" parent="TabContainer/Cyber"]
-margin_top = 18.0
-margin_right = 561.0
-margin_bottom = 316.0
+offset_top = 18.0
+offset_right = 561.0
+offset_bottom = 316.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 scroll_horizontal_enabled = false
 
 [node name="CyberVBox" type="VBoxContainer" parent="TabContainer/Cyber/Scroll"]
 unique_name_in_owner = true
-margin_right = 561.0
-margin_bottom = 298.0
+offset_right = 561.0
+offset_bottom = 298.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
 [node name="NoMarkets" type="Label" parent="."]
 visible = false
-margin_left = -4.0
-margin_top = 161.0
-margin_right = 565.0
-margin_bottom = 175.0
+offset_left = -4.0
+offset_top = 161.0
+offset_right = 565.0
+offset_bottom = 175.0
 text = "LABEL_NO_MARKETS"
 align = 1
 valign = 1

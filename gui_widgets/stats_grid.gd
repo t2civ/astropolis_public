@@ -44,9 +44,9 @@ var _network_targets: Array
 var _network_fallback_names: Array
 var _network_replacement_names: Array
 
-onready var _quantity_formatter: IVQuantityFormatter = IVGlobal.program.QuantityFormatter
-onready var _tree: SceneTree = get_tree()
-onready var _grid: GridContainer = $Grid
+@onready var _quantity_formatter: IVQuantityFormatter = IVGlobal.program.QuantityFormatter
+@onready var _tree: SceneTree = get_tree()
+@onready var _grid: GridContainer = $Grid
 
 
 func update_targets(targets_: Array, replacement_names_ := [], fallback_names_ := []) -> void:
@@ -183,7 +183,7 @@ func _build_grid(data: Array) -> void:
 	var n_cells := _grid.get_child_count()
 	while n_cells < n_cells_needed:
 		var label := Label.new()
-		label.align = Label.ALIGN_CENTER
+		label.align = Label.ALIGNMENT_CENTER
 		label.size_flags_horizontal = SIZE_EXPAND_FILL
 		_grid.add_child(label)
 		n_cells += 1
@@ -194,7 +194,7 @@ func _build_grid(data: Array) -> void:
 		var header_label: Label = _grid.get_child(column)
 		var header_text: String = data[column]
 		header_label.text = header_text
-		header_label.align = Label.ALIGN_CENTER
+		header_label.align = Label.ALIGNMENT_CENTER
 		header_label.show()
 		column += 1
 		

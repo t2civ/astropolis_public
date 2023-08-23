@@ -8,7 +8,7 @@ class_name InfoCloner
 
 
 func _project_init() -> void:
-	IVGlobal.connect("system_tree_ready", self, "_on_system_tree_ready")
+	IVGlobal.connect("system_tree_ready", Callable(self, "_on_system_tree_ready"))
 
 
 func _on_system_tree_ready(_is_new_game: bool) -> void:
@@ -16,7 +16,7 @@ func _on_system_tree_ready(_is_new_game: bool) -> void:
 	for child in astro_gui.get_children():
 		var info_panel := child as InfoPanel
 		if info_panel:
-			info_panel.connect("clone_and_pin_requested", self, "_pin_info_panel")
+			info_panel.connect("clone_and_pin_requested", Callable(self, "_pin_info_panel"))
 
 
 func _pin_info_panel(info_panel: InfoPanel) -> void:
@@ -44,7 +44,7 @@ func _pin_info_panel(info_panel: InfoPanel) -> void:
 
 	# clone InfoPanel (no persist properties we need to worry about)
 	var panel_clone: InfoPanel = IVFiles.make_object_or_scene(InfoPanel)
-	panel_clone.connect("clone_and_pin_requested", self, "_pin_info_panel")
+	panel_clone.connect("clone_and_pin_requested", Callable(self, "_pin_info_panel"))
 	panel_clone.selection_manager = sm_clone
 	panel_clone.is_pinned = true
 	panel_clone.header_text = info_panel.header_text
@@ -55,9 +55,9 @@ func _pin_info_panel(info_panel: InfoPanel) -> void:
 	panel_clone.add_child(sm_clone)
 	panel_clone.add_child(itm_clone)
 	# TODO: Smarter positioning of cloned panel
-	panel_clone.set_anchors_and_margins_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE)
+	panel_clone.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE)
 	# delay and do some finish work
-	yield(IVGlobal.get_tree(), "idle_frame")
+	await IVGlobal.get_tree().idle_frame
 	panel_clone.get_node("ControlMod").finish_move()
 
 
