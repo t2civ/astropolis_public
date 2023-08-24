@@ -14,10 +14,10 @@ enum { # _dirty_values
 # save/load persistence for server only
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 const PERSIST_PROPERTIES := [
-	"computations",
-	"diversity_model",
-	"yq",
-	"_dirty_values",
+	&"computations",
+	&"diversity_model",
+	&"yq",
+	&"_dirty_values",
 ]
 
 var computations := 0.0
@@ -128,10 +128,4 @@ func sync_server_changes(data: Array, k: int) -> int:
 				diversity_model[key] = change
 			i += 1
 	return k
-
-
-
-
-
-
 

@@ -287,3 +287,4 @@ static func is_valid_unit(unit: String, preprocess := false,
 			assert(space_pos > 3, "A space must follow '10^xx'")
 			unit = unit.substr(space_pos + 1, 999)
 	return multipliers.has(unit) or functions.has(unit)
+

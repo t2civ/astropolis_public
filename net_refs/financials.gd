@@ -16,11 +16,11 @@ enum { # _dirty_values
 
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 const PERSIST_PROPERTIES := [
-	"yq",
-	"revenue",
-	"accountings",
-	"_dirty_values",
-	"_dirty_accountings",
+	&"yq",
+	&"revenue",
+	&"accountings",
+	&"_dirty_values",
+	&"_dirty_accountings",
 ]
 
 # interface sync
@@ -93,5 +93,4 @@ func sync_server_changes(data: Array, k: int) -> int:
 		k += 1
 	k = _add_dirty(data, accountings, k)
 	return k
-
 
