@@ -5,8 +5,8 @@
 [ext_resource path="res://astropolis_public/gui_widgets/stats_grid.tscn" type="PackedScene" id=3]
 
 [node name="DevelopmentPanel" type="PanelContainer"]
-margin_right = 424.0
-margin_bottom = 209.0
+offset_right = 424.0
+offset_bottom = 209.0
 mouse_filter = 1
 size_flags_horizontal = 0
 size_flags_vertical = 0
@@ -16,7 +16,7 @@ __meta__ = {
 }
 
 [node name="StatsGrid" parent="." instance=ExtResource( 3 )]
-margin_right = 417.0
+offset_right = 417.0
 
 [node name="ControlMod" parent="." instance=ExtResource( 2 )]
 

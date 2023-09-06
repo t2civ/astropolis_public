@@ -13,30 +13,30 @@ extends NetRef
 # save/load persistence for server only
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 const PERSIST_PROPERTIES := [
-	"yq",
-	"reserves",
-	"markets",
-	"in_transits",
-	"contracteds",
-	"prices",
-	"bids",
-	"asks",
-	"_dirty_reserves_1",
-	"_dirty_reserves_2",
-	"_dirty_internal_markets_1",
-	"_dirty_internal_markets_2",
-	"_dirty_markets_1",
-	"_dirty_markets_2",
-	"_dirty_in_transits_1",
-	"_dirty_in_transits_2",
-	"_dirty_contracteds_1",
-	"_dirty_contracteds_2",
-	"_dirty_prices_1",
-	"_dirty_prices_2",
-	"_dirty_bids_1",
-	"_dirty_bids_2",
-	"_dirty_asks_1",
-	"_dirty_asks_2",
+	&"yq",
+	&"reserves",
+	&"markets",
+	&"in_transits",
+	&"contracteds",
+	&"prices",
+	&"bids",
+	&"asks",
+	&"_dirty_reserves_1",
+	&"_dirty_reserves_2",
+	&"_dirty_internal_markets_1",
+	&"_dirty_internal_markets_2",
+	&"_dirty_markets_1",
+	&"_dirty_markets_2",
+	&"_dirty_in_transits_1",
+	&"_dirty_in_transits_2",
+	&"_dirty_contracteds_1",
+	&"_dirty_contracteds_2",
+	&"_dirty_prices_1",
+	&"_dirty_prices_2",
+	&"_dirty_bids_1",
+	&"_dirty_bids_2",
+	&"_dirty_asks_1",
+	&"_dirty_asks_2",
 ]
 
 
@@ -201,6 +201,4 @@ func sync_server_changes(data: Array, k: int) -> int:
 	k = _set_dirty(data, asks, k, 64) # not accumulator!
 	
 	return k
-
-
 

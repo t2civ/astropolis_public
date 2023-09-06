@@ -33,27 +33,27 @@ const FREE_RESOURCE_MIN_FRACTION := 0.1
 
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 const PERSIST_PROPERTIES := [
-	"name",
-	"stratum_type",
-	"polity_name",
-	"body_radius",
-	"outer_depth",
-	"thickness",
-	"spherical_fraction",
-	"area",
-	"density",
-	"volume",
-	"total_mass",
-	"masses",
-	"heterogeneities",
-	"survey_type",
-	"may_have_free_resources",
-	"density_bias",
-	"masses_biases",
-	"heterogeneities_biases",
-	"_dirty_values",
-	"_dirty_masses",
-	"_dirty_heterogeneities",
+	&"name",
+	&"stratum_type",
+	&"polity_name",
+	&"body_radius",
+	&"outer_depth",
+	&"thickness",
+	&"spherical_fraction",
+	&"area",
+	&"density",
+	&"volume",
+	&"total_mass",
+	&"masses",
+	&"heterogeneities",
+	&"survey_type",
+	&"may_have_free_resources",
+	&"density_bias",
+	&"masses_biases",
+	&"heterogeneities_biases",
+	&"_dirty_values",
+	&"_dirty_masses",
+	&"_dirty_heterogeneities",
 ]
 
 var name: String
@@ -96,7 +96,7 @@ var _extraction_resources: Array = _tables.extraction_resources # maps index to 
 var _resource_extractions: Array = _tables.resource_extractions # maps resource_type to index
 var _survey_density_errors: Array = _tables.surveys.density_error # coeff of variation
 var _survey_masses_errors: Array = _tables.surveys.masses_error
-var _survey_heterogeneities_errors: Array = _tables.surveys.heterogeneities_error
+#var _survey_heterogeneities_errors: Array = _tables.surveys.heterogeneities_error
 var _survey_deposits_sds: Array = _tables.surveys.deposits_sigma
 
 
@@ -397,5 +397,4 @@ func calculate_volume_and_total_mass() -> void:
 	
 	total_mass = volume * density
 	_needs_volume_mass_calculation = false
-
 

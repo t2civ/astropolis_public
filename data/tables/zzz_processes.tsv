@@ -1,4 +1,5 @@
 name	process_class	module_type	is_extraction	is_solar	solar_offset	power	input1	input1q	input2	input2q	input3	input3q	output1	output1q	output2	output2q	output3	output3q	output4	output4q	output5	output5q	output6	output6q	#comments
+@DONT_PARSE																									
 Type	INT	INT	BOOL	BOOL	REAL	REAL	INT	REAL	INT	REAL	INT	REAL	INT	REAL	INT	REAL	INT	REAL	INT	REAL	INT	REAL	INT	REAL	
 Unit						GJ/d		t/d		t/d		t/d		t/d		t/d		t/d		t/d		t/d		t/d	
 Prefix/PROCESS_	PROCESS_CLASS_	MODULE_					RESOURCE_		RESOURCE_		RESOURCE_		RESOURCE_		RESOURCE_		RESOURCE_		RESOURCE_		RESOURCE_		RESOURCE_		

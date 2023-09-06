@@ -9,47 +9,47 @@ anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-margin_left = -287.5
-margin_top = -354.0
-margin_right = 287.5
+offset_left = -287.5
+offset_top = -354.0
+offset_right = 287.5
 script = ExtResource( 1 )
 __meta__ = {
 "_edit_use_anchors_": false
 }
 
 [node name="SelectionButtons" parent="." instance=ExtResource( 4 )]
-margin_left = 7.0
-margin_top = 7.0
-margin_right = 74.0
-margin_bottom = 27.0
+offset_left = 7.0
+offset_top = 7.0
+offset_right = 74.0
+offset_bottom = 27.0
 
 [node name="HeaderLabel" type="Label" parent="."]
-margin_left = 287.0
-margin_top = 7.0
-margin_right = 287.0
-margin_bottom = 21.0
+offset_left = 287.0
+offset_top = 7.0
+offset_right = 287.0
+offset_bottom = 21.0
 size_flags_horizontal = 4
 size_flags_vertical = 0
 
 [node name="TRButtons" type="HBoxContainer" parent="."]
-margin_left = 525.0
-margin_top = 7.0
-margin_right = 568.0
-margin_bottom = 27.0
+offset_left = 525.0
+offset_top = 7.0
+offset_right = 568.0
+offset_bottom = 27.0
 size_flags_horizontal = 8
 size_flags_vertical = 0
 
 [node name="Pin" type="Button" parent="TRButtons"]
-margin_right = 20.0
-margin_bottom = 20.0
-hint_tooltip = "LABEL_CLONE_AND_PIN"
+offset_right = 20.0
+offset_bottom = 20.0
+tooltip_text = "LABEL_CLONE_AND_PIN"
 text = "*"
 
 [node name="Close" type="Button" parent="TRButtons"]
-margin_left = 24.0
-margin_right = 43.0
-margin_bottom = 20.0
-hint_tooltip = "LABEL_CLOSE"
+offset_left = 24.0
+offset_right = 43.0
+offset_bottom = 20.0
+tooltip_text = "LABEL_CLOSE"
 text = "x"
 
 [node name="ControlMod" parent="." instance=ExtResource( 2 )]

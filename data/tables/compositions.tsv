@@ -1,5 +1,5 @@
-name	init_open	#reveal_tech	#mine_tech	#well_tech	body_class	body	stratum	major_stratum	polity	outer_depth	thickness	spherical_fraction	area	density	#volume	#mass	inner_pressure	survey	thickness_uncert	density_uncert	masses_uncert	heterogeneities_uncert
-Type	BOOL	INT	INT	INT	INT	STRING	INT	INT	STRING	REAL	REAL	REAL	REAL	REAL	REAL	REAL	REAL	INT	REAL	REAL	REAL	REAL
+	init_open	#reveal_tech	#mine_tech	#well_tech	body_class	body	stratum	major_stratum	polity	outer_depth	thickness	spherical_fraction	area	density	#volume	#mass	inner_pressure	survey	thickness_uncert	density_uncert	masses_uncert	heterogeneities_uncert
+Type	BOOL	INT	INT	INT	INT	STRING	INT	INT	STRING	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	INT	FLOAT	FLOAT	FLOAT	FLOAT
 Unit										km	km		km^2	g/cm^3	km^3	t	Pa					
 Default																			0	0	0	0
 Prefix/COMPOSITION_					BODY_CLASS_		STRATUM_	MAJOR_STRATUM_	POLITY_									SURVEY_				
@@ -55,4 +55,3 @@ PLANET_CERES_STRATUM_UPPER_CRUST	x					PLANET_CERES	UPPER_CRUST	UPPER_CRUST		0	4
 PLANET_CERES_STRATUM_LOWER_CRUST_INTER_LAYER	x					PLANET_CERES	LOWER_CRUST_INTER_LAYER	LOWER_CRUST_INTER_LAYER		40	60	1		2				THEORETICAL_DISPUTED	0.8	0.8	0.8	0.8
 PLANET_CERES_STRATUM_MANTLE						PLANET_CERES	MANTLE	MANTLE		100	160	1		2.4				THEORETICAL_DISPUTED	0.8	0.8	0.8	0.8
 PLANET_CERES_STRATUM_CORE						PLANET_CERES	CORE	CORE		260		1		2.4				THEORETICAL_DISPUTED	0.8	0.8	0.8	0.8
-#																						

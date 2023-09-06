@@ -65,10 +65,10 @@ var _n_resources_is_extraction := _resources_is_extraction.size()
 var _resource_names: Array = _tables.resources.name
 
 
-onready var _memory: Dictionary = get_parent().memory # open states
-onready var _no_ops_label: Label = $NoOpsLabel
-onready var _tab_container: TabContainer = $TabContainer
-onready var _vboxes := [
+@onready var _memory: Dictionary = get_parent().memory # open states
+@onready var _no_ops_label: Label = $NoOpsLabel
+@onready var _tab_container: TabContainer = $TabContainer
+@onready var _vboxes := [
 	$"%EnergyVBox",
 	$"%ExtractionVBox",
 	$"%RefiningVBox",
@@ -76,7 +76,7 @@ onready var _vboxes := [
 	$"%BiomesVBox",
 	$"%ServicesVBox",
 ]
-onready var _col0_spacers := [
+@onready var _col0_spacers := [
 	$TabContainer/Energy/Hdrs/Spacer,
 	$TabContainer/Extraction/Hdrs/Spacer,
 	$TabContainer/Refining/Hdrs/Spacer,
@@ -84,7 +84,7 @@ onready var _col0_spacers := [
 	$TabContainer/Biomes/Hdrs/Spacer,
 	$TabContainer/Services/Hdrs/Spacer,
 ]
-onready var _revenue_hdrs := [
+@onready var _revenue_hdrs := [
 	$TabContainer/Energy/Hdrs/Hdr4,
 	$TabContainer/Extraction/Hdrs/Hdr4,
 	$TabContainer/Refining/Hdrs/Hdr4,
@@ -92,7 +92,7 @@ onready var _revenue_hdrs := [
 	$TabContainer/Biomes/Hdrs/Hdr4,
 	$TabContainer/Services/Hdrs/Hdr4,
 ]
-onready var _margin_hdrs := [
+@onready var _margin_hdrs := [
 	$TabContainer/Energy/Hdrs/Hdr5,
 	$TabContainer/Extraction/Hdrs/Hdr5,
 	$TabContainer/Refining/Hdrs/Hdr5,
@@ -103,11 +103,11 @@ onready var _margin_hdrs := [
 
 
 func _ready() -> void:
-	IVGlobal.connect("about_to_free_procedural_nodes", self, "_clear")
-	connect("visibility_changed", self, "_update_tab")
+	IVGlobal.connect("about_to_free_procedural_nodes", Callable(self, "_clear"))
+	connect("visibility_changed", Callable(self, "_update_tab"))
 	_selection_manager = IVWidgets.get_selection_manager(self)
-	_selection_manager.connect("selection_changed", self, "_update_tab")
-	_tab_container.connect("tab_changed", self, "_select_tab")
+	_selection_manager.connect("selection_changed", Callable(self, "_update_tab"))
+	_tab_container.connect("tab_changed", Callable(self, "_select_tab"))
 	# rename tabs for localization or abreviation
 	$TabContainer/Energy.name = "TAB_OPS_ENERGY"
 	$TabContainer/Extraction.name = "TAB_OPS_EXTRACTION"
@@ -117,7 +117,7 @@ func _ready() -> void:
 	$TabContainer/Services.name = "TAB_OPS_SERVICES"
 	
 	for col0_spacer in _col0_spacers:
-		col0_spacer.rect_min_size.x = _name_column_width - 10.0
+		col0_spacer.custom_minimum_size.x = _name_column_width - 10.0
 	
 	_tab_container.set_current_tab(_on_ready_tab)
 	_suppress_tab_listener = false
@@ -126,10 +126,10 @@ func _ready() -> void:
 
 func _clear() -> void:
 	if _selection_manager:
-		_selection_manager.disconnect("selection_changed", self, "_update_tab")
+		_selection_manager.disconnect("selection_changed", Callable(self, "_update_tab"))
 		_selection_manager = null
-	disconnect("visibility_changed", self, "_update_tab")
-	_tab_container.disconnect("tab_changed", self, "_select_tab")
+	disconnect("visibility_changed", Callable(self, "_update_tab"))
+	_tab_container.disconnect("tab_changed", Callable(self, "_select_tab"))
 
 
 func timer_update() -> void:
@@ -291,7 +291,7 @@ class GroupBox extends VBoxContainer:
 		_memory = memory
 		size_flags_horizontal = SIZE_FILL
 		add_child(_group_hdr)
-		_group_hdr.group_button.connect("button_down", self, "_toggle_open_close")
+		_group_hdr.group_button.connect("button_down", Callable(self, "_toggle_open_close"))
 	
 	
 	func set_group_item(target_name: String, group_data: Array, ops_data: Array,
@@ -369,27 +369,27 @@ class RowItem extends HBoxContainer:
 		if is_group:
 			group_button = Button.new()
 			group_button.size_flags_horizontal = SIZE_EXPAND_FILL
-			group_button.rect_min_size.x = _name_column_width
+			group_button.custom_minimum_size.x = _name_column_width
 			group_button.flat = true
 			group_button.align = Button.ALIGN_LEFT
 			add_child(group_button)
 		else:
 			ops_label = Label.new()
 			ops_label.size_flags_horizontal = SIZE_EXPAND_FILL
-			ops_label.rect_min_size.x = _name_column_width
+			ops_label.custom_minimum_size.x = _name_column_width
 			add_child(ops_label)
 		utilization_label.size_flags_horizontal = SIZE_EXPAND_FILL
-		utilization_label.align = Label.ALIGN_CENTER
+		utilization_label.align = Label.ALIGNMENT_CENTER
 		power_label.size_flags_horizontal = SIZE_EXPAND_FILL
-		power_label.align = Label.ALIGN_CENTER
+		power_label.align = Label.ALIGNMENT_CENTER
 		flow_label.size_flags_horizontal = SIZE_EXPAND_FILL
-		flow_label.align = Label.ALIGN_CENTER
+		flow_label.align = Label.ALIGNMENT_CENTER
 		revenue_label.size_flags_horizontal = SIZE_EXPAND_FILL
-		revenue_label.align = Label.ALIGN_CENTER
+		revenue_label.align = Label.ALIGNMENT_CENTER
 		margin_label.size_flags_horizontal = SIZE_EXPAND_FILL
-		margin_label.align = Label.ALIGN_CENTER
+		margin_label.align = Label.ALIGNMENT_CENTER
 		controler.size_flags_horizontal = SIZE_FILL
-		controler.rect_min_size.x = 20
+		controler.custom_minimum_size.x = 20
 		add_child(utilization_label)
 		add_child(power_label)
 		add_child(flow_label)

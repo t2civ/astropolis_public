@@ -1,0 +1,14 @@
+[remap]
+
+importer="ivoyager.table_importer"
+type="IVTableResource"
+uid="uid://cjjwaugwwuk1"
+path="res://.godot/imported/spacecrafts.tsv-76e5fc04bf398669de30db296edfaf3c.tres"
+
+[deps]
+
+source_file="res://TEST_TABLES/spacecrafts.tsv"
+dest_files=["res://.godot/imported/spacecrafts.tsv-76e5fc04bf398669de30db296edfaf3c.tres"]
+
+[params]
+

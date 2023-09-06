@@ -1,0 +1,14 @@
+[remap]
+
+importer="ivoyager.table_importer"
+type="IVTableResource"
+uid="uid://cwj1fut37qi2m"
+path="res://.godot/imported/carrying_capacity_groups.tsv-36c18a1583f7dcacba5142641f22aa6e.tres"
+
+[deps]
+
+source_file="res://TEST_TABLES/carrying_capacity_groups.tsv"
+dest_files=["res://.godot/imported/carrying_capacity_groups.tsv-36c18a1583f7dcacba5142641f22aa6e.tres"]
+
+[params]
+

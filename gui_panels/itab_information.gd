@@ -16,9 +16,9 @@ var _selection_manager: SelectionManager
 
 
 func _ready() -> void:
-	connect("visibility_changed", self, "_update_selection")
+	connect("visibility_changed", Callable(self, "_update_selection"))
 	_selection_manager = IVWidgets.get_selection_manager(self)
-	_selection_manager.connect("selection_changed", self, "_update_selection")
+	_selection_manager.connect("selection_changed", Callable(self, "_update_selection"))
 	_update_selection()
 
 

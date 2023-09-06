@@ -1,5 +1,5 @@
-name	density_error	masses_error	heterogeneities_error	deposits_sigma	#comments
-Type	REAL	REAL	REAL	REAL	
+	density_error	masses_error	heterogeneities_error	deposits_sigma	#comments
+Type	FLOAT	FLOAT	FLOAT	FLOAT	
 Default				0	
 Prefix/SURVEY_					
 GENERALIZATION	0.15	0.75	0.75		e.g., it's a C-type asteroid

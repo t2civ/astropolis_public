@@ -1,5 +1,5 @@
-name	op_class	init_open	shift_rate
-Type	INT	BOOL	REAL
+	op_class	init_open	shift_rate
+Type	INT	BOOL	FLOAT
 Default			
 Unit			1/y
 Prefix/OP_GROUP_	OP_CLASS_		

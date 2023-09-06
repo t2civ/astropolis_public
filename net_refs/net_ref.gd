@@ -3,7 +3,7 @@
 # Copyright 2019-2023 Charlie Whitfield, all rights reserved
 # *****************************************************************************
 class_name NetRef
-extends Reference
+extends RefCounted
 
 # Abstract base class for data classes that are optimized for network sync.
 # Only changes are synched. Most NetRef changes are synched at Facility level

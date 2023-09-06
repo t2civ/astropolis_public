@@ -28,7 +28,7 @@ func _ready() -> void:
 #	margin_bottom = -4
 #	margin_left = -4
 #	margin_right = -4
-	set("custom_constants/margin_top", 27) # TODO: Settings GUI_SIZE listener
+	set("theme_override_constants/margin_top", 27) # TODO: Settings GUI_SIZE listener
 	if _is_new:
 		add_child(info_tab_container)
 

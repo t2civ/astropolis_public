@@ -3,8 +3,8 @@
 [ext_resource path="res://astropolis_public/gui_widgets/local_selections.gd" type="Script" id=1]
 
 [node name="LocalSelections" type="ScrollContainer"]
-margin_right = 12.0
-margin_bottom = 12.0
+offset_right = 12.0
+offset_bottom = 12.0
 scroll_horizontal_enabled = false
 script = ExtResource( 1 )
 

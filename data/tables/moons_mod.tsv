@@ -1,5 +1,5 @@
-name	solar_occlusion
-Type	REAL
+	solar_occlusion
+Type	FLOAT
 Default	0.5
 Unit	
 Prefix/MOON_	
@@ -180,5 +180,4 @@ STYX
 NIX	
 KERBEROS	
 HYDRA	
-# modifies ivoyager/data/	
-# solar_system/moons.tsv	
+@MODIFIES=moons	

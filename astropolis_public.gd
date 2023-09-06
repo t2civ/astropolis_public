@@ -18,8 +18,8 @@ const USE_THREADS := false
 func _extension_init():
 	print("%s %s%s-%s %s" % [EXTENSION_NAME, EXTENSION_VERSION, EXTENSION_BUILD, EXTENSION_STATE,
 			str(EXTENSION_YMD)])
-	IVGlobal.connect("project_objects_instantiated", self, "_on_project_objects_instantiated")
-	IVGlobal.connect("project_nodes_added", self, "_on_project_nodes_added")
+	IVGlobal.connect("project_objects_instantiated", Callable(self, "_on_project_objects_instantiated"))
+	IVGlobal.connect("project_nodes_added", Callable(self, "_on_project_nodes_added"))
 
 	# properties
 	AIGlobal.verbose = AI_VERBOSE
@@ -29,7 +29,7 @@ func _extension_init():
 	IVGlobal.save_file_extension = "AstropolisSave"
 	IVGlobal.save_file_extension_name = "Astropolis Save"
 	IVGlobal.start_time = 10.0 * Units.YEAR
-	IVGlobal.colors.great = Color.blue
+	IVGlobal.colors.great = Color.BLUE
 #	IVGlobal.body_tables.append("spacecrafts")
 	IVGlobal.unit_multipliers = Units.MULTIPLIERS
 	IVGlobal.unit_functions = Units.FUNCTIONS
@@ -38,7 +38,7 @@ func _extension_init():
 #	globe_mesh.set_rings(64) # default 32
 	
 	# translations
-	var path_format := "res://astropolis_public/data/text/%s.translation"
+	var path_format := "res://astropolis_public/data/text/%s.position"
 	IVGlobal.translations.append(path_format % "entities.en")
 	IVGlobal.translations.append(path_format % "gui.en")
 	IVGlobal.translations.append(path_format % "hints.en")

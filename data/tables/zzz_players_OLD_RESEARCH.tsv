@@ -1,4 +1,5 @@
 name	public_debt	tax	space_agency_support	population	adults	wealth_per_adult	median_wealth	gdp_per_adult	millionaires	top_10_p	top_1_p	Comments
+@DONT_PARSE												
 # Real-world data on the right is not used directly, but transformed into simplified game terms.												
 # Space tax is a made-up concept where a space agency taxes private activity off the homeworld. It starts at 0% and can be raised later.												
 # Private Sector GDP --(tax)--> Govt --(space_agency_support)--> Space Agency; Private Sector Space GDP --(space_tax)--> Space Agency												

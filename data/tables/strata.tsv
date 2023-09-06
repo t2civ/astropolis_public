@@ -1,4 +1,4 @@
-name	is_free_resources	is_deposits	#comments
+	is_free_resources	is_deposits	#comments
 Type	BOOL	BOOL	
 Prefix/STRATUM_			
 UNDIFFERENTIATED			
@@ -30,4 +30,3 @@ MANTLE_CORE		x
 CORE			
 OUTER_CORE			
 INNER_CORE			
-#			

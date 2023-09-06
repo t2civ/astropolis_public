@@ -33,8 +33,8 @@ var compositions := [] # resizable container - not threadsafe!
 
 
 func _init() -> void:
-	IVGlobal.connect("about_to_free_procedural_nodes", self, "_clear")
-	IVGlobal.connect("about_to_quit", self, "_clear")
+	IVGlobal.connect("about_to_free_procedural_nodes", Callable(self, "_clear"))
+	IVGlobal.connect("about_to_quit", Callable(self, "_clear"))
 
 
 func _clear() -> void:

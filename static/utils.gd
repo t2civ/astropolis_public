@@ -296,7 +296,7 @@ static func get_diversity_index(diversity_model: Dictionary, q := 1.0) -> float:
 	# All diversity_model values are integral floats >= 1.0.
 	# (Interesting programming note: base Homo sapiens has key = 0.)
 	
-	if diversity_model.empty():
+	if diversity_model.is_empty():
 		return 0.0 # not exactly correct but intuitive
 	if q == 1.0:
 		return exp(get_shannon_entropy(diversity_model, false)) # limit as q -> 1
@@ -316,7 +316,7 @@ static func get_shannon_entropy(diversity_model: Dictionary, in_bits := true) ->
 	# see comments above
 	# The unit of measure is 'bits' by default (base 2). If in_bits == false,
 	# then the unit of measure is 'natural units' (base e).
-	if diversity_model.empty():
+	if diversity_model.is_empty():
 		return 0.0 # not exactly correct but intuitive
 	var n_individuals := 0.0
 	for key in diversity_model:
@@ -350,5 +350,4 @@ static func add_to_diversity_model(base: Dictionary, add: Dictionary) -> void:
 				base.erase(key)
 		else:
 			base[key] = add[key]
-
 
