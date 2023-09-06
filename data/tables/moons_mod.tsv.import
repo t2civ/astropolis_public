@@ -1,0 +1,14 @@
+[remap]
+
+importer="ivoyager.table_importer"
+type="IVTableResource"
+uid="uid://bv6yn5dtllpd2"
+path="res://.godot/imported/moons_mod.tsv-d89e6cafc28ad6d94e503d395ab1386d.tres"
+
+[deps]
+
+source_file="res://TEST_TABLES/moons_mod.tsv"
+dest_files=["res://.godot/imported/moons_mod.tsv-d89e6cafc28ad6d94e503d395ab1386d.tres"]
+
+[params]
+

@@ -1,4 +1,5 @@
 nil	module	locale	max_extraction	max_uncert	resource1	percent1	uncert1	cffvar1	resource2	percent2	uncert2	cffvar2	resource3	percent3	uncert3	cffvar3	resource4	percent4	uncert4	cffvar4	resource5	percent5	uncert5	cffvar5	resource6	percent6	uncert6	cffvar6	resource7	percent7	uncert7	cffvar7	resource8	percent8	uncert8	cffvar8
+@DONT_PARSE																																				
 Type	INT	STRING	REAL	REAL	INT	REAL	REAL	REAL	INT	REAL	REAL	REAL	INT	REAL	REAL	REAL	INT	REAL	REAL	REAL	INT	REAL	REAL	REAL	INT	REAL	REAL	REAL	INT	REAL	REAL	REAL	INT	REAL	REAL	REAL
 Unit			t																																	
 	MODULE_AIR_CONDENSERS	PLANET_VENUS	1e12	0.1	RESOURCE_CARBON_DIOXIDE	96.5	0	0	RESOURCE_NITROGEN	3.5	0	0	RESOURCE_SULFER_DIOXIDE	0.015	0	0	RESOURCE_ARGON_NEON	0.0070	0	0	RESOURCE_WATER	0.0020	0	0	RESOURCE_CARBON_MONOXIDE	0.0017	0	0	RESOURCE_HELIUM	0.0012	0	0				

@@ -1,5 +1,5 @@
-name	mod_class	op_quantity	virtual	earthlike	active_atmos	tidal_hydro	rivers	min_gravity	constant_sun	stratum
-Type	INT	REAL	BOOL	BOOL	BOOL	BOOL	BOOL	REAL	BOOL	INT
+	mod_class	op_quantity	virtual	earthlike	active_atmos	tidal_hydro	rivers	min_gravity	constant_sun	stratum
+Type	INT	FLOAT	BOOL	BOOL	BOOL	BOOL	BOOL	FLOAT	BOOL	INT
 Default										
 Unit										
 Prefix/MODULE_	MOD_CLASS_									STRATUM_

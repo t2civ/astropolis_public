@@ -1,0 +1,14 @@
+[remap]
+
+importer="ivoyager.table_importer"
+type="IVTableResource"
+uid="uid://cpfu7tebkew8s"
+path="res://.godot/imported/zzz_player_hw_biomes_OLD_RESEARCH.tsv-485438c5634f94e382ce27adcdcf766a.tres"
+
+[deps]
+
+source_file="res://TEST_TABLES/zzz_player_hw_biomes_OLD_RESEARCH.tsv"
+dest_files=["res://.godot/imported/zzz_player_hw_biomes_OLD_RESEARCH.tsv-485438c5634f94e382ce27adcdcf766a.tres"]
+
+[params]
+

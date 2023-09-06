@@ -1,0 +1,14 @@
+[remap]
+
+importer="ivoyager.table_importer"
+type="IVTableResource"
+uid="uid://dxnghbxhep7lf"
+path="res://.godot/imported/populations.tsv-f0aa475f53acae53e707d40bbc5e0f59.tres"
+
+[deps]
+
+source_file="res://TEST_TABLES/populations.tsv"
+dest_files=["res://.godot/imported/populations.tsv-f0aa475f53acae53e707d40bbc5e0f59.tres"]
+
+[params]
+

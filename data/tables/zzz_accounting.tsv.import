@@ -1,0 +1,14 @@
+[remap]
+
+importer="ivoyager.table_importer"
+type="IVTableResource"
+uid="uid://pqvuyxt72la"
+path="res://.godot/imported/zzz_accounting.tsv-84fdfc356e4025cc69259522e43bab9b.tres"
+
+[deps]
+
+source_file="res://TEST_TABLES/zzz_accounting.tsv"
+dest_files=["res://.godot/imported/zzz_accounting.tsv-84fdfc356e4025cc69259522e43bab9b.tres"]
+
+[params]
+
