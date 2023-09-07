@@ -82,6 +82,7 @@ func get_body_flags(body_name: String) -> int:
 	var interface: Interface = interfaces_by_name.get(body_name)
 	if !interface:
 		return 0
+	@warning_ignore("unsafe_property_access")
 	return interface.body_flags
 
 
@@ -89,6 +90,7 @@ func get_facility_body(facility_name: String) -> String:
 	var interface: Interface = interfaces_by_name.get(facility_name)
 	if !interface:
 		return ""
+	@warning_ignore("unsafe_property_access")
 	return interface.body_name
 
 
@@ -96,6 +98,7 @@ func get_facility_player(facility_name: String) -> String:
 	var interface: Interface = interfaces_by_name.get(facility_name)
 	if !interface:
 		return ""
+	@warning_ignore("unsafe_property_access")
 	return interface.player_name
 
 
@@ -103,6 +106,7 @@ func get_facility_polity(facility_name: String) -> String:
 	var interface: Interface = interfaces_by_name.get(facility_name)
 	if !interface:
 		return ""
+	@warning_ignore("unsafe_property_access")
 	return interface.polity_name
 
 

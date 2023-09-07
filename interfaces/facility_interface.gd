@@ -197,7 +197,7 @@ func _add_proxies() -> void:
 	#  PROXY_SYSTEM_<star_name>                 - all facilities under star
 	
 	var proxy_name: String
-	var gui_name: String
+	var proxy_gui_name: String
 	var proxy_interface: Interface
 	
 	# off-Earth
@@ -210,8 +210,8 @@ func _add_proxies() -> void:
 	# TODO: generalize to PROXY_HOMEWORLD_<polity_name>, e.g., for new Martian polity
 	if body_name == "PLANET_EARTH":
 		proxy_name = "PROXY_PLANET_EARTH_" + polity_name
-		gui_name = tr("PLANET_EARTH") + " / " + tr(polity_name)
-		proxy_interface = AIGlobal.get_or_make_proxy(proxy_name, gui_name, true, true, true)
+		proxy_gui_name = tr("PLANET_EARTH") + " / " + tr(polity_name)
+		proxy_interface = AIGlobal.get_or_make_proxy(proxy_name, proxy_gui_name, true, true, true)
 		add_propagation(proxy_interface)
 	
 	# search up body tree for others...
@@ -253,7 +253,7 @@ func _add_proxies() -> void:
 	
 	# in star system - all facilities!
 	proxy_name = "PROXY_SYSTEM_" + in_star_system.name
-	gui_name = tr("SYSTEM_" + in_star_system.name) # for STAR_SUN translates to 'Solar System'
-	proxy_interface = AIGlobal.get_or_make_proxy(proxy_name, gui_name)
+	proxy_gui_name = tr("SYSTEM_" + in_star_system.name) # for STAR_SUN translates to 'Solar System'
+	proxy_interface = AIGlobal.get_or_make_proxy(proxy_name, proxy_gui_name)
 	add_propagation(proxy_interface)
 

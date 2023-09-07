@@ -73,8 +73,11 @@ var tables: Dictionary = IVGlobal.tables
 
 # private
 var _dirty := 0
+@warning_ignore("unused_private_class_variable")
 var _is_local_player := false # gives GUI access
+@warning_ignore("unused_private_class_variable")
 var _is_server_ai := false
+@warning_ignore("unused_private_class_variable")
 var _is_local_use_ai := false # local player sets/unsets
 
 

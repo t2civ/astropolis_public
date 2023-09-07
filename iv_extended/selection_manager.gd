@@ -112,18 +112,18 @@ func get_info_panel_data() -> Array:
 			var proxy_name := "PROXY_" + body_name + "_" + polity_name
 			var header := get_gui_name()
 			return [proxy_name, header, true]
-		 # agency or company facility is the target
+		# agency or company facility is the target
 		return [selection_name, get_gui_name(), true]
 	# must be body selection
 	var body_name := get_body_name()
 	assert(body_name == selection_name)
 	var body_flags := MainThreadGlobal.get_body_flags(body_name)
 	if body_flags & BodyFlags.IS_STAR:
-		 # solar system
+		# solar system
 		var system_name := "SYSTEM_" + body_name
 		var proxy_name := "PROXY_" + system_name
 		return [proxy_name, tr(system_name) + all_suffix, true]
-	 # body is the target
+	# body is the target
 	var header := get_gui_name()
 	var is_developed := false
 	if MainThreadGlobal.get_n_facilities(body_name) > 0: # has facilities

@@ -95,7 +95,8 @@ func get_facilities(body_or_player_name: String) -> Array:
 func get_n_facilities(body_or_player_name: String) -> int:
 	if !facilities_by_holder.has(body_or_player_name):
 		return 0
-	return facilities_by_holder[body_or_player_name].size()
+	var facilities: Array = facilities_by_holder[body_or_player_name]
+	return facilities.size()
 
 
 func get_player_facility_at_body(player_name: String, body_name: String) -> String:
