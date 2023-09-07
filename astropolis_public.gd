@@ -82,7 +82,6 @@ func _extension_init():
 	IVProjectBuilder.gui_nodes._AstroGUI_ = AstroGUI
 	
 	# extended
-	IVProjectBuilder.prog_refs._TableReader_ = TableReader
 	IVProjectBuilder.procedural_classes._SelectionManager_ = SelectionManager
 	
 	# removed
@@ -116,16 +115,15 @@ func _on_project_objects_instantiated() -> void:
 	
 	
 	# table additions (subtables, re-indexings, or other useful table items)
-	var tables: Dictionary = IVGlobal.tables
-	var table_reader: TableReader = IVGlobal.program.TableReader
+	var tables: Dictionary = IVTableData.tables
 	# unique items
 	tables.resource_type_electricity = tables.resources.unique_type.find("electricity")
 	assert(tables.resource_type_electricity != -1)
 	# table row subsets (arrays of row_types)
-	tables.extraction_resources = table_reader.get_true_rows("resources", "is_extraction")
-	tables.maybe_free_resources = table_reader.get_true_rows("resources", "maybe_free")
-	tables.is_manufacturing_operations = table_reader.get_true_rows("operations", "is_manufacturing")
-	tables.extraction_operations = table_reader.get_matching_rows("operations", "op_process_group",
+	tables.extraction_resources = IVTableData.get_db_true_rows("resources", "is_extraction")
+	tables.maybe_free_resources = IVTableData.get_db_true_rows("resources", "maybe_free")
+	tables.is_manufacturing_operations = IVTableData.get_db_true_rows("operations", "is_manufacturing")
+	tables.extraction_operations = IVTableData.get_db_matching_rows("operations", "op_process_group",
 			Enums.OpProcessGroup.OP_PROCESS_GROUP_EXTRACTION)
 	# inverted table row subsets (array of indexes in the subset, where non-subset = -1)
 	tables.resource_extractions = Utils.invert_subset_indexing(tables.extraction_resources,
@@ -149,9 +147,5 @@ func _on_project_objects_instantiated() -> void:
 
 func _on_project_nodes_added() -> void:
 	IVProjectBuilder.move_top_gui_child_to_sibling("AstroGUI", "SplashScreen", true)
-
-
-
-
 
 
