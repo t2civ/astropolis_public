@@ -17,8 +17,6 @@ enum {
 	GROUP_SINGULAR,
 }
 
-const MULTIPLIERS := Units.MULTIPLIERS
-
 const N_COLUMNS := 7
 
 const OPEN_PREFIX := "\u2304   "
@@ -64,7 +62,7 @@ var _resources_is_extraction: Array = _tables.extraction_resources
 var _n_resources_is_extraction := _resources_is_extraction.size()
 var _resource_names: Array = _tables.resources.name
 
-
+@onready var _multipliers := IVUnits.multipliers
 @onready var _memory: Dictionary = get_parent().memory # open states
 @onready var _no_ops_label: Label = $NoOpsLabel
 @onready var _tab_container: TabContainer = $TabContainer
@@ -209,7 +207,7 @@ func _get_ai_data(data: Array) -> void:
 			var operation_type: int = ops[j]
 			var flow: float = operations.get_gui_flow(operation_type)
 			if !is_nan(flow):
-				flow /= MULTIPLIERS[_operation_flow_units[operation_type]]
+				flow /= _multipliers[_operation_flow_units[operation_type]]
 			var op_data := [
 				_operation_names[operation_type],
 				operations.get_utilization(operation_type),

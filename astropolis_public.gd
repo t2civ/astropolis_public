@@ -28,14 +28,8 @@ func _extension_init():
 	IVGlobal.use_threads = USE_THREADS
 	IVGlobal.save_file_extension = "AstropolisSave"
 	IVGlobal.save_file_extension_name = "Astropolis Save"
-	IVGlobal.start_time = 10.0 * Units.YEAR
+	IVGlobal.start_time = 10.0 * IVUnits.YEAR
 	IVGlobal.colors.great = Color.BLUE
-#	IVGlobal.body_tables.append("spacecrafts")
-	IVGlobal.unit_multipliers = Units.MULTIPLIERS
-	IVGlobal.unit_functions = Units.FUNCTIONS
-#	var globe_mesh: SphereMesh = IVGlobal.shared_resources.globe_mesh
-#	globe_mesh.set_radial_segments(128) # default 64
-#	globe_mesh.set_rings(64) # default 32
 	
 	# translations
 	var path_format := "res://astropolis_public/data/text/%s.position"
@@ -43,39 +37,39 @@ func _extension_init():
 	IVGlobal.translations.append(path_format % "gui.en")
 	IVGlobal.translations.append(path_format % "hints.en")
 	
-	# primary tables
+	# tables
 	path_format = "res://astropolis_public/data/tables/%s.tsv"
-	IVGlobal.table_import.carrying_capacity_groups = path_format % "carrying_capacity_groups"
-	IVGlobal.table_import.compositions = path_format % "compositions"
-	IVGlobal.table_import.facilities = path_format % "facilities"
-	IVGlobal.table_import.major_strata = path_format % "major_strata"
-	IVGlobal.table_import.mod_classes = path_format % "mod_classes"
-	IVGlobal.table_import.modules = path_format % "modules"
-	IVGlobal.table_import.op_classes = path_format % "op_classes"
-	IVGlobal.table_import.op_groups = path_format % "op_groups"
-	IVGlobal.table_import.operations = path_format % "operations"
-	IVGlobal.table_import.players = path_format % "players"
-	IVGlobal.table_import.populations = path_format % "populations"
-	IVGlobal.table_import.resource_classes = path_format % "resource_classes"
-	IVGlobal.table_import.resources = path_format % "resources"
-	IVGlobal.table_import.spacecrafts = path_format % "spacecrafts" # replacement!
-	IVGlobal.table_import.strata = path_format % "strata"
-	IVGlobal.table_import.surveys = path_format % "surveys"
-	
-	# primary table mods
-	IVGlobal.table_import_mods.asset_adjustments = path_format % "asset_adjustments_mod"
-	IVGlobal.table_import_mods.planets = path_format % "planets_mod"
-	IVGlobal.table_import_mods.moons = path_format % "moons_mod"
-	
-	# type x type tables
-	IVGlobal.project.type_by_type_tables = [
-		[path_format, "compositions_resources_heterogeneities", "compositions", "resources"],
-		[path_format, "compositions_resources_percents", "compositions", "resources"],
-		[path_format, "facilities_operations_capacities", "operations", "facilities"], # transposed
-		[path_format, "facilities_operations_utilizations", "operations", "facilities"], # transposed
-		[path_format, "facilities_populations", "facilities", "populations"],
-		[path_format, "facilities_resources", "facilities", "resources"],
+	var postprocess_tables_append := [
+		# primary tables
+		path_format % "carrying_capacity_groups",
+		path_format % "compositions",
+		path_format % "facilities",
+		path_format % "major_strata",
+		path_format % "mod_classes",
+		path_format % "modules",
+		path_format % "op_classes",
+		path_format % "op_groups",
+		path_format % "operations",
+		path_format % "players",
+		path_format % "populations",
+		path_format % "resource_classes",
+		path_format % "resources",
+		path_format % "spacecrafts", # replacement!
+		path_format % "strata",
+		path_format % "surveys",
+		# primary table mods
+		path_format % "asset_adjustments_mod",
+		path_format % "planets_mod",
+		path_format % "moons_mod",
+		# enum x enum tables
+		path_format % "compositions_resources_heterogeneities",
+		path_format % "compositions_resources_percents",
+		path_format % "facilities_operations_capacities",
+		path_format % "facilities_operations_utilizations",
+		path_format % "facilities_populations",
+		path_format % "facilities_resources",
 	]
+	IVGlobal.postprocess_tables.append_array(postprocess_tables_append)
 	
 	# added/replaced classes
 	IVProjectBuilder.prog_refs._InfoCloner_ = InfoCloner
@@ -89,6 +83,10 @@ func _extension_init():
 	IVProjectBuilder.gui_nodes.erase("_CreditsPopup_")
 	IVProjectBuilder.procedural_classes.erase("_Composition_") # using total replacement
 	
+	# add game units
+	var multipliers := IVUnits.multipliers
+	multipliers.flops = 1.0 / IVUnits.SECOND # base unit for computation
+	multipliers.puhr = 1e16 * 3600.0 # 'processor unit hour'; 1e16 flops/s * hr
 
 
 func _on_project_objects_instantiated() -> void:

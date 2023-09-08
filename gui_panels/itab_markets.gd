@@ -12,9 +12,6 @@ const SCENE := "res://astropolis_public/gui_panels/itab_markets.tscn"
 
 signal header_changed(new_header)
 
-const units := preload("res://ivoyager/static/units.gd")
-const MULTIPLIERS := Units.MULTIPLIERS
-
 const N_COLUMNS := 6
 
 const TRADE_CLASS_TEXTS := [ # correspond to TradeClasses

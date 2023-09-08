@@ -38,7 +38,7 @@ enum { # sync_svr_type
 	SYNC_SVR_METAVERSE,
 }
 
-const INTERVAL := 7.0 * Units.DAY
+const INTERVAL := 7.0 * IVUnits.DAY
 
 var interface_id := -1
 var name := "" # unique & immutable
