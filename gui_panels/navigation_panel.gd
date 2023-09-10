@@ -14,15 +14,17 @@ const PERSIST_PROPERTIES := [
 ]
 
 
-var _settings: Dictionary = IVGlobal.settings
+#var _settings: Dictionary = IVGlobal.settings
 #onready var _under_moons_spacer: Control = find_node("UnderMoonsSpacer")
 #var _under_moons_spacer_sizes := [55.0, 66.0, 77.0]
 
 
 func _ready() -> void:
-	IVGlobal.connect("update_gui_requested", Callable(self, "_resize"))
-	IVGlobal.connect("setting_changed", Callable(self, "_settings_listener"))
+	IVGlobal.update_gui_requested.connect(_resize)
+	IVGlobal.setting_changed.connect(_settings_listener)
+	@warning_ignore("unsafe_method_access")
 	$"%AsteroidsHScroll".add_bodies_from_table("asteroids")
+	@warning_ignore("unsafe_method_access")
 	$"%SpacecraftsHScroll".add_bodies_from_table("spacecrafts")
 
 
@@ -35,3 +37,4 @@ func _resize() -> void:
 func _settings_listener(setting: String, _value) -> void:
 	if setting == "gui_size":
 		_resize()
+

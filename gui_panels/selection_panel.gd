@@ -24,6 +24,7 @@ var reserved_view_names := [tr("BUTTON_HOME")]
 
 
 func _ready() -> void:
+	@warning_ignore("unsafe_method_access")
 	$"%ViewSaveFlow".init($"%ViewSaveButton", default_view_name, set_name, is_cached,
 			view_flags, init_flags, reserved_view_names)
 

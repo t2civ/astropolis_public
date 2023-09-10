@@ -44,7 +44,7 @@ var _subheader_suffixes := [
 	" / " + tr("LABEL_BIOMES"),
 	" / " + tr("LABEL_SERVICES"),
 ]
-var _show_subheader := true
+#var _show_subheader := true
 var _state: Dictionary = IVGlobal.state
 var _selection_manager: SelectionManager
 var _suppress_tab_listener := true
@@ -52,17 +52,18 @@ var _suppress_tab_listener := true
 var _name_column_width := 250.0 # TODO: resize on GUI resize (also in RowItem)
 
 # table indexing
-var _tables: Dictionary = IVGlobal.tables
+var _tables: Dictionary = IVTableData.tables
 var _op_classes_op_groups: Array = _tables.op_classes_op_groups
 var _op_group_names: Array = _tables.op_groups.name
 var _op_groups_operations: Array = _tables.op_groups_operations
 var _operation_names: Array = _tables.operations.name
 var _operation_flow_units: Array = _tables.operations.flow_unit
-var _resources_is_extraction: Array = _tables.extraction_resources
-var _n_resources_is_extraction := _resources_is_extraction.size()
-var _resource_names: Array = _tables.resources.name
+#var _resources_is_extraction: Array = _tables.extraction_resources
+#var _n_resources_is_extraction := _resources_is_extraction.size()
+#var _resource_names: Array = _tables.resources.name
 
 @onready var _multipliers := IVUnits.multipliers
+@warning_ignore("unsafe_property_access")
 @onready var _memory: Dictionary = get_parent().memory # open states
 @onready var _no_ops_label: Label = $NoOpsLabel
 @onready var _tab_container: TabContainer = $TabContainer
@@ -101,11 +102,11 @@ var _resource_names: Array = _tables.resources.name
 
 
 func _ready() -> void:
-	IVGlobal.connect("about_to_free_procedural_nodes", Callable(self, "_clear"))
-	connect("visibility_changed", Callable(self, "_update_tab"))
+	IVGlobal.about_to_free_procedural_nodes.connect(_clear)
+	visibility_changed.connect(_update_tab)
 	_selection_manager = IVWidgets.get_selection_manager(self)
-	_selection_manager.connect("selection_changed", Callable(self, "_update_tab"))
-	_tab_container.connect("tab_changed", Callable(self, "_select_tab"))
+	_selection_manager.selection_changed.connect(_update_tab)
+	_tab_container.tab_changed.connect(_select_tab)
 	# rename tabs for localization or abreviation
 	$TabContainer/Energy.name = "TAB_OPS_ENERGY"
 	$TabContainer/Extraction.name = "TAB_OPS_EXTRACTION"
@@ -124,10 +125,10 @@ func _ready() -> void:
 
 func _clear() -> void:
 	if _selection_manager:
-		_selection_manager.disconnect("selection_changed", Callable(self, "_update_tab"))
+		_selection_manager.selection_changed.disconnect(_update_tab)
 		_selection_manager = null
-	disconnect("visibility_changed", Callable(self, "_update_tab"))
-	_tab_container.disconnect("tab_changed", Callable(self, "_select_tab"))
+	visibility_changed.disconnect(_update_tab)
+	_tab_container.tab_changed.disconnect(_select_tab)
 
 
 func timer_update() -> void:
@@ -155,7 +156,7 @@ func _update_tab(_suppress_camera_move := false) -> void:
 		header_text += _subheader_suffixes[current_tab]
 	else:
 		_update_no_operations()
-	emit_signal("header_changed", header_text)
+	header_changed.emit(header_text)
 
 
 func _update_no_operations() -> void:
@@ -267,7 +268,8 @@ func _update_tab_display(data: Array) -> void:
 	
 	# hide unused
 	while i < n_children:
-		vbox.get_child(i).hide()
+		var group_box: GroupBox = vbox.get_child(i)
+		group_box.hide()
 		i += 1
 	
 	_no_ops_label.hide()
@@ -289,7 +291,7 @@ class GroupBox extends VBoxContainer:
 		_memory = memory
 		size_flags_horizontal = SIZE_FILL
 		add_child(_group_hdr)
-		_group_hdr.group_button.connect("button_down", Callable(self, "_toggle_open_close"))
+		_group_hdr.group_button.button_down.connect(_toggle_open_close)
 	
 	
 	func set_group_item(target_name: String, group_data: Array, ops_data: Array,
@@ -326,7 +328,8 @@ class GroupBox extends VBoxContainer:
 		# hide unused
 		i = n_children_needed
 		while i < n_children:
-			get_child(i).hide()
+			var ops_row: RowItem = get_child(i)
+			ops_row.hide()
 			i += 1
 	
 	
@@ -339,7 +342,8 @@ class GroupBox extends VBoxContainer:
 		var n_children := get_child_count()
 		var i := 1
 		while i < n_children:
-			get_child(i).visible = _is_open
+			var ops_row: RowItem = get_child(i)
+			ops_row.visible = _is_open
 			i += 1
 
 
@@ -354,7 +358,9 @@ class RowItem extends HBoxContainer:
 	var margin_label := Label.new()
 	var controler := Control.new() # TODO
 	
-	var _qf: IVQuantityFormatter = IVGlobal.program.QuantityFormatter
+	var qformat := IVQFormat # make const when Godot allows
+	var multipliers := qformat.multipliers
+	
 	var _is_group: bool
 	var _group_name: String
 	var _name_column_width := 250.0 # TODO: resize on GUI resize
@@ -369,7 +375,7 @@ class RowItem extends HBoxContainer:
 			group_button.size_flags_horizontal = SIZE_EXPAND_FILL
 			group_button.custom_minimum_size.x = _name_column_width
 			group_button.flat = true
-			group_button.align = Button.ALIGN_LEFT
+			group_button.alignment = HORIZONTAL_ALIGNMENT_CENTER
 			add_child(group_button)
 		else:
 			ops_label = Label.new()
@@ -377,15 +383,15 @@ class RowItem extends HBoxContainer:
 			ops_label.custom_minimum_size.x = _name_column_width
 			add_child(ops_label)
 		utilization_label.size_flags_horizontal = SIZE_EXPAND_FILL
-		utilization_label.align = Label.ALIGNMENT_CENTER
+		utilization_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		power_label.size_flags_horizontal = SIZE_EXPAND_FILL
-		power_label.align = Label.ALIGNMENT_CENTER
+		power_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		flow_label.size_flags_horizontal = SIZE_EXPAND_FILL
-		flow_label.align = Label.ALIGNMENT_CENTER
+		flow_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		revenue_label.size_flags_horizontal = SIZE_EXPAND_FILL
-		revenue_label.align = Label.ALIGNMENT_CENTER
+		revenue_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		margin_label.size_flags_horizontal = SIZE_EXPAND_FILL
-		margin_label.align = Label.ALIGNMENT_CENTER
+		margin_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		controler.size_flags_horizontal = SIZE_FILL
 		controler.custom_minimum_size.x = 20
 		add_child(utilization_label)
@@ -422,22 +428,22 @@ class RowItem extends HBoxContainer:
 		elif power == INF:
 			power_label.text = "?"
 		else:
-			power /= MULTIPLIERS["MW"]
-			power_label.text = _qf.number(power, 2)
+			power /= multipliers["MW"]
+			power_label.text = qformat.number(power, 2)
 			
 		if is_nan(flow):
 			flow_label.text = " "
 		elif flow == INF:
 			flow_label.text = "?"
 		else:
-			flow_label.text = _qf.number(flow, 2)
+			flow_label.text = qformat.number(flow, 2)
 			
 		if is_nan(revenue):
 			revenue_label.text = " "
 		elif revenue == INF:
 			revenue_label.text = "?"
 		else:
-			revenue_label.text = _qf.number(revenue / 1e6, 2)
+			revenue_label.text = qformat.number(revenue / 1e6, 2)
 			
 		if is_nan(margin):
 			margin_label.text = " "
@@ -453,5 +459,4 @@ class RowItem extends HBoxContainer:
 			group_button.text = OPEN_PREFIX + tr(_group_name)
 		else:
 			group_button.text = CLOSED_PREFIX + tr(_group_name)
-
 

@@ -11,10 +11,10 @@ const PERSIST_MODE := IVEnums.PERSIST_PROPERTIES_ONLY # child GUIs are persisted
 
 
 func _ready():
-	IVGlobal.connect("system_tree_built_or_loaded", Callable(self, "_on_system_tree_built_or_loaded"))
-	IVGlobal.connect("simulator_started", Callable(self, "show"))
-	IVGlobal.connect("about_to_free_procedural_nodes", Callable(self, "hide"))
-	IVGlobal.connect("show_hide_gui_requested", Callable(self, "show_hide_gui"))
+	IVGlobal.system_tree_built_or_loaded.connect(_on_system_tree_built_or_loaded)
+	IVGlobal.simulator_started.connect(show)
+	IVGlobal.about_to_free_procedural_nodes.connect(hide)
+	IVGlobal.show_hide_gui_requested.connect(show_hide_gui)
 	hide()
 
 
@@ -28,7 +28,7 @@ func _on_system_tree_built_or_loaded(is_new_game: bool) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("toggle_all_gui"):
+	if event.is_action_pressed(&"toggle_all_gui"):
 		show_hide_gui()
 	else:
 		return # input NOT handled!
@@ -39,3 +39,4 @@ func show_hide_gui(is_toggle := true, is_show := true) -> void:
 	if !IVGlobal.state.is_system_built:
 		return
 	visible = !visible if is_toggle else is_show
+

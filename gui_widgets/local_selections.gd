@@ -50,8 +50,8 @@ var _n_sections := section_names.size()
 
 
 func _ready() -> void:
-	IVGlobal.connect("simulator_started", Callable(self, "_update"))
-	IVGlobal.connect("about_to_free_procedural_nodes", Callable(self, "_clear"))
+	IVGlobal.simulator_started.connect(_update)
+	IVGlobal.about_to_free_procedural_nodes.connect(_clear)
 	_update()
 
 
@@ -69,7 +69,7 @@ func _clear() -> void:
 
 func _init_after_system_built() -> void:
 	_selection_manager = IVWidgets.get_selection_manager(self)
-	_selection_manager.connect("selection_changed", Callable(self, "_update"))
+	_selection_manager.selection_changed.connect(_update)
 	var section := 0
 	while section < _n_sections:
 		var section_text: String = section_names[section]

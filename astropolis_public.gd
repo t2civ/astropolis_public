@@ -83,10 +83,17 @@ func _extension_init():
 	IVProjectBuilder.gui_nodes.erase("_CreditsPopup_")
 	IVProjectBuilder.procedural_classes.erase("_Composition_") # using total replacement
 	
-	# add game units
+	# static class changes
 	var multipliers := IVUnits.multipliers
 	multipliers.flops = 1.0 / IVUnits.SECOND # base unit for computation
 	multipliers.puhr = 1e16 * 3600.0 # 'processor unit hour'; 1e16 flops/s * hr
+	multipliers.species = 1.0
+	
+	IVQFormat.exponent_str = "e"
+	# https://sites.google.com/site/largenumbers/home/2-2/2-2-3-non-canonical-si-prefixes
+#	IVQFormat.prefix_names.append("Bronto") # fictional e27
+#	IVQFormat.prefix_names.append("Giop") # fictional e30
+#	IVQFormat.prefix_symbols.append("B")
 
 
 func _on_project_objects_instantiated() -> void:
@@ -95,14 +102,7 @@ func _on_project_objects_instantiated() -> void:
 	var timekeeper: IVTimekeeper = IVGlobal.program.Timekeeper
 	timekeeper.date_format = timekeeper.DATE_FORMAT_Y_M_D_Q_YQ_YM
 	timekeeper.start_speed = 0
-	
-	var qty_txt_converter: IVQuantityFormatter = IVGlobal.program.QuantityFormatter
-	qty_txt_converter.exp_str = "e"
-	# https://sites.google.com/site/largenumbers/home/2-2/2-2-3-non-canonical-si-prefixes
-#	qty_txt_converter.prefix_names.append("Bronto") # fictional e27
-#	qty_txt_converter.prefix_names.append("Giop") # fictional e30
-#	qty_txt_converter.prefix_symbols.append("B")
-#	qty_txt_converter.prefix_symbols.append("Gp")
+#	IVQFormat.prefix_symbols.append("Gp")
 	
 	var settings_manager: IVSettingsManager = IVGlobal.program.SettingsManager
 	var defaults: Dictionary = settings_manager.defaults

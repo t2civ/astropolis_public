@@ -30,6 +30,11 @@ const PERSIST_PROPERTIES := [
 	"_on_ready_tab",
 ]
 
+var qformat := IVQFormat # make const when Godot allows
+var units := IVUnits # make const when Godot allows
+
+var multipliers := units.multipliers
+
 # persisted
 var current_tab := 0
 var _on_ready_tab := 0
@@ -46,7 +51,7 @@ var _subheader_suffixes := [
 	" / " + tr("LABEL_BIOLOGICALS"),
 	" / " + tr("LABEL_CYBER"),
 ]
-var _show_subheader := true
+#var _show_subheader := true
 var _state: Dictionary = IVGlobal.state
 var _selection_manager: SelectionManager
 var _suppress_tab_listener := true
@@ -54,13 +59,13 @@ var _suppress_tab_listener := true
 var _name_column_width := 250.0 # TODO: resize on GUI resize (also in RowItem)
 
 # table indexing
-var _tables: Dictionary = IVGlobal.tables
-var _n_resources: int = _tables.n_resources
+var _tables: Dictionary = IVTableData.tables
+#var _n_resources: int = _tables.n_resources
 var _resource_names: Array = _tables.resources.name
 var _trade_classes: Array = _tables.resources.trade_class
 var _trade_units: Array = _tables.resources.trade_unit
 var _resource_classes_resources: Array = _tables.resource_classes_resources # array of arrays
-var _qf: IVQuantityFormatter = IVGlobal.program.QuantityFormatter
+
 
 @onready var _no_markets_label: Label = $NoMarkets
 @onready var _tab_container: TabContainer = $TabContainer
@@ -85,11 +90,11 @@ var _qf: IVQuantityFormatter = IVGlobal.program.QuantityFormatter
 
 
 func _ready() -> void:
-	IVGlobal.connect("about_to_free_procedural_nodes", Callable(self, "_clear"))
-	connect("visibility_changed", Callable(self, "_update_tab"))
+	IVGlobal.about_to_free_procedural_nodes.connect(_clear)
+	visibility_changed.connect(_update_tab)
 	_selection_manager = IVWidgets.get_selection_manager(self)
-	_selection_manager.connect("selection_changed", Callable(self, "_update_tab"))
-	_tab_container.connect("tab_changed", Callable(self, "_select_tab"))
+	_selection_manager.selection_changed.connect(_update_tab)
+	_tab_container.tab_changed.connect(_select_tab)
 	# rename tabs for abreviated localization
 	$TabContainer/Energy.name = "TAB_MKS_ENERGY"
 	$TabContainer/Ores.name = "TAB_MKS_ORES"
@@ -107,10 +112,10 @@ func _ready() -> void:
 
 func _clear() -> void:
 	if _selection_manager:
-		_selection_manager.disconnect("selection_changed", Callable(self, "_update_tab"))
+		_selection_manager.selection_changed.disconnect(_update_tab)
 		_selection_manager = null
-	disconnect("visibility_changed", Callable(self, "_update_tab"))
-	_tab_container.disconnect("tab_changed", Callable(self, "_select_tab"))
+	visibility_changed.disconnect(_update_tab)
+	_tab_container.tab_changed.disconnect(_select_tab)
 
 
 func timer_update() -> void:
@@ -205,7 +210,7 @@ func _update_tab_display(data: Array) -> void:
 			if column == 0: # resource name
 				label.custom_minimum_size.x = _name_column_width
 			else: # value
-				label.align = Label.ALIGNMENT_CENTER
+				label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			hbox.add_child(label)
 			column += 1
 		vbox.add_child(hbox)
@@ -223,33 +228,31 @@ func _update_tab_display(data: Array) -> void:
 		var trade_class: int = _trade_classes[resource_type]
 		var trade_unit: String = _trade_units[resource_type]
 		
-		in_stock /= MULTIPLIERS[trade_unit]
-		contracted /= MULTIPLIERS[trade_unit]
+		in_stock /= multipliers[trade_unit]
+		contracted /= multipliers[trade_unit]
 		
 		var resource_text: String = (
 			tr(_resource_names[resource_type])
 			+ " (" + TRADE_CLASS_TEXTS[trade_class]
 			+ trade_unit + ")"
 		)
-		var price_text := "" if is_nan(price) else _qf.number(price, 3)
-		var bid_text := "" if is_nan(bid) else _qf.number(bid, 3)
-		var ask_text := "" if is_nan(ask) else _qf.number(ask, 3)
-		var in_stock_text := _qf.number(in_stock, 2) # FIXME: trade unit
-		var contracted_text := _qf.number(contracted, 2) # FIXME: trade unit
+		var price_text := "" if is_nan(price) else qformat.number(price, 3)
+		var bid_text := "" if is_nan(bid) else qformat.number(bid, 3)
+		var ask_text := "" if is_nan(ask) else qformat.number(ask, 3)
+		var in_stock_text := qformat.number(in_stock, 2) # FIXME: trade unit
+		var contracted_text := qformat.number(contracted, 2) # FIXME: trade unit
 		
 		var hbox: HBoxContainer = vbox.get_child(i)
-		hbox.get_child(0).text = resource_text
-		hbox.get_child(1).text = price_text
-		hbox.get_child(2).text = bid_text
-		hbox.get_child(3).text = ask_text
-		hbox.get_child(4).text = in_stock_text
-		hbox.get_child(5).text = contracted_text
+		(hbox.get_child(0) as Label).text = resource_text
+		(hbox.get_child(1) as Label).text = price_text
+		(hbox.get_child(2) as Label).text = bid_text
+		(hbox.get_child(3) as Label).text = ask_text
+		(hbox.get_child(4) as Label).text = in_stock_text
+		(hbox.get_child(5) as Label).text = contracted_text
 		i += 1
 	
 	# no show/hide needed if we always show all resources
 
 	_no_markets_label.hide()
 	_tab_container.show()
-
-
 
