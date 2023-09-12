@@ -10,9 +10,9 @@ extends TabContainer
 
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 const PERSIST_PROPERTIES := [
-	"memory",
-	"_on_ready_tab",
-	]
+	&"memory",
+	&"_on_ready_tab",
+]
 
 # persisted
 var memory := {} # generic memory that tabs can share, eg, for open states

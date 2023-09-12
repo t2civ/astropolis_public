@@ -21,7 +21,7 @@ extends IVSelectionManager
 
 const PLAYER_CLASS_POLITY := Enums.PlayerClasses.PLAYER_CLASS_POLITY
 
-var all_suffix := " / " + tr("LABEL_ALL")
+var all_suffix := " / " + tr(&"LABEL_ALL")
 
 
 static func get_or_make_selection(selection_name: String) -> IVSelection:

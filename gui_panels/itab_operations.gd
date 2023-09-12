@@ -26,8 +26,8 @@ const SUB_PREFIX := "         "
 
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 const PERSIST_PROPERTIES := [
-	"current_tab",
-	"_on_ready_tab",
+	&"current_tab",
+	&"_on_ready_tab",
 ]
 
 # persisted

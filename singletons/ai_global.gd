@@ -20,6 +20,8 @@ signal proxy_requested(proxy_name, gui_name, has_operations, has_inventory, has_
 	has_population, has_biome, has_metaverse)
 signal interface_changed(object_type, class_id, data)
 
+signal player_owner_changed(fixme) # FIXME - added for NetworkLobby; not hooked up anywhere else
+
 
 var verbose := false
 var verbose2 := false

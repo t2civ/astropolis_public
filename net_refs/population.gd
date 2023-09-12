@@ -43,7 +43,7 @@ var _dirty_carrying_capacities := 0
 var _dirty_immigration_attractions := 0
 var _dirty_emigration_pressures := 0
 
-var _tables: Dictionary = IVGlobal.tables
+var _tables: Dictionary = IVTableData.tables
 var _n_populations: int = _tables.n_populations
 var _table_populations: Dictionary = _tables.populations
 var _carrying_capacity_groups: Array[int] = _table_populations.carrying_capacity_group

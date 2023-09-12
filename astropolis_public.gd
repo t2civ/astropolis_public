@@ -4,10 +4,10 @@
 # *****************************************************************************
 
 const EXTENSION_NAME := "Astropolis Public"
-const EXTENSION_VERSION := "0.0.2"
+const EXTENSION_VERSION := "0.0.3"
 const EXTENSION_BUILD := "" # hotfix or debug build
 const EXTENSION_STATE := "prototype" # 'dev', 'alpha', 'beta', 'rc', ''
-const EXTENSION_YMD := 20230725
+const EXTENSION_YMD := 20230912
 
 const AI_VERBOSE := false
 const AI_VERBOSE2 := false

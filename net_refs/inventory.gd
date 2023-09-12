@@ -70,7 +70,7 @@ var _dirty_asks_2 := 0 # max 128
 func _init(is_new := false) -> void:
 	if !is_new: # game load
 		return
-	var n_resources: int = IVGlobal.tables.n_resources
+	var n_resources: int = IVTableData.tables.n_resources
 	reserves = ivutils.init_array(n_resources, 0.0)
 	markets = reserves.duplicate()
 	in_transits = reserves.duplicate()

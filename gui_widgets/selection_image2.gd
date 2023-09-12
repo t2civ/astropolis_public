@@ -21,7 +21,7 @@ extends TextureRect
 
 # GUI widget. An ancestor Control must have member "selection_manager".
 
-var _hint_extension := "\n\n" + tr("HINT_SELECTION_IMAGE")
+var _hint_extension := "\n\n" + tr(&"HINT_SELECTION_IMAGE")
 var _selection_manager: IVSelectionManager
 
 
@@ -70,3 +70,4 @@ func _update_image(_suppress_camera_move := false) -> void:
 	var texture_2d := _selection_manager.get_texture_2d()
 	if texture_2d:
 		texture = texture_2d
+

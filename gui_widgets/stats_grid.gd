@@ -27,16 +27,17 @@ var required_component := "operations"
 
 var content := [
 	# label_txt, target_path
-	["LABEL_POPULATION", "get_population_and_crew_total", qformat.named_number],
-	["LABEL_ECONOMY", "operations/lfq_gross_output", qformat.prefixed_named_number.bind("$")],
-	["LABEL_ENERGY", "operations/get_power_total", qformat.prefixed_unit.bind("W")],
-	["LABEL_MANUFACTURING", "operations/get_manufacturing_mass_flow_total", qformat.prefixed_unit.bind("t/d")],
-	["LABEL_CONSTRUCTIONS", "operations/constructions", qformat.prefixed_unit.bind("t")],
-	["LABEL_COMPUTATIONS", "metaverse/computations", qformat.prefixed_unit.bind("flops")],
-	["LABEL_INFORMATION", "metaverse/get_information", qformat.prefixed_unit.bind("bits")],
-	["LABEL_BIOPRODUCTIVITY", "biome/bioproductivity", qformat.prefixed_unit.bind("t/d")],
-	["LABEL_BIOMASS", "biome/biomass", qformat.prefixed_unit.bind("t")],
-	["LABEL_BIODIVERSITY", "biome/get_biodiversity", qformat.fixed_unit.bind("species")],
+	[&"LABEL_POPULATION", "get_population_and_crew_total", qformat.named_number],
+	[&"LABEL_ECONOMY", "operations/lfq_gross_output", qformat.prefixed_named_number.bind("$")],
+	[&"LABEL_ENERGY", "operations/get_power_total", qformat.prefixed_unit.bind("W")],
+	[&"LABEL_MANUFACTURING", "operations/get_manufacturing_mass_flow_total",
+			qformat.prefixed_unit.bind("t/d")],
+	[&"LABEL_CONSTRUCTIONS", "operations/constructions", qformat.prefixed_unit.bind("t")],
+	[&"LABEL_COMPUTATIONS", "metaverse/computations", qformat.prefixed_unit.bind("flops")],
+	[&"LABEL_INFORMATION", "metaverse/get_information", qformat.prefixed_unit.bind("bits")],
+	[&"LABEL_BIOPRODUCTIVITY", "biome/bioproductivity", qformat.prefixed_unit.bind("t/d")],
+	[&"LABEL_BIOMASS", "biome/biomass", qformat.prefixed_unit.bind("t")],
+	[&"LABEL_BIODIVERSITY", "biome/get_biodiversity", qformat.fixed_unit.bind("species")],
 ]
 
 var targets := ["PLANET_EARTH", "PROXY_OFF_EARTH"]

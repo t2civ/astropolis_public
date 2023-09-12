@@ -69,7 +69,7 @@ var use_this_ai := false # read-only
 var times: Array = IVGlobal.times # [time (s, J2000), engine_time (s), solar_day (d)] (floats)
 var date: Array = IVGlobal.date # Gregorian [year, month, day] (ints)
 var clock: Array = IVGlobal.clock # UT [hour, minute, second] (ints)
-var tables: Dictionary = IVGlobal.tables
+var tables: Dictionary = IVTableData.tables
 
 # private
 var _dirty := 0

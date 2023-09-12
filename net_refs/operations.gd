@@ -148,7 +148,7 @@ var _dirty_op_commands_1 := 0
 var _dirty_op_commands_2 := 0 # max 128
 
 # indexing & table data
-var _tables: Dictionary = IVGlobal.tables
+var _tables: Dictionary = IVTableData.tables
 var _table_operations: Dictionary = _tables.operations
 var _n_operations: int = _tables.n_operations
 var _op_groups_operations: Array = _tables.op_groups_operations # array of arrays

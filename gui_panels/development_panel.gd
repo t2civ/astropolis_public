@@ -40,8 +40,7 @@ func _delayed_1st_update() -> void:
 	# wait for initial server back-and-forth so there is data to get
 	var i := 0
 	while i < 8: # add more if needed
-		@warning_ignore("unsafe_property_access")
-		await get_tree().idle_frame
+		await get_tree().process_frame
 		i += 1
 	@warning_ignore("unsafe_method_access")
 	$StatsGrid.update()
