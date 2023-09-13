@@ -18,8 +18,8 @@ const USE_THREADS := false
 func _extension_init():
 	print("%s %s%s-%s %s" % [EXTENSION_NAME, EXTENSION_VERSION, EXTENSION_BUILD, EXTENSION_STATE,
 			str(EXTENSION_YMD)])
-	IVGlobal.connect("project_objects_instantiated", Callable(self, "_on_project_objects_instantiated"))
-	IVGlobal.connect("project_nodes_added", Callable(self, "_on_project_nodes_added"))
+	IVGlobal.project_objects_instantiated.connect(_on_project_objects_instantiated)
+	IVGlobal.project_nodes_added.connect(_on_project_nodes_added)
 
 	# properties
 	AIGlobal.verbose = AI_VERBOSE
@@ -32,12 +32,19 @@ func _extension_init():
 	IVGlobal.colors.great = Color.BLUE
 	
 	# translations
-	var path_format := "res://astropolis_public/data/text/%s.position"
+	var path_format := "res://astropolis_public/data/text/%s.translation"
 	IVGlobal.translations.append(path_format % "entities.en")
 	IVGlobal.translations.append(path_format % "gui.en")
 	IVGlobal.translations.append(path_format % "hints.en")
 	
 	# tables
+	IVGlobal.table_project_enums.append(Enums.OpProcessGroup)
+	IVGlobal.table_project_enums.append(Enums.TradeClasses)
+	IVGlobal.table_project_enums.append(Enums.PlayerClasses)
+	
+	IVGlobal.postprocess_tables.erase("res://ivoyager/data/solar_system/spacecrafts.tsv")
+	IVGlobal.postprocess_tables.erase("res://ivoyager/data/solar_system/wiki_extras.tsv")
+	
 	path_format = "res://astropolis_public/data/tables/%s.tsv"
 	var postprocess_tables_append := [
 		# primary tables
@@ -72,14 +79,14 @@ func _extension_init():
 	IVGlobal.postprocess_tables.append_array(postprocess_tables_append)
 	
 	# added/replaced classes
-	IVProjectBuilder.prog_refs._InfoCloner_ = InfoCloner
+	IVProjectBuilder.program_refcounteds._InfoCloner_ = InfoCloner
 	IVProjectBuilder.gui_nodes._AstroGUI_ = AstroGUI
 	
 	# extended
 	IVProjectBuilder.procedural_classes._SelectionManager_ = SelectionManager
 	
 	# removed
-	IVProjectBuilder.prog_refs.erase("_CompositionBuilder_")
+	IVProjectBuilder.program_refcounteds.erase("_CompositionBuilder_")
 	IVProjectBuilder.gui_nodes.erase("_CreditsPopup_")
 	IVProjectBuilder.procedural_classes.erase("_Composition_") # using total replacement
 	
