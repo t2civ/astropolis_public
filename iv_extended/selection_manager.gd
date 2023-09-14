@@ -99,7 +99,7 @@ func get_body_gui_name() -> String:
 func get_info_panel_data() -> Array:
 	# [target_name, header_text, is_developed] or empty array
 	# target is proxy in some cases; header_text is already translated
-	var selection_name := get_name()
+	var selection_name := get_selection_name()
 	if !selection_name:
 		return []
 	if selection_name.begins_with("FACILITY_"):

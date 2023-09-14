@@ -55,44 +55,44 @@ enum { # _dirty_values
 # save/load persistence for server only
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 const PERSIST_PROPERTIES := [
-	"yq",
-	"lfq_revenue",
-	"lfq_gross_output",
-	"lfq_net_income",
-	"total_power",
-	"manufacturing",
-	"constructions",
-	"crews",
-	"capacities",
-	"rates",
-	"public_capacities",
-	"est_revenues",
-	"est_gross_incomes",
-	"est_gross_margins",
-	"op_logics",
-	"op_commands",
+	&"yq",
+	&"lfq_revenue",
+	&"lfq_gross_output",
+	&"lfq_net_income",
+	&"total_power",
+	&"manufacturing",
+	&"constructions",
+	&"crews",
+	&"capacities",
+	&"rates",
+	&"public_capacities",
+	&"est_revenues",
+	&"est_gross_incomes",
+	&"est_gross_margins",
+	&"op_logics",
+	&"op_commands",
 	
-	"has_financials",
-	"_is_facility",
+	&"has_financials",
+	&"_is_facility",
 	
-	"_dirty_values",
-	"_dirty_crew",
-	"_dirty_capacities_1",
-	"_dirty_capacities_2",
-	"_dirty_rates_1",
-	"_dirty_rates_2",
-	"_dirty_public_capacities_1",
-	"_dirty_public_capacities_2",
-	"_dirty_est_revenues_1",
-	"_dirty_est_revenues_2",
-	"_dirty_est_gross_incomes_1",
-	"_dirty_est_gross_incomes_2",
-	"_dirty_est_gross_margins_1",
-	"_dirty_est_gross_margins_2",
-	"_dirty_op_logics_1",
-	"_dirty_op_logics_2",
-	"_dirty_op_commands_1",
-	"_dirty_op_commands_2",
+	&"_dirty_values",
+	&"_dirty_crew",
+	&"_dirty_capacities_1",
+	&"_dirty_capacities_2",
+	&"_dirty_rates_1",
+	&"_dirty_rates_2",
+	&"_dirty_public_capacities_1",
+	&"_dirty_public_capacities_2",
+	&"_dirty_est_revenues_1",
+	&"_dirty_est_revenues_2",
+	&"_dirty_est_gross_incomes_1",
+	&"_dirty_est_gross_incomes_2",
+	&"_dirty_est_gross_margins_1",
+	&"_dirty_est_gross_margins_2",
+	&"_dirty_op_logics_1",
+	&"_dirty_op_logics_2",
+	&"_dirty_op_commands_1",
+	&"_dirty_op_commands_2",
 ]
 
 # Interface read-only! Data flows server -> interface.
@@ -104,24 +104,24 @@ var total_power := 0.0 # DEPRECIATE - we have a method
 var manufacturing := 0.0 # present mass rate of manufactured products; DEPRECIATE for method
 var constructions := 0.0 # total mass of all constructions
 
-var crews: Array # indexed by population_type (can have crew w/out Population component)
+var crews: Array[float] # indexed by population_type (can have crew w/out Population component)
 
-var capacities: Array
-var rates: Array # =mass_flow if has_mass_flow (?)
+var capacities: Array[float]
+var rates: Array[float] # =mass_flow if has_mass_flow (?)
 
 # Facility, Player only (has_financials = true)
-var public_capacities: Array # =capacities if public sector, 0.0 if private sector
-var est_revenues: Array # per year at current rate & prices
-var est_gross_incomes: Array # per year at current prices
+var public_capacities: Array[float] # =capacities if public sector, 0.0 if private sector
+var est_revenues: Array[float] # per year at current rate & prices
+var est_gross_incomes: Array[float] # per year at current prices
 
 
 # Facility only
-var est_gross_margins: Array # at current prices (even if rate = 0)
-var op_logics: Array # enum; Facility only
+var est_gross_margins: Array[float] # at current prices (even if rate = 0)
+var op_logics: Array[int] # enum; Facility only
 
 # Facility only. 'op_commands' are AI or player settable from FacilityInterface.
 # Use API! (Direct change will break!) Data flows Interface -> Server.
-var op_commands: Array # enum; Facility only
+var op_commands: Array[int] # enum; Facility only
 
 
 var has_financials := false
@@ -149,9 +149,10 @@ var _dirty_op_commands_2 := 0 # max 128
 
 # indexing & table data
 var _tables: Dictionary = IVTableData.tables
-var _table_operations: Dictionary = _tables.operations
-var _n_operations: int = _tables.n_operations
-var _op_groups_operations: Array = _tables.op_groups_operations # array of arrays
+var _table_n_rows: Dictionary = IVTableData.table_n_rows
+var _table_operations: Dictionary = _tables[&"operations"]
+var _n_operations: int = _table_n_rows[&"operations"]
+var _op_groups_operations: Array[Array] = _tables[&"op_groups_operations"]
 
 
 func _init(is_new := false, has_financials_ := false, is_facility := false) -> void:
@@ -159,8 +160,8 @@ func _init(is_new := false, has_financials_ := false, is_facility := false) -> v
 		return
 	has_financials = has_financials_
 	_is_facility = is_facility
-	crews = ivutils.init_array(_tables.n_populations, 0.0)
-	capacities = ivutils.init_array(_n_operations, 0.0)
+	crews = ivutils.init_typed_array(_table_n_rows.populations, TYPE_FLOAT, &"", null, 0.0)
+	capacities = ivutils.init_typed_array(_n_operations, TYPE_FLOAT, &"", null, 0.0)
 	rates = capacities.duplicate()
 	if !has_financials_:
 		return
@@ -169,9 +170,9 @@ func _init(is_new := false, has_financials_ := false, is_facility := false) -> v
 	est_gross_incomes = capacities.duplicate()
 	if !is_facility:
 		return
-	est_gross_margins = ivutils.init_array(_n_operations, NAN)
-	op_logics = ivutils.init_array(_n_operations, OpLogics.IS_IDLE_UNPROFITABLE)
-	op_commands = ivutils.init_array(_n_operations, OpCommands.AUTOMATE)
+	est_gross_margins = ivutils.init_typed_array(_n_operations, TYPE_FLOAT, &"", null, NAN)
+	op_logics = ivutils.init_typed_array(_n_operations, TYPE_INT, &"", null, OpLogics.IS_IDLE_UNPROFITABLE)
+	op_commands = ivutils.init_typed_array(_n_operations, TYPE_INT, &"", null, OpCommands.AUTOMATE)
 
 
 # ********************************** READ *************************************

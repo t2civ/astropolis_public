@@ -121,6 +121,8 @@ func _on_project_objects_instantiated() -> void:
 	
 	# table additions (subtables, re-indexings, or other useful table items)
 	var tables: Dictionary = IVTableData.tables
+	var table_n_rows: Dictionary = IVTableData.table_n_rows
+	
 	# unique items
 	tables.resource_type_electricity = tables.resources.unique_type.find("electricity")
 	assert(tables.resource_type_electricity != -1)
@@ -132,16 +134,16 @@ func _on_project_objects_instantiated() -> void:
 			Enums.OpProcessGroup.OP_PROCESS_GROUP_EXTRACTION)
 	# inverted table row subsets (array of indexes in the subset, where non-subset = -1)
 	tables.resource_extractions = Utils.invert_subset_indexing(tables.extraction_resources,
-			tables.n_resources)
+			table_n_rows.resources)
 	tables.operation_extractions = Utils.invert_subset_indexing(tables.extraction_operations,
-			tables.n_operations)
+			table_n_rows.operations)
 	# one-to-many indexing (arrays of arrays)
 	tables.op_classes_op_groups = Utils.invert_many_to_one_indexing(tables.op_groups.op_class,
-			tables.n_op_classes) # an array of op_groups for each op_class
+			table_n_rows.op_classes) # an array of op_groups for each op_class
 	tables.op_groups_operations = Utils.invert_many_to_one_indexing(tables.operations.op_group,
-			tables.n_op_groups) # an array of operations for each op_group
+			table_n_rows.op_groups) # an array of operations for each op_group
 	tables.resource_classes_resources = Utils.invert_many_to_one_indexing(tables.resources.resource_class,
-			tables.n_resource_classes) # an array of resources for each resource_class
+			table_n_rows.resource_classes) # an array of resources for each resource_class
 	
 	# tests
 	for i in tables.operations.input_resources:

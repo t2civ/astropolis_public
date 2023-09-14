@@ -55,7 +55,7 @@ func _gui_input(event: InputEvent) -> void:
 		# image click centers and "levels" the target body
 		# Below modified from I, Voyager:
 		var body_name := _selection_manager.get_body_name()
-		if body_name != _selection_manager.get_name():
+		if body_name != _selection_manager.get_selection_name():
 			_selection_manager.select_by_name(body_name)
 			return
 		# End modification

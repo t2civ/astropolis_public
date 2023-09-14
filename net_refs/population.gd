@@ -44,22 +44,25 @@ var _dirty_immigration_attractions := 0
 var _dirty_emigration_pressures := 0
 
 var _tables: Dictionary = IVTableData.tables
-var _n_populations: int = _tables.n_populations
-var _table_populations: Dictionary = _tables.populations
-var _carrying_capacity_groups: Array[int] = _table_populations.carrying_capacity_group
-var _carrying_capacity_group2s: Array[int] = _table_populations.carrying_capacity_group2
+var _table_n_rows: Dictionary = IVTableData.table_n_rows
+var _n_populations: int = _table_n_rows[&"populations"]
+var _table_populations: Dictionary = _tables[&"populations"]
+var _carrying_capacity_groups: Array[int] = _table_populations[&"carrying_capacity_group"]
+var _carrying_capacity_group2s: Array[int] = _table_populations[&"carrying_capacity_group2"]
 
 
 func _init(is_new := false, is_facility := false) -> void:
 	if !is_new: # game load
 		return
-	numbers = ivutils.init_array(_n_populations, 0.0)
-	history_numbers = ivutils.init_array(_n_populations, [])
+	numbers = ivutils.init_typed_array(_n_populations, TYPE_FLOAT, &"", null, 0.0)
+	history_numbers = ivutils.init_typed_array(_n_populations, TYPE_ARRAY, &"", null,
+			[] as Array[float])
 	if !is_facility:
 		return
 	_is_facility = true
 	growth_rates = numbers.duplicate()
-	carrying_capacities = ivutils.init_array(_tables.n_carrying_capacity_groups, 0.0)
+	carrying_capacities = ivutils.init_typed_array(_table_n_rows.carrying_capacity_groups,
+			TYPE_FLOAT, &"", null, 0.0)
 	immigration_attractions = numbers.duplicate()
 	emigration_pressures = numbers.duplicate()
 

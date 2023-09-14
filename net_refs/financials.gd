@@ -26,7 +26,7 @@ const PERSIST_PROPERTIES := [
 # interface sync
 var yq := -1 # last sync, = year * 4 + (quarter - 1)
 var revenue := 0.0 # positive values of INC_STMT_GROSS
-var accountings: Array
+var accountings: Array[float]
 
 # TODO:
 # var items: Dictionary # facility only?
@@ -43,7 +43,7 @@ func _init(is_new := false) -> void:
 	# debug dev
 	var n_accountings := 10
 	
-	accountings = ivutils.init_array(n_accountings, 0.0)
+	accountings = ivutils.init_typed_array(n_accountings, TYPE_FLOAT, &"", null, 0.0)
 
 
 func get_server_init() -> Array:

@@ -51,7 +51,7 @@ func _ready() -> void:
 	visibility_changed.connect(_update_selection)
 	_selection_manager = IVWidgets.get_selection_manager(self)
 	_selection_manager.selection_changed.connect(_update_selection)
-	_composition_types = IVTableData.get_entity_enumeration(&"compositions")
+	_composition_types = IVTableData.enumeration_dicts[&"compositions"]
 	_update_selection()
 
 
@@ -69,7 +69,7 @@ func _update_selection(_suppress_camera_move := false) -> void:
 	header_changed.emit(header_text)
 	
 	var body_name := _selection_manager.get_body_name()
-	var selection_name := _selection_manager.get_name() # body or facility
+	var selection_name := _selection_manager.get_selection_name() # body or facility
 	MainThreadGlobal.call_on_ai_thread(self, "_get_ai_data", [body_name, selection_name])
 
 

@@ -70,6 +70,7 @@ var times: Array = IVGlobal.times # [time (s, J2000), engine_time (s), solar_day
 var date: Array = IVGlobal.date # Gregorian [year, month, day] (ints)
 var clock: Array = IVGlobal.clock # UT [hour, minute, second] (ints)
 var tables: Dictionary = IVTableData.tables
+var table_n_rows: Dictionary = IVTableData.table_n_rows
 
 # private
 var _dirty := 0

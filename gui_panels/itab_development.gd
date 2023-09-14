@@ -56,7 +56,7 @@ func _update_selection(_suppress_camera_move := false) -> void:
 	header_text += _header_suffix
 	header_changed.emit(header_text)
 	
-	var selection_name := _selection_manager.get_name()
+	var selection_name := _selection_manager.get_selection_name()
 	
 	var body_name: String
 	var body_flags: int

@@ -60,7 +60,6 @@ var _name_column_width := 250.0 # TODO: resize on GUI resize (also in RowItem)
 
 # table indexing
 var _tables: Dictionary = IVTableData.tables
-#var _n_resources: int = _tables.n_resources
 var _resource_names: Array = _tables.resources.name
 var _trade_classes: Array = _tables.resources.trade_class
 var _trade_units: Array = _tables.resources.trade_unit
