@@ -43,7 +43,7 @@ func _init(is_new := false) -> void:
 	# debug dev
 	var n_accountings := 10
 	
-	accountings = ivutils.init_typed_array(n_accountings, TYPE_FLOAT, &"", null, 0.0)
+	accountings = ivutils.init_array(n_accountings, 0.0, TYPE_FLOAT)
 
 
 func get_server_init() -> Array:

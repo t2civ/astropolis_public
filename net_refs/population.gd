@@ -54,15 +54,13 @@ var _carrying_capacity_group2s: Array[int] = _table_populations[&"carrying_capac
 func _init(is_new := false, is_facility := false) -> void:
 	if !is_new: # game load
 		return
-	numbers = ivutils.init_typed_array(_n_populations, TYPE_FLOAT, &"", null, 0.0)
-	history_numbers = ivutils.init_typed_array(_n_populations, TYPE_ARRAY, &"", null,
-			[] as Array[float])
+	numbers = ivutils.init_array(_n_populations, 0.0, TYPE_FLOAT)
+	history_numbers = ivutils.init_array(_n_populations, [] as Array[float], TYPE_ARRAY)
 	if !is_facility:
 		return
 	_is_facility = true
 	growth_rates = numbers.duplicate()
-	carrying_capacities = ivutils.init_typed_array(_table_n_rows.carrying_capacity_groups,
-			TYPE_FLOAT, &"", null, 0.0)
+	carrying_capacities = ivutils.init_array(_table_n_rows.carrying_capacity_groups, 0.0, TYPE_FLOAT)
 	immigration_attractions = numbers.duplicate()
 	emigration_pressures = numbers.duplicate()
 

@@ -234,11 +234,11 @@ func _init(is_new := false, is_server := false) -> void:
 	if !is_new: # loaded game
 		return
 	var n_is_extraction_resources := _extraction_resources.size()
-	masses = ivutils.init_typed_array(n_is_extraction_resources, TYPE_FLOAT, &"", null, 0.0)
+	masses = ivutils.init_array(n_is_extraction_resources, 0.0, TYPE_FLOAT)
 	heterogeneities = masses.duplicate()
 	if !is_server:
 		return
-	masses_biases = ivutils.init_typed_array(n_is_extraction_resources, TYPE_FLOAT, &"", null, 1.0)
+	masses_biases = ivutils.init_array(n_is_extraction_resources, 1.0, TYPE_FLOAT)
 	heterogeneities_biases = masses_biases.duplicate()
 
 

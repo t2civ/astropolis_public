@@ -71,11 +71,11 @@ func _init(is_new := false) -> void:
 	if !is_new: # game load
 		return
 	var n_resources: int = IVTableData.table_n_rows.resources
-	reserves = ivutils.init_typed_array(n_resources, TYPE_FLOAT, &"", null, 0.0)
+	reserves = ivutils.init_array(n_resources, 0.0, TYPE_FLOAT)
 	markets = reserves.duplicate()
 	in_transits = reserves.duplicate()
 	contracteds = reserves.duplicate()
-	prices = ivutils.init_typed_array(n_resources, TYPE_FLOAT, &"", null, NAN)
+	prices = ivutils.init_array(n_resources, NAN, TYPE_FLOAT)
 	bids = prices.duplicate()
 	asks = prices.duplicate()
 

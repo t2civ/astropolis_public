@@ -160,8 +160,8 @@ func _init(is_new := false, has_financials_ := false, is_facility := false) -> v
 		return
 	has_financials = has_financials_
 	_is_facility = is_facility
-	crews = ivutils.init_typed_array(_table_n_rows.populations, TYPE_FLOAT, &"", null, 0.0)
-	capacities = ivutils.init_typed_array(_n_operations, TYPE_FLOAT, &"", null, 0.0)
+	crews = ivutils.init_array(_table_n_rows[&"populations"], 0.0, TYPE_FLOAT)
+	capacities = ivutils.init_array(_n_operations, 0.0, TYPE_FLOAT)
 	rates = capacities.duplicate()
 	if !has_financials_:
 		return
@@ -170,9 +170,9 @@ func _init(is_new := false, has_financials_ := false, is_facility := false) -> v
 	est_gross_incomes = capacities.duplicate()
 	if !is_facility:
 		return
-	est_gross_margins = ivutils.init_typed_array(_n_operations, TYPE_FLOAT, &"", null, NAN)
-	op_logics = ivutils.init_typed_array(_n_operations, TYPE_INT, &"", null, OpLogics.IS_IDLE_UNPROFITABLE)
-	op_commands = ivutils.init_typed_array(_n_operations, TYPE_INT, &"", null, OpCommands.AUTOMATE)
+	est_gross_margins = ivutils.init_array(_n_operations, NAN, TYPE_FLOAT)
+	op_logics = ivutils.init_array(_n_operations, OpLogics.IS_IDLE_UNPROFITABLE, TYPE_INT)
+	op_commands = ivutils.init_array(_n_operations, OpCommands.AUTOMATE, TYPE_INT)
 
 
 # ********************************** READ *************************************

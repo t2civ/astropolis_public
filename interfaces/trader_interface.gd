@@ -22,8 +22,8 @@ var is_spaceport := false
 var market_requests: Array # bool; markets we want, indexed by resource_id
 
 # don't sync (server doesn't care)
-var bids: Array[float] = IVUtils.init_typed_array(table_n_rows.resources, TYPE_FLOAT, &"", null, 0.0)
-var asks: Array[float] = IVUtils.init_typed_array(table_n_rows.resources, TYPE_FLOAT, &"", null, 0.0)
+var bids: Array[float] = IVUtils.init_array(table_n_rows.resources, 0.0, TYPE_FLOAT)
+var asks: Array[float] = IVUtils.init_array(table_n_rows.resources, 0.0, TYPE_FLOAT)
 
 
 # shared from other interfaces
