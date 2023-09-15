@@ -68,7 +68,7 @@ func _clear() -> void:
 
 
 func _init_after_system_built() -> void:
-	_selection_manager = IVWidgets.get_selection_manager(self)
+	_selection_manager = IVSelectionManager.get_selection_manager(self)
 	_selection_manager.selection_changed.connect(_update)
 	var section := 0
 	while section < _n_sections:

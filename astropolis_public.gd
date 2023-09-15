@@ -83,12 +83,12 @@ func _extension_init():
 	IVProjectBuilder.gui_nodes._AstroGUI_ = AstroGUI
 	
 	# extended
-	IVProjectBuilder.procedural_classes._SelectionManager_ = SelectionManager
+	IVProjectBuilder.procedural_objects._SelectionManager_ = SelectionManager
 	
 	# removed
 	IVProjectBuilder.program_refcounteds.erase("_CompositionBuilder_")
 	IVProjectBuilder.gui_nodes.erase("_CreditsPopup_")
-	IVProjectBuilder.procedural_classes.erase("_Composition_") # using total replacement
+	IVProjectBuilder.procedural_objects.erase("_Composition_") # using total replacement
 	
 	# static class changes
 	var multipliers := IVUnits.multipliers

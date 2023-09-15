@@ -49,7 +49,7 @@ var _header_suffix := "  -  " + tr(&"LABEL_RESOURCES")
 
 func _ready() -> void:
 	visibility_changed.connect(_update_selection)
-	_selection_manager = IVWidgets.get_selection_manager(self)
+	_selection_manager = IVSelectionManager.get_selection_manager(self)
 	_selection_manager.selection_changed.connect(_update_selection)
 	_composition_types = IVTableData.enumeration_dicts[&"compositions"]
 	_update_selection()

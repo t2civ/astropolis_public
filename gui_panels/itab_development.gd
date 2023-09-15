@@ -29,7 +29,7 @@ func _ready() -> void:
 	visibility_changed.connect(_update_selection)
 	@warning_ignore("unsafe_property_access", "unsafe_method_access")
 	_stats_grid.has_stats_changed.connect(_update_no_development)
-	_selection_manager = IVWidgets.get_selection_manager(self)
+	_selection_manager = IVSelectionManager.get_selection_manager(self)
 	_selection_manager.selection_changed.connect(_update_selection)
 	@warning_ignore("unsafe_property_access")
 	_stats_grid.min_columns = 4

@@ -91,7 +91,7 @@ var _resource_classes_resources: Array = _tables.resource_classes_resources # ar
 func _ready() -> void:
 	IVGlobal.about_to_free_procedural_nodes.connect(_clear)
 	visibility_changed.connect(_update_tab)
-	_selection_manager = IVWidgets.get_selection_manager(self)
+	_selection_manager = IVSelectionManager.get_selection_manager(self)
 	_selection_manager.selection_changed.connect(_update_tab)
 	_tab_container.tab_changed.connect(_select_tab)
 	# rename tabs for abreviated localization

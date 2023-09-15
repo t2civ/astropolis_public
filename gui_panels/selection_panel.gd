@@ -14,12 +14,12 @@ const PERSIST_PROPERTIES := [
 ]
 
 
-var default_view_name := "LABEL_VIEW1" # will increment if taken
-var set_name := "SP"
+var default_view_name := &"LABEL_VIEW1" # will increment if taken
+var set_name := &"SP"
 var is_cached := false # if false, persisted via gamesave
 var view_flags := IVView.ALL
 var init_flags := IVView.ALL_CAMERA
-var reserved_view_names: Array[String] = [tr("BUTTON_HOME")]
+var reserved_view_names: Array[StringName] = [&"BUTTON_HOME"]
 
 
 
