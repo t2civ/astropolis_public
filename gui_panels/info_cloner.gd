@@ -7,7 +7,7 @@ class_name InfoCloner
 # Clones InfoPanel on 'clone_and_pin_requested' signal.
 
 
-func _project_init() -> void:
+func _ivcore_init() -> void:
 	IVGlobal.system_tree_ready.connect(_on_system_tree_ready)
 
 

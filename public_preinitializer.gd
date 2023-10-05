@@ -1,13 +1,10 @@
-# astropolis_public.gd
+# public_preinitializer.gd
 # This file is part of Astropolis
 # Copyright 2019-2023 Charlie Whitfield, all rights reserved
 # *****************************************************************************
+extends RefCounted
 
-const EXTENSION_NAME := "Astropolis Public"
-const EXTENSION_VERSION := "0.0.3"
-const EXTENSION_BUILD := "" # hotfix or debug build
-const EXTENSION_STATE := "prototype" # 'dev', 'alpha', 'beta', 'rc', ''
-const EXTENSION_YMD := 20230912
+const VERSION := "0.0.4-dev"
 
 const AI_VERBOSE := false
 const AI_VERBOSE2 := false
@@ -15,35 +12,33 @@ const IVOYAGER_VERBOSE := false
 const USE_THREADS := false
 
 
-func _extension_init():
-	print("%s %s%s-%s %s" % [EXTENSION_NAME, EXTENSION_VERSION, EXTENSION_BUILD, EXTENSION_STATE,
-			str(EXTENSION_YMD)])
+func _init():
+	print("Astropolis Public %s" % VERSION)
 	IVGlobal.project_objects_instantiated.connect(_on_project_objects_instantiated)
 	IVGlobal.project_nodes_added.connect(_on_project_nodes_added)
 
 	# properties
 	AIGlobal.verbose = AI_VERBOSE
 	AIGlobal.verbose2 = AI_VERBOSE2
-	IVGlobal.verbose = IVOYAGER_VERBOSE
-	IVGlobal.use_threads = USE_THREADS
-	IVGlobal.save_file_extension = "AstropolisSave"
-	IVGlobal.save_file_extension_name = "Astropolis Save"
-	IVGlobal.start_time = 10.0 * IVUnits.YEAR
-	IVGlobal.colors.great = Color.BLUE
+	IVCoreSettings.use_threads = USE_THREADS
+	IVCoreSettings.save_file_extension = "AstropolisSave"
+	IVCoreSettings.save_file_extension_name = "Astropolis Save"
+	IVCoreSettings.start_time = 10.0 * IVUnits.YEAR
+	IVCoreSettings.colors.great = Color.BLUE
 	
 	# translations
 	var path_format := "res://astropolis_public/data/text/%s.translation"
-	IVGlobal.translations.append(path_format % "entities.en")
-	IVGlobal.translations.append(path_format % "gui.en")
-	IVGlobal.translations.append(path_format % "hints.en")
+	IVCoreSettings.translations.append(path_format % "entities.en")
+	IVCoreSettings.translations.append(path_format % "gui.en")
+	IVCoreSettings.translations.append(path_format % "hints.en")
 	
 	# tables
-	IVGlobal.table_project_enums.append(Enums.OpProcessGroup)
-	IVGlobal.table_project_enums.append(Enums.TradeClasses)
-	IVGlobal.table_project_enums.append(Enums.PlayerClasses)
+	IVCoreSettings.table_project_enums.append(Enums.OpProcessGroup)
+	IVCoreSettings.table_project_enums.append(Enums.TradeClasses)
+	IVCoreSettings.table_project_enums.append(Enums.PlayerClasses)
 	
-	IVGlobal.postprocess_tables.erase("res://addons/ivoyager_core/data/solar_system/spacecrafts.tsv")
-	IVGlobal.postprocess_tables.erase("res://addons/ivoyager_core/data/solar_system/wiki_extras.tsv")
+	IVCoreSettings.postprocess_tables.erase("res://addons/ivoyager_core/data/solar_system/spacecrafts.tsv")
+	IVCoreSettings.postprocess_tables.erase("res://addons/ivoyager_core/data/solar_system/wiki_extras.tsv")
 	
 	path_format = "res://astropolis_public/data/tables/%s.tsv"
 	var postprocess_tables_append := [
@@ -76,31 +71,26 @@ func _extension_init():
 		path_format % "facilities_populations",
 		path_format % "facilities_resources",
 	]
-	IVGlobal.postprocess_tables.append_array(postprocess_tables_append)
+	IVCoreSettings.postprocess_tables.append_array(postprocess_tables_append)
 	
 	# added/replaced classes
-	IVProjectBuilder.program_refcounteds._InfoCloner_ = InfoCloner
-	IVProjectBuilder.gui_nodes._AstroGUI_ = AstroGUI
+	IVCoreInitializer.program_refcounteds[&"InfoCloner"] = InfoCloner
+	IVCoreInitializer.gui_nodes[&"AstroGUI"] = AstroGUI
 	
 	# extended
-	IVProjectBuilder.procedural_objects._SelectionManager_ = SelectionManager
+	IVCoreInitializer.procedural_objects[&"SelectionManager"] = SelectionManager
 	
 	# removed
-	IVProjectBuilder.program_refcounteds.erase("_CompositionBuilder_")
-	IVProjectBuilder.gui_nodes.erase("_CreditsPopup_")
-	IVProjectBuilder.procedural_objects.erase("_Composition_") # using total replacement
+	IVCoreInitializer.program_refcounteds.erase(&"CompositionBuilder")
+	IVCoreInitializer.procedural_objects.erase(&"Composition") # using total replacement
 	
 	# static class changes
-	var multipliers := IVUnits.multipliers
-	multipliers.flops = 1.0 / IVUnits.SECOND # base unit for computation
-	multipliers.puhr = 1e16 * 3600.0 # 'processor unit hour'; 1e16 flops/s * hr
-	multipliers.species = 1.0
+	var unit_multipliers := IVUnits.unit_multipliers
+	unit_multipliers[&"flops"] = 1.0 / IVUnits.SECOND # base unit for computation
+	unit_multipliers[&"puhr"] = 1e16 * 3600.0 # 'processor unit hour'; 1e16 flops/s * hr
+	unit_multipliers[&"species"] = 1.0
 	
 	IVQFormat.exponent_str = "e"
-	# https://sites.google.com/site/largenumbers/home/2-2/2-2-3-non-canonical-si-prefixes
-#	IVQFormat.prefix_names.append("Bronto") # fictional e27
-#	IVQFormat.prefix_names.append("Giop") # fictional e30
-#	IVQFormat.prefix_symbols.append("B")
 
 
 func _on_project_objects_instantiated() -> void:
@@ -109,7 +99,6 @@ func _on_project_objects_instantiated() -> void:
 	var timekeeper: IVTimekeeper = IVGlobal.program.Timekeeper
 	timekeeper.date_format = timekeeper.DATE_FORMAT_Y_M_D_Q_YQ_YM
 	timekeeper.start_speed = 0
-#	IVQFormat.prefix_symbols.append("Gp")
 	
 	var settings_manager: IVSettingsManager = IVGlobal.program.SettingsManager
 	var defaults: Dictionary = settings_manager.defaults
@@ -153,6 +142,6 @@ func _on_project_objects_instantiated() -> void:
 
 
 func _on_project_nodes_added() -> void:
-	IVProjectBuilder.move_top_gui_child_to_sibling("AstroGUI", "SplashScreen", true)
+	IVCoreInitializer.move_top_gui_child_to_sibling("AstroGUI", "SplashScreen", true)
 
 

@@ -62,7 +62,7 @@ var _operation_flow_units: Array = _tables.operations.flow_unit
 #var _n_resources_is_extraction := _resources_is_extraction.size()
 #var _resource_names: Array = _tables.resources.name
 
-@onready var _multipliers := IVUnits.multipliers
+@onready var _multipliers := IVUnits.unit_multipliers
 @warning_ignore("unsafe_property_access")
 @onready var _memory: Dictionary = get_parent().memory # open states
 @onready var _no_ops_label: Label = $NoOpsLabel
@@ -227,7 +227,7 @@ func _get_ai_data(data: Array) -> void:
 	data.append(n_op_groups)
 	data.append(tab)
 	data.append(target_name)
-	call_deferred("_update_tab_display", data)
+	_update_tab_display.call_deferred(data)
 
 
 # *****************************************************************************
@@ -358,8 +358,7 @@ class RowItem extends HBoxContainer:
 	var margin_label := Label.new()
 	var controler := Control.new() # TODO
 	
-	var qformat := IVQFormat # make const when Godot allows
-	var multipliers := qformat.multipliers
+	var unit_multipliers := IVUnits.unit_multipliers
 	
 	var _is_group: bool
 	var _group_name: String
@@ -428,22 +427,22 @@ class RowItem extends HBoxContainer:
 		elif power == INF:
 			power_label.text = "?"
 		else:
-			power /= multipliers["MW"]
-			power_label.text = qformat.number(power, 2)
+			power /= unit_multipliers[&"MW"]
+			power_label.text = IVQFormat.number(power, 2)
 			
 		if is_nan(flow):
 			flow_label.text = " "
 		elif flow == INF:
 			flow_label.text = "?"
 		else:
-			flow_label.text = qformat.number(flow, 2)
+			flow_label.text = IVQFormat.number(flow, 2)
 			
 		if is_nan(revenue):
 			revenue_label.text = " "
 		elif revenue == INF:
 			revenue_label.text = "?"
 		else:
-			revenue_label.text = qformat.number(revenue / 1e6, 2)
+			revenue_label.text = IVQFormat.number(revenue / 1e6, 2)
 			
 		if is_nan(margin):
 			margin_label.text = " "

@@ -30,10 +30,7 @@ const PERSIST_PROPERTIES := [
 	"_on_ready_tab",
 ]
 
-var qformat := IVQFormat # make const when Godot allows
-var units := IVUnits # make const when Godot allows
-
-var multipliers := units.multipliers
+var unit_multipliers := IVUnits.unit_multipliers
 
 # persisted
 var current_tab := 0
@@ -227,19 +224,19 @@ func _update_tab_display(data: Array) -> void:
 		var trade_class: int = _trade_classes[resource_type]
 		var trade_unit: String = _trade_units[resource_type]
 		
-		in_stock /= multipliers[trade_unit]
-		contracted /= multipliers[trade_unit]
+		in_stock /= unit_multipliers[trade_unit]
+		contracted /= unit_multipliers[trade_unit]
 		
 		var resource_text: String = (
 			tr(_resource_names[resource_type])
 			+ " (" + TRADE_CLASS_TEXTS[trade_class]
 			+ trade_unit + ")"
 		)
-		var price_text := "" if is_nan(price) else qformat.number(price, 3)
-		var bid_text := "" if is_nan(bid) else qformat.number(bid, 3)
-		var ask_text := "" if is_nan(ask) else qformat.number(ask, 3)
-		var in_stock_text := qformat.number(in_stock, 2) # FIXME: trade unit
-		var contracted_text := qformat.number(contracted, 2) # FIXME: trade unit
+		var price_text := "" if is_nan(price) else IVQFormat.number(price, 3)
+		var bid_text := "" if is_nan(bid) else IVQFormat.number(bid, 3)
+		var ask_text := "" if is_nan(ask) else IVQFormat.number(ask, 3)
+		var in_stock_text := IVQFormat.number(in_stock, 2) # FIXME: trade unit
+		var contracted_text := IVQFormat.number(contracted, 2) # FIXME: trade unit
 		
 		var hbox: HBoxContainer = vbox.get_child(i)
 		(hbox.get_child(0) as Label).text = resource_text

@@ -13,8 +13,6 @@ signal has_stats_changed(has_stats)
 
 const ivutils := preload("res://addons/ivoyager_core/static/utils.gd")
 
-var qformat := IVQFormat # const when Godot allows
-
 
 # GUI values - parent should set only once at init
 #var update_interval := 1.0 # seconds
@@ -27,17 +25,17 @@ var required_component := "operations"
 
 var content := [
 	# label_txt, target_path
-	[&"LABEL_POPULATION", "get_population_and_crew_total", qformat.named_number],
-	[&"LABEL_ECONOMY", "operations/lfq_gross_output", qformat.prefixed_named_number.bind("$")],
-	[&"LABEL_ENERGY", "operations/get_power_total", qformat.prefixed_unit.bind("W")],
+	[&"LABEL_POPULATION", "get_population_and_crew_total", IVQFormat.named_number],
+	[&"LABEL_ECONOMY", "operations/lfq_gross_output", IVQFormat.prefixed_named_number.bind("$")],
+	[&"LABEL_ENERGY", "operations/get_power_total", IVQFormat.prefixed_unit.bind("W")],
 	[&"LABEL_MANUFACTURING", "operations/get_manufacturing_mass_flow_total",
-			qformat.prefixed_unit.bind("t/d")],
-	[&"LABEL_CONSTRUCTIONS", "operations/constructions", qformat.prefixed_unit.bind("t")],
-	[&"LABEL_COMPUTATIONS", "metaverse/computations", qformat.prefixed_unit.bind("flops")],
-	[&"LABEL_INFORMATION", "metaverse/get_information", qformat.prefixed_unit.bind("bits")],
-	[&"LABEL_BIOPRODUCTIVITY", "biome/bioproductivity", qformat.prefixed_unit.bind("t/d")],
-	[&"LABEL_BIOMASS", "biome/biomass", qformat.prefixed_unit.bind("t")],
-	[&"LABEL_BIODIVERSITY", "biome/get_biodiversity", qformat.fixed_unit.bind("species")],
+			IVQFormat.prefixed_unit.bind("t/d")],
+	[&"LABEL_CONSTRUCTIONS", "operations/constructions", IVQFormat.prefixed_unit.bind("t")],
+	[&"LABEL_COMPUTATIONS", "metaverse/computations", IVQFormat.prefixed_unit.bind("flops")],
+	[&"LABEL_INFORMATION", "metaverse/get_information", IVQFormat.prefixed_unit.bind("bits")],
+	[&"LABEL_BIOPRODUCTIVITY", "biome/bioproductivity", IVQFormat.prefixed_unit.bind("t/d")],
+	[&"LABEL_BIOMASS", "biome/biomass", IVQFormat.prefixed_unit.bind("t")],
+	[&"LABEL_BIODIVERSITY", "biome/get_biodiversity", IVQFormat.fixed_unit.bind("species")],
 ]
 
 var targets := ["PLANET_EARTH", "PROXY_OFF_EARTH"]
@@ -149,9 +147,9 @@ func _set_network_data(data: Array) -> void:
 #		var option_type: int = args[0]
 #		var unit: String = args[1] if n_args > 1 else ""
 #		var precision: int = args[2] if n_args > 2 else 3
-#		var num_type: int = args[3] if n_args > 3 else qformat.NUM_DYNAMIC
+#		var num_type: int = args[3] if n_args > 3 else IVQFormat.NUM_DYNAMIC
 #		var long_form: bool = args[4] if n_args > 4 else false
-#		var case_type: int = args[5] if n_args > 5 else qformat.CASE_MIXED
+#		var case_type: int = args[5] if n_args > 5 else IVQFormat.CASE_MIXED
 
 		var format_callable: Callable = line_array[2]
 		

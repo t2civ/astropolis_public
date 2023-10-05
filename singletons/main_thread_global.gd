@@ -59,30 +59,34 @@ func get_gui_name(interface_name: String) -> String:
 
 
 func get_body_flags(body_name: String) -> int:
-	var interface: BodyInterface = interfaces_by_name.get(body_name)
+	var interface: Interface = interfaces_by_name.get(body_name)
 	if !interface:
 		return 0
+	@warning_ignore("unsafe_property_access")
 	return interface.body_flags
 
 
 func get_facility_body(facility_name: String) -> String:
-	var interface: FacilityInterface = interfaces_by_name.get(facility_name)
+	var interface: Interface = interfaces_by_name.get(facility_name)
 	if !interface:
 		return ""
+	@warning_ignore("unsafe_property_access")
 	return interface.body_name
 
 
 func get_facility_player(facility_name: String) -> String:
-	var interface: FacilityInterface = interfaces_by_name.get(facility_name)
+	var interface: Interface = interfaces_by_name.get(facility_name)
 	if !interface:
 		return ""
+	@warning_ignore("unsafe_property_access")
 	return interface.player_name
 
 
 func get_facility_polity(facility_name: String) -> String:
-	var interface: FacilityInterface = interfaces_by_name.get(facility_name)
+	var interface: Interface = interfaces_by_name.get(facility_name)
 	if !interface:
 		return ""
+	@warning_ignore("unsafe_property_access")
 	return interface.polity_name
 
 
@@ -102,15 +106,17 @@ func get_n_facilities(body_or_player_name: String) -> int:
 func get_player_facility_at_body(player_name: String, body_name: String) -> String:
 	var body_facilities := get_facilities(body_name)
 	for facility_name in body_facilities:
-		var interface: FacilityInterface = interfaces_by_name.get(facility_name)
+		var interface: Interface = interfaces_by_name.get(facility_name)
+		@warning_ignore("unsafe_property_access")
 		if interface.player_name == player_name:
 			return interface.name
 	return ""
 
 
 func get_player_class(player_name: String) -> int:
-	var interface: PlayerInterface = interfaces_by_name.get(player_name)
+	var interface: Interface = interfaces_by_name.get(player_name)
 	if interface:
+		@warning_ignore("unsafe_property_access")
 		return interface.player_class
 	return -1
 

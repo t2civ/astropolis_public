@@ -18,11 +18,7 @@ const IS_SPACECRAFT := IVEnums.BodyFlags.IS_SPACECRAFT
 
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 
-const NUM_DYNAMIC := IVQFormat.NUM_DYNAMIC
-const LENGTH_M_KM := IVQFormat.LENGTH_M_KM
-
-var qformat := IVQFormat # const when Godot allows
-
+const LENGTH_M_KM := IVQFormat.DynamicUnitType.LENGTH_M_KM
 
 
 var _tables: Dictionary = IVTableData.tables
@@ -235,10 +231,10 @@ func _update_display(data: Array) -> void:
 			hint_format_str = tr(&"HINT_STRATUM_FORMAT_2") # thickness
 		var hint := hint_format_str % [
 			tr(evidence),
-			qformat.dynamic_unit(thickness, LENGTH_M_KM, 3, NUM_DYNAMIC),
-			qformat.fixed_unit(volume, &"km^3", 3, NUM_DYNAMIC),
-			qformat.fixed_unit(density, &"g/cm^3", 3, NUM_DYNAMIC),
-			qformat.fixed_unit(total_mass, &"t", 3, NUM_DYNAMIC),
+			IVQFormat.dynamic_unit(thickness, LENGTH_M_KM, 3),
+			IVQFormat.fixed_unit(volume, &"km^3", 3),
+			IVQFormat.fixed_unit(density, &"g/cm^3", 3),
+			IVQFormat.fixed_unit(total_mass, &"t", 3),
 		]
 		
 		var polity_index := composition_polities.find(composition_polity)
@@ -335,8 +331,6 @@ class StratumVBox extends VBoxContainer:
 	
 	const N_COLUMNS := 5
 	
-	var qformat := IVQFormat # const when Godot allows
-	
 	var _resource_names: Array = IVTableData.tables.resources.name
 	
 	var _stratum_header := Button.new()
@@ -409,19 +403,19 @@ class StratumVBox extends VBoxContainer:
 			elif mean < 0.001:
 				precision = 2
 			var resource_text := RESOURCE_INDENT + tr(resource_name)
-			var mean_text := qformat.number(mean, precision, NUM_DYNAMIC)
+			var mean_text := IVQFormat.number(mean, precision)
 			var uncert_text := ""
 			if uncertainty:
-				uncert_text = "± " + qformat.number(uncertainty, 1, NUM_DYNAMIC)
+				uncert_text = "± " + IVQFormat.number(uncertainty, 1)
 			var heter_text := ""
 			if heterogeneity:
 				if heterogeneity < 0.11 * mean:
 					heter_text = _text_low
 				else:
-					heter_text = "± " + qformat.number(heterogeneity, 1, NUM_DYNAMIC)
+					heter_text = "± " + IVQFormat.number(heterogeneity, 1)
 			var deposits_text := ""
 			if deposits:
-				deposits_text = qformat.number(deposits, 1, NUM_DYNAMIC)
+				deposits_text = IVQFormat.number(deposits, 1)
 			
 			# set text & show column labels
 			var begin_index := i * N_COLUMNS
