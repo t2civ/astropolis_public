@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=2]
 
 [ext_resource path="res://astropolis_public/gui_panels/itab_information.gd" type="Script" id=1]
-[ext_resource path="res://ivoyager/gui_widgets/selection_data.tscn" type="PackedScene" id=2]
+[ext_resource path="res://addons/ivoyager_core/gui_widgets/selection_data.tscn" type="PackedScene" id=2]
 
 
 

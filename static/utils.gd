@@ -4,7 +4,7 @@
 # *****************************************************************************
 class_name Utils
 
-const ivutils := preload("res://ivoyager/static/utils.gd")
+const ivutils := preload("res://addons/ivoyager_core/static/utils.gd")
 
 
 const LOG2_64 := { # indexed by power-of-2s from 2^0 to 2^63

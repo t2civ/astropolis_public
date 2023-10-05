@@ -10,7 +10,7 @@ extends RefCounted
 # and propagated to Body, Player and Proxies. Exception: Compositions are
 # synched at Body level without propagation (TODO: propagate to Proxies).
 
-const ivutils := preload("res://ivoyager/static/utils.gd")
+const ivutils := preload("res://addons/ivoyager_core/static/utils.gd")
 const utils := preload("res://astropolis_public/static/utils.gd")
 const LOG2_64 := Utils.LOG2_64
 

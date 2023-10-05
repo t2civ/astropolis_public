@@ -42,8 +42,8 @@ func _extension_init():
 	IVGlobal.table_project_enums.append(Enums.TradeClasses)
 	IVGlobal.table_project_enums.append(Enums.PlayerClasses)
 	
-	IVGlobal.postprocess_tables.erase("res://ivoyager/data/solar_system/spacecrafts.tsv")
-	IVGlobal.postprocess_tables.erase("res://ivoyager/data/solar_system/wiki_extras.tsv")
+	IVGlobal.postprocess_tables.erase("res://addons/ivoyager_core/data/solar_system/spacecrafts.tsv")
+	IVGlobal.postprocess_tables.erase("res://addons/ivoyager_core/data/solar_system/wiki_extras.tsv")
 	
 	path_format = "res://astropolis_public/data/tables/%s.tsv"
 	var postprocess_tables_append := [

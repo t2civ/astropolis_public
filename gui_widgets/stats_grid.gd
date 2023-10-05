@@ -11,7 +11,7 @@ extends MarginContainer
 
 signal has_stats_changed(has_stats)
 
-const ivutils := preload("res://ivoyager/static/utils.gd")
+const ivutils := preload("res://addons/ivoyager_core/static/utils.gd")
 
 var qformat := IVQFormat # const when Godot allows
 
