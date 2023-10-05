@@ -16,17 +16,17 @@ enum { # _dirty_values
 
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 const PERSIST_PROPERTIES := [
-	"yq",
-	"revenue",
-	"accountings",
-	"_dirty_values",
-	"_dirty_accountings",
+	&"yq",
+	&"revenue",
+	&"accountings",
+	&"_dirty_values",
+	&"_dirty_accountings",
 ]
 
 # interface sync
 var yq := -1 # last sync, = year * 4 + (quarter - 1)
 var revenue := 0.0 # positive values of INC_STMT_GROSS
-var accountings: Array
+var accountings: Array[float]
 
 # TODO:
 # var items: Dictionary # facility only?
@@ -43,7 +43,7 @@ func _init(is_new := false) -> void:
 	# debug dev
 	var n_accountings := 10
 	
-	accountings = ivutils.init_array(n_accountings, 0.0)
+	accountings = ivutils.init_array(n_accountings, 0.0, TYPE_FLOAT)
 
 
 func get_server_init() -> Array:
@@ -93,5 +93,4 @@ func sync_server_changes(data: Array, k: int) -> int:
 		k += 1
 	k = _add_dirty(data, accountings, k)
 	return k
-
 

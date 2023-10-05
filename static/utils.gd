@@ -62,25 +62,27 @@ static func get_n_bits(n: int) -> int:
 
 # array & dict utils
 
-static func invert_many_to_one_indexing(base: Array, size: int) -> Array:
+static func invert_many_to_one_indexing(base: Array[int], size: int) -> Array[Array]:
 	# e.g., ([0, 1, 1, 1, 3, 3], 5)
 	# -> [[0], [1, 2, 3], [], [4, 5], []]
-	var result := []
-	for result_index in range(size):
-		var indexes := []
-		for index in range(base.size()):
+	var result: Array[Array] = []
+	for result_index in size:
+		var indexes: Array[int] = []
+		for index in base.size():
 			if base[index] == result_index:
 				indexes.append(index)
 		result.append(indexes)
 	return result
 
 
-static func invert_subset_indexing(base: Array, size: int) -> Array:
+static func invert_subset_indexing(base: Array[int], size: int) -> Array[int]:
 	# inverts subset indexes of a larger set
 	# e.g., ([3, 4, 5, 7, 8, 9], 11)
 	# -> [-1, -1, -1, 0, 1, 2, -1, 3, 4, 5, -1]
 	# same result as find each index in the subset, but faster
-	var result := ivutils.init_array(size, -1)
+	var result: Array[int] = []
+	result.resize(size)
+	result.fill(-1)
 	var base_size := base.size()
 	var i := 0
 	while i < base_size:
@@ -109,11 +111,11 @@ static func fill_array(base: Array, fill: Array) -> void:
 		base[i] = fill[i]
 
 
-static func get_weighted_averages(data1: Array, weights1: Array,
-		data2: Array, weights2: Array) -> Array:
+static func get_weighted_averages(data1: Array[float], weights1: Array[float],
+		data2: Array[float], weights2: Array[float]) -> Array[float]:
 	# assumes float arrays of equal sizes
 	var i := data1.size()
-	var result := []
+	var result: Array[float] = []
 	result.resize(i)
 	while i > 0:
 		i -= 1
@@ -121,21 +123,21 @@ static func get_weighted_averages(data1: Array, weights1: Array,
 	return result
 
 
-static func get_weighted_averages_diff(data: Array, data_weights: Array,
-		subtract: Array, subtract_weights: Array) -> Array:
+static func get_weighted_averages_diff(data: Array[float], data_weights: Array[float],
+		subtract: Array[float], subtract_weights: Array[float]) -> Array[float]:
 	# expects float arrays of equal sizes; reverses above function
 	var i := data.size()
-	var result := []
+	var result: Array[float] = []
 	result.resize(i)
 	while i > 0:
 		i -= 1
-		result[i] = (data[i] * data_weights[i] - subtract[i] * subtract_weights[i]) \
-				/ (data_weights[i] - subtract_weights[i])
+		result[i] = ((data[i] * data_weights[i] - subtract[i] * subtract_weights[i])
+				/ (data_weights[i] - subtract_weights[i]))
 	return result
 
 
-static func combine_weighted_floats(base: Array, base_weights: Array,
-		add: Array, add_weights: Array) -> void:
+static func combine_weighted_floats(base: Array[float], base_weights: Array[float],
+		add: Array[float], add_weights: Array[float]) -> void:
 	# modifies 'base'; expects float arrays of equal sizes
 	var i := base.size()
 	while i > 0:
@@ -145,8 +147,8 @@ static func combine_weighted_floats(base: Array, base_weights: Array,
 			base[i] = (base[i] * base_weights[i] + add[i] * add_weights[i]) / divisor
 
 
-static func combine_weighted_float_arrays(base: Array, base_weights: Array,
-		add: Array, add_weights: Array) -> void:
+static func combine_weighted_float_arrays(base: Array[Array], base_weights: Array[float],
+		add: Array[Array], add_weights: Array[float]) -> void:
 	# as above, but expects base and add to be arrays of arrays of floats
 	var i := base.size()
 	while i > 0:
@@ -161,8 +163,8 @@ static func combine_weighted_float_arrays(base: Array, base_weights: Array,
 				base[i][j] = (base[i][j] * base_weights[i] + add[i][j] * add_weights[i]) / divisor
 
 
-static func deduct_weighted_floats(base: Array, base_weights: Array,
-		deduct: Array, deduct_weights: Array) -> void:
+static func deduct_weighted_floats(base: Array[float], base_weights: Array[float],
+		deduct: Array[float], deduct_weights: Array[float]) -> void:
 	# modifies 'base'; expects float arrays of equal sizes
 	var i := base.size()
 	while i > 0:
@@ -172,8 +174,8 @@ static func deduct_weighted_floats(base: Array, base_weights: Array,
 			base[i] = (base[i] * base_weights[i] - deduct[i] * deduct_weights[i]) / divisor
 
 
-static func deduct_weighted_float_arrays(base: Array, base_weights: Array,
-		deduct: Array, deduct_weights: Array) -> void:
+static func deduct_weighted_float_arrays(base: Array[Array], base_weights: Array[float],
+		deduct: Array[Array], deduct_weights: Array[float]) -> void:
 	# as above, but expects base and add to be arrays of arrays of floats
 	var i := base.size()
 	while i > 0:
@@ -188,7 +190,7 @@ static func deduct_weighted_float_arrays(base: Array, base_weights: Array,
 				base[i][j] = (base[i][j] * base_weights[i] - deduct[i][j] * deduct_weights[i]) / divisor
 
 
-static func normalize_float_array(array: Array, normalized_sum: float) -> void:
+static func normalize_float_array(array: Array[float], normalized_sum: float) -> void:
 	# if array sums to 0.0, returns an array of INF values
 	var sum := 0.0
 	var size := array.size()
@@ -206,7 +208,7 @@ static func normalize_float_array(array: Array, normalized_sum: float) -> void:
 		i += 1
 
 
-static func get_float_array_sum(array: Array) -> float:
+static func get_float_array_sum(array: Array[float]) -> float:
 	var sum := 0.0
 	var i := array.size()
 	while i > 0:
@@ -215,14 +217,14 @@ static func get_float_array_sum(array: Array) -> float:
 	return sum
 
 
-static func multiply_float_array_by_float(array: Array, multiplier: float) -> void:
+static func multiply_float_array_by_float(array: Array[float], multiplier: float) -> void:
 	var i := array.size()
 	while i > 0:
 		i -= 1
 		array[i] *= multiplier
 
 
-static func multiply_float_array_by_array(base: Array, multiply: Array) -> void:
+static func multiply_float_array_by_array(base: Array[float], multiply: Array[float]) -> void:
 	# modifies 'base'; expects float arrays of equal sizes
 	var i := base.size()
 	while i > 0:
@@ -230,7 +232,7 @@ static func multiply_float_array_by_array(base: Array, multiply: Array) -> void:
 		base[i] *= multiply[i]
 
 
-static func add_to_float_array_with_array(base: Array, add: Array) -> void:
+static func add_to_float_array_with_array(base: Array[float], add: Array[float]) -> void:
 	# modifies 'base'; expects float arrays of equal sizes
 	var i := base.size()
 	while i > 0:
@@ -238,7 +240,7 @@ static func add_to_float_array_with_array(base: Array, add: Array) -> void:
 		base[i] += add[i]
 
 
-static func subtract_from_float_array_with_array(base: Array, subtract: Array) -> void:
+static func subtract_from_float_array_with_array(base: Array[float], subtract: Array[float]) -> void:
 	# modifies 'base'; expects float arrays of equal sizes
 	var i := base.size()
 	while i > 0:
@@ -246,18 +248,18 @@ static func subtract_from_float_array_with_array(base: Array, subtract: Array) -
 		base[i] -= subtract[i]
 
 
-static func zero_float_array(array: Array) -> void:
+static func zero_float_array(array: Array[float]) -> void:
 	var i := array.size()
 	while i > 0:
 		i -= 1
 		array[i] = 0.0
 
 
-static func zero_array_of_float_arrays(array: Array) -> void:
+static func zero_array_of_float_arrays(array: Array[Array]) -> void:
 	var i := array.size()
 	while i > 0:
 		i -= 1
-		if !array[i]: # skip [] or null
+		if !array[i]: # skip []
 			continue
 		var j: int = array[i].size()
 		while j > 0:
@@ -296,7 +298,7 @@ static func get_diversity_index(diversity_model: Dictionary, q := 1.0) -> float:
 	# All diversity_model values are integral floats >= 1.0.
 	# (Interesting programming note: base Homo sapiens has key = 0.)
 	
-	if diversity_model.empty():
+	if diversity_model.is_empty():
 		return 0.0 # not exactly correct but intuitive
 	if q == 1.0:
 		return exp(get_shannon_entropy(diversity_model, false)) # limit as q -> 1
@@ -316,7 +318,7 @@ static func get_shannon_entropy(diversity_model: Dictionary, in_bits := true) ->
 	# see comments above
 	# The unit of measure is 'bits' by default (base 2). If in_bits == false,
 	# then the unit of measure is 'natural units' (base e).
-	if diversity_model.empty():
+	if diversity_model.is_empty():
 		return 0.0 # not exactly correct but intuitive
 	var n_individuals := 0.0
 	for key in diversity_model:
@@ -350,5 +352,4 @@ static func add_to_diversity_model(base: Dictionary, add: Dictionary) -> void:
 				base.erase(key)
 		else:
 			base[key] = add[key]
-
 

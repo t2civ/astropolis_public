@@ -17,11 +17,11 @@ const PLAYER_CLASS_COMPANY := Enums.PlayerClasses.PLAYER_CLASS_COMPANY
 const IS_STAR := IVEnums.BodyFlags.IS_STAR
 
 var section_names := [
-	tr("LABEL_SPACEFARING_POLITIES"),
-	tr("LABEL_SPACE_AGENCIES"),
-	tr("LABEL_SPACE_COMPANIES"),
-	tr("LABEL_OFFWORLD_FACILITIES"),
-	tr("LABEL_SYSTEM_FACILITIES"),
+	tr(&"LABEL_SPACEFARING_POLITIES"),
+	tr(&"LABEL_SPACE_AGENCIES"),
+	tr(&"LABEL_SPACE_COMPANIES"),
+	tr(&"LABEL_OFFWORLD_FACILITIES"),
+	tr(&"LABEL_SYSTEM_FACILITIES"),
 ]
 
 var open_prefix := "\u2304   "
@@ -46,12 +46,12 @@ var _section_arrays := [_polities, _agencies, _companies, _offworld, _system]
 var _n_sections := section_names.size()
 
 
-onready var _vbox: VBoxContainer = $VBox
+@onready var _vbox: VBoxContainer = $VBox
 
 
 func _ready() -> void:
-	IVGlobal.connect("simulator_started", self, "_update")
-	IVGlobal.connect("about_to_free_procedural_nodes", self, "_clear")
+	IVGlobal.simulator_started.connect(_update)
+	IVGlobal.about_to_free_procedural_nodes.connect(_clear)
 	_update()
 
 
@@ -68,8 +68,8 @@ func _clear() -> void:
 
 
 func _init_after_system_built() -> void:
-	_selection_manager = IVWidgets.get_selection_manager(self)
-	_selection_manager.connect("selection_changed", self, "_update")
+	_selection_manager = IVSelectionManager.get_selection_manager(self)
+	_selection_manager.selection_changed.connect(_update)
 	var section := 0
 	while section < _n_sections:
 		var section_text: String = section_names[section]
@@ -163,7 +163,7 @@ func _update_labels() -> void:
 		while n_labels <= n_items + child_index: # enough if open
 			var label := Label.new()
 			label.mouse_filter = MOUSE_FILTER_PASS
-			label.connect("gui_input", self, "_on_gui_input", [label])
+			label.connect("gui_input", Callable(self, "_on_gui_input").bind(label))
 			_vbox.add_child(label)
 			n_labels += 1
 		var is_open: bool = is_open_sections[section]
@@ -195,7 +195,7 @@ func _on_gui_input(event: InputEvent, label: Label) -> void:
 		return
 	if !event_mouse_button.pressed:
 		return
-	if event_mouse_button.button_index != BUTTON_LEFT:
+	if event_mouse_button.button_index != MOUSE_BUTTON_LEFT:
 		return
 	# 'lookup' will either be an integer (section index) or string (selection target)
 	var lookup = _pressed_lookup.get(label.text)

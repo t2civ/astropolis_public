@@ -1,4 +1,4 @@
-name	player_class	is_start	gui_hide	is_playable	part_of	polity	homeworld
+	player_class	is_start	gui_hide	is_playable	part_of	polity	homeworld
 Type	INT	BOOL	BOOL	BOOL	INT	STRING	STRING
 Default		TRUE					PLANET_EARTH
 Unit							

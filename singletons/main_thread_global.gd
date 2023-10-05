@@ -28,7 +28,7 @@ var facilities_by_holder := {} # [facility names] indexed by body & player names
 # *****************************************************************************
 
 func _ready() -> void:
-	IVGlobal.connect("about_to_free_procedural_nodes", self, "_clear")
+	IVGlobal.about_to_free_procedural_nodes.connect(_clear)
 
 
 func _clear() -> void:
@@ -41,7 +41,7 @@ func _clear() -> void:
 
 func call_on_ai_thread(object: Object, method: String, data := []) -> void:
 	# object method must have 'data: Array' as its single required arg
-	emit_signal("ai_thread_called", object, method, data)
+	ai_thread_called.emit(object, method, data)
 
 
 func get_interface_by_name(interface_name: String) -> Interface:
@@ -95,7 +95,8 @@ func get_facilities(body_or_player_name: String) -> Array:
 func get_n_facilities(body_or_player_name: String) -> int:
 	if !facilities_by_holder.has(body_or_player_name):
 		return 0
-	return facilities_by_holder[body_or_player_name].size()
+	var facilities: Array = facilities_by_holder[body_or_player_name]
+	return facilities.size()
 
 
 func get_player_facility_at_body(player_name: String, body_name: String) -> String:
@@ -112,5 +113,4 @@ func get_player_class(player_name: String) -> int:
 	if interface:
 		return interface.player_class
 	return -1
-
 

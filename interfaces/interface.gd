@@ -38,7 +38,7 @@ enum { # sync_svr_type
 	SYNC_SVR_METAVERSE,
 }
 
-const INTERVAL := 7.0 * Units.DAY
+const INTERVAL := 7.0 * IVUnits.DAY
 
 var interface_id := -1
 var name := "" # unique & immutable
@@ -69,12 +69,16 @@ var use_this_ai := false # read-only
 var times: Array = IVGlobal.times # [time (s, J2000), engine_time (s), solar_day (d)] (floats)
 var date: Array = IVGlobal.date # Gregorian [year, month, day] (ints)
 var clock: Array = IVGlobal.clock # UT [hour, minute, second] (ints)
-var tables: Dictionary = IVGlobal.tables
+var tables: Dictionary = IVTableData.tables
+var table_n_rows: Dictionary = IVTableData.table_n_rows
 
 # private
 var _dirty := 0
+@warning_ignore("unused_private_class_variable")
 var _is_local_player := false # gives GUI access
+@warning_ignore("unused_private_class_variable")
 var _is_server_ai := false
+@warning_ignore("unused_private_class_variable")
 var _is_local_use_ai := false # local player sets/unsets
 
 
@@ -115,7 +119,7 @@ func process_ai(time: float) -> void:
 	if time > next_interval:
 		if next_interval == -INF: # init
 			last_interval = time
-			next_interval = time + rand_range(0.0, INTERVAL) # stagger AI processing
+			next_interval = time + randf_range(0.0, INTERVAL) # stagger AI processing
 			process_ai_init()
 		else:
 			var delta := time - last_interval

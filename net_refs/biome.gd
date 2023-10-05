@@ -16,11 +16,11 @@ enum { # _dirty_values
 # save/load persistence for server only
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 const PERSIST_PROPERTIES := [
-	"yq",
-	"bioproductivity",
-	"biomass",
-	"diversity_model",
-	"_dirty_values",
+	&"yq",
+	&"bioproductivity",
+	&"biomass",
+	&"diversity_model",
+	&"_dirty_values",
 ]
 
 var yq := -1 # last sync, = year * 4 + (quarter - 1)
@@ -145,10 +145,4 @@ func sync_server_changes(data: Array, k: int) -> int:
 			i += 1
 	
 	return k
-
-
-
-
-
-
 

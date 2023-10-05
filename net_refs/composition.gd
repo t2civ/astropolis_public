@@ -33,27 +33,27 @@ const FREE_RESOURCE_MIN_FRACTION := 0.1
 
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 const PERSIST_PROPERTIES := [
-	"name",
-	"stratum_type",
-	"polity_name",
-	"body_radius",
-	"outer_depth",
-	"thickness",
-	"spherical_fraction",
-	"area",
-	"density",
-	"volume",
-	"total_mass",
-	"masses",
-	"heterogeneities",
-	"survey_type",
-	"may_have_free_resources",
-	"density_bias",
-	"masses_biases",
-	"heterogeneities_biases",
-	"_dirty_values",
-	"_dirty_masses",
-	"_dirty_heterogeneities",
+	&"name",
+	&"stratum_type",
+	&"polity_name",
+	&"body_radius",
+	&"outer_depth",
+	&"thickness",
+	&"spherical_fraction",
+	&"area",
+	&"density",
+	&"volume",
+	&"total_mass",
+	&"masses",
+	&"heterogeneities",
+	&"survey_type",
+	&"may_have_free_resources",
+	&"density_bias",
+	&"masses_biases",
+	&"heterogeneities_biases",
+	&"_dirty_values",
+	&"_dirty_masses",
+	&"_dirty_heterogeneities",
 ]
 
 var name: String
@@ -69,8 +69,8 @@ var density := 0.0
 var volume := 0.0 # calculated! Use API to get refreshed value!
 var total_mass := 0.0 # calculated! Use API to get refreshed value!
 
-var masses: Array
-var heterogeneities: Array # variation within; this is good for mining!
+var masses: Array[float]
+var heterogeneities: Array[float] # variation within; this is good for mining!
 
 var survey_type := -1 # surveys.tsv, table errors give estimation uncertainties
 
@@ -78,8 +78,8 @@ var may_have_free_resources: bool # from strata.tsv
 
 # server only
 var density_bias := 1.0 # the server is lying to you...
-var masses_biases: Array
-var heterogeneities_biases: Array
+var masses_biases: Array[float]
+var heterogeneities_biases: Array[float]
 
 # dirty data
 var _dirty_values := 0 # enum DIRTY_ flags
@@ -90,14 +90,14 @@ var _dirty_heterogeneities := 0 # dirty indexes as bit flags (max index 63)
 var _needs_volume_mass_calculation := true
 
 # indexing
-var _tables: Dictionary = IVGlobal.tables
-var _resource_maybe_free: Array = _tables.resources.maybe_free
-var _extraction_resources: Array = _tables.extraction_resources # maps index to resource_type
-var _resource_extractions: Array = _tables.resource_extractions # maps resource_type to index
-var _survey_density_errors: Array = _tables.surveys.density_error # coeff of variation
-var _survey_masses_errors: Array = _tables.surveys.masses_error
-var _survey_heterogeneities_errors: Array = _tables.surveys.heterogeneities_error
-var _survey_deposits_sds: Array = _tables.surveys.deposits_sigma
+var _tables: Dictionary = IVTableData.tables
+var _resource_maybe_free: Array[bool] = _tables[&"resources"][&"maybe_free"]
+var _extraction_resources: Array[int] = _tables[&"extraction_resources"] # maps index to resource_type
+var _resource_extractions: Array[int] = _tables[&"resource_extractions"] # maps resource_type to index
+var _survey_density_errors: Array[float] = _tables[&"surveys"][&"density_error"] # coeff of variation
+var _survey_masses_errors: Array[float] = _tables[&"surveys"][&"masses_error"]
+#var _survey_heterogeneities_errors: Array = _tables.surveys.heterogeneities_error
+var _survey_deposits_sds: Array[float] = _tables[&"surveys"][&"deposits_sigma"]
 
 
 # TODO: Operations/Extractions organized by strata
@@ -234,11 +234,11 @@ func _init(is_new := false, is_server := false) -> void:
 	if !is_new: # loaded game
 		return
 	var n_is_extraction_resources := _extraction_resources.size()
-	masses = ivutils.init_array(n_is_extraction_resources, 0.0)
+	masses = ivutils.init_array(n_is_extraction_resources, 0.0, TYPE_FLOAT)
 	heterogeneities = masses.duplicate()
 	if !is_server:
 		return
-	masses_biases = ivutils.init_array(n_is_extraction_resources, 1.0)
+	masses_biases = ivutils.init_array(n_is_extraction_resources, 1.0, TYPE_FLOAT)
 	heterogeneities_biases = masses_biases.duplicate()
 
 
@@ -397,5 +397,4 @@ func calculate_volume_and_total_mass() -> void:
 	
 	total_mass = volume * density
 	_needs_volume_mass_calculation = false
-
 

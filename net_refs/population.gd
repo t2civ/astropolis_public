@@ -10,29 +10,29 @@ extends NetRef
 # save/load persistence for server only
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 const PERSIST_PROPERTIES := [
-	"yq",
-	"numbers",
-	"growth_rates",
-	"carrying_capacities",
-	"immigration_attractions",
-	"emigration_pressures",
-	"history_numbers",
-	"_is_facility",
-	"_dirty_numbers",
-	"_dirty_carrying_capacities",
-	"_dirty_growth_rates",
-	"_dirty_immigration_attractions",
-	"_dirty_emigration_pressures",
+	&"yq",
+	&"numbers",
+	&"growth_rates",
+	&"carrying_capacities",
+	&"immigration_attractions",
+	&"emigration_pressures",
+	&"history_numbers",
+	&"_is_facility",
+	&"_dirty_numbers",
+	&"_dirty_carrying_capacities",
+	&"_dirty_growth_rates",
+	&"_dirty_immigration_attractions",
+	&"_dirty_emigration_pressures",
 ]
 
 # Interface read-only! All data flows server -> interface.
 var yq := -1 # last sync, = year * 4 + (quarter - 1)
-var numbers: Array
-var growth_rates: Array # Facility only
-var carrying_capacities: Array # Facility only; indexed by carrying_capacity_group
-var immigration_attractions: Array # Facility only
-var emigration_pressures: Array # Facility only
-var history_numbers: Array # Array for ea pop type; [..., qrt_before_last, last_qrt]
+var numbers: Array[float]
+var growth_rates: Array[float] # Facility only
+var carrying_capacities: Array[float] # Facility only; indexed by carrying_capacity_group
+var immigration_attractions: Array[float] # Facility only
+var emigration_pressures: Array[float] # Facility only
+var history_numbers: Array[Array] # Array for ea pop type; [..., qrt_before_last, last_qrt]
 
 var _is_facility := false
 
@@ -43,23 +43,24 @@ var _dirty_carrying_capacities := 0
 var _dirty_immigration_attractions := 0
 var _dirty_emigration_pressures := 0
 
-var _tables: Dictionary = IVGlobal.tables
-var _n_populations: int = _tables.n_populations
-var _table_populations: Dictionary = _tables.populations
-var _carrying_capacity_groups: Array = _table_populations.carrying_capacity_group
-var _carrying_capacity_group2s: Array = _table_populations.carrying_capacity_group2
+var _tables: Dictionary = IVTableData.tables
+var _table_n_rows: Dictionary = IVTableData.table_n_rows
+var _n_populations: int = _table_n_rows[&"populations"]
+var _table_populations: Dictionary = _tables[&"populations"]
+var _carrying_capacity_groups: Array[int] = _table_populations[&"carrying_capacity_group"]
+var _carrying_capacity_group2s: Array[int] = _table_populations[&"carrying_capacity_group2"]
 
 
 func _init(is_new := false, is_facility := false) -> void:
 	if !is_new: # game load
 		return
-	numbers = ivutils.init_array(_n_populations, 0.0)
-	history_numbers = ivutils.init_array(_n_populations, [])
+	numbers = ivutils.init_array(_n_populations, 0.0, TYPE_FLOAT)
+	history_numbers = ivutils.init_array(_n_populations, [] as Array[float], TYPE_ARRAY)
 	if !is_facility:
 		return
 	_is_facility = true
 	growth_rates = numbers.duplicate()
-	carrying_capacities = ivutils.init_array(_tables.n_carrying_capacity_groups, 0.0)
+	carrying_capacities = ivutils.init_array(_table_n_rows.carrying_capacity_groups, 0.0, TYPE_FLOAT)
 	immigration_attractions = numbers.duplicate()
 	emigration_pressures = numbers.duplicate()
 
@@ -200,7 +201,7 @@ func propagate_component_init(data: Array) -> void:
 	utils.add_to_float_array_with_array(numbers, data[1])
 	
 	# expand history arrays as needed (at end and/or front) to handle this data
-	var add_history_numbers: Array = data[2]
+	var add_history_numbers: Array[Array] = data[2]
 	var add_history_size: int = add_history_numbers[0].size()
 	var history_size: int = history_numbers[0].size()
 	if yq == -1:
@@ -273,7 +274,4 @@ func _update_history(svr_yq: int) -> void:
 			history_numbers[i].append(numbers[i])
 			i += 1
 		yq += 1
-
-
-
 

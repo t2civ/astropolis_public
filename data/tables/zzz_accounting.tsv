@@ -1,4 +1,5 @@
 name	account_class	account_section	Comments
+@DONT_PARSE			
 Type	AccountClass	AccountItem	
 # Hard-coded!			
 REVENUE			

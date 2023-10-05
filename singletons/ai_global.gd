@@ -20,6 +20,8 @@ signal proxy_requested(proxy_name, gui_name, has_operations, has_inventory, has_
 	has_population, has_biome, has_metaverse)
 signal interface_changed(object_type, class_id, data)
 
+signal player_owner_changed(fixme) # FIXME - added for NetworkLobby; not hooked up anywhere else
+
 
 var verbose := false
 var verbose2 := false
@@ -49,7 +51,7 @@ var facilities_by_holder := {} # [facility names] indexed by body & player names
 # Main thread init and destroy
 
 func _ready() -> void:
-	IVGlobal.connect("about_to_free_procedural_nodes", self, "_clear_procedural")
+	IVGlobal.about_to_free_procedural_nodes.connect(_clear_procedural)
 
 
 func _clear_procedural() -> void:
@@ -82,6 +84,7 @@ func get_body_flags(body_name: String) -> int:
 	var interface: Interface = interfaces_by_name.get(body_name)
 	if !interface:
 		return 0
+	@warning_ignore("unsafe_property_access")
 	return interface.body_flags
 
 
@@ -89,6 +92,7 @@ func get_facility_body(facility_name: String) -> String:
 	var interface: Interface = interfaces_by_name.get(facility_name)
 	if !interface:
 		return ""
+	@warning_ignore("unsafe_property_access")
 	return interface.body_name
 
 
@@ -96,6 +100,7 @@ func get_facility_player(facility_name: String) -> String:
 	var interface: Interface = interfaces_by_name.get(facility_name)
 	if !interface:
 		return ""
+	@warning_ignore("unsafe_property_access")
 	return interface.player_name
 
 
@@ -103,6 +108,7 @@ func get_facility_polity(facility_name: String) -> String:
 	var interface: Interface = interfaces_by_name.get(facility_name)
 	if !interface:
 		return ""
+	@warning_ignore("unsafe_property_access")
 	return interface.polity_name
 
 
@@ -123,11 +129,10 @@ func get_or_make_proxy(proxy_name: String, gui_name := "",
 		return proxy_interface
 	if !gui_name:
 		gui_name = tr(proxy_name)
-	emit_signal("proxy_requested", proxy_name, gui_name,
+	proxy_requested.emit(proxy_name, gui_name,
 			has_operations, has_inventory, has_financials,
 			has_population, has_biome, has_metaverse)
 	proxy_interface = interfaces_by_name.get(proxy_name)
 	assert(proxy_interface)
 	return proxy_interface
-
 

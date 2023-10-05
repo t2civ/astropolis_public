@@ -3,27 +3,27 @@
 [ext_resource path="res://astropolis_public/gui_widgets/stats_grid.gd" type="Script" id=1]
 
 [node name="StatsGrid" type="MarginContainer"]
-margin_left = 7.0
-margin_top = 7.0
-margin_right = 17.0
-margin_bottom = 17.0
+offset_left = 7.0
+offset_top = 7.0
+offset_right = 17.0
+offset_bottom = 17.0
 mouse_filter = 2
 size_flags_vertical = 0
-custom_constants/margin_right = 5
-custom_constants/margin_top = 5
-custom_constants/margin_left = 5
-custom_constants/margin_bottom = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_bottom = 5
 script = ExtResource( 1 )
 __meta__ = {
 "_edit_use_anchors_": false
 }
 
 [node name="Grid" type="GridContainer" parent="."]
-margin_left = 5.0
-margin_top = 5.0
-margin_right = 5.0
-margin_bottom = 5.0
-custom_constants/hseparation = 10
+offset_left = 5.0
+offset_top = 5.0
+offset_right = 5.0
+offset_bottom = 5.0
+theme_override_constants/h_separation = 10
 columns = 2
 
 [node name="BlankCell" type="Control" parent="Grid"]
