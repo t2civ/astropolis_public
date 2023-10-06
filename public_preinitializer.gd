@@ -6,14 +6,14 @@ extends RefCounted
 
 const VERSION := "0.0.4-dev"
 
-const AI_VERBOSE := false
-const AI_VERBOSE2 := false
+const AI_VERBOSE := true
+const AI_VERBOSE2 := true
 const IVOYAGER_VERBOSE := false
 const USE_THREADS := false
 
 
 func _init():
-	print("Astropolis Public %s" % VERSION)
+	print("Astropolis Public %s, USE_THREADS = %s" % [VERSION, USE_THREADS])
 	IVGlobal.project_objects_instantiated.connect(_on_project_objects_instantiated)
 	IVGlobal.project_nodes_added.connect(_on_project_nodes_added)
 
