@@ -24,7 +24,7 @@ const PLAYER_CLASS_POLITY := Enums.PlayerClasses.PLAYER_CLASS_POLITY
 var all_suffix := " / " + tr(&"LABEL_ALL")
 
 
-static func get_or_make_selection(selection_name: String) -> IVSelection:
+static func get_or_make_selection(selection_name: StringName) -> IVSelection:
 	var selection_: IVSelection = IVGlobal.selections.get(selection_name)
 	if selection_:
 		return selection_
@@ -36,9 +36,9 @@ static func get_or_make_selection(selection_name: String) -> IVSelection:
 	return null
 
 
-static func make_selection_for_facility(facility_name: String) -> IVSelection:
+static func make_selection_for_facility(facility_name: StringName) -> IVSelection:
 	var gui_name: String = MainThreadGlobal.get_gui_name(facility_name)
-	var body_name: String = MainThreadGlobal.get_facility_body(facility_name)
+	var body_name: StringName = MainThreadGlobal.get_facility_body(facility_name)
 	var body_selection := get_or_make_selection(body_name)
 	var selection_ := _duplicate_body_selection(body_selection)
 	selection_.name = facility_name
@@ -63,7 +63,7 @@ func select_body(body: IVBody, _suppress_camera_move := false) -> void:
 	select_prefer_facility(body.name)
 
 
-func select_prefer_facility(selection_name: String) -> void:
+func select_prefer_facility(selection_name: StringName) -> void:
 	if selection_name.begins_with("FACILITY_"):
 		var selection_ := get_or_make_selection(selection_name)
 		select(selection_)
@@ -78,9 +78,9 @@ func select_prefer_facility(selection_name: String) -> void:
 		var selection_ := get_or_make_selection(facilities[0])
 		select(selection_)
 		return
-	var local_player_name: String = MainThreadGlobal.local_player_name
+	var local_player_name: StringName = MainThreadGlobal.local_player_name
 	for facility_name in facilities:
-		var loop_player: String = MainThreadGlobal.get_facility_player(facility_name)
+		var loop_player: StringName = MainThreadGlobal.get_facility_player(facility_name)
 		if loop_player == local_player_name:
 			var selection_ := get_or_make_selection(facility_name)
 			select(selection_)
@@ -103,12 +103,12 @@ func get_info_panel_data() -> Array:
 	if !selection_name:
 		return []
 	if selection_name.begins_with("FACILITY_"):
-		var player_name: String = MainThreadGlobal.get_facility_player(selection_name)
+		var player_name: StringName = MainThreadGlobal.get_facility_player(selection_name)
 		var player_class := MainThreadGlobal.get_player_class(player_name)
 		if player_class == PLAYER_CLASS_POLITY:
 			# polity proxy (combines polity player, agency & companies)
 			var body_name := get_body_name()
-			var polity_name: String = MainThreadGlobal.get_facility_polity(selection_name)
+			var polity_name: StringName = MainThreadGlobal.get_facility_polity(selection_name)
 			var proxy_name := "PROXY_" + body_name + "_" + polity_name
 			var header := get_gui_name()
 			return [proxy_name, header, true]

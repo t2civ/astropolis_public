@@ -132,8 +132,7 @@ func _get_ai_data(body_name: StringName, selection_name: StringName) -> void:
 		
 		resources_data.sort_custom(_sort_resources)
 		
-		# appends below will be popped so resources_data is ready for StratumVBox
-		var evidence: String = _survey_names[survey_type]
+		var evidence: StringName = _survey_names[survey_type]
 		var init_open := true
 		var composition_type: int = _composition_types.get(composition.name, -1)
 		if composition_type != -1:
@@ -210,14 +209,14 @@ func _update_display(selection_name: StringName, composition_polities: Array,
 		var composition_polity: StringName = resources_data.pop_back()
 		var init_open: bool = resources_data.pop_back()
 		var stratum_type: int = resources_data.pop_back()
-		var evidence: String = resources_data.pop_back()
+		var evidence: StringName = resources_data.pop_back()
 		var body_radius: float = resources_data.pop_back()
 		var thickness: float = resources_data.pop_back()
 		var volume: float = resources_data.pop_back()
 		var density: float = resources_data.pop_back()
 		var total_mass: float = resources_data.pop_back()
 		# resources_data now in correct form for add_stratum()
-		var stratum_name: String = _stratum_names[stratum_type]
+		var stratum_name: StringName = _stratum_names[stratum_type]
 		var hint_format_str: String
 		if body_radius == thickness:
 			hint_format_str = tr(&"HINT_STRATUM_FORMAT_1") # radius for sm undiff body
@@ -266,7 +265,7 @@ class PolityVBox extends VBoxContainer:
 		add_child(_polity_header)
 	
 	
-	func set_vbox(selection_name: String, polity_name: String, init_open: bool) -> void:
+	func set_vbox(selection_name: StringName, polity_name: StringName, init_open: bool) -> void:
 		_next_child_index = 1
 		_memory_key = selection_name + polity_name
 		if _memory.has(_memory_key):
@@ -283,7 +282,7 @@ class PolityVBox extends VBoxContainer:
 			_polity_header.text = SUPER_CLOSED_PREFIX + _polity_text
 	
 	
-	func add_stratum(stratum_name: String, hint: String, init_open: bool,
+	func add_stratum(stratum_name: StringName, hint: StringName, init_open: bool,
 			resources_data: Array) -> void:
 		var stratum_vbox: StratumVBox
 		if _next_child_index < get_child_count():
@@ -329,7 +328,7 @@ class StratumVBox extends VBoxContainer:
 	
 	var _stratum_header := Button.new()
 	var _resource_grid := GridContainer.new()
-	var _stratum_name: String
+	var _stratum_name: StringName
 	var _text_low := tr(&"LABEL_LOW").to_lower()
 	var _memory: Dictionary
 	var _memory_key: String
@@ -348,7 +347,7 @@ class StratumVBox extends VBoxContainer:
 		add_child(_resource_grid)
 	
 	
-	func set_stratum(stratum_name: String, hint: String, resources_data: Array,
+	func set_stratum(stratum_name: StringName, hint: StringName, resources_data: Array,
 			init_open: bool, base_memory_key: String) -> void:
 		_memory_key = base_memory_key + stratum_name
 		_stratum_name = stratum_name
@@ -386,7 +385,7 @@ class StratumVBox extends VBoxContainer:
 			var uncertainty: float = resource_data[2]
 			var heterogeneity: float = resource_data[3]
 			var deposits: float = resource_data[4]
-			var resource_name: String = _resource_names[resource_type]
+			var resource_name: StringName = _resource_names[resource_type]
 			var precision := 3
 			if uncertainty:
 				precision = int(mean / (10.0 * uncertainty)) + 1

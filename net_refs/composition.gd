@@ -56,9 +56,9 @@ const PERSIST_PROPERTIES := [
 	&"_dirty_heterogeneities",
 ]
 
-var name: String
+var name: StringName
 var stratum_type := -1 # strata.tsv
-var polity_name: String # "" for commons
+var polity_name: StringName # "" for commons
 
 var body_radius := 0.0 # same as Body.m_radius
 var outer_depth := 0.0 # of the strata (could be negative for atmosphere)

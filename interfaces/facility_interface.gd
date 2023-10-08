@@ -32,9 +32,9 @@ var facility_class := -1
 var public_portion: float # 0.0 - 1.0; how much is public sector?
 var has_internal_market: bool # ops treated as separate entities for economic measure & tax
 var solar_occlusion: float # for solar utilization calculation
-var polity_name: String
-var body_name: String
-var player_name: String
+var polity_name: StringName
+var body_name: StringName
+var player_name: StringName
 
 var propagations := []
 
@@ -196,7 +196,7 @@ func _add_proxies() -> void:
 	#  PROXY_MOONS_OF_<body_name>_<player_name> - as above for player facilities
 	#  PROXY_SYSTEM_<star_name>                 - all facilities under star
 	
-	var proxy_name: String
+	var proxy_name: StringName
 	var proxy_gui_name: String
 	var proxy_interface: Interface
 	

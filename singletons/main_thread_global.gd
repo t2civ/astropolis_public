@@ -16,8 +16,8 @@ signal ai_thread_called(callable)
 
 const utils := preload("res://astropolis_public/static/utils.gd")
 
-var local_player_name := "PLAYER_NASA"
-var home_facility_name := "FACILITY_PLANET_EARTH_PLAYER_NASA"
+var local_player_name := &"PLAYER_NASA"
+var home_facility_name := &"FACILITY_PLANET_EARTH_PLAYER_NASA"
 
 # Access on main thread only!
 
@@ -43,13 +43,13 @@ func call_ai_thread(callable: Callable) -> void:
 	ai_thread_called.emit(callable)
 
 
-func get_interface_by_name(interface_name: String) -> Interface:
+func get_interface_by_name(interface_name: StringName) -> Interface:
 	# Returns null if doesn't exist.
 	# This method is safe on main thread, but the Interface is not!
 	return interfaces_by_name.get(interface_name)
 
 
-func get_gui_name(interface_name: String) -> String:
+func get_gui_name(interface_name: StringName) -> String:
 	# return is translated
 	var interface: Interface = interfaces_by_name.get(interface_name)
 	if !interface:
@@ -57,52 +57,48 @@ func get_gui_name(interface_name: String) -> String:
 	return interface.gui_name
 
 
-func get_body_flags(body_name: String) -> int:
+func get_body_flags(body_name: StringName) -> int:
 	var interface: Interface = interfaces_by_name.get(body_name)
 	if !interface:
 		return 0
-	@warning_ignore("unsafe_property_access")
-	return interface.body_flags
+	return interface.get(&"body_flags")
 
 
-func get_facility_body(facility_name: String) -> String:
+func get_facility_body(facility_name: StringName) -> StringName:
 	var interface: Interface = interfaces_by_name.get(facility_name)
 	if !interface:
 		return ""
-	@warning_ignore("unsafe_property_access")
-	return interface.body_name
+	return interface.get(&"body_name")
 
 
-func get_facility_player(facility_name: String) -> String:
+func get_facility_player(facility_name: StringName) -> StringName:
 	var interface: Interface = interfaces_by_name.get(facility_name)
 	if !interface:
 		return ""
-	@warning_ignore("unsafe_property_access")
-	return interface.player_name
+	return interface.get(&"player_name")
 
 
-func get_facility_polity(facility_name: String) -> String:
+func get_facility_polity(facility_name: StringName) -> StringName:
 	var interface: Interface = interfaces_by_name.get(facility_name)
 	if !interface:
 		return ""
-	@warning_ignore("unsafe_property_access")
-	return interface.polity_name
+	return interface.get(&"polity_name")
 
 
-func get_facilities(body_or_player_name: String) -> Array:
+func get_facilities(body_or_player_name: StringName) -> Array:
 	if !facilities_by_holder.has(body_or_player_name):
 		return []
 	return facilities_by_holder[body_or_player_name]
 
 
-func get_n_facilities(body_or_player_name: String) -> int:
+func get_n_facilities(body_or_player_name: StringName) -> int:
 	if !facilities_by_holder.has(body_or_player_name):
 		return 0
 	var facilities: Array = facilities_by_holder[body_or_player_name]
 	return facilities.size()
 
 
-func get_player_facility_at_body(player_name: String, body_name: String) -> String:
+func get_player_facility_at_body(player_name: StringName, body_name: StringName) -> StringName:
 	var body_facilities := get_facilities(body_name)
 	for facility_name in body_facilities:
 		var interface: Interface = interfaces_by_name.get(facility_name)
@@ -112,7 +108,7 @@ func get_player_facility_at_body(player_name: String, body_name: String) -> Stri
 	return ""
 
 
-func get_player_class(player_name: String) -> int:
+func get_player_class(player_name: StringName) -> int:
 	var interface: Interface = interfaces_by_name.get(player_name)
 	if interface:
 		@warning_ignore("unsafe_property_access")

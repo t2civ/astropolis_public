@@ -81,7 +81,7 @@ func _set_network_data() -> void:
 			if !interface.get(required_component):
 				interface = null
 		if interface:
-			if interface.has_method("calculate_proxy_data"): # ProxyInterface
+			if interface.has_method(&"calculate_proxy_data"): # ProxyInterface
 				@warning_ignore("unsafe_method_access")
 				interface.calculate_proxy_data()
 			has_data = true

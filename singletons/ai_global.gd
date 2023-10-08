@@ -30,7 +30,7 @@ var is_autoplay := false
 var is_multiplayer_server := false
 var is_multiplayer_client := false
 
-var local_player_name := "PLAYER_NASA"
+var local_player_name := &"PLAYER_NASA"
 
 # *****************************************************************************
 # Access on AI thread only! NOT THREADSAFE!
@@ -68,58 +68,55 @@ func _clear_procedural() -> void:
 # *****************************************************************************
 # Access on AI thread only! NOT THREADSAFE!
 
-func get_interface_by_name(interface_name: String) -> Interface:
+func get_interface_by_name(interface_name: StringName) -> Interface:
 	# Returns null if doesn't exist.
 	return interfaces_by_name.get(interface_name)
 
 
-func get_gui_name(interface_name: String) -> String:
+func get_gui_name(interface_name: StringName) -> String:
+	# return is translated
 	var interface: Interface = interfaces_by_name.get(interface_name)
 	if !interface:
 		return ""
 	return interface.gui_name
 
 
-func get_body_flags(body_name: String) -> int:
+func get_body_flags(body_name: StringName) -> int:
 	var interface: Interface = interfaces_by_name.get(body_name)
 	if !interface:
 		return 0
-	@warning_ignore("unsafe_property_access")
-	return interface.body_flags
+	return interface.get(&"body_flags")
 
 
-func get_facility_body(facility_name: String) -> String:
+func get_facility_body(facility_name: StringName) -> StringName:
 	var interface: Interface = interfaces_by_name.get(facility_name)
 	if !interface:
 		return ""
-	@warning_ignore("unsafe_property_access")
-	return interface.body_name
+	return interface.get(&"body_name")
 
 
-func get_facility_player(facility_name: String) -> String:
+func get_facility_player(facility_name: StringName) -> StringName:
 	var interface: Interface = interfaces_by_name.get(facility_name)
 	if !interface:
 		return ""
-	@warning_ignore("unsafe_property_access")
-	return interface.player_name
+	return interface.get(&"player_name")
 
 
-func get_facility_polity(facility_name: String) -> String:
+func get_facility_polity(facility_name: StringName) -> StringName:
 	var interface: Interface = interfaces_by_name.get(facility_name)
 	if !interface:
 		return ""
-	@warning_ignore("unsafe_property_access")
-	return interface.polity_name
+	return interface.get(&"polity_name")
 
 
-func get_facilities(holder_name: String) -> Array:
+func get_facilities(holder_name: StringName) -> Array:
 	# holder can be body or player
 	if !facilities_by_holder.has(holder_name):
 		return []
 	return facilities_by_holder[holder_name]
 
 
-func get_or_make_proxy(proxy_name: String, gui_name := "",
+func get_or_make_proxy(proxy_name: StringName, gui_name := "",
 		has_operations := true, has_inventory := false, has_financials := false,
 		has_population := true, has_biome := true, has_metaverse := true) -> Interface:
 	# Proxy names should be prefixed 'PROXY_' and must be unique.

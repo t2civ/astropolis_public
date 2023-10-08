@@ -35,14 +35,14 @@ var current_tab := 0
 var _on_ready_tab := 0
 
 # not persisted
-var _header_suffix := "  -  " + tr("LABEL_OPERATIONS")
+var _header_suffix := "  -  " + tr(&"LABEL_OPERATIONS")
 var _subheader_suffixes := [
-	" / " + tr("LABEL_ENERGY"),
-	" / " + tr("LABEL_EXTRACTION"),
-	" / " + tr("LABEL_REFINING"),
-	" / " + tr("LABEL_MANUFACTURING"),
-	" / " + tr("LABEL_BIOMES"),
-	" / " + tr("LABEL_SERVICES"),
+	" / " + tr(&"LABEL_ENERGY"),
+	" / " + tr(&"LABEL_EXTRACTION"),
+	" / " + tr(&"LABEL_REFINING"),
+	" / " + tr(&"LABEL_MANUFACTURING"),
+	" / " + tr(&"LABEL_BIOMES"),
+	" / " + tr(&"LABEL_SERVICES"),
 ]
 #var _show_subheader := true
 var _state: Dictionary = IVGlobal.state
@@ -108,12 +108,12 @@ func _ready() -> void:
 	_selection_manager.selection_changed.connect(_update_tab)
 	_tab_container.tab_changed.connect(_select_tab)
 	# rename tabs for localization or abreviation
-	$TabContainer/Energy.name = "TAB_OPS_ENERGY"
-	$TabContainer/Extraction.name = "TAB_OPS_EXTRACTION"
-	$TabContainer/Refining.name = "TAB_OPS_REFINING"
-	$TabContainer/Manufacturing.name = "TAB_OPS_MANUFACTURING"
-	$TabContainer/Biomes.name = "TAB_OPS_BIOMES"
-	$TabContainer/Services.name = "TAB_OPS_SERVICES"
+	$TabContainer/Energy.name = &"TAB_OPS_ENERGY"
+	$TabContainer/Extraction.name = &"TAB_OPS_EXTRACTION"
+	$TabContainer/Refining.name = &"TAB_OPS_REFINING"
+	$TabContainer/Manufacturing.name = &"TAB_OPS_MANUFACTURING"
+	$TabContainer/Biomes.name = &"TAB_OPS_BIOMES"
+	$TabContainer/Services.name = &"TAB_OPS_SERVICES"
 	
 	for col0_spacer in _col0_spacers:
 		col0_spacer.custom_minimum_size.x = _name_column_width - 10.0
@@ -148,7 +148,7 @@ func _update_tab(_suppress_camera_move := false) -> void:
 	var selection_data := _selection_manager.get_info_panel_data()
 	if !selection_data:
 		return
-	var target_name: String = selection_data[0]
+	var target_name: StringName = selection_data[0]
 	var header_text: String = selection_data[1] + _header_suffix
 	var is_developed: bool = selection_data[2]
 	if is_developed:
@@ -167,11 +167,11 @@ func _update_no_operations() -> void:
 # *****************************************************************************
 # AI thread !!!!
 
-func _get_ai_data(target_name: String) -> void:
+func _get_ai_data(target_name: StringName) -> void:
 	var data := []
 	var interface: Interface = AIGlobal.get_interface_by_name(target_name)
 	if !interface:
-		call_deferred("_update_no_operations")
+		_update_no_operations.call_deferred()
 		return
 	
 	var tab := current_tab
@@ -229,7 +229,7 @@ func _get_ai_data(target_name: String) -> void:
 # Main thread !!!!
 
 
-func _update_tab_display(target_name: String, tab: int, n_op_groups: int, has_financials: bool,
+func _update_tab_display(target_name: StringName, tab: int, n_op_groups: int, has_financials: bool,
 		data: Array) -> void:
 	# TODO: if no op_groups, show something like, "(No Energy Operations)"
 	
@@ -286,7 +286,7 @@ class GroupBox extends VBoxContainer:
 		_group_hdr.group_button.button_down.connect(_toggle_open_close)
 	
 	
-	func set_group_item(target_name: String, group_data: Array, ops_data: Array,
+	func set_group_item(target_name: StringName, group_data: Array, ops_data: Array,
 			init_open := true) -> void:
 		_memory_key = target_name + group_data[0]
 		if _memory.has(_memory_key):
@@ -353,7 +353,7 @@ class RowItem extends HBoxContainer:
 	var unit_multipliers := IVUnits.unit_multipliers
 	
 	var _is_group: bool
-	var _group_name: String
+	var _group_name: StringName
 	var _name_column_width := 250.0 # TODO: resize on GUI resize
 	
 	
@@ -396,7 +396,7 @@ class RowItem extends HBoxContainer:
 	func set_row(data: Array, group_state := -1) -> void:
 		# NAN, blank
 		# INF, "?"
-		var row_name: String = data[0]
+		var row_name: StringName = data[0]
 		var utilization: float = data[1]
 		var power: float = data[2]
 		var flow: float = data[3]

@@ -32,6 +32,6 @@ func _update_selection(_suppress_camera_move := false) -> void:
 	if !_selection_manager.has_selection():
 		return
 	var selection_name := _selection_manager.get_body_name()
-	var header := (tr(selection_name) + "  -  " + tr("LABEL_INFORMATION"))
+	var header := (tr(selection_name) + "  -  " + tr(&"LABEL_INFORMATION"))
 	header_changed.emit(header)
 

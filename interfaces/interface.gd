@@ -41,7 +41,7 @@ enum { # sync_svr_type
 const INTERVAL := 7.0 * IVUnits.DAY
 
 var interface_id := -1
-var name := "" # unique & immutable
+var name := &"" # unique & immutable
 var gui_name := "" # mutable for display ("" for player means hide from GUI)
 var yq := -1 # year * 4 + (quarter - 1); never set for BodyInterface w/out a facility
 var last_interval := -INF

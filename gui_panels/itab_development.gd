@@ -16,7 +16,7 @@ const PLAYER_CLASS_POLITY := Enums.PlayerClasses.PLAYER_CLASS_POLITY
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 const PERSIST_PROPERTIES := []
 
-var _header_suffix := "  -  " + tr("LABEL_DEVELOPMENT")
+var _header_suffix := "  -  " + tr(&"LABEL_DEVELOPMENT")
 var _state: Dictionary = IVGlobal.state
 var _selection_manager: SelectionManager
 
@@ -51,17 +51,17 @@ func _update_selection(_suppress_camera_move := false) -> void:
 	var selection_data := _selection_manager.get_info_panel_data()
 	if !selection_data:
 		return
-	var target_name: String = selection_data[0]
+	var target_name: StringName = selection_data[0]
 	var header_text: String = selection_data[1]
 	header_text += _header_suffix
 	header_changed.emit(header_text)
 	
 	var selection_name := _selection_manager.get_selection_name()
 	
-	var body_name: String
+	var body_name: StringName
 	var body_flags: int
-	var proxy_orbit: String
-	var proxy_moons_of: String
+	var proxy_orbit: StringName
+	var proxy_moons_of: StringName
 	
 	# Below replicates some logic in SelectionManager.get_info_panel_data(); could be cleaned up.
 	if selection_name.begins_with("FACILITY_"):
@@ -76,21 +76,21 @@ func _update_selection(_suppress_camera_move := false) -> void:
 			return
 		
 		# agency or company
-		var player_name: String = MainThreadGlobal.get_facility_player(selection_name)
-		proxy_orbit = "PROXY_ORBIT_" + body_name + "_" + player_name
-		proxy_moons_of = "PROXY_MOONS_OF_" + body_name + "_" + player_name
+		var player_name: StringName = MainThreadGlobal.get_facility_player(selection_name)
+		proxy_orbit = StringName("PROXY_ORBIT_" + body_name + "_" + player_name)
+		proxy_moons_of = StringName("PROXY_MOONS_OF_" + body_name + "_" + player_name)
 	
 	else: # body
 		assert(IVGlobal.bodies.has(selection_name))
 		body_name = selection_name
 		body_flags = MainThreadGlobal.get_body_flags(body_name)
-		proxy_orbit = "PROXY_ORBIT_" + body_name
-		proxy_moons_of = "PROXY_MOONS_OF_" + body_name
+		proxy_orbit = StringName("PROXY_ORBIT_" + body_name)
+		proxy_moons_of = StringName("PROXY_MOONS_OF_" + body_name)
 	
 	# at star
 	if body_flags & BodyFlags.IS_STAR:
 		@warning_ignore("unsafe_method_access")
-		_stats_grid.update_targets(["PROXY_SYSTEM_STAR_SUN"], ["SYSTEM_SOLAR_SYSTEM"])
+		_stats_grid.update_targets([&"PROXY_SYSTEM_STAR_SUN"], [&"SYSTEM_SOLAR_SYSTEM"])
 		return
 	
 	var at_body_name := _get_at_body_name(body_flags)
@@ -104,27 +104,27 @@ func _update_selection(_suppress_camera_move := false) -> void:
 	# at moonless major body
 	if not body_flags & BodyFlags2.GUI_HAS_MOONS:
 		var targets := [selection_name, proxy_orbit]
-		var replacement_names := [at_body_name, "LABEL_IN_ORBIT"]
+		var replacement_names := [at_body_name, &"LABEL_IN_ORBIT"]
 		@warning_ignore("unsafe_method_access")
 		_stats_grid.update_targets(targets, replacement_names)
 		return
 	
 	# at major body w/ moon(s)
-	var at_moon_text := "LABEL_MOONS"
-	if body_name == "PLANET_EARTH":
-		at_moon_text = "LABEL_LUNAR"
+	var at_moon_text := &"LABEL_MOONS"
+	if body_name == &"PLANET_EARTH":
+		at_moon_text = &"LABEL_LUNAR"
 	var targets := [selection_name, proxy_orbit, proxy_moons_of]
-	var replacement_names := [at_body_name, "LABEL_ORBIT", at_moon_text]
+	var replacement_names := [at_body_name, &"LABEL_ORBIT", at_moon_text]
 	@warning_ignore("unsafe_method_access")
 	_stats_grid.update_targets(targets, replacement_names)
 
 
-func _get_at_body_name(body_flags: int) -> String:
+func _get_at_body_name(body_flags: int) -> StringName:
 	if body_flags & BodyFlags2.IS_STATION:
-		return "LABEL_STATION"
+		return &"LABEL_STATION"
 	if body_flags & BodyFlags2.GUI_CLOUDS_SURFACE:
-		return "LABEL_CLOUDS_SURFACE" # Venus
+		return &"LABEL_CLOUDS_SURFACE" # Venus
 	if body_flags & BodyFlags2.GUI_CLOUDS:
-		return "LABEL_CLOUDS" # gas giants
-	return "LABEL_SURFACE"
+		return &"LABEL_CLOUDS" # gas giants
+	return &"LABEL_SURFACE"
 

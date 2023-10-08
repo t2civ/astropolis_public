@@ -26,8 +26,8 @@ const TRADE_CLASS_TEXTS := [ # correspond to TradeClasses
 
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 const PERSIST_PROPERTIES := [
-	"current_tab",
-	"_on_ready_tab",
+	&"current_tab",
+	&"_on_ready_tab",
 ]
 
 var unit_multipliers := IVUnits.unit_multipliers
@@ -38,15 +38,15 @@ var _on_ready_tab := 0
 
 # not persisted
 
-var _header_suffix := "  -  " + tr("LABEL_MARKETS")
+var _header_suffix := "  -  " + tr(&"LABEL_MARKETS")
 var _subheader_suffixes := [
-	" / " + tr("LABEL_ENERGY"),
-	" / " + tr("LABEL_ORES"),
-	" / " + tr("LABEL_VOLATILES"),
-	" / " + tr("LABEL_MATERIALS"),
-	" / " + tr("LABEL_MANUFACTURED"),
-	" / " + tr("LABEL_BIOLOGICALS"),
-	" / " + tr("LABEL_CYBER"),
+	" / " + tr(&"LABEL_ENERGY"),
+	" / " + tr(&"LABEL_ORES"),
+	" / " + tr(&"LABEL_VOLATILES"),
+	" / " + tr(&"LABEL_MATERIALS"),
+	" / " + tr(&"LABEL_MANUFACTURED"),
+	" / " + tr(&"LABEL_BIOLOGICALS"),
+	" / " + tr(&"LABEL_CYBER"),
 ]
 #var _show_subheader := true
 var _state: Dictionary = IVGlobal.state
@@ -92,13 +92,13 @@ func _ready() -> void:
 	_selection_manager.selection_changed.connect(_update_tab)
 	_tab_container.tab_changed.connect(_select_tab)
 	# rename tabs for abreviated localization
-	$TabContainer/Energy.name = "TAB_MKS_ENERGY"
-	$TabContainer/Ores.name = "TAB_MKS_ORES"
-	$TabContainer/Volatiles.name = "TAB_MKS_VOLATILES"
-	$TabContainer/Materials.name = "TAB_MKS_MATERIALS"
-	$TabContainer/Manufactured.name = "TAB_MKS_MANUFACTURED"
-	$TabContainer/Biologicals.name = "TAB_MKS_BIOLOGICALS"
-	$TabContainer/Cyber.name = "TAB_MKS_CYBER"
+	$TabContainer/Energy.name = &"TAB_MKS_ENERGY"
+	$TabContainer/Ores.name = &"TAB_MKS_ORES"
+	$TabContainer/Volatiles.name = &"TAB_MKS_VOLATILES"
+	$TabContainer/Materials.name = &"TAB_MKS_MATERIALS"
+	$TabContainer/Manufactured.name = &"TAB_MKS_MANUFACTURED"
+	$TabContainer/Biologicals.name = &"TAB_MKS_BIOLOGICALS"
+	$TabContainer/Cyber.name = &"TAB_MKS_CYBER"
 	for col0_spacer in _col0_spacers:
 		col0_spacer.custom_minimum_size.x = _name_column_width - 10.0
 	_tab_container.set_current_tab(_on_ready_tab)
@@ -131,7 +131,7 @@ func _update_tab(_suppress_camera_move := false) -> void:
 	var selection_data := _selection_manager.get_info_panel_data()
 	if !selection_data:
 		return
-	var target_name: String = selection_data[0]
+	var target_name: StringName = selection_data[0]
 	var header_text: String = selection_data[1] + _header_suffix
 	var is_developed: bool = selection_data[2]
 	var has_market := is_developed and (target_name.begins_with("FACILITY_")
@@ -141,28 +141,28 @@ func _update_tab(_suppress_camera_move := false) -> void:
 		header_text += _subheader_suffixes[current_tab]
 	else:
 		_update_no_markets(is_developed)
-	emit_signal("header_changed", header_text)
+	header_changed.emit(header_text)
 
 
 func _update_no_markets(is_developed := false) -> void:
 	_tab_container.hide()
-	_no_markets_label.text = ("LABEL_NO_MARKETS_SELECT_ENTITY" if is_developed
-			else "LABEL_NO_MARKETS")
+	_no_markets_label.text = (&"LABEL_NO_MARKETS_SELECT_ENTITY" if is_developed
+			else &"LABEL_NO_MARKETS")
 	_no_markets_label.show()
 
 
 # *****************************************************************************
 # AI thread !!!!
 
-func _get_ai_data(target_name: String) -> void:
+func _get_ai_data(target_name: StringName) -> void:
 	
 	var interface: Interface = AIGlobal.get_interface_by_name(target_name)
 	if !interface:
-		call_deferred("_update_no_markets")
+		_update_no_markets.call_deferred()
 		return
 	var inventory := interface.inventory
 	if !inventory:
-		call_deferred("_update_no_markets")
+		_update_no_markets.call_deferred()
 		return
 	var tab := current_tab
 	var resource_class_resources: Array = _resource_classes_resources[tab]
@@ -216,7 +216,7 @@ func _update_tab_display(tab: int, n_resources: int, data: Array) -> void:
 		var contracted: float = data[i * N_COLUMNS + 5]
 		
 		var trade_class: int = _trade_classes[resource_type]
-		var trade_unit: String = _trade_units[resource_type]
+		var trade_unit: StringName = _trade_units[resource_type]
 		
 		in_stock /= unit_multipliers[trade_unit]
 		contracted /= unit_multipliers[trade_unit]
