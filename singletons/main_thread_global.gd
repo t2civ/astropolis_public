@@ -11,7 +11,7 @@ extends Node
 # the main thread, use only Interface methods marked 'threadsafe'.
 
 signal interface_added(interface)
-signal ai_thread_called(object, method, data)
+signal ai_thread_called(callable)
 
 
 const utils := preload("res://astropolis_public/static/utils.gd")
@@ -39,9 +39,8 @@ func _clear() -> void:
 # *****************************************************************************
 # Access on main thread only!
 
-func call_on_ai_thread(object: Object, method: String, data := []) -> void:
-	# object method must have 'data: Array' as its single required arg
-	ai_thread_called.emit(object, method, data)
+func call_ai_thread(callable: Callable) -> void:
+	ai_thread_called.emit(callable)
 
 
 func get_interface_by_name(interface_name: String) -> Interface:

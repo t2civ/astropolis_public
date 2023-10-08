@@ -36,13 +36,13 @@ var local_player_name := "PLAYER_NASA"
 # Access on AI thread only! NOT THREADSAFE!
 
 # Interfaces
-var interfaces := [] # indexed by interface_id
+var interfaces: Array[Interface] = [] # indexed by interface_id
 var interfaces_by_name := {} # PLANET_EARTH, PLAYER_NASA, PROXY_OFFWORLD, etc.
-var facility_interfaces := [] # indexed by facility_id
-var body_interfaces := [] # indexed by body_id
-var player_interfaces := [] # indexed by player_id
-var proxy_interfaces := [] # indexed by proxy_id
-var trader_interfaces := [] # indexed by trader_id
+var facility_interfaces: Array[Interface] = [] # indexed by facility_id
+var body_interfaces: Array[Interface] = [] # indexed by body_id
+var player_interfaces: Array[Interface] = [] # indexed by player_id
+var proxy_interfaces: Array[Interface] = [] # indexed by proxy_id
+var trader_interfaces: Array[Interface] = [] # indexed by trader_id
 
 var facilities_by_holder := {} # [facility names] indexed by body & player names
 

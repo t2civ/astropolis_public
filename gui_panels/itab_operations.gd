@@ -152,7 +152,7 @@ func _update_tab(_suppress_camera_move := false) -> void:
 	var header_text: String = selection_data[1] + _header_suffix
 	var is_developed: bool = selection_data[2]
 	if is_developed:
-		MainThreadGlobal.call_on_ai_thread(self, "_get_ai_data", [target_name])
+		MainThreadGlobal.call_ai_thread(_get_ai_data.bind(target_name))
 		header_text += _subheader_suffixes[current_tab]
 	else:
 		_update_no_operations()
@@ -167,9 +167,8 @@ func _update_no_operations() -> void:
 # *****************************************************************************
 # AI thread !!!!
 
-func _get_ai_data(data: Array) -> void:
-	var target_name: String = data.pop_back()
-	assert(!data)
+func _get_ai_data(target_name: String) -> void:
+	var data := []
 	var interface: Interface = AIGlobal.get_interface_by_name(target_name)
 	if !interface:
 		call_deferred("_update_no_operations")
@@ -223,24 +222,17 @@ func _get_ai_data(data: Array) -> void:
 		data.append(ops_data)
 		i += 1
 	
-	data.append(has_financials)
-	data.append(n_op_groups)
-	data.append(tab)
-	data.append(target_name)
-	_update_tab_display.call_deferred(data)
+	_update_tab_display.call_deferred(target_name, tab, n_op_groups, has_financials, data)
 
 
 # *****************************************************************************
 # Main thread !!!!
 
 
-func _update_tab_display(data: Array) -> void:
-	var target_name: String = data.pop_back()
-	var tab: int = data.pop_back()
-	var n_op_groups: int = data.pop_back()
+func _update_tab_display(target_name: String, tab: int, n_op_groups: int, has_financials: bool,
+		data: Array) -> void:
 	# TODO: if no op_groups, show something like, "(No Energy Operations)"
-	var has_financials: bool = data.pop_back()
-
+	
 	# header changes
 	var revenue_hdr: Label = _revenue_hdrs[tab]
 	var margin_hdr: Label = _margin_hdrs[tab]

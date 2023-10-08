@@ -60,14 +60,14 @@ func update_targets(targets_: Array, replacement_names_ := [], fallback_names_ :
 
 
 func update() -> void:
-	MainThreadGlobal.call_on_ai_thread(self, "_set_network_data")
+	MainThreadGlobal.call_ai_thread(_set_network_data)
 
 
 # *****************************************************************************
 # AI thread !!!!
 
-func _set_network_data(data: Array) -> void:
-	assert(!data) # empty now but we will fill it
+func _set_network_data() -> void:
+	var data := []
 	_network_targets = targets # for thread safety
 	_network_replacement_names = replacement_names
 	_network_fallback_names = fallback_names
@@ -141,16 +141,6 @@ func _set_network_data(data: Array) -> void:
 		var row_text: String = line_array[0] # row label
 		data.append(row_text)
 		
-		# get args for QuantityFormatter
-#		var args: Array = line_array[2]
-#		var n_args: int = args.size()
-#		var option_type: int = args[0]
-#		var unit: String = args[1] if n_args > 1 else ""
-#		var precision: int = args[2] if n_args > 2 else 3
-#		var num_type: int = args[3] if n_args > 3 else IVQFormat.NUM_DYNAMIC
-#		var long_form: bool = args[4] if n_args > 4 else false
-#		var case_type: int = args[5] if n_args > 5 else IVQFormat.CASE_MIXED
-
 		var format_callable: Callable = line_array[2]
 		
 		# add values
@@ -171,7 +161,7 @@ func _set_network_data(data: Array) -> void:
 
 	# add n_rows and finish
 	data.append(row)
-	call_deferred("_build_grid", data)
+	_build_grid.call_deferred(data)
 
 
 # *****************************************************************************
@@ -179,7 +169,7 @@ func _set_network_data(data: Array) -> void:
 
 func _no_data() -> void:
 	_grid.hide()
-	emit_signal("has_stats_changed", false)
+	has_stats_changed.emit(false)
 
 
 func _build_grid(data: Array) -> void:
@@ -230,6 +220,6 @@ func _build_grid(data: Array) -> void:
 		var label: Label = _grid.get_child(n_cells)
 		label.hide()
 	
-	emit_signal("has_stats_changed", true)
+	has_stats_changed.emit(true)
 	_grid.show()
-	
+

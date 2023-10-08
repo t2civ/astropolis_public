@@ -89,6 +89,9 @@ func _init():
 	unit_multipliers[&"flops"] = 1.0 / IVUnits.SECOND # base unit for computation
 	unit_multipliers[&"puhr"] = 1e16 * 3600.0 # 'processor unit hour'; 1e16 flops/s * hr
 	unit_multipliers[&"species"] = 1.0
+	unit_multipliers[&"t/d"] = IVUnits.TONNE / IVUnits.DAY
+	unit_multipliers[&"km^3"] = IVUnits.KM ** 3
+	
 	
 	IVQFormat.exponent_str = "e"
 

@@ -66,16 +66,14 @@ func _update_selection(_suppress_camera_move := false) -> void:
 	
 	var body_name := _selection_manager.get_body_name()
 	var selection_name := _selection_manager.get_selection_name() # body or facility
-	MainThreadGlobal.call_on_ai_thread(self, "_get_ai_data", [body_name, selection_name])
+	MainThreadGlobal.call_ai_thread(_get_ai_data.bind(body_name, selection_name))
 
 
 # *****************************************************************************
 # AI thread !!!!
 
-func _get_ai_data(data: Array) -> void:
-	var body_name: String = data[0]
-	var selection_name: String = data[1]
-	data.clear()
+func _get_ai_data(body_name: StringName, selection_name: StringName) -> void:
+	var data: Array = []
 	var polity_name := ""
 	if selection_name.begins_with("FACILITY_"):
 		polity_name = AIGlobal.get_facility_polity(selection_name)
@@ -91,7 +89,7 @@ func _get_ai_data(data: Array) -> void:
 		return
 	
 	var composition_polities := []
-	var open_at_init := []
+	var open_at_init: Array[bool] = []
 	
 	var n_compositions := compositions.size()
 
@@ -153,10 +151,7 @@ func _get_ai_data(data: Array) -> void:
 		
 		data.append(resources_data)
 	
-	data.append(open_at_init)
-	data.append(composition_polities)
-	data.append(selection_name)
-	_update_display.call_deferred(data)
+	_update_display.call_deferred(selection_name, composition_polities, open_at_init, data)
 
 
 func _sort_resources(a: Array, b: Array) -> bool:
@@ -180,10 +175,9 @@ func _update_no_resources(is_unknown := true) -> void:
 	_no_resources.show()
 
 
-func _update_display(data: Array) -> void:
-	var selection_name: String = data.pop_back()
-	var composition_polities: Array = data.pop_back()
-	var open_at_init: Array = data.pop_back()
+func _update_display(selection_name: StringName, composition_polities: Array,
+		open_at_init: Array[bool], data: Array) -> void:
+
 	# TODO: Sort composition_polities in some sensible way
 	var n_polities := composition_polities.size()
 	var n_polity_vboxes := _resource_vbox.get_child_count()
@@ -198,7 +192,7 @@ func _update_display(data: Array) -> void:
 	var i := 0
 	while i < n_polities:
 		var polity_vbox: PolityVBox = _resource_vbox.get_child(i)
-		var polity_name: String = composition_polities[i]
+		var polity_name: StringName = composition_polities[i]
 		var init_open: bool = open_at_init[i]
 		polity_vbox.set_vbox(selection_name, polity_name, init_open)
 		polity_vbox.show()
@@ -213,7 +207,7 @@ func _update_display(data: Array) -> void:
 	i = 0
 	while i < n_strata:
 		var resources_data: Array = data[i]
-		var composition_polity: String = resources_data.pop_back()
+		var composition_polity: StringName = resources_data.pop_back()
 		var init_open: bool = resources_data.pop_back()
 		var stratum_type: int = resources_data.pop_back()
 		var evidence: String = resources_data.pop_back()

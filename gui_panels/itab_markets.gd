@@ -134,10 +134,10 @@ func _update_tab(_suppress_camera_move := false) -> void:
 	var target_name: String = selection_data[0]
 	var header_text: String = selection_data[1] + _header_suffix
 	var is_developed: bool = selection_data[2]
-	var has_market := is_developed and (target_name.begins_with("FACILITY_") \
+	var has_market := is_developed and (target_name.begins_with("FACILITY_")
 			or target_name.begins_with("PROXY_"))
 	if has_market:
-		MainThreadGlobal.call_on_ai_thread(self, "_get_ai_data", [target_name])
+		MainThreadGlobal.call_ai_thread(_get_ai_data.bind(target_name))
 		header_text += _subheader_suffixes[current_tab]
 	else:
 		_update_no_markets(is_developed)
@@ -146,17 +146,16 @@ func _update_tab(_suppress_camera_move := false) -> void:
 
 func _update_no_markets(is_developed := false) -> void:
 	_tab_container.hide()
-	_no_markets_label.text = "LABEL_NO_MARKETS_SELECT_ENTITY" if is_developed \
-			else "LABEL_NO_MARKETS"
+	_no_markets_label.text = ("LABEL_NO_MARKETS_SELECT_ENTITY" if is_developed
+			else "LABEL_NO_MARKETS")
 	_no_markets_label.show()
 
 
 # *****************************************************************************
 # AI thread !!!!
 
-func _get_ai_data(data: Array) -> void:
-	var target_name: String = data.pop_back()
-	assert(!data)
+func _get_ai_data(target_name: String) -> void:
+	
 	var interface: Interface = AIGlobal.get_interface_by_name(target_name)
 	if !interface:
 		call_deferred("_update_no_markets")
@@ -167,6 +166,7 @@ func _get_ai_data(data: Array) -> void:
 		return
 	var tab := current_tab
 	var resource_class_resources: Array = _resource_classes_resources[tab]
+	var data := []
 	var n_resources := resource_class_resources.size()
 	var i := 0
 	while i < n_resources:
@@ -179,20 +179,14 @@ func _get_ai_data(data: Array) -> void:
 		data.append(inventory.contracteds[resource_type])
 		i += 1
 	
-	data.append(n_resources)
-	data.append(tab)
-#	data.append(target_name)
-	call_deferred("_update_tab_display", data)
+	_update_tab_display.call_deferred(tab, n_resources, data)
 	
 
 # *****************************************************************************
 # Main thread !!!!
 
-func _update_tab_display(data: Array) -> void:
-#	var target_name: String = data.pop_back()
-	var tab: int = data.pop_back()
-	var n_resources: int = data.pop_back()
-
+func _update_tab_display(tab: int, n_resources: int, data: Array) -> void:
+	
 	# make rows as needed
 	var vbox: VBoxContainer = _vboxes[tab]
 	var n_children := vbox.get_child_count()
