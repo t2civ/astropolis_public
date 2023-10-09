@@ -33,8 +33,8 @@ var compositions := [] # resizable container - not threadsafe!
 
 
 func _init() -> void:
-	IVGlobal.connect("about_to_free_procedural_nodes", Callable(self, "_clear"))
-	IVGlobal.connect("about_to_quit", Callable(self, "_clear"))
+	IVGlobal.about_to_free_procedural_nodes.connect(_clear)
+	IVGlobal.about_to_quit.connect(_clear)
 
 
 func _clear() -> void:
@@ -59,6 +59,7 @@ func sync_server_init(data: Array) -> void:
 	var parent_name: String = data[7]
 	if parent_name:
 		parent = AIGlobal.get_interface_by_name(parent_name)
+		@warning_ignore("unsafe_method_access")
 		parent.add_satellite(self)
 	if data[8]:
 		var compositions_data: Array = data[8]

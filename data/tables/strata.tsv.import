@@ -3,12 +3,12 @@
 importer="ivoyager.table_importer"
 type="IVTableResource"
 uid="uid://bfqd67jgr6rlu"
-path="res://.godot/imported/strata.tsv-c0dc79cecdec772316c0b21647a28b1f.tres"
+path="res://.godot/imported/strata.tsv-f82d817b24e5decfd29482ea2cde2d9a.tres"
 
 [deps]
 
-source_file="res://TEST_TABLES/strata.tsv"
-dest_files=["res://.godot/imported/strata.tsv-c0dc79cecdec772316c0b21647a28b1f.tres"]
+source_file="res://astropolis_public/data/tables/strata.tsv"
+dest_files=["res://.godot/imported/strata.tsv-f82d817b24e5decfd29482ea2cde2d9a.tres"]
 
 [params]
 

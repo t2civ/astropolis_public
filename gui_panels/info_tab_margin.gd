@@ -22,13 +22,13 @@ func _init(is_new := false) -> void:
 
 
 func _ready() -> void:
-	name = "InfoTabMargin"
+	name = &"InfoTabMargin"
 	mouse_filter = MOUSE_FILTER_IGNORE
 #	margin_top = -4 # not working as expected
 #	margin_bottom = -4
 #	margin_left = -4
 #	margin_right = -4
-	set("theme_override_constants/margin_top", 27) # TODO: Settings GUI_SIZE listener
+	set(&"theme_override_constants/margin_top", 27) # TODO: Settings GUI_SIZE listener
 	if _is_new:
 		add_child(info_tab_container)
 

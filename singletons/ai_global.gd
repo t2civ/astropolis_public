@@ -20,6 +20,8 @@ signal proxy_requested(proxy_name, gui_name, has_operations, has_inventory, has_
 	has_population, has_biome, has_metaverse)
 signal interface_changed(object_type, class_id, data)
 
+signal player_owner_changed(fixme) # FIXME - added for NetworkLobby; not hooked up anywhere else
+
 
 var verbose := false
 var verbose2 := false
@@ -28,19 +30,19 @@ var is_autoplay := false
 var is_multiplayer_server := false
 var is_multiplayer_client := false
 
-var local_player_name := "PLAYER_NASA"
+var local_player_name := &"PLAYER_NASA"
 
 # *****************************************************************************
 # Access on AI thread only! NOT THREADSAFE!
 
 # Interfaces
-var interfaces := [] # indexed by interface_id
+var interfaces: Array[Interface] = [] # indexed by interface_id
 var interfaces_by_name := {} # PLANET_EARTH, PLAYER_NASA, PROXY_OFFWORLD, etc.
-var facility_interfaces := [] # indexed by facility_id
-var body_interfaces := [] # indexed by body_id
-var player_interfaces := [] # indexed by player_id
-var proxy_interfaces := [] # indexed by proxy_id
-var trader_interfaces := [] # indexed by trader_id
+var facility_interfaces: Array[Interface] = [] # indexed by facility_id
+var body_interfaces: Array[Interface] = [] # indexed by body_id
+var player_interfaces: Array[Interface] = [] # indexed by player_id
+var proxy_interfaces: Array[Interface] = [] # indexed by proxy_id
+var trader_interfaces: Array[Interface] = [] # indexed by trader_id
 
 var facilities_by_holder := {} # [facility names] indexed by body & player names
 
@@ -66,54 +68,55 @@ func _clear_procedural() -> void:
 # *****************************************************************************
 # Access on AI thread only! NOT THREADSAFE!
 
-func get_interface_by_name(interface_name: String) -> Interface:
+func get_interface_by_name(interface_name: StringName) -> Interface:
 	# Returns null if doesn't exist.
 	return interfaces_by_name.get(interface_name)
 
 
-func get_gui_name(interface_name: String) -> String:
+func get_gui_name(interface_name: StringName) -> String:
+	# return is translated
 	var interface: Interface = interfaces_by_name.get(interface_name)
 	if !interface:
 		return ""
 	return interface.gui_name
 
 
-func get_body_flags(body_name: String) -> int:
+func get_body_flags(body_name: StringName) -> int:
 	var interface: Interface = interfaces_by_name.get(body_name)
 	if !interface:
 		return 0
-	return interface.body_flags
+	return interface.get(&"body_flags")
 
 
-func get_facility_body(facility_name: String) -> String:
+func get_facility_body(facility_name: StringName) -> StringName:
 	var interface: Interface = interfaces_by_name.get(facility_name)
 	if !interface:
 		return ""
-	return interface.body_name
+	return interface.get(&"body_name")
 
 
-func get_facility_player(facility_name: String) -> String:
+func get_facility_player(facility_name: StringName) -> StringName:
 	var interface: Interface = interfaces_by_name.get(facility_name)
 	if !interface:
 		return ""
-	return interface.player_name
+	return interface.get(&"player_name")
 
 
-func get_facility_polity(facility_name: String) -> String:
+func get_facility_polity(facility_name: StringName) -> StringName:
 	var interface: Interface = interfaces_by_name.get(facility_name)
 	if !interface:
 		return ""
-	return interface.polity_name
+	return interface.get(&"polity_name")
 
 
-func get_facilities(holder_name: String) -> Array:
+func get_facilities(holder_name: StringName) -> Array:
 	# holder can be body or player
 	if !facilities_by_holder.has(holder_name):
 		return []
 	return facilities_by_holder[holder_name]
 
 
-func get_or_make_proxy(proxy_name: String, gui_name := "",
+func get_or_make_proxy(proxy_name: StringName, gui_name := "",
 		has_operations := true, has_inventory := false, has_financials := false,
 		has_population := true, has_biome := true, has_metaverse := true) -> Interface:
 	# Proxy names should be prefixed 'PROXY_' and must be unique.

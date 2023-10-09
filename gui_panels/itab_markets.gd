@@ -12,9 +12,6 @@ const SCENE := "res://astropolis_public/gui_panels/itab_markets.tscn"
 
 signal header_changed(new_header)
 
-const units := preload("res://ivoyager/static/units.gd")
-const MULTIPLIERS := Units.MULTIPLIERS
-
 const N_COLUMNS := 6
 
 const TRADE_CLASS_TEXTS := [ # correspond to TradeClasses
@@ -29,9 +26,11 @@ const TRADE_CLASS_TEXTS := [ # correspond to TradeClasses
 
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 const PERSIST_PROPERTIES := [
-	"current_tab",
-	"_on_ready_tab",
+	&"current_tab",
+	&"_on_ready_tab",
 ]
+
+var unit_multipliers := IVUnits.unit_multipliers
 
 # persisted
 var current_tab := 0
@@ -39,17 +38,17 @@ var _on_ready_tab := 0
 
 # not persisted
 
-var _header_suffix := "  -  " + tr("LABEL_MARKETS")
+var _header_suffix := "  -  " + tr(&"LABEL_MARKETS")
 var _subheader_suffixes := [
-	" / " + tr("LABEL_ENERGY"),
-	" / " + tr("LABEL_ORES"),
-	" / " + tr("LABEL_VOLATILES"),
-	" / " + tr("LABEL_MATERIALS"),
-	" / " + tr("LABEL_MANUFACTURED"),
-	" / " + tr("LABEL_BIOLOGICALS"),
-	" / " + tr("LABEL_CYBER"),
+	" / " + tr(&"LABEL_ENERGY"),
+	" / " + tr(&"LABEL_ORES"),
+	" / " + tr(&"LABEL_VOLATILES"),
+	" / " + tr(&"LABEL_MATERIALS"),
+	" / " + tr(&"LABEL_MANUFACTURED"),
+	" / " + tr(&"LABEL_BIOLOGICALS"),
+	" / " + tr(&"LABEL_CYBER"),
 ]
-var _show_subheader := true
+#var _show_subheader := true
 var _state: Dictionary = IVGlobal.state
 var _selection_manager: SelectionManager
 var _suppress_tab_listener := true
@@ -57,13 +56,12 @@ var _suppress_tab_listener := true
 var _name_column_width := 250.0 # TODO: resize on GUI resize (also in RowItem)
 
 # table indexing
-var _tables: Dictionary = IVGlobal.tables
-var _n_resources: int = _tables.n_resources
+var _tables: Dictionary = IVTableData.tables
 var _resource_names: Array = _tables.resources.name
 var _trade_classes: Array = _tables.resources.trade_class
 var _trade_units: Array = _tables.resources.trade_unit
 var _resource_classes_resources: Array = _tables.resource_classes_resources # array of arrays
-var _qf: IVQuantityFormatter = IVGlobal.program.QuantityFormatter
+
 
 @onready var _no_markets_label: Label = $NoMarkets
 @onready var _tab_container: TabContainer = $TabContainer
@@ -88,19 +86,19 @@ var _qf: IVQuantityFormatter = IVGlobal.program.QuantityFormatter
 
 
 func _ready() -> void:
-	IVGlobal.connect("about_to_free_procedural_nodes", Callable(self, "_clear"))
-	connect("visibility_changed", Callable(self, "_update_tab"))
-	_selection_manager = IVWidgets.get_selection_manager(self)
-	_selection_manager.connect("selection_changed", Callable(self, "_update_tab"))
-	_tab_container.connect("tab_changed", Callable(self, "_select_tab"))
+	IVGlobal.about_to_free_procedural_nodes.connect(_clear)
+	visibility_changed.connect(_update_tab)
+	_selection_manager = IVSelectionManager.get_selection_manager(self)
+	_selection_manager.selection_changed.connect(_update_tab)
+	_tab_container.tab_changed.connect(_select_tab)
 	# rename tabs for abreviated localization
-	$TabContainer/Energy.name = "TAB_MKS_ENERGY"
-	$TabContainer/Ores.name = "TAB_MKS_ORES"
-	$TabContainer/Volatiles.name = "TAB_MKS_VOLATILES"
-	$TabContainer/Materials.name = "TAB_MKS_MATERIALS"
-	$TabContainer/Manufactured.name = "TAB_MKS_MANUFACTURED"
-	$TabContainer/Biologicals.name = "TAB_MKS_BIOLOGICALS"
-	$TabContainer/Cyber.name = "TAB_MKS_CYBER"
+	$TabContainer/Energy.name = &"TAB_MKS_ENERGY"
+	$TabContainer/Ores.name = &"TAB_MKS_ORES"
+	$TabContainer/Volatiles.name = &"TAB_MKS_VOLATILES"
+	$TabContainer/Materials.name = &"TAB_MKS_MATERIALS"
+	$TabContainer/Manufactured.name = &"TAB_MKS_MANUFACTURED"
+	$TabContainer/Biologicals.name = &"TAB_MKS_BIOLOGICALS"
+	$TabContainer/Cyber.name = &"TAB_MKS_CYBER"
 	for col0_spacer in _col0_spacers:
 		col0_spacer.custom_minimum_size.x = _name_column_width - 10.0
 	_tab_container.set_current_tab(_on_ready_tab)
@@ -110,10 +108,10 @@ func _ready() -> void:
 
 func _clear() -> void:
 	if _selection_manager:
-		_selection_manager.disconnect("selection_changed", Callable(self, "_update_tab"))
+		_selection_manager.selection_changed.disconnect(_update_tab)
 		_selection_manager = null
-	disconnect("visibility_changed", Callable(self, "_update_tab"))
-	_tab_container.disconnect("tab_changed", Callable(self, "_select_tab"))
+	visibility_changed.disconnect(_update_tab)
+	_tab_container.tab_changed.disconnect(_select_tab)
 
 
 func timer_update() -> void:
@@ -133,42 +131,42 @@ func _update_tab(_suppress_camera_move := false) -> void:
 	var selection_data := _selection_manager.get_info_panel_data()
 	if !selection_data:
 		return
-	var target_name: String = selection_data[0]
+	var target_name: StringName = selection_data[0]
 	var header_text: String = selection_data[1] + _header_suffix
 	var is_developed: bool = selection_data[2]
-	var has_market := is_developed and (target_name.begins_with("FACILITY_") \
+	var has_market := is_developed and (target_name.begins_with("FACILITY_")
 			or target_name.begins_with("PROXY_"))
 	if has_market:
-		MainThreadGlobal.call_on_ai_thread(self, "_get_ai_data", [target_name])
+		MainThreadGlobal.call_ai_thread(_get_ai_data.bind(target_name))
 		header_text += _subheader_suffixes[current_tab]
 	else:
 		_update_no_markets(is_developed)
-	emit_signal("header_changed", header_text)
+	header_changed.emit(header_text)
 
 
 func _update_no_markets(is_developed := false) -> void:
 	_tab_container.hide()
-	_no_markets_label.text = "LABEL_NO_MARKETS_SELECT_ENTITY" if is_developed \
-			else "LABEL_NO_MARKETS"
+	_no_markets_label.text = (&"LABEL_NO_MARKETS_SELECT_ENTITY" if is_developed
+			else &"LABEL_NO_MARKETS")
 	_no_markets_label.show()
 
 
 # *****************************************************************************
 # AI thread !!!!
 
-func _get_ai_data(data: Array) -> void:
-	var target_name: String = data.pop_back()
-	assert(!data)
+func _get_ai_data(target_name: StringName) -> void:
+	
 	var interface: Interface = AIGlobal.get_interface_by_name(target_name)
 	if !interface:
-		call_deferred("_update_no_markets")
+		_update_no_markets.call_deferred()
 		return
 	var inventory := interface.inventory
 	if !inventory:
-		call_deferred("_update_no_markets")
+		_update_no_markets.call_deferred()
 		return
 	var tab := current_tab
 	var resource_class_resources: Array = _resource_classes_resources[tab]
+	var data := []
 	var n_resources := resource_class_resources.size()
 	var i := 0
 	while i < n_resources:
@@ -181,20 +179,14 @@ func _get_ai_data(data: Array) -> void:
 		data.append(inventory.contracteds[resource_type])
 		i += 1
 	
-	data.append(n_resources)
-	data.append(tab)
-#	data.append(target_name)
-	call_deferred("_update_tab_display", data)
+	_update_tab_display.call_deferred(tab, n_resources, data)
 	
 
 # *****************************************************************************
 # Main thread !!!!
 
-func _update_tab_display(data: Array) -> void:
-#	var target_name: String = data.pop_back()
-	var tab: int = data.pop_back()
-	var n_resources: int = data.pop_back()
-
+func _update_tab_display(tab: int, n_resources: int, data: Array) -> void:
+	
 	# make rows as needed
 	var vbox: VBoxContainer = _vboxes[tab]
 	var n_children := vbox.get_child_count()
@@ -208,7 +200,7 @@ func _update_tab_display(data: Array) -> void:
 			if column == 0: # resource name
 				label.custom_minimum_size.x = _name_column_width
 			else: # value
-				label.align = Label.ALIGNMENT_CENTER
+				label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			hbox.add_child(label)
 			column += 1
 		vbox.add_child(hbox)
@@ -224,35 +216,33 @@ func _update_tab_display(data: Array) -> void:
 		var contracted: float = data[i * N_COLUMNS + 5]
 		
 		var trade_class: int = _trade_classes[resource_type]
-		var trade_unit: String = _trade_units[resource_type]
+		var trade_unit: StringName = _trade_units[resource_type]
 		
-		in_stock /= MULTIPLIERS[trade_unit]
-		contracted /= MULTIPLIERS[trade_unit]
+		in_stock /= unit_multipliers[trade_unit]
+		contracted /= unit_multipliers[trade_unit]
 		
 		var resource_text: String = (
 			tr(_resource_names[resource_type])
 			+ " (" + TRADE_CLASS_TEXTS[trade_class]
 			+ trade_unit + ")"
 		)
-		var price_text := "" if is_nan(price) else _qf.number(price, 3)
-		var bid_text := "" if is_nan(bid) else _qf.number(bid, 3)
-		var ask_text := "" if is_nan(ask) else _qf.number(ask, 3)
-		var in_stock_text := _qf.number(in_stock, 2) # FIXME: trade unit
-		var contracted_text := _qf.number(contracted, 2) # FIXME: trade unit
+		var price_text := "" if is_nan(price) else IVQFormat.number(price, 3)
+		var bid_text := "" if is_nan(bid) else IVQFormat.number(bid, 3)
+		var ask_text := "" if is_nan(ask) else IVQFormat.number(ask, 3)
+		var in_stock_text := IVQFormat.number(in_stock, 2) # FIXME: trade unit
+		var contracted_text := IVQFormat.number(contracted, 2) # FIXME: trade unit
 		
 		var hbox: HBoxContainer = vbox.get_child(i)
-		hbox.get_child(0).text = resource_text
-		hbox.get_child(1).text = price_text
-		hbox.get_child(2).text = bid_text
-		hbox.get_child(3).text = ask_text
-		hbox.get_child(4).text = in_stock_text
-		hbox.get_child(5).text = contracted_text
+		(hbox.get_child(0) as Label).text = resource_text
+		(hbox.get_child(1) as Label).text = price_text
+		(hbox.get_child(2) as Label).text = bid_text
+		(hbox.get_child(3) as Label).text = ask_text
+		(hbox.get_child(4) as Label).text = in_stock_text
+		(hbox.get_child(5) as Label).text = contracted_text
 		i += 1
 	
 	# no show/hide needed if we always show all resources
 
 	_no_markets_label.hide()
 	_tab_container.show()
-
-
 

@@ -14,12 +14,14 @@ const SUPER_CLOSED_PREFIX := "> "
 const STRATUM_OPEN_PREFIX := "  \u2304 "
 const STRATUM_CLOSED_PREFIX := "  > "
 const RESOURCE_INDENT := "        "
-const NUM_TYPE := IVQuantityFormatter.NUM_DYNAMIC
 const IS_SPACECRAFT := IVEnums.BodyFlags.IS_SPACECRAFT
 
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 
-var _tables: Dictionary = IVGlobal.tables
+const LENGTH_M_KM := IVQFormat.DynamicUnitType.LENGTH_M_KM
+
+
+var _tables: Dictionary = IVTableData.tables
 var _is_extraction_resources: Array = _tables.extraction_resources
 var _n_is_extraction_resources := _is_extraction_resources.size()
 var _resource_sort_overrides: Array = _tables.resources.sort_override
@@ -30,23 +32,22 @@ var _survey_names: Array = _tables.surveys.name
 var _composition_types: Dictionary # table name enumeration
 
 var _state: Dictionary = IVGlobal.state
-var _qf: IVQuantityFormatter = IVGlobal.program.QuantityFormatter
 var _selection_manager: SelectionManager
 
-var _header_suffix := "  -  " + tr("LABEL_RESOURCES")
+var _header_suffix := "  -  " + tr(&"LABEL_RESOURCES")
 
 @onready var _vbox: VBoxContainer = $VBox
 @onready var _no_resources: Label = $NoResources
 @onready var _resource_vbox: VBoxContainer = $"%ResourceVBox"
+@warning_ignore("unsafe_property_access")
 @onready var _memory: Dictionary = get_parent().memory # open states
 
 
 func _ready() -> void:
-	connect("visibility_changed", Callable(self, "_update_selection"))
-	_selection_manager = IVWidgets.get_selection_manager(self)
-	_selection_manager.connect("selection_changed", Callable(self, "_update_selection"))
-	var table_reader: TableReader = IVGlobal.program.TableReader
-	_composition_types = table_reader.get_names_enumeration("compositions")
+	visibility_changed.connect(_update_selection)
+	_selection_manager = IVSelectionManager.get_selection_manager(self)
+	_selection_manager.selection_changed.connect(_update_selection)
+	_composition_types = IVTableData.enumeration_dicts[&"compositions"]
 	_update_selection()
 
 
@@ -61,36 +62,34 @@ func _update_selection(_suppress_camera_move := false) -> void:
 	if !selection_data:
 		return
 	var header_text: String = selection_data[1] + _header_suffix
-	emit_signal("header_changed", header_text)
+	header_changed.emit(header_text)
 	
 	var body_name := _selection_manager.get_body_name()
-	var selection_name := _selection_manager.get_name() # body or facility
-	MainThreadGlobal.call_on_ai_thread(self, "_get_ai_data", [body_name, selection_name])
+	var selection_name := _selection_manager.get_selection_name() # body or facility
+	MainThreadGlobal.call_ai_thread(_get_ai_data.bind(body_name, selection_name))
 
 
 # *****************************************************************************
 # AI thread !!!!
 
-func _get_ai_data(data: Array) -> void:
-	var body_name: String = data[0]
-	var selection_name: String = data[1]
-	data.clear()
+func _get_ai_data(body_name: StringName, selection_name: StringName) -> void:
+	var data: Array = []
 	var polity_name := ""
 	if selection_name.begins_with("FACILITY_"):
 		polity_name = AIGlobal.get_facility_polity(selection_name)
 	var body_interface: BodyInterface = AIGlobal.get_interface_by_name(body_name)
 	if !body_interface:
-		call_deferred("_update_no_resources")
+		_update_no_resources.call_deferred()
 		return
 	
 	var compositions := body_interface.compositions
 	if !compositions:
 		var is_unknown := not body_interface.body_flags & IS_SPACECRAFT
-		call_deferred("_update_no_resources", is_unknown)
+		_update_no_resources.call_deferred(is_unknown)
 		return
 	
 	var composition_polities := []
-	var open_at_init := []
+	var open_at_init: Array[bool] = []
 	
 	var n_compositions := compositions.size()
 
@@ -131,10 +130,9 @@ func _get_ai_data(data: Array) -> void:
 			var resource_data := [resource_type, mean, uncertainty, heterogeneity, deposits]
 			resources_data.append(resource_data)
 		
-		resources_data.sort_custom(Callable(self, "_sort_resources"))
+		resources_data.sort_custom(_sort_resources)
 		
-		# appends below will be popped so resources_data is ready for StratumVBox
-		var evidence: String = _survey_names[survey_type]
+		var evidence: StringName = _survey_names[survey_type]
 		var init_open := true
 		var composition_type: int = _composition_types.get(composition.name, -1)
 		if composition_type != -1:
@@ -152,10 +150,7 @@ func _get_ai_data(data: Array) -> void:
 		
 		data.append(resources_data)
 	
-	data.append(open_at_init)
-	data.append(composition_polities)
-	data.append(selection_name)
-	call_deferred("_update_display", data)
+	_update_display.call_deferred(selection_name, composition_polities, open_at_init, data)
 
 
 func _sort_resources(a: Array, b: Array) -> bool:
@@ -174,15 +169,14 @@ func _sort_resources(a: Array, b: Array) -> bool:
 
 func _update_no_resources(is_unknown := true) -> void:
 	_vbox.hide()
-	_no_resources.text = "LABEL_UNKNOWN_RESOURCES_PARENTHESIS" if is_unknown \
-			else "LABEL_NO_RESOURCES_PARENTHESIS"
+	_no_resources.text = (&"LABEL_UNKNOWN_RESOURCES_PARENTHESIS" if is_unknown
+			else &"LABEL_NO_RESOURCES_PARENTHESIS")
 	_no_resources.show()
 
 
-func _update_display(data: Array) -> void:
-	var selection_name: String = data.pop_back()
-	var composition_polities: Array = data.pop_back()
-	var open_at_init: Array = data.pop_back()
+func _update_display(selection_name: StringName, composition_polities: Array,
+		open_at_init: Array[bool], data: Array) -> void:
+
 	# TODO: Sort composition_polities in some sensible way
 	var n_polities := composition_polities.size()
 	var n_polity_vboxes := _resource_vbox.get_child_count()
@@ -197,7 +191,7 @@ func _update_display(data: Array) -> void:
 	var i := 0
 	while i < n_polities:
 		var polity_vbox: PolityVBox = _resource_vbox.get_child(i)
-		var polity_name: String = composition_polities[i]
+		var polity_name: StringName = composition_polities[i]
 		var init_open: bool = open_at_init[i]
 		polity_vbox.set_vbox(selection_name, polity_name, init_open)
 		polity_vbox.show()
@@ -212,28 +206,28 @@ func _update_display(data: Array) -> void:
 	i = 0
 	while i < n_strata:
 		var resources_data: Array = data[i]
-		var composition_polity: String = resources_data.pop_back()
+		var composition_polity: StringName = resources_data.pop_back()
 		var init_open: bool = resources_data.pop_back()
 		var stratum_type: int = resources_data.pop_back()
-		var evidence: String = resources_data.pop_back()
+		var evidence: StringName = resources_data.pop_back()
 		var body_radius: float = resources_data.pop_back()
 		var thickness: float = resources_data.pop_back()
 		var volume: float = resources_data.pop_back()
 		var density: float = resources_data.pop_back()
 		var total_mass: float = resources_data.pop_back()
 		# resources_data now in correct form for add_stratum()
-		var stratum_name: String = _stratum_names[stratum_type]
+		var stratum_name: StringName = _stratum_names[stratum_type]
 		var hint_format_str: String
 		if body_radius == thickness:
-			hint_format_str = tr("HINT_STRATUM_FORMAT_1") # radius for sm undiff body
+			hint_format_str = tr(&"HINT_STRATUM_FORMAT_1") # radius for sm undiff body
 		else:
-			hint_format_str = tr("HINT_STRATUM_FORMAT_2") # thickness
+			hint_format_str = tr(&"HINT_STRATUM_FORMAT_2") # thickness
 		var hint := hint_format_str % [
 			tr(evidence),
-			_qf.number_option(thickness, _qf.LENGTH_M_KM, "", 3, NUM_TYPE),
-			_qf.number_unit(volume, "km^3", 3, NUM_TYPE),
-			_qf.number_unit(density, "g/cm^3", 3, NUM_TYPE),
-			_qf.number_unit(total_mass, "t", 3, NUM_TYPE),
+			IVQFormat.dynamic_unit(thickness, LENGTH_M_KM, 3),
+			IVQFormat.fixed_unit(volume, &"km^3", 3),
+			IVQFormat.fixed_unit(density, &"g/cm^3", 3),
+			IVQFormat.fixed_unit(total_mass, &"t", 3),
 		]
 		
 		var polity_index := composition_polities.find(composition_polity)
@@ -242,6 +236,7 @@ func _update_display(data: Array) -> void:
 		i += 1
 	
 	for polity_vbox in _resource_vbox.get_children():
+		@warning_ignore("unsafe_method_access")
 		polity_vbox.finish_strata()
 	
 	_vbox.show()
@@ -263,14 +258,14 @@ class PolityVBox extends VBoxContainer:
 	func _init(memory: Dictionary) -> void:
 		_memory = memory
 		size_flags_horizontal = SIZE_FILL
-		_polity_header.connect("button_down", Callable(self, "_toggle_open_close"))
+		_polity_header.button_down.connect(_toggle_open_close)
 		_polity_header.flat = true
-		_polity_header.align = Button.ALIGN_LEFT
+		_polity_header.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		_polity_header.size_flags_horizontal = SIZE_FILL
 		add_child(_polity_header)
 	
 	
-	func set_vbox(selection_name: String, polity_name: String, init_open: bool) -> void:
+	func set_vbox(selection_name: StringName, polity_name: StringName, init_open: bool) -> void:
 		_next_child_index = 1
 		_memory_key = selection_name + polity_name
 		if _memory.has(_memory_key):
@@ -278,16 +273,16 @@ class PolityVBox extends VBoxContainer:
 		else:
 			_is_open = init_open
 		if !polity_name:
-			_polity_text = tr("LABEL_COMMONS")
+			_polity_text = tr(&"LABEL_COMMONS")
 		else:
-			_polity_text = tr("LABEL_TERRITORIAL") + " - " + tr(polity_name)
+			_polity_text = tr(&"LABEL_TERRITORIAL") + " - " + tr(polity_name)
 		if _is_open:
 			_polity_header.text = SUPER_OPEN_PREFIX + _polity_text
 		else:
 			_polity_header.text = SUPER_CLOSED_PREFIX + _polity_text
 	
 	
-	func add_stratum(stratum_name: String, hint: String, init_open: bool,
+	func add_stratum(stratum_name: StringName, hint: StringName, init_open: bool,
 			resources_data: Array) -> void:
 		var stratum_vbox: StratumVBox
 		if _next_child_index < get_child_count():
@@ -304,7 +299,8 @@ class PolityVBox extends VBoxContainer:
 		var i := get_child_count()
 		while i > _next_child_index:
 			i -= 1
-			get_child(i).hide()
+			var stratum_vbox: StratumVBox = get_child(i)
+			stratum_vbox.hide()
 	
 	
 	func _toggle_open_close() -> void:
@@ -328,12 +324,12 @@ class StratumVBox extends VBoxContainer:
 	
 	const N_COLUMNS := 5
 	
-	var _resource_names: Array = IVGlobal.tables.resources.name
-	var _qf: IVQuantityFormatter = IVGlobal.program.QuantityFormatter
+	var _resource_names: Array = IVTableData.tables.resources.name
+	
 	var _stratum_header := Button.new()
 	var _resource_grid := GridContainer.new()
-	var _stratum_name: String
-	var _text_low := tr("LABEL_LOW").to_lower()
+	var _stratum_name: StringName
+	var _text_low := tr(&"LABEL_LOW").to_lower()
 	var _memory: Dictionary
 	var _memory_key: String
 	
@@ -341,9 +337,9 @@ class StratumVBox extends VBoxContainer:
 	func _init(memory: Dictionary) -> void:
 		_memory = memory
 		size_flags_horizontal = SIZE_FILL
-		_stratum_header.connect("button_down", Callable(self, "_toggle_open_close"))
+		_stratum_header.button_down.connect(_toggle_open_close)
 		_stratum_header.flat = true
-		_stratum_header.align = Button.ALIGN_LEFT
+		_stratum_header.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		_stratum_header.size_flags_horizontal = SIZE_FILL
 		add_child(_stratum_header)
 		_resource_grid.columns = N_COLUMNS
@@ -351,7 +347,7 @@ class StratumVBox extends VBoxContainer:
 		add_child(_resource_grid)
 	
 	
-	func set_stratum(stratum_name: String, hint: String, resources_data: Array,
+	func set_stratum(stratum_name: StringName, hint: StringName, resources_data: Array,
 			init_open: bool, base_memory_key: String) -> void:
 		_memory_key = base_memory_key + stratum_name
 		_stratum_name = stratum_name
@@ -376,7 +372,7 @@ class StratumVBox extends VBoxContainer:
 			if n_cells % N_COLUMNS == 0:
 				label.custom_minimum_size.x = 230
 			else:
-				label.align = Label.ALIGNMENT_CENTER
+				label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			_resource_grid.add_child(label)
 			n_cells += 1
 		
@@ -389,7 +385,7 @@ class StratumVBox extends VBoxContainer:
 			var uncertainty: float = resource_data[2]
 			var heterogeneity: float = resource_data[3]
 			var deposits: float = resource_data[4]
-			var resource_name: String = _resource_names[resource_type]
+			var resource_name: StringName = _resource_names[resource_type]
 			var precision := 3
 			if uncertainty:
 				precision = int(mean / (10.0 * uncertainty)) + 1
@@ -400,19 +396,19 @@ class StratumVBox extends VBoxContainer:
 			elif mean < 0.001:
 				precision = 2
 			var resource_text := RESOURCE_INDENT + tr(resource_name)
-			var mean_text := _qf.number(mean, precision, NUM_TYPE)
+			var mean_text := IVQFormat.number(mean, precision)
 			var uncert_text := ""
 			if uncertainty:
-				uncert_text = "± " + _qf.number(uncertainty, 1, NUM_TYPE)
+				uncert_text = "± " + IVQFormat.number(uncertainty, 1)
 			var heter_text := ""
 			if heterogeneity:
 				if heterogeneity < 0.11 * mean:
 					heter_text = _text_low
 				else:
-					heter_text = "± " + _qf.number(heterogeneity, 1, NUM_TYPE)
+					heter_text = "± " + IVQFormat.number(heterogeneity, 1)
 			var deposits_text := ""
 			if deposits:
-				deposits_text = _qf.number(deposits, 1, NUM_TYPE)
+				deposits_text = IVQFormat.number(deposits, 1)
 			
 			# set text & show column labels
 			var begin_index := i * N_COLUMNS
@@ -450,5 +446,4 @@ class StratumVBox extends VBoxContainer:
 			_stratum_header.text = STRATUM_OPEN_PREFIX + tr(_stratum_name)
 			_resource_grid.show()
 			_memory[_memory_key] = true
-
 

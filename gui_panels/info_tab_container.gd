@@ -10,9 +10,9 @@ extends TabContainer
 
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 const PERSIST_PROPERTIES := [
-	"memory",
-	"_on_ready_tab",
-	]
+	&"memory",
+	&"_on_ready_tab",
+]
 
 # persisted
 var memory := {} # generic memory that tabs can share, eg, for open states
@@ -30,7 +30,6 @@ var subpanels: Array
 
 # not persisted
 var _timer := Timer.new()
-var _state: Dictionary = IVGlobal.state
 var _is_new := false
 var _suppress_tab_listener := true
 
@@ -48,13 +47,13 @@ func _init(is_new := false) -> void:
 
 
 func _ready() -> void:
-	name = "InfoTabContainer"
+	name = &"InfoTabContainer"
 	mouse_filter = MOUSE_FILTER_PASS
-	connect("tab_changed", Callable(self, "_tab_listener"))
+	tab_changed.connect(_tab_listener)
 	add_child(_timer)
 	_timer.start() # 1 s interval unless we change
 	if !_is_new: # loaded game
-		IVGlobal.connect("game_load_finished", Callable(self, "_on_game_load_finished").bind(), CONNECT_ONE_SHOT)
+		IVGlobal.game_load_finished.connect(_on_game_load_finished, CONNECT_ONE_SHOT)
 		return
 	add_child(itab_development)
 	add_child(itab_operations)
@@ -85,19 +84,20 @@ func _on_game_load_finished() -> void:
 func _init_tabs() -> void:
 	set_current_tab(_on_ready_tab)
 	_suppress_tab_listener = false
-	itab_development.name = "TAB_DEVELOPMENT"
-	itab_operations.name = "TAB_OPERATIONS"
-	itab_markets.name = "TAB_MARKETS"
-	itab_resources.name = "TAB_RESOURCES"
-	itab_information.name = "TAB_INFORMATION"
-	_timer.connect("timeout", Callable(itab_development, "timer_update"))
-	_timer.connect("timeout", Callable(itab_operations, "timer_update"))
-	_timer.connect("timeout", Callable(itab_markets, "timer_update"))
-	_timer.connect("timeout", Callable(itab_resources, "timer_update"))
-	_timer.connect("timeout", Callable(itab_information, "timer_update"))
+	itab_development.name = &"TAB_DEVELOPMENT"
+	itab_operations.name = &"TAB_OPERATIONS"
+	itab_markets.name = &"TAB_MARKETS"
+	itab_resources.name = &"TAB_RESOURCES"
+	itab_information.name = &"TAB_INFORMATION"
+	_timer.timeout.connect(itab_development.timer_update)
+	_timer.timeout.connect(itab_operations.timer_update)
+	_timer.timeout.connect(itab_markets.timer_update)
+	_timer.timeout.connect(itab_resources.timer_update)
+	_timer.timeout.connect(itab_information.timer_update)
 
 
 func _tab_listener(tab: int) -> void:
 	if _suppress_tab_listener:
 		return
 	_on_ready_tab = tab
+

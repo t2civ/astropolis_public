@@ -3,12 +3,12 @@
 importer="ivoyager.table_importer"
 type="IVTableResource"
 uid="uid://dbs6qq2w1wran"
-path="res://.godot/imported/facilities.tsv-f1ddb1f3a758a4cbf5355ba0a70d5937.tres"
+path="res://.godot/imported/facilities.tsv-9a533f2f411a7b73f3bfa510c79eb3f7.tres"
 
 [deps]
 
-source_file="res://TEST_TABLES/facilities.tsv"
-dest_files=["res://.godot/imported/facilities.tsv-f1ddb1f3a758a4cbf5355ba0a70d5937.tres"]
+source_file="res://astropolis_public/data/tables/facilities.tsv"
+dest_files=["res://.godot/imported/facilities.tsv-9a533f2f411a7b73f3bfa510c79eb3f7.tres"]
 
 [params]
 

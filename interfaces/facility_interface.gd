@@ -32,9 +32,9 @@ var facility_class := -1
 var public_portion: float # 0.0 - 1.0; how much is public sector?
 var has_internal_market: bool # ops treated as separate entities for economic measure & tax
 var solar_occlusion: float # for solar utilization calculation
-var polity_name: String
-var body_name: String
-var player_name: String
+var polity_name: StringName
+var body_name: StringName
+var player_name: StringName
 
 var propagations := []
 
@@ -180,6 +180,7 @@ func _add_base_propagations() -> void:
 	add_propagation(body_interface)
 	var player_interface: Interface = AIGlobal.interfaces_by_name[player_name]
 	add_propagation(player_interface)
+	@warning_ignore("unsafe_property_access", "unsafe_property_access", "unsafe_property_access")
 	if player_interface.part_of_name:
 		var part_of: Interface = AIGlobal.interfaces_by_name[player_interface.part_of_name]
 		add_propagation(part_of)
@@ -196,8 +197,8 @@ func _add_proxies() -> void:
 	#  PROXY_MOONS_OF_<body_name>_<player_name> - as above for player facilities
 	#  PROXY_SYSTEM_<star_name>                 - all facilities under star
 	
-	var proxy_name: String
-	var gui_name: String
+	var proxy_name: StringName
+	var proxy_gui_name: String
 	var proxy_interface: Interface
 	
 	# off-Earth
@@ -210,8 +211,8 @@ func _add_proxies() -> void:
 	# TODO: generalize to PROXY_HOMEWORLD_<polity_name>, e.g., for new Martian polity
 	if body_name == "PLANET_EARTH":
 		proxy_name = "PROXY_PLANET_EARTH_" + polity_name
-		gui_name = tr("PLANET_EARTH") + " / " + tr(polity_name)
-		proxy_interface = AIGlobal.get_or_make_proxy(proxy_name, gui_name, true, true, true)
+		proxy_gui_name = tr("PLANET_EARTH") + " / " + tr(polity_name)
+		proxy_interface = AIGlobal.get_or_make_proxy(proxy_name, proxy_gui_name, true, true, true)
 		add_propagation(proxy_interface)
 	
 	# search up body tree for others...
@@ -221,16 +222,21 @@ func _add_proxies() -> void:
 	var at_moons_of_planet: Interface
 	var in_star_system: Interface
 	var body: Interface = interfaces_by_name[body_name]
+	@warning_ignore("unsafe_property_access")
 	var up_body: Interface = body.parent
+	@warning_ignore("unsafe_property_access", "unsafe_property_access")
 	if up_body.body_flags & BodyFlags.IS_PLANET_OR_MOON:
 		in_orbit_of_planet_or_moon = up_body
 	while true:
+		@warning_ignore("unsafe_property_access", "unsafe_property_access")
 		if up_body.body_flags & BodyFlags.IS_STAR:
 			in_star_system = up_body
 			break
+		@warning_ignore("unsafe_property_access", "unsafe_property_access")
 		if up_body.body_flags & BodyFlags.IS_PLANET:
 			if up_body != in_orbit_of_planet_or_moon:
 				at_moons_of_planet = up_body
+		@warning_ignore("unsafe_property_access")
 		up_body = up_body.parent
 	
 	# in orbit of planet or moon - all players & player-specific
@@ -253,7 +259,7 @@ func _add_proxies() -> void:
 	
 	# in star system - all facilities!
 	proxy_name = "PROXY_SYSTEM_" + in_star_system.name
-	gui_name = tr("SYSTEM_" + in_star_system.name) # for STAR_SUN translates to 'Solar System'
-	proxy_interface = AIGlobal.get_or_make_proxy(proxy_name, gui_name)
+	proxy_gui_name = tr("SYSTEM_" + in_star_system.name) # for STAR_SUN translates to 'Solar System'
+	proxy_interface = AIGlobal.get_or_make_proxy(proxy_name, proxy_gui_name)
 	add_propagation(proxy_interface)
 

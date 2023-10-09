@@ -1,14 +1,14 @@
 [gd_scene load_steps=10 format=2]
 
 [ext_resource path="res://astropolis_public/gui_panels/navigation_panel.gd" type="Script" id=1]
-[ext_resource path="res://ivoyager/gui_widgets/camera_lock_ckbx.tscn" type="PackedScene" id=2]
-[ext_resource path="res://ivoyager/gui_mods/control_draggable.tscn" type="PackedScene" id=3]
-[ext_resource path="res://ivoyager/gui_widgets/sun_slice_button.tscn" type="PackedScene" id=4]
-[ext_resource path="res://ivoyager/gui_widgets/speed_buttons.tscn" type="PackedScene" id=5]
-[ext_resource path="res://ivoyager/gui_widgets/speed_label.tscn" type="PackedScene" id=6]
-[ext_resource path="res://ivoyager/gui_widgets/planet_moon_buttons.tscn" type="PackedScene" id=7]
-[ext_resource path="res://ivoyager/gui_widgets/date_time_label.tscn" type="PackedScene" id=8]
-[ext_resource path="res://ivoyager/gui_widgets/body_h_scroll.tscn" type="PackedScene" id=9]
+[ext_resource path="res://addons/ivoyager_core/gui_widgets/camera_lock_ckbx.tscn" type="PackedScene" id=2]
+[ext_resource path="res://addons/ivoyager_core/gui_mods/control_draggable.tscn" type="PackedScene" id=3]
+[ext_resource path="res://addons/ivoyager_core/gui_widgets/sun_slice_button.tscn" type="PackedScene" id=4]
+[ext_resource path="res://addons/ivoyager_core/gui_widgets/speed_buttons.tscn" type="PackedScene" id=5]
+[ext_resource path="res://addons/ivoyager_core/gui_widgets/speed_label.tscn" type="PackedScene" id=6]
+[ext_resource path="res://addons/ivoyager_core/gui_widgets/planet_moon_buttons.tscn" type="PackedScene" id=7]
+[ext_resource path="res://addons/ivoyager_core/gui_widgets/date_time_label.tscn" type="PackedScene" id=8]
+[ext_resource path="res://addons/ivoyager_core/gui_widgets/body_h_scroll.tscn" type="PackedScene" id=9]
 
 [node name="NavigationPanel" type="PanelContainer"]
 anchor_left = 1.0

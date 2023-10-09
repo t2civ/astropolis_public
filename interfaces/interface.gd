@@ -38,10 +38,10 @@ enum { # sync_svr_type
 	SYNC_SVR_METAVERSE,
 }
 
-const INTERVAL := 7.0 * Units.DAY
+const INTERVAL := 7.0 * IVUnits.DAY
 
 var interface_id := -1
-var name := "" # unique & immutable
+var name := &"" # unique & immutable
 var gui_name := "" # mutable for display ("" for player means hide from GUI)
 var yq := -1 # year * 4 + (quarter - 1); never set for BodyInterface w/out a facility
 var last_interval := -INF
@@ -69,12 +69,16 @@ var use_this_ai := false # read-only
 var times: Array = IVGlobal.times # [time (s, J2000), engine_time (s), solar_day (d)] (floats)
 var date: Array = IVGlobal.date # Gregorian [year, month, day] (ints)
 var clock: Array = IVGlobal.clock # UT [hour, minute, second] (ints)
-var tables: Dictionary = IVGlobal.tables
+var tables: Dictionary = IVTableData.tables
+var table_n_rows: Dictionary = IVTableData.table_n_rows
 
 # private
 var _dirty := 0
+@warning_ignore("unused_private_class_variable")
 var _is_local_player := false # gives GUI access
+@warning_ignore("unused_private_class_variable")
 var _is_server_ai := false
+@warning_ignore("unused_private_class_variable")
 var _is_local_use_ai := false # local player sets/unsets
 
 
@@ -160,6 +164,12 @@ func _sync_ai_changes() -> void:
 	_dirty = 0
 
 
+func propagate_component_init(_data: Array, _indexes: Array) -> void:
+	pass
+
+
+func propagate_component_changes(_data: Array, _indexes: Array) -> void:
+	pass
 
 # *****************************************************************************
 # Internal main thread

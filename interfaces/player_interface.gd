@@ -24,8 +24,8 @@ const OBJECT_TYPE = Enums.Objects.PLAYER
 # public read-only
 var player_id := -1
 var player_class := -1 # PlayerClasses enum
-var part_of_name: String # non-polity players only!
-var polity_name: String
+var part_of_name: StringName # non-polity players only!
+var polity_name: StringName
 var homeworld := ""
 
 

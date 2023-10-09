@@ -16,9 +16,9 @@ var _selection_manager: SelectionManager
 
 
 func _ready() -> void:
-	connect("visibility_changed", Callable(self, "_update_selection"))
-	_selection_manager = IVWidgets.get_selection_manager(self)
-	_selection_manager.connect("selection_changed", Callable(self, "_update_selection"))
+	visibility_changed.connect(_update_selection)
+	_selection_manager = IVSelectionManager.get_selection_manager(self)
+	_selection_manager.selection_changed.connect(_update_selection)
 	_update_selection()
 
 
@@ -32,5 +32,6 @@ func _update_selection(_suppress_camera_move := false) -> void:
 	if !_selection_manager.has_selection():
 		return
 	var selection_name := _selection_manager.get_body_name()
-	var header := (tr(selection_name) + "  -  " + tr("LABEL_INFORMATION"))
-	emit_signal("header_changed", header)
+	var header := (tr(selection_name) + "  -  " + tr(&"LABEL_INFORMATION"))
+	header_changed.emit(header)
+

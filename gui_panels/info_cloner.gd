@@ -7,8 +7,8 @@ class_name InfoCloner
 # Clones InfoPanel on 'clone_and_pin_requested' signal.
 
 
-func _project_init() -> void:
-	IVGlobal.connect("system_tree_ready", Callable(self, "_on_system_tree_ready"))
+func _ivcore_init() -> void:
+	IVGlobal.system_tree_ready.connect(_on_system_tree_ready)
 
 
 func _on_system_tree_ready(_is_new_game: bool) -> void:
@@ -16,7 +16,7 @@ func _on_system_tree_ready(_is_new_game: bool) -> void:
 	for child in astro_gui.get_children():
 		var info_panel := child as InfoPanel
 		if info_panel:
-			info_panel.connect("clone_and_pin_requested", Callable(self, "_pin_info_panel"))
+			info_panel.clone_and_pin_requested.connect(_pin_info_panel)
 
 
 func _pin_info_panel(info_panel: InfoPanel) -> void:
@@ -44,7 +44,7 @@ func _pin_info_panel(info_panel: InfoPanel) -> void:
 
 	# clone InfoPanel (no persist properties we need to worry about)
 	var panel_clone: InfoPanel = IVFiles.make_object_or_scene(InfoPanel)
-	panel_clone.connect("clone_and_pin_requested", Callable(self, "_pin_info_panel"))
+	panel_clone.clone_and_pin_requested.connect(_pin_info_panel)
 	panel_clone.selection_manager = sm_clone
 	panel_clone.is_pinned = true
 	panel_clone.header_text = info_panel.header_text
@@ -57,16 +57,19 @@ func _pin_info_panel(info_panel: InfoPanel) -> void:
 	# TODO: Smarter positioning of cloned panel
 	panel_clone.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE)
 	# delay and do some finish work
-	await IVGlobal.get_tree().idle_frame
+	await IVGlobal.get_tree().process_frame
+	@warning_ignore("unsafe_method_access")
 	panel_clone.get_node("ControlMod").finish_move()
 
 
 func _clone_persist_properties(original: Object, clone: Object) -> void:
-	if not "PERSIST_PROPERTIES" in original:
+	if not &"PERSIST_PROPERTIES" in original:
 		return
-	for persist_property in original.PERSIST_PROPERTIES:
+	for persist_property in original.get(&"PERSIST_PROPERTIES"):
 		var value = original.get(persist_property)
 		var type := typeof(value)
 		if type == TYPE_ARRAY or type == TYPE_DICTIONARY:
+			@warning_ignore("unsafe_method_access")
 			value = value.duplicate(true)
 		clone.set(persist_property, value)
+

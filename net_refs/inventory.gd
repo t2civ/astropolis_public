@@ -42,13 +42,13 @@ const PERSIST_PROPERTIES := [
 
 # Interface read-only! Data flows server -> interface.
 var yq := -1 # last sync, = year * 4 + (quarter - 1)
-var reserves: Array # exists here; we may need it (>= 0.0)
-var markets: Array # exists here; Trader may commit (>= 0.0)
-var in_transits: Array # on the way (>= 0.0), probably under contract
-var contracteds: Array # sum of all contracts (+/-), here or elsewhere
-var prices: Array # last sale or set by Exchange (NAN if no price)
-var bids: Array # NAN if none
-var asks: Array # NAN if none
+var reserves: Array[float] # exists here; we may need it (>= 0.0)
+var markets: Array[float] # exists here; Trader may commit (>= 0.0)
+var in_transits: Array[float] # on the way (>= 0.0), probably under contract
+var contracteds: Array[float] # sum of all contracts (+/-), here or elsewhere
+var prices: Array[float] # last sale or set by Exchange (NAN if no price)
+var bids: Array[float] # NAN if none
+var asks: Array[float] # NAN if none
 
 var _dirty_reserves_1 := 0
 var _dirty_reserves_2 := 0 # max 128
@@ -70,12 +70,12 @@ var _dirty_asks_2 := 0 # max 128
 func _init(is_new := false) -> void:
 	if !is_new: # game load
 		return
-	var n_resources: int = IVGlobal.tables.n_resources
-	reserves = ivutils.init_array(n_resources, 0.0)
+	var n_resources: int = IVTableData.table_n_rows.resources
+	reserves = ivutils.init_array(n_resources, 0.0, TYPE_FLOAT)
 	markets = reserves.duplicate()
 	in_transits = reserves.duplicate()
 	contracteds = reserves.duplicate()
-	prices = ivutils.init_array(n_resources, NAN)
+	prices = ivutils.init_array(n_resources, NAN, TYPE_FLOAT)
 	bids = prices.duplicate()
 	asks = prices.duplicate()
 

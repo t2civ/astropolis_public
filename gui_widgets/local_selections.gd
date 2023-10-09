@@ -17,11 +17,12 @@ const PLAYER_CLASS_COMPANY := Enums.PlayerClasses.PLAYER_CLASS_COMPANY
 const IS_STAR := IVEnums.BodyFlags.IS_STAR
 
 var section_names := [
-	tr("LABEL_SPACEFARING_POLITIES"),
-	tr("LABEL_SPACE_AGENCIES"),
-	tr("LABEL_SPACE_COMPANIES"),
-	tr("LABEL_OFFWORLD_FACILITIES"),
-	tr("LABEL_SYSTEM_FACILITIES"),
+	# FIXME
+	tr(&"LABEL_SPACEFARING_POLITIES"),
+	tr(&"LABEL_SPACE_AGENCIES"),
+	tr(&"LABEL_SPACE_COMPANIES"),
+	tr(&"LABEL_OFFWORLD_FACILITIES"),
+	tr(&"LABEL_SYSTEM_FACILITIES"),
 ]
 
 var open_prefix := "\u2304   "
@@ -50,8 +51,8 @@ var _n_sections := section_names.size()
 
 
 func _ready() -> void:
-	IVGlobal.connect("simulator_started", Callable(self, "_update"))
-	IVGlobal.connect("about_to_free_procedural_nodes", Callable(self, "_clear"))
+	IVGlobal.simulator_started.connect(_update)
+	IVGlobal.about_to_free_procedural_nodes.connect(_clear)
 	_update()
 
 
@@ -68,8 +69,8 @@ func _clear() -> void:
 
 
 func _init_after_system_built() -> void:
-	_selection_manager = IVWidgets.get_selection_manager(self)
-	_selection_manager.connect("selection_changed", Callable(self, "_update"))
+	_selection_manager = IVSelectionManager.get_selection_manager(self)
+	_selection_manager.selection_changed.connect(_update)
 	var section := 0
 	while section < _n_sections:
 		var section_text: String = section_names[section]
@@ -108,12 +109,12 @@ func _set_selections_recursive(body: IVBody, bodies_array: Array, root_call := f
 	if _facilities_by_holder.has(body.name):
 		
 		# add all players w/ facility here
-		var body_name: String = body.name
+		var body_name: StringName = body.name
 		var facilities: Array = _facilities_by_holder[body_name]
 		var n_facilities := facilities.size()
 		var i := 0
 		while i < n_facilities:
-			var facility_name: String = facilities[i]
+			var facility_name: StringName = facilities[i]
 			var facility_interface: FacilityInterface = _interfaces_by_name[facility_name]
 			var player_name := facility_interface.player_name
 			var player_interface: PlayerInterface = _interfaces_by_name[player_name]
@@ -163,7 +164,7 @@ func _update_labels() -> void:
 		while n_labels <= n_items + child_index: # enough if open
 			var label := Label.new()
 			label.mouse_filter = MOUSE_FILTER_PASS
-			label.connect("gui_input", Callable(self, "_on_gui_input").bind(label))
+			label.gui_input.connect(_on_gui_input.bind(label))
 			_vbox.add_child(label)
 			n_labels += 1
 		var is_open: bool = is_open_sections[section]
@@ -204,5 +205,4 @@ func _on_gui_input(event: InputEvent, label: Label) -> void:
 		_update_labels()
 	else:
 		_selection_manager.select_prefer_facility(lookup)
-
 
