@@ -3,11 +3,12 @@
 # Copyright 2019-2023 Charlie Whitfield, all rights reserved
 # *****************************************************************************
 class_name Interface
+extends RefCounted
 
 # DO NOT MODIFY THIS FILE! To modify AI, see comments in '_base_ai.gd' files.
 #
-# Warning! This object lives and dies on the AI Server thread! Some access from
-# other threads is possible (e.g., from main thread GUI), but see:
+# This object lives and dies on the AI thread! Access from other threads is
+# possible (e.g., from main thread GUI), but see:
 # https://docs.godotengine.org/en/latest/tutorials/performance/thread_safe_apis.html
 
 

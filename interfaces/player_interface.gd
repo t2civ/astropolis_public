@@ -24,7 +24,7 @@ const OBJECT_TYPE = Enums.Objects.PLAYER
 # public read-only
 var player_id := -1
 var player_class := -1 # PlayerClasses enum
-var part_of_name: StringName # non-polity players only!
+var part_of: PlayerInterface # non-polity players only!
 var polity_name: StringName
 var homeworld := ""
 
@@ -45,7 +45,8 @@ func sync_server_init(data: Array) -> void:
 	name = data[3]
 	gui_name = data[4]
 	player_class = data[5]
-	part_of_name = data[6]
+	var part_of_name: StringName = data[6]
+	part_of = AIGlobal.interfaces_by_name[part_of_name] if part_of_name else null
 	polity_name = data[7]
 	homeworld = data[8]
 
@@ -56,7 +57,8 @@ func sync_server_dirty(data: Array) -> void:
 	if dirty & DIRTY_BASE:
 		gui_name = data[k]
 		player_class = data[k + 1]
-		part_of_name = data[k + 2]
+		var part_of_name: StringName = data[k + 2]
+		part_of = AIGlobal.interfaces_by_name[part_of_name] if part_of_name else null
 		polity_name = data[k + 3]
 		homeworld = data[k + 4]
 

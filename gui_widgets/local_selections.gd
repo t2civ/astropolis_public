@@ -116,7 +116,7 @@ func _set_selections_recursive(body: IVBody, bodies_array: Array, root_call := f
 		while i < n_facilities:
 			var facility_name: StringName = facilities[i]
 			var facility_interface: FacilityInterface = _interfaces_by_name[facility_name]
-			var player_name := facility_interface.player_name
+			var player_name := facility_interface.player.name
 			var player_interface: PlayerInterface = _interfaces_by_name[player_name]
 			var gui_name := player_interface.gui_name
 			if !gui_name: # hidden player

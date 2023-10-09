@@ -7,8 +7,8 @@ extends Interface
 
 # DO NOT MODIFY THIS FILE! To modify AI, see comments in '_base_ai.gd' files.
 #
-# Warning! This object lives and dies on the AI Server thread! Some access from
-# other threads is possible (e.g., from main thread GUI), but see:
+# This object lives and dies on the AI thread! Access from other threads is
+# possible (e.g., from main thread GUI), but see:
 # https://docs.godotengine.org/en/latest/tutorials/performance/thread_safe_apis.html
 #
 # To get the SceenTree "body" node (class IVBody) use IVGlobal.bodies[body_name].
@@ -25,10 +25,10 @@ const OBJECT_TYPE = Enums.Objects.BODY
 
 var body_id := -1
 var body_flags := 0
-var solar_occlusion: float # atmosphere & rotation/orbit shading
-var parent: Interface # null for top body
-var satellites := [] # Interfaces; resizable container - not threadsafe!
-var compositions := [] # resizable container - not threadsafe!
+var solar_occlusion: float # TODO: replace w/ atmospheric condition
+var parent: BodyInterface # null for top body
+var satellites: Array[BodyInterface] = [] # resizable container - not threadsafe!
+var compositions: Array[Composition] = [] # resizable container - not threadsafe!
 
 
 
@@ -59,7 +59,6 @@ func sync_server_init(data: Array) -> void:
 	var parent_name: String = data[7]
 	if parent_name:
 		parent = AIGlobal.get_interface_by_name(parent_name)
-		@warning_ignore("unsafe_method_access")
 		parent.add_satellite(self)
 	if data[8]:
 		var compositions_data: Array = data[8]
@@ -145,11 +144,11 @@ func propagate_component_changes(data: Array, indexes: Array) -> void:
 			process_ai_new_quarter() # after component histories have updated
 
 
-func add_satellite(satellite: Interface) -> void:
+func add_satellite(satellite: BodyInterface) -> void:
 	assert(!satellites.has(satellite))
 	satellites.append(satellite)
 
 
-func remove_satellite(satellite: Interface) -> void:
+func remove_satellite(satellite: BodyInterface) -> void:
 	satellites.erase(satellite)
 
