@@ -65,7 +65,7 @@ func _pin_info_panel(info_panel: InfoPanel) -> void:
 func _clone_persist_properties(original: Object, clone: Object) -> void:
 	if not &"PERSIST_PROPERTIES" in original:
 		return
-	for persist_property in original.PERSIST_PROPERTIES:
+	for persist_property in original.get(&"PERSIST_PROPERTIES"):
 		var value = original.get(persist_property)
 		var type := typeof(value)
 		if type == TYPE_ARRAY or type == TYPE_DICTIONARY:

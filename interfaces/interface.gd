@@ -164,6 +164,12 @@ func _sync_ai_changes() -> void:
 	_dirty = 0
 
 
+func propagate_component_init(_data: Array, _indexes: Array) -> void:
+	pass
+
+
+func propagate_component_changes(_data: Array, _indexes: Array) -> void:
+	pass
 
 # *****************************************************************************
 # Internal main thread

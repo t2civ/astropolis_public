@@ -21,7 +21,7 @@ extends Label
 
 # GUI widget. An ancestor Control must have member selection_manager.
 
-var _selection_manager: IVSelectionManager
+var _selection_manager: SelectionManager
 
 
 func _ready() -> void:

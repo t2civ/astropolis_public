@@ -102,8 +102,7 @@ func get_player_facility_at_body(player_name: StringName, body_name: StringName)
 	var body_facilities := get_facilities(body_name)
 	for facility_name in body_facilities:
 		var interface: Interface = interfaces_by_name.get(facility_name)
-		@warning_ignore("unsafe_property_access")
-		if interface.player_name == player_name:
+		if interface.get(&"player_name") == player_name:
 			return interface.name
 	return ""
 
@@ -111,7 +110,6 @@ func get_player_facility_at_body(player_name: StringName, body_name: StringName)
 func get_player_class(player_name: StringName) -> int:
 	var interface: Interface = interfaces_by_name.get(player_name)
 	if interface:
-		@warning_ignore("unsafe_property_access")
-		return interface.player_class
+		return interface.get(&"player_class")
 	return -1
 

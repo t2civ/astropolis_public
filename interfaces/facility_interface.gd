@@ -180,6 +180,7 @@ func _add_base_propagations() -> void:
 	add_propagation(body_interface)
 	var player_interface: Interface = AIGlobal.interfaces_by_name[player_name]
 	add_propagation(player_interface)
+	@warning_ignore("unsafe_property_access", "unsafe_property_access", "unsafe_property_access")
 	if player_interface.part_of_name:
 		var part_of: Interface = AIGlobal.interfaces_by_name[player_interface.part_of_name]
 		add_propagation(part_of)
@@ -221,16 +222,21 @@ func _add_proxies() -> void:
 	var at_moons_of_planet: Interface
 	var in_star_system: Interface
 	var body: Interface = interfaces_by_name[body_name]
+	@warning_ignore("unsafe_property_access")
 	var up_body: Interface = body.parent
+	@warning_ignore("unsafe_property_access", "unsafe_property_access")
 	if up_body.body_flags & BodyFlags.IS_PLANET_OR_MOON:
 		in_orbit_of_planet_or_moon = up_body
 	while true:
+		@warning_ignore("unsafe_property_access", "unsafe_property_access")
 		if up_body.body_flags & BodyFlags.IS_STAR:
 			in_star_system = up_body
 			break
+		@warning_ignore("unsafe_property_access", "unsafe_property_access")
 		if up_body.body_flags & BodyFlags.IS_PLANET:
 			if up_body != in_orbit_of_planet_or_moon:
 				at_moons_of_planet = up_body
+		@warning_ignore("unsafe_property_access")
 		up_body = up_body.parent
 	
 	# in orbit of planet or moon - all players & player-specific

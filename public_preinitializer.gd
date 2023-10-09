@@ -116,35 +116,36 @@ func _on_project_objects_instantiated() -> void:
 	var table_n_rows: Dictionary = IVTableData.table_n_rows
 	
 	# unique items
-	tables.resource_type_electricity = tables.resources.unique_type.find("electricity")
-	assert(tables.resource_type_electricity != -1)
+	tables[&"resource_type_electricity"] = IVTableData.db_find(&"resources", &"unique_type", &"electricity")
+	assert(tables[&"resource_type_electricity"] != -1)
 	# table row subsets (arrays of row_types)
-	tables.extraction_resources = IVTableData.get_db_true_rows("resources", "is_extraction")
-	tables.maybe_free_resources = IVTableData.get_db_true_rows("resources", "maybe_free")
-	tables.is_manufacturing_operations = IVTableData.get_db_true_rows("operations", "is_manufacturing")
-	tables.extraction_operations = IVTableData.get_db_matching_rows("operations", "op_process_group",
+	tables[&"extraction_resources"] = IVTableData.get_db_true_rows(&"resources", &"is_extraction")
+	tables[&"maybe_free_resources"] = IVTableData.get_db_true_rows(&"resources", &"maybe_free")
+	tables[&"is_manufacturing_operations"] = IVTableData.get_db_true_rows(&"operations", &"is_manufacturing")
+	tables[&"extraction_operations"] = IVTableData.get_db_matching_rows(&"operations", &"op_process_group",
 			Enums.OpProcessGroup.OP_PROCESS_GROUP_EXTRACTION)
 	# inverted table row subsets (array of indexes in the subset, where non-subset = -1)
-	tables.resource_extractions = Utils.invert_subset_indexing(tables.extraction_resources,
-			table_n_rows.resources)
-	tables.operation_extractions = Utils.invert_subset_indexing(tables.extraction_operations,
-			table_n_rows.operations)
+	tables[&"resource_extractions"] = Utils.invert_subset_indexing(tables[&"extraction_resources"],
+			table_n_rows[&"resources"])
+	tables[&"operation_extractions"] = Utils.invert_subset_indexing(tables[&"extraction_operations"],
+			table_n_rows[&"operations"])
 	# one-to-many indexing (arrays of arrays)
-	tables.op_classes_op_groups = Utils.invert_many_to_one_indexing(tables.op_groups.op_class,
-			table_n_rows.op_classes) # an array of op_groups for each op_class
-	tables.op_groups_operations = Utils.invert_many_to_one_indexing(tables.operations.op_group,
-			table_n_rows.op_groups) # an array of operations for each op_group
-	tables.resource_classes_resources = Utils.invert_many_to_one_indexing(tables.resources.resource_class,
-			table_n_rows.resource_classes) # an array of resources for each resource_class
+	tables[&"op_classes_op_groups"] = Utils.invert_many_to_one_indexing(tables[&"op_groups"][&"op_class"],
+			table_n_rows[&"op_classes"]) # an array of op_groups for each op_class
+	tables[&"op_groups_operations"] = Utils.invert_many_to_one_indexing(tables[&"operations"][&"op_group"],
+			table_n_rows[&"op_groups"]) # an array of operations for each op_group
+	tables[&"resource_classes_resources"] = Utils.invert_many_to_one_indexing(tables[&"resources"][&"resource_class"],
+			table_n_rows[&"resource_classes"]) # an array of resources for each resource_class
 	
 	# tests
-	for i in tables.operations.input_resources:
-		assert(tables.operations.input_resources.size() == tables.operations.input_quantities.size())
-	for i in tables.operations.output_resources:
-		assert(tables.operations.output_resources.size() == tables.operations.output_quantities.size())
+	for i in table_n_rows[&"operations"]:
+		assert(IVTableData.get_db_array(&"operations", &"input_resources", i).size()
+				== IVTableData.get_db_array(&"operations", &"input_quantities", i).size())
+		assert(IVTableData.get_db_array(&"operations", &"output_resources", i).size()
+				== IVTableData.get_db_array(&"operations", &"output_quantities", i).size())
 
 
 func _on_project_nodes_added() -> void:
-	IVCoreInitializer.move_top_gui_child_to_sibling("AstroGUI", "SplashScreen", true)
+	IVCoreInitializer.move_top_gui_child_to_sibling(&"AstroGUI", &"SplashScreen", true)
 
 

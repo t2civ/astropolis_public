@@ -30,7 +30,6 @@ var subpanels: Array
 
 # not persisted
 var _timer := Timer.new()
-var _state: Dictionary = IVGlobal.state
 var _is_new := false
 var _suppress_tab_listener := true
 
