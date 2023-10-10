@@ -1,5 +1,5 @@
 	resource_class	trade_class	trade_unit	start_price	unique_type	is_extraction	maybe_free	sort_override	hide_variances
-Type	INT	INT	STRING	FLOAT	STRING	BOOL	BOOL	INT	BOOL
+Type	INT	INT	STRING_NAME	FLOAT	STRING_NAME	BOOL	BOOL	INT	BOOL
 Default			t					0	
 Prefix/RESOURCE_	RESOURCE_CLASS_	TRADE_CLASS_							
 ELECTRICITY	ENERGY	ELECTRICITY	MWh	27.8	electricity				

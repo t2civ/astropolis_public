@@ -1,5 +1,5 @@
 	init_open	#reveal_tech	#mine_tech	#well_tech	body_class	body	stratum	major_stratum	polity	outer_depth	thickness	spherical_fraction	area	density	#volume	#mass	inner_pressure	survey	thickness_uncert	density_uncert	masses_uncert	heterogeneities_uncert
-Type	BOOL	INT	INT	INT	INT	STRING	INT	INT	STRING	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	INT	FLOAT	FLOAT	FLOAT	FLOAT
+Type	BOOL	INT	INT	INT	INT	STRING_NAME	INT	INT	STRING_NAME	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	INT	FLOAT	FLOAT	FLOAT	FLOAT
 Unit										km	km		km^2	g/cm^3	km^3	t	Pa					
 Default																			0	0	0	0
 Prefix/COMPOSITION_					BODY_CLASS_		STRATUM_	MAJOR_STRATUM_	POLITY_									SURVEY_				

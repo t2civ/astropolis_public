@@ -230,7 +230,7 @@ func propagate_component_init(data: Array) -> void:
 		quarter -= 1
 
 
-func get_server_changes(data: Array) -> void:
+func take_server_delta(data: Array) -> void:
 	# facility accumulator only; zero values and dirty flags
 	# optimized for right-biased dirty flags
 	_append_and_zero_dirty_bshift(data, numbers, _dirty_numbers)
@@ -245,7 +245,7 @@ func get_server_changes(data: Array) -> void:
 	_dirty_emigration_pressures = 0
 
 
-func sync_server_changes(data: Array, k: int) -> int:
+func sync_server_delta(data: Array, k: int) -> int:
 	# any target; reference safe
 	var svr_yq: int = data[0]
 	if yq < svr_yq:

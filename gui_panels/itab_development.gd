@@ -65,7 +65,7 @@ func _update_selection(_suppress_camera_move := false) -> void:
 	
 	# Below replicates some logic in SelectionManager.get_info_panel_data(); could be cleaned up.
 	if selection_name.begins_with("FACILITY_"):
-		body_name = MainThreadGlobal.get_facility_body(selection_name)
+		body_name = MainThreadGlobal.get_body_name(selection_name)
 		body_flags = MainThreadGlobal.get_body_flags(body_name)
 		
 		if target_name.begins_with("PROXY_"):
@@ -76,7 +76,7 @@ func _update_selection(_suppress_camera_move := false) -> void:
 			return
 		
 		# agency or company
-		var player_name: StringName = MainThreadGlobal.get_facility_player(selection_name)
+		var player_name: StringName = MainThreadGlobal.get_player_name(selection_name)
 		proxy_orbit = StringName("PROXY_ORBIT_" + body_name + "_" + player_name)
 		proxy_moons_of = StringName("PROXY_MOONS_OF_" + body_name + "_" + player_name)
 	

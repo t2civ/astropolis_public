@@ -22,7 +22,7 @@ var home_facility_name := &"FACILITY_PLANET_EARTH_PLAYER_NASA"
 # Access on main thread only!
 
 var interfaces_by_name := {} # PLANET_EARTH, PLAYER_NASA, etc.
-var facilities_by_holder := {} # [facility names] indexed by body & player names
+var body_selection_redirect := {} # redirect to single facility or local player facility
 
 
 # *****************************************************************************
@@ -33,7 +33,7 @@ func _ready() -> void:
 
 func _clear() -> void:
 	interfaces_by_name.clear()
-	facilities_by_holder.clear()
+	body_selection_redirect.clear()
 
 
 # *****************************************************************************
@@ -43,73 +43,82 @@ func call_ai_thread(callable: Callable) -> void:
 	ai_thread_called.emit(callable)
 
 
+func get_body_selection_redirect(body_name: StringName) -> StringName:
+	return body_selection_redirect.get(body_name, &"")
+
+
+func set_body_selection_redirect(body_name: StringName, redirect_name: StringName) -> void:
+	if redirect_name:
+		body_selection_redirect[body_name] = redirect_name
+	else:
+		body_selection_redirect.erase(body_name)
+
+
+
+
+
+# All below have an equivilent AIGlobal method. AIGlobal has additional methods
+# that are not threadsafe.
+
 func get_interface_by_name(interface_name: StringName) -> Interface:
-	# Returns null if doesn't exist.
-	# This method is safe on main thread, but the Interface is not!
+	# Returns null if doesn't exist. This method is safe on main thread, but
+	# the returned Interface is not!
 	return interfaces_by_name.get(interface_name)
 
 
 func get_gui_name(interface_name: StringName) -> String:
-	# return is translated
+	# Returns translated GUI name.
 	var interface: Interface = interfaces_by_name.get(interface_name)
 	if !interface:
 		return ""
 	return interface.gui_name
 
 
-func get_body_flags(body_name: StringName) -> int:
-	var interface: Interface = interfaces_by_name.get(body_name)
+func get_body_name(interface_name: StringName) -> StringName:
+	# Return is useful (not &"") for facility and body.
+	var interface: Interface = interfaces_by_name.get(interface_name)
+	if !interface:
+		return &""
+	return interface.get_body_name()
+
+
+func get_body_flags(interface_name: StringName) -> int:
+	# Return is useful (not 0) for facility and body.
+	var interface: Interface = interfaces_by_name.get(interface_name)
 	if !interface:
 		return 0
-	return interface.get(&"body_flags")
+	return interface.get_body_flags()
 
 
-func get_facility_body(facility_name: StringName) -> StringName:
-	var interface: Interface = interfaces_by_name.get(facility_name)
+func get_player_name(interface_name: StringName) -> StringName:
+	# Return is useful (not -1) for facility and player.
+	var interface: Interface = interfaces_by_name.get(interface_name)
 	if !interface:
-		return ""
-	return interface.get(&"body_name")
+		return &""
+	return interface.get_player_name()
 
 
-func get_facility_player(facility_name: StringName) -> StringName:
-	var interface: Interface = interfaces_by_name.get(facility_name)
+func get_player_class(interface_name: StringName) -> int:
+	# Return is useful (not -1) for facility and player.
+	var interface: Interface = interfaces_by_name.get(interface_name)
 	if !interface:
-		return ""
-	return interface.get(&"player_name")
+		return -1
+	return interface.get_player_class()
 
 
-func get_facility_polity(facility_name: StringName) -> StringName:
-	var interface: Interface = interfaces_by_name.get(facility_name)
+func get_polity_name(interface_name: StringName) -> StringName:
+	# Return is useful (not &"") for facility and player.
+	var interface: Interface = interfaces_by_name.get(interface_name)
 	if !interface:
-		return ""
-	return interface.get(&"polity_name")
+		return &""
+	return interface.get_polity_name()
 
 
-func get_facilities(body_or_player_name: StringName) -> Array:
-	if !facilities_by_holder.has(body_or_player_name):
-		return []
-	return facilities_by_holder[body_or_player_name]
+func has_facilities(interface_name: StringName) -> bool:
+	# Return is useful (possibly true) for body and player.
+	var interface: Interface = interfaces_by_name.get(interface_name)
+	if !interface:
+		return false
+	return interface.has_facilities()
 
-
-func get_n_facilities(body_or_player_name: StringName) -> int:
-	if !facilities_by_holder.has(body_or_player_name):
-		return 0
-	var facilities: Array = facilities_by_holder[body_or_player_name]
-	return facilities.size()
-
-
-func get_player_facility_at_body(player_name: StringName, body_name: StringName) -> StringName:
-	var body_facilities := get_facilities(body_name)
-	for facility_name in body_facilities:
-		var interface: Interface = interfaces_by_name.get(facility_name)
-		if interface.get(&"player_name") == player_name:
-			return interface.name
-	return ""
-
-
-func get_player_class(player_name: StringName) -> int:
-	var interface: Interface = interfaces_by_name.get(player_name)
-	if interface:
-		return interface.get(&"player_class")
-	return -1
 

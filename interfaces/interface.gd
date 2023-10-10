@@ -3,11 +3,12 @@
 # Copyright 2019-2023 Charlie Whitfield, all rights reserved
 # *****************************************************************************
 class_name Interface
+extends RefCounted
 
 # DO NOT MODIFY THIS FILE! To modify AI, see comments in '_base_ai.gd' files.
 #
-# Warning! This object lives and dies on the AI Server thread! Some access from
-# other threads is possible (e.g., from main thread GUI), but see:
+# This object lives and dies on the AI thread! Access from other threads is
+# possible (e.g., from main thread GUI), but see:
 # https://docs.godotengine.org/en/latest/tutorials/performance/thread_safe_apis.html
 
 
@@ -95,6 +96,40 @@ func get_population_and_crew_total() -> float:
 	var population_number := population.get_number_total() if population else 0.0
 	var crew := operations.get_crew_total() if operations else 0.0
 	return population_number + crew
+
+
+# *****************************************************************************
+# Override API - not always applicable
+
+func get_body_name() -> StringName:
+	return &""
+
+
+func get_body_flags() -> int:
+	return 0
+
+
+func get_player_name() -> StringName:
+	return &""
+
+
+func get_player_class() -> int:
+	return -1
+
+
+func get_polity_name() -> StringName:
+	return &""
+
+
+func has_facilities() -> bool:
+	return false
+
+
+func get_facilities() -> Array[Interface]:
+	# AI thread only!
+	return []
+
+
 
 
 # *****************************************************************************

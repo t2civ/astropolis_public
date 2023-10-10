@@ -31,20 +31,20 @@ var sub_prefix := "       "
 var is_open_sections := [false, false, false, true, true]
 
 var _state: Dictionary = IVGlobal.state
-var _interfaces_by_name: Dictionary = MainThreadGlobal.interfaces_by_name
-var _facilities_by_holder: Dictionary = MainThreadGlobal.facilities_by_holder
 
-var _pressed_lookup := {} # interfaces or section int, indexed by label.text
+var _pressed_lookup := {} # interface name or section int, indexed by label.text
 var _selection_manager: SelectionManager
 
-var _polities := []
-var _agencies := []
-var _companies := []
-var _offworld := []
-var _system := []
+var _polities: Array[String] = []
+var _agencies: Array[String] = []
+var _companies: Array[String] = []
+var _offworld: Array[String] = []
+var _system: Array[String] = []
 
 var _section_arrays := [_polities, _agencies, _companies, _offworld, _system]
 var _n_sections := section_names.size()
+
+var _is_busy := false # don't update if getting data on ai thread (cheap mutex)
 
 
 @onready var _vbox: VBoxContainer = $VBox
@@ -79,82 +79,81 @@ func _init_after_system_built() -> void:
 		section += 1
 
 
-func _update(_dummy = 0) -> void:
+func _update(_dummy := false) -> void:
+	if _is_busy:
+		return
 	if !_state.is_system_built:
 		return
 	if !_selection_manager:
 		_init_after_system_built()
 	var selection := _selection_manager.get_selection()
-	if selection:
-		_set_selections(selection)
+	if !selection:
+		return
+	_is_busy = true
+	var body_name := selection.get_body_name()
+	MainThreadGlobal.call_ai_thread(_set_selections_on_ai_thread.bind(body_name))
 
 
-func _set_selections(selection: IVSelection) -> void:
+func _set_selections_on_ai_thread(body_name: StringName) -> void:
+	# AI thread!
 	_polities.clear()
 	_agencies.clear()
 	_companies.clear()
 	_offworld.clear()
 	_system.clear()
-	var body_name := selection.get_body_name()
-	var body: IVBody = IVGlobal.bodies[body_name]
-	if body.flags & IS_STAR:
-		_set_selections_recursive(body, _system, true)
-	else:
-		_set_selections_recursive(body, _offworld, true)
-	_update_labels()
+	var body: BodyInterface = AIGlobal.get_interface_by_name(body_name)
+	if !body:
+		_is_busy = false
+		return
+	var is_star := bool(body.body_flags & IS_STAR)
+	_set_selections_recursive(body, is_star, true)
+	# TODO: Sort results in some sensible way
+	_update_labels.call_deferred()
 
 
-func _set_selections_recursive(body: IVBody, bodies_array: Array, root_call := false) -> void:
+func _set_selections_recursive(body: BodyInterface, is_star: bool, root_call := false) -> void:
+	# AI thread!
+	for facility_ in body.get_facilities(): # FIXME Godot 4.2: loop type
+		var facility: FacilityInterface = facility_
+		
+		# add facility for all players here
+		var player := facility.player
+		var player_gui_name := player.gui_name
+		if !player_gui_name: # hidden player
+			continue
+		var label_text := sub_prefix + player_gui_name
+		var player_class_array: Array
+		match player.player_class:
+			PLAYER_CLASS_POLITY:
+				player_class_array = _polities
+			PLAYER_CLASS_AGENCY:
+				player_class_array = _agencies
+			PLAYER_CLASS_COMPANY:
+				player_class_array = _companies
+			_:
+				assert(false, "Unknown player_class")
+		
+		if !player_class_array.has(label_text):
+			player_class_array.append(label_text)
+			_pressed_lookup[label_text] = facility.name
+		elif player.homeworld == body.name: # has precedence over any others
+			_pressed_lookup[label_text] = facility.name
 	
-	if _facilities_by_holder.has(body.name):
-		
-		# add all players w/ facility here
-		var body_name: StringName = body.name
-		var facilities: Array = _facilities_by_holder[body_name]
-		var n_facilities := facilities.size()
-		var i := 0
-		while i < n_facilities:
-			var facility_name: StringName = facilities[i]
-			var facility_interface: FacilityInterface = _interfaces_by_name[facility_name]
-			var player_name := facility_interface.player_name
-			var player_interface: PlayerInterface = _interfaces_by_name[player_name]
-			var gui_name := player_interface.gui_name
-			if !gui_name: # hidden player
-				i += 1
-				continue
-			var label_text := sub_prefix + gui_name
-			var player_class_array: Array
-			match player_interface.player_class:
-				PLAYER_CLASS_POLITY:
-					player_class_array = _polities
-				PLAYER_CLASS_AGENCY:
-					player_class_array = _agencies
-				PLAYER_CLASS_COMPANY:
-					player_class_array = _companies
-				_:
-					assert(false, "Unknown player_class")
-			
-			if !player_class_array.has(label_text):
-				player_class_array.append(label_text)
-				_pressed_lookup[label_text] = facility_name
-			elif player_interface.homeworld == body_name: # replace existing facility
-				_pressed_lookup[label_text] = facility_name
-			i += 1
-		
-		if !root_call:
-			# add body
-			var body_interface: BodyInterface = _interfaces_by_name[body_name]
-			var label_text := sub_prefix + body_interface.gui_name
-			bodies_array.append(label_text)
-			_pressed_lookup[label_text] = body_name
+	if !root_call and body.has_facilities():
+		# add body
+		var label_text := sub_prefix + body.gui_name
+		if is_star:
+			_system.append(label_text)
+		else:
+			_offworld.append(label_text)
+		_pressed_lookup[label_text] = body.name
 	
 	for satellite in body.satellites:
-		_set_selections_recursive(satellite, bodies_array)
-	
-	# TODO: Sort results in some sensible way
+		_set_selections_recursive(satellite, is_star)
 
 
 func _update_labels() -> void:
+	# Main thread
 	var n_labels := _vbox.get_child_count()
 	var child_index := 0
 	var section := 0
@@ -184,6 +183,9 @@ func _update_labels() -> void:
 				label.text = label_text
 				child_index += 1
 		section += 1
+	
+	_is_busy = false # safe to call again
+	
 	while child_index < n_labels:
 		var label: Label = _vbox.get_child(child_index)
 		label.hide()
@@ -201,8 +203,9 @@ func _on_gui_input(event: InputEvent, label: Label) -> void:
 	# 'lookup' will either be an integer (section index) or string (selection target)
 	var lookup = _pressed_lookup.get(label.text)
 	if typeof(lookup) == TYPE_INT: # toggle section
-		is_open_sections[lookup] = !is_open_sections[lookup]
-		_update_labels()
+		if !_is_busy:
+			is_open_sections[lookup] = !is_open_sections[lookup]
+			_update_labels()
 	else:
 		_selection_manager.select_prefer_facility(lookup)
 

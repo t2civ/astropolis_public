@@ -1,5 +1,5 @@
-	is_start	body	player	public_portion	internal_market	solar_occlusion
-Type	BOOL	STRING	INT	FLOAT	BOOL	FLOAT
+	is_start	body	player	public_sector	has_economy	solar_occlusion
+Type	BOOL	STRING_NAME	INT	FLOAT	BOOL	FLOAT
 Default	TRUE					
 Unit						
 Prefix/FACILITY_			PLAYER_			

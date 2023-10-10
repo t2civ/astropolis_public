@@ -71,7 +71,7 @@ func propagate_component_init(data: Array) -> void:
 	utils.add_to_float_array_with_array(accountings, data[2])
 
 
-func get_server_changes(data: Array) -> void:
+func take_server_delta(data: Array) -> void:
 	# facility accumulator only; zero accumulators and dirty flags
 	data.append(_dirty_values)
 	if _dirty_values & DIRTY_REVENUE:
@@ -82,7 +82,7 @@ func get_server_changes(data: Array) -> void:
 	_dirty_accountings = 0
 
 
-func sync_server_changes(data: Array, k: int) -> int:
+func sync_server_delta(data: Array, k: int) -> int:
 	# any target; reference safe
 	var svr_yq: int = data[0]
 	yq = svr_yq # TODO: histories

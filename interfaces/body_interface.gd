@@ -7,8 +7,8 @@ extends Interface
 
 # DO NOT MODIFY THIS FILE! To modify AI, see comments in '_base_ai.gd' files.
 #
-# Warning! This object lives and dies on the AI Server thread! Some access from
-# other threads is possible (e.g., from main thread GUI), but see:
+# This object lives and dies on the AI thread! Access from other threads is
+# possible (e.g., from main thread GUI), but see:
 # https://docs.godotengine.org/en/latest/tutorials/performance/thread_safe_apis.html
 #
 # To get the SceenTree "body" node (class IVBody) use IVGlobal.bodies[body_name].
@@ -25,26 +25,47 @@ const OBJECT_TYPE = Enums.Objects.BODY
 
 var body_id := -1
 var body_flags := 0
-var solar_occlusion: float # atmosphere & rotation/orbit shading
-var parent: Interface # null for top body
-var satellites := [] # Interfaces; resizable container - not threadsafe!
-var compositions := [] # resizable container - not threadsafe!
+var solar_occlusion: float # TODO: replace w/ atmospheric condition
+var is_satellites := false
+var is_facilities := false
 
+var parent: BodyInterface # null for top body
+
+var satellites: Array[BodyInterface] = [] # resizable container - not threadsafe!
+var facilities: Array[Interface] = [] # resizable container - not threadsafe!
+var compositions: Array[Composition] = [] # resizable container - not threadsafe!
 
 
 func _init() -> void:
-	IVGlobal.about_to_free_procedural_nodes.connect(_clear)
-	IVGlobal.about_to_quit.connect(_clear)
+	IVGlobal.about_to_free_procedural_nodes.connect(_clear_circular_references)
+	IVGlobal.about_to_quit.connect(_clear_circular_references)
 
 
-func _clear() -> void:
-	# clear circular references
-	parent = null
+func _clear_circular_references() -> void:
+	# down hierarchy only
 	satellites.clear()
+	facilities.clear()
 
 
 # *****************************************************************************
 # interface API
+
+
+func get_body_name() -> StringName:
+	return name
+
+
+func get_body_flags() -> int:
+	return body_flags
+
+
+func has_facilities() -> bool:
+	return is_facilities
+
+
+func get_facilities() -> Array[Interface]:
+	# AI thread only!
+	return facilities
 
 
 # *****************************************************************************
@@ -59,7 +80,6 @@ func sync_server_init(data: Array) -> void:
 	var parent_name: String = data[7]
 	if parent_name:
 		parent = AIGlobal.get_interface_by_name(parent_name)
-		@warning_ignore("unsafe_method_access")
 		parent.add_satellite(self)
 	if data[8]:
 		var compositions_data: Array = data[8]
@@ -121,20 +141,20 @@ func propagate_component_changes(data: Array, indexes: Array) -> void:
 	if dirty & DIRTY_OPERATIONS:
 		if !operations:
 			operations = Operations.new(true)
-		operations.sync_server_changes(data, indexes[0])
+		operations.sync_server_delta(data, indexes[0])
 	# no inventory or financials
 	if dirty & DIRTY_POPULATION:
 		if !population:
 			population = Population.new(true)
-		population.sync_server_changes(data, indexes[3])
+		population.sync_server_delta(data, indexes[3])
 	if dirty & DIRTY_BIOME:
 		if !biome:
 			biome = Biome.new(true)
-		biome.sync_server_changes(data, indexes[4])
+		biome.sync_server_delta(data, indexes[4])
 	if dirty & DIRTY_METAVERSE:
 		if !metaverse:
 			metaverse = Metaverse.new(true)
-		metaverse.sync_server_changes(data, indexes[5])
+		metaverse.sync_server_delta(data, indexes[5])
 	
 	assert(data[0] >= yq)
 	if data[0] > yq:
@@ -145,11 +165,24 @@ func propagate_component_changes(data: Array, indexes: Array) -> void:
 			process_ai_new_quarter() # after component histories have updated
 
 
-func add_satellite(satellite: Interface) -> void:
+func add_satellite(satellite: BodyInterface) -> void:
 	assert(!satellites.has(satellite))
 	satellites.append(satellite)
+	is_satellites = true
 
 
-func remove_satellite(satellite: Interface) -> void:
+func remove_satellite(satellite: BodyInterface) -> void:
 	satellites.erase(satellite)
+	is_satellites = !satellites.is_empty()
+
+
+func add_facility(facility: Interface) -> void:
+	assert(!facilities.has(facility))
+	facilities.append(facility)
+	is_facilities = true
+
+
+func remove_facility(facility: Interface) -> void:
+	facilities.erase(facility)
+	is_facilities = !facilities.is_empty()
 

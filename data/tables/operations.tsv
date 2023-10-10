@@ -1,5 +1,5 @@
 	op_group	op_class	mod_class	op_process_group	power	is_solar	solar_offset	is_manufacturing	stratum	reverse	fuel_burn	extraction_rate	bioproductivity	mass_flow	bit_rate	gui_flow	flow_unit	biological_crew	android_crew	carrying_capacity	carrying_capacity_group	area	input_resources	input_quantities	output_resources	output_quantities
-Type	INT	INT	INT	INT	FLOAT	BOOL	FLOAT	BOOL	INT	INT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	STRING	FLOAT	FLOAT	FLOAT	INT	FLOAT	ARRAY[INT]	ARRAY[FLOAT]	ARRAY[INT]	ARRAY[FLOAT]
+Type	INT	INT	INT	INT	FLOAT	BOOL	FLOAT	BOOL	INT	INT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	STRING_NAME	FLOAT	FLOAT	FLOAT	INT	FLOAT	ARRAY[INT]	ARRAY[FLOAT]	ARRAY[INT]	ARRAY[FLOAT]
 Unit					MW						t/d	t/d	t/d	t/d								km^2				
 Default					0									0				0	0	0						
 Prefix/OPERATION_	OP_GROUP_	OP_CLASS_	MOD_CLASS_	OP_PROCESS_GROUP_					STRATUM_	OPERATION_											CARRYING_CAPACITY_GROUP_		RESOURCE_		RESOURCE_	

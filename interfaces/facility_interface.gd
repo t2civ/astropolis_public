@@ -7,8 +7,8 @@ extends Interface
 
 # DO NOT MODIFY THIS FILE! To modify AI, see comments in '_base_ai.gd' files.
 #
-# Warning! This object lives and dies on the AI Server thread! Some access from
-# other threads is possible (e.g., from main thread GUI), but see:
+# This object lives and dies on the AI thread! Access from other threads is
+# possible (e.g., from main thread GUI), but see:
 # https://docs.godotengine.org/en/latest/tutorials/performance/thread_safe_apis.html
 #
 # Facilities are where most of the important activity happens in Astropolis. 
@@ -29,12 +29,14 @@ const OBJECT_TYPE := Enums.Objects.FACILITY
 
 var facility_id := -1
 var facility_class := -1
-var public_portion: float # 0.0 - 1.0; how much is public sector?
-var has_internal_market: bool # ops treated as separate entities for economic measure & tax
-var solar_occlusion: float # for solar utilization calculation
+var public_sector: float # often 0.0 or 1.0, sometimes mixed
+var has_economy: bool # ops treated as separate entities for economic measure & tax
+var solar_occlusion: float # TODO: calculate from body atmosphere, body shading, etc.
 var polity_name: StringName
-var body_name: StringName
-var player_name: StringName
+
+var body: BodyInterface
+var player: PlayerInterface
+
 
 var propagations := []
 
@@ -55,9 +57,34 @@ func _init() -> void:
 # *****************************************************************************
 # interface API
 
+func remove() -> void:
+	body.remove_facility(self)
+	player.remove_facility(self)
+
+
 func set_gui_name(new_gui_name: String) -> void:
 	_dirty |= DIRTY_BASE
 	gui_name = new_gui_name
+
+
+func get_body_name() -> StringName:
+	return body.name
+
+
+func get_body_flags() -> int:
+	return body.body_flags
+
+
+func get_player_name() -> StringName:
+	return player.name
+
+
+func get_player_class() -> int:
+	return player.player_class
+
+
+func get_polity_name() -> StringName:
+	return polity_name
 
 
 func add_propagation(interface: Interface) -> void:
@@ -77,13 +104,14 @@ func sync_server_init(data: Array) -> void:
 	name = data[3]
 	gui_name = data[4]
 	facility_class = data[5]
-	public_portion = data[6]
-	has_internal_market = data[7]
+	public_sector = data[6]
+	has_economy = data[7]
 	solar_occlusion = data[8]
 	polity_name = data[9]
-	player_name = data[10]
-	body_name = data[11]
-	
+	player = AIGlobal.interfaces_by_name[data[10]]
+	player.add_facility(self)
+	body = AIGlobal.interfaces_by_name[data[11]]
+	body.add_facility(self)
 	_component_indexes = [12, 13, 14, 15, 16, 17, 18]
 	operations.sync_server_init(data[12])
 	inventory.sync_server_init(data[13])
@@ -118,34 +146,34 @@ func sync_server_dirty(data: Array) -> void:
 	if dirty & DIRTY_BASE:
 		gui_name = data[k]
 		facility_class = data[k + 1]
-		public_portion = data[k + 2]
+		public_sector = data[k + 2]
 		solar_occlusion = data[k + 3]
 		polity_name = data[k + 4]
 		k += 5
 	if dirty & DIRTY_OPERATIONS:
 		_component_indexes[0] = k
-		k = operations.sync_server_changes(data, k)
+		k = operations.sync_server_delta(data, k)
 	if dirty & DIRTY_INVENTORY:
 		_component_indexes[1] = k
-		k = inventory.sync_server_changes(data, k)
+		k = inventory.sync_server_delta(data, k)
 	if dirty & DIRTY_FINANCIALS:
 		_component_indexes[2] = k
-		k = financials.sync_server_changes(data, k)
+		k = financials.sync_server_delta(data, k)
 	if dirty & DIRTY_POPULATION:
 		if !population:
 			population = Population.new(true, true)
 		_component_indexes[3] = k
-		k = population.sync_server_changes(data, k)
+		k = population.sync_server_delta(data, k)
 	if dirty & DIRTY_BIOME:
 		if !biome:
 			biome = Biome.new(true)
 		_component_indexes[4] = k
-		k = biome.sync_server_changes(data, k)
+		k = biome.sync_server_delta(data, k)
 	if dirty & DIRTY_METAVERSE:
 		if !metaverse:
 			metaverse = Metaverse.new(true)
 		_component_indexes[5] = k
-		k = metaverse.sync_server_changes(data, k)
+		k = metaverse.sync_server_delta(data, k)
 	
 	assert(data[0] >= yq)
 	if data[0] > yq:
@@ -176,14 +204,10 @@ func _sync_ai_changes() -> void:
 
 
 func _add_base_propagations() -> void:
-	var body_interface: Interface = AIGlobal.interfaces_by_name[body_name]
-	add_propagation(body_interface)
-	var player_interface: Interface = AIGlobal.interfaces_by_name[player_name]
-	add_propagation(player_interface)
-	@warning_ignore("unsafe_property_access", "unsafe_property_access", "unsafe_property_access")
-	if player_interface.part_of_name:
-		var part_of: Interface = AIGlobal.interfaces_by_name[player_interface.part_of_name]
-		add_propagation(part_of)
+	add_propagation(body)
+	add_propagation(player)
+	if player.part_of:
+		add_propagation(player.part_of)
 
 
 func _add_proxies() -> void:
@@ -202,41 +226,34 @@ func _add_proxies() -> void:
 	var proxy_interface: Interface
 	
 	# off-Earth
-	if body_name != "PLANET_EARTH":
+	if body.name != "PLANET_EARTH":
 		proxy_name = "PROXY_OFF_EARTH"
 		proxy_interface = AIGlobal.get_or_make_proxy(proxy_name)
 		add_propagation(proxy_interface)
 	
 	# polity on Earth
 	# TODO: generalize to PROXY_HOMEWORLD_<polity_name>, e.g., for new Martian polity
-	if body_name == "PLANET_EARTH":
+	if body.name == "PLANET_EARTH":
 		proxy_name = "PROXY_PLANET_EARTH_" + polity_name
 		proxy_gui_name = tr("PLANET_EARTH") + " / " + tr(polity_name)
 		proxy_interface = AIGlobal.get_or_make_proxy(proxy_name, proxy_gui_name, true, true, true)
 		add_propagation(proxy_interface)
 	
 	# search up body tree for others...
-	var interfaces_by_name: Dictionary = AIGlobal.interfaces_by_name
 	var BodyFlags: Dictionary = IVEnums.BodyFlags
 	var in_orbit_of_planet_or_moon: Interface
 	var at_moons_of_planet: Interface
 	var in_star_system: Interface
-	var body: Interface = interfaces_by_name[body_name]
-	@warning_ignore("unsafe_property_access")
-	var up_body: Interface = body.parent
-	@warning_ignore("unsafe_property_access", "unsafe_property_access")
+	var up_body := body.parent
 	if up_body.body_flags & BodyFlags.IS_PLANET_OR_MOON:
 		in_orbit_of_planet_or_moon = up_body
 	while true:
-		@warning_ignore("unsafe_property_access", "unsafe_property_access")
 		if up_body.body_flags & BodyFlags.IS_STAR:
 			in_star_system = up_body
 			break
-		@warning_ignore("unsafe_property_access", "unsafe_property_access")
 		if up_body.body_flags & BodyFlags.IS_PLANET:
 			if up_body != in_orbit_of_planet_or_moon:
 				at_moons_of_planet = up_body
-		@warning_ignore("unsafe_property_access")
 		up_body = up_body.parent
 	
 	# in orbit of planet or moon - all players & player-specific
@@ -244,7 +261,7 @@ func _add_proxies() -> void:
 		proxy_name = "PROXY_ORBIT_" + in_orbit_of_planet_or_moon.name
 		proxy_interface = AIGlobal.get_or_make_proxy(proxy_name)
 		add_propagation(proxy_interface)
-		proxy_name += "_" + player_name
+		proxy_name += "_" + player.name
 		proxy_interface = AIGlobal.get_or_make_proxy(proxy_name)
 		add_propagation(proxy_interface)
 	
@@ -253,7 +270,7 @@ func _add_proxies() -> void:
 		proxy_name = "PROXY_MOONS_OF_" + at_moons_of_planet.name
 		proxy_interface = AIGlobal.get_or_make_proxy(proxy_name)
 		add_propagation(proxy_interface)
-		proxy_name += "_" + player_name
+		proxy_name += "_" + player.name
 		proxy_interface = AIGlobal.get_or_make_proxy(proxy_name)
 		add_propagation(proxy_interface)
 	
