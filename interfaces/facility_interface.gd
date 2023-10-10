@@ -29,8 +29,8 @@ const OBJECT_TYPE := Enums.Objects.FACILITY
 
 var facility_id := -1
 var facility_class := -1
-var public_portion: float # how much is public sector? usually 0.0 or 1.0
-var has_internal_market: bool # ops treated as separate entities for economic measure & tax
+var public_sector: float # often 0.0 or 1.0, sometimes mixed
+var has_economy: bool # ops treated as separate entities for economic measure & tax
 var solar_occlusion: float # TODO: calculate from body atmosphere, body shading, etc.
 var polity_name: StringName
 
@@ -79,8 +79,8 @@ func sync_server_init(data: Array) -> void:
 	name = data[3]
 	gui_name = data[4]
 	facility_class = data[5]
-	public_portion = data[6]
-	has_internal_market = data[7]
+	public_sector = data[6]
+	has_economy = data[7]
 	solar_occlusion = data[8]
 	polity_name = data[9]
 	player = AIGlobal.interfaces_by_name[data[10]]
@@ -120,7 +120,7 @@ func sync_server_dirty(data: Array) -> void:
 	if dirty & DIRTY_BASE:
 		gui_name = data[k]
 		facility_class = data[k + 1]
-		public_portion = data[k + 2]
+		public_sector = data[k + 2]
 		solar_occlusion = data[k + 3]
 		polity_name = data[k + 4]
 		k += 5
