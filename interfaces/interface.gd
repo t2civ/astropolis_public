@@ -99,6 +99,40 @@ func get_population_and_crew_total() -> float:
 
 
 # *****************************************************************************
+# Override API - not always applicable
+
+func get_body_name() -> StringName:
+	return &""
+
+
+func get_body_flags() -> int:
+	return 0
+
+
+func get_player_name() -> StringName:
+	return &""
+
+
+func get_player_class() -> int:
+	return -1
+
+
+func get_polity_name() -> StringName:
+	return &""
+
+
+func has_facilities() -> bool:
+	return false
+
+
+func get_facilities() -> Array[Interface]:
+	# AI thread only!
+	return []
+
+
+
+
+# *****************************************************************************
 # Main thread public
 
 #func player_use_ai(use_ai: bool) -> void:

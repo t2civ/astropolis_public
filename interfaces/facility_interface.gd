@@ -57,9 +57,34 @@ func _init() -> void:
 # *****************************************************************************
 # interface API
 
+func remove() -> void:
+	body.remove_facility(self)
+	player.remove_facility(self)
+
+
 func set_gui_name(new_gui_name: String) -> void:
 	_dirty |= DIRTY_BASE
 	gui_name = new_gui_name
+
+
+func get_body_name() -> StringName:
+	return body.name
+
+
+func get_body_flags() -> int:
+	return body.body_flags
+
+
+func get_player_name() -> StringName:
+	return player.name
+
+
+func get_player_class() -> int:
+	return player.player_class
+
+
+func get_polity_name() -> StringName:
+	return polity_name
 
 
 func add_propagation(interface: Interface) -> void:
@@ -84,8 +109,9 @@ func sync_server_init(data: Array) -> void:
 	solar_occlusion = data[8]
 	polity_name = data[9]
 	player = AIGlobal.interfaces_by_name[data[10]]
+	player.add_facility(self)
 	body = AIGlobal.interfaces_by_name[data[11]]
-	
+	body.add_facility(self)
 	_component_indexes = [12, 13, 14, 15, 16, 17, 18]
 	operations.sync_server_init(data[12])
 	inventory.sync_server_init(data[13])
@@ -126,28 +152,28 @@ func sync_server_dirty(data: Array) -> void:
 		k += 5
 	if dirty & DIRTY_OPERATIONS:
 		_component_indexes[0] = k
-		k = operations.sync_server_changes(data, k)
+		k = operations.sync_server_delta(data, k)
 	if dirty & DIRTY_INVENTORY:
 		_component_indexes[1] = k
-		k = inventory.sync_server_changes(data, k)
+		k = inventory.sync_server_delta(data, k)
 	if dirty & DIRTY_FINANCIALS:
 		_component_indexes[2] = k
-		k = financials.sync_server_changes(data, k)
+		k = financials.sync_server_delta(data, k)
 	if dirty & DIRTY_POPULATION:
 		if !population:
 			population = Population.new(true, true)
 		_component_indexes[3] = k
-		k = population.sync_server_changes(data, k)
+		k = population.sync_server_delta(data, k)
 	if dirty & DIRTY_BIOME:
 		if !biome:
 			biome = Biome.new(true)
 		_component_indexes[4] = k
-		k = biome.sync_server_changes(data, k)
+		k = biome.sync_server_delta(data, k)
 	if dirty & DIRTY_METAVERSE:
 		if !metaverse:
 			metaverse = Metaverse.new(true)
 		_component_indexes[5] = k
-		k = metaverse.sync_server_changes(data, k)
+		k = metaverse.sync_server_delta(data, k)
 	
 	assert(data[0] >= yq)
 	if data[0] > yq:

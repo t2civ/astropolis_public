@@ -38,7 +38,7 @@ static func get_or_make_selection(selection_name: StringName) -> IVSelection:
 
 static func make_selection_for_facility(facility_name: StringName) -> IVSelection:
 	var gui_name: String = MainThreadGlobal.get_gui_name(facility_name)
-	var body_name: StringName = MainThreadGlobal.get_facility_body(facility_name)
+	var body_name: StringName = MainThreadGlobal.get_body_name(facility_name)
 	var body_selection := get_or_make_selection(body_name)
 	var selection_ := _duplicate_body_selection(body_selection)
 	selection_.name = facility_name
@@ -64,27 +64,11 @@ func select_body(body: IVBody, _suppress_camera_move := false) -> void:
 
 
 func select_prefer_facility(selection_name: StringName) -> void:
-	if selection_name.begins_with("FACILITY_"):
-		var selection_ := get_or_make_selection(selection_name)
-		select(selection_)
-		return
-	
-	# New prioritized selection when body selected:
-	#  1. If exactly one facility at body, go to that (common for small bodies).
-	#  2. If local player has facility at body, go to that.
-	#  3. Otherwise, go to body.
-	var facilities: Array = MainThreadGlobal.get_facilities(selection_name)
-	if facilities.size() == 1:
-		var selection_ := get_or_make_selection(facilities[0])
-		select(selection_)
-		return
-	var local_player_name: StringName = MainThreadGlobal.local_player_name
-	for facility_name in facilities:
-		var loop_player: StringName = MainThreadGlobal.get_facility_player(facility_name)
-		if loop_player == local_player_name:
-			var selection_ := get_or_make_selection(facility_name)
-			select(selection_)
-			return
+	# Redirects to single facility or local player facility if not Earth
+	if !selection_name.begins_with("FACILITY_"):
+		var redirect: StringName = MainThreadGlobal.get_body_selection_redirect(selection_name)
+		if redirect:
+			selection_name = redirect
 	var selection_ := get_or_make_selection(selection_name)
 	select(selection_)
 
@@ -103,12 +87,12 @@ func get_info_panel_data() -> Array:
 	if !selection_name:
 		return []
 	if selection_name.begins_with("FACILITY_"):
-		var player_name: StringName = MainThreadGlobal.get_facility_player(selection_name)
+		var player_name: StringName = MainThreadGlobal.get_player_name(selection_name)
 		var player_class := MainThreadGlobal.get_player_class(player_name)
 		if player_class == PLAYER_CLASS_POLITY:
 			# polity proxy (combines polity player, agency & companies)
 			var body_name := get_body_name()
-			var polity_name: StringName = MainThreadGlobal.get_facility_polity(selection_name)
+			var polity_name: StringName = MainThreadGlobal.get_polity_name(selection_name)
 			var proxy_name := "PROXY_" + body_name + "_" + polity_name
 			var header := get_gui_name()
 			return [proxy_name, header, true]
@@ -126,7 +110,7 @@ func get_info_panel_data() -> Array:
 	# body is the target
 	var header := get_gui_name()
 	var is_developed := false
-	if MainThreadGlobal.get_n_facilities(body_name) > 0: # has facilities
+	if MainThreadGlobal.has_facilities(body_name):
 		header += all_suffix
 		is_developed = true
 	return [body_name, header, is_developed]

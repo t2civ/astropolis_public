@@ -147,7 +147,7 @@ func propagate_component_init(data: Array) -> void:
 	utils.fill_array(asks, data[7])
 
 
-func get_server_changes(data: Array) -> void:
+func take_server_delta(data: Array) -> void:
 	# facility accumulator only; zero values and dirty flags
 	# optimized for sparse dirty flags (not right-biased)
 	_append_and_zero_dirty(data, reserves, _dirty_reserves_1)
@@ -180,7 +180,7 @@ func get_server_changes(data: Array) -> void:
 	_dirty_asks_2 = 0
 
 
-func sync_server_changes(data: Array, k: int) -> int:
+func sync_server_delta(data: Array, k: int) -> int:
 	# any target
 	var svr_yq: int = data[0]
 	yq = svr_yq # TODO: histories

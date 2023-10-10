@@ -30,12 +30,12 @@ func propagate_component_init(_data: Array) -> void:
 	pass
 
 
-func get_server_changes(_data: Array) -> void:
+func take_server_delta(_data: Array) -> void:
 	# facility accumulator only; zero accumulators and dirty flags
 	pass
 
 
-func sync_server_changes(_data: Array, _k: int) -> int:
+func sync_server_delta(_data: Array, _k: int) -> int:
 	# any target
 	return 0
 
