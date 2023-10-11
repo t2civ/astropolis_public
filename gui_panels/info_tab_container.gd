@@ -9,7 +9,7 @@ extends TabContainer
 # TODO: Generalize so we don't have to maintain subpanel classes here.
 
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
-const PERSIST_PROPERTIES := [
+const PERSIST_PROPERTIES: Array[StringName] = [
 	&"memory",
 	&"_on_ready_tab",
 ]
@@ -25,7 +25,7 @@ var itab_operations: ITabOperations
 var itab_markets: ITabMarkets
 var itab_resources: ITabResources
 var itab_information: ITabInformation
-var subpanels: Array
+var subpanels: Array[Container]
 
 
 # not persisted

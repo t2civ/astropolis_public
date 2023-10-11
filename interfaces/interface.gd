@@ -89,7 +89,6 @@ var _is_local_use_ai := false # local player sets/unsets
 
 func _init() -> void:
 	IVGlobal.about_to_free_procedural_nodes.connect(_clear_circular_references)
-	IVGlobal.about_to_quit.connect(_clear_circular_references)
 
 
 static func get_interface_by_name(interface_name: StringName) -> Interface:
@@ -216,11 +215,11 @@ func _sync_ai_changes() -> void:
 	_dirty = 0
 
 
-func propagate_component_init(_data: Array, _indexes: Array) -> void:
+func propagate_component_init(_data: Array, _indexes: Array[int]) -> void:
 	pass
 
 
-func propagate_component_changes(_data: Array, _indexes: Array) -> void:
+func propagate_component_changes(_data: Array, _indexes: Array[int]) -> void:
 	pass
 
 # *****************************************************************************

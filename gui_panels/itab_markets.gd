@@ -25,7 +25,7 @@ const TRADE_CLASS_TEXTS := [ # correspond to TradeClasses
 ]
 
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
-const PERSIST_PROPERTIES := [
+const PERSIST_PROPERTIES: Array[StringName] = [
 	&"current_tab",
 	&"_on_ready_tab",
 ]
@@ -57,9 +57,9 @@ var _name_column_width := 250.0 # TODO: resize on GUI resize (also in RowItem)
 
 # table indexing
 var _tables: Dictionary = IVTableData.tables
-var _resource_names: Array = _tables.resources.name
-var _trade_classes: Array = _tables.resources.trade_class
-var _trade_units: Array = _tables.resources.trade_unit
+var _resource_names: Array[StringName] = _tables.resources.name
+var _trade_classes: Array[int] = _tables.resources.trade_class
+var _trade_units: Array[StringName] = _tables.resources.trade_unit
 var _resource_classes_resources: Array = _tables.resource_classes_resources # array of arrays
 
 

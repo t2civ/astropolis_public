@@ -41,7 +41,7 @@ var player: PlayerInterface
 
 var propagations := []
 
-var _component_indexes: Array # reused for data propagation
+var _component_indexes: Array[int] # reused for data propagation
 
 
 func _init() -> void:
@@ -115,18 +115,24 @@ func sync_server_init(data: Array) -> void:
 	body = interfaces_by_name[data[11]]
 	body.add_facility(self)
 	_component_indexes = [12, 13, 14, 15, 16, 17, 18]
-	operations.sync_server_init(data[12])
-	inventory.sync_server_init(data[13])
-	financials.sync_server_init(data[14])
-	if data[15]:
+	var component_data: Array = data[12]
+	operations.sync_server_init(component_data)
+	component_data = data[13]
+	inventory.sync_server_init(component_data)
+	component_data = data[14]
+	financials.sync_server_init(component_data)
+	component_data = data[15]
+	if component_data:
 		population = Population.new(true, true)
-		population.sync_server_init(data[15])
-	if data[16]:
+		population.sync_server_init(component_data)
+	component_data = data[16]
+	if component_data:
 		biome = Biome.new(true)
-		biome.sync_server_init(data[16])
-	if data[17]:
+		biome.sync_server_init(component_data)
+	component_data = data[17]
+	if component_data:
 		metaverse = Metaverse.new(true)
-		metaverse.sync_server_init(data[17])
+		metaverse.sync_server_init(component_data)
 	yq = data[18]
 	
 	# add proxies

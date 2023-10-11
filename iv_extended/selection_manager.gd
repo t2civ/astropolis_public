@@ -86,20 +86,22 @@ func get_info_panel_data() -> Array:
 	var selection_name := get_selection_name()
 	if !selection_name:
 		return []
+	var header: String
+	var body_name: StringName
 	if selection_name.begins_with("FACILITY_"):
 		var player_name: StringName = MainThreadGlobal.get_player_name(selection_name)
 		var player_class := MainThreadGlobal.get_player_class(player_name)
 		if player_class == PLAYER_CLASS_POLITY:
 			# polity proxy (combines polity player, agency & companies)
-			var body_name := get_body_name()
+			body_name = get_body_name()
 			var polity_name: StringName = MainThreadGlobal.get_polity_name(selection_name)
 			var proxy_name := "PROXY_" + body_name + "_" + polity_name
-			var header := get_gui_name()
+			header = get_gui_name()
 			return [proxy_name, header, true]
 		# agency or company facility is the target
 		return [selection_name, get_gui_name(), true]
 	# must be body selection
-	var body_name := get_body_name()
+	body_name = get_body_name()
 	assert(body_name == selection_name)
 	var body_flags := MainThreadGlobal.get_body_flags(body_name)
 	if body_flags & BodyFlags.IS_STAR:
@@ -108,7 +110,7 @@ func get_info_panel_data() -> Array:
 		var proxy_name := "PROXY_" + system_name
 		return [proxy_name, tr(system_name) + all_suffix, true]
 	# body is the target
-	var header := get_gui_name()
+	header = get_gui_name()
 	var is_developed := false
 	if MainThreadGlobal.has_facilities(body_name):
 		header += all_suffix

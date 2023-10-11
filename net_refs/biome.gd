@@ -15,7 +15,7 @@ enum { # _dirty_values
 
 # save/load persistence for server only
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
-const PERSIST_PROPERTIES := [
+const PERSIST_PROPERTIES: Array[StringName] = [
 	&"yq",
 	&"bioproductivity",
 	&"biomass",
@@ -93,7 +93,8 @@ func propagate_component_init(data: Array) -> void:
 	yq = svr_yq # TODO: histories
 	bioproductivity += data[1]
 	biomass += data[2]
-	utils.add_to_diversity_model(diversity_model, data[3])
+	var add_dict: Dictionary = data[3]
+	utils.add_to_diversity_model(diversity_model, add_dict)
 
 
 func take_server_delta(data: Array) -> void:

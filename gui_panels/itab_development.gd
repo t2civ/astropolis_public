@@ -14,30 +14,27 @@ const BodyFlags2: Dictionary = Enums.BodyFlags2
 const PLAYER_CLASS_POLITY := Enums.PlayerClasses.PLAYER_CLASS_POLITY
 
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
-const PERSIST_PROPERTIES := []
+const PERSIST_PROPERTIES: Array[StringName] = []
 
 var _header_suffix := "  -  " + tr(&"LABEL_DEVELOPMENT")
 var _state: Dictionary = IVGlobal.state
 var _selection_manager: SelectionManager
 
-@onready var _stats_grid: MarginContainer = $StatsGrid
+@onready var _stats_grid: StatsGrid = $StatsGrid
 @onready var _no_dev_label: Label = $NoDevLabel
 
 
 func _ready() -> void:
 	IVGlobal.update_gui_requested.connect(_update_selection)
 	visibility_changed.connect(_update_selection)
-	@warning_ignore("unsafe_property_access", "unsafe_method_access")
 	_stats_grid.has_stats_changed.connect(_update_no_development)
 	_selection_manager = IVSelectionManager.get_selection_manager(self)
 	_selection_manager.selection_changed.connect(_update_selection)
-	@warning_ignore("unsafe_property_access")
 	_stats_grid.min_columns = 4
 	_update_selection()
 
 
 func timer_update() -> void:
-	@warning_ignore("unsafe_method_access")
 	_stats_grid.update()
 
 
@@ -64,14 +61,14 @@ func _update_selection(_suppress_camera_move := false) -> void:
 	var proxy_moons_of: StringName
 	
 	# Below replicates some logic in SelectionManager.get_info_panel_data(); could be cleaned up.
+	var at_body_name: StringName
 	if selection_name.begins_with("FACILITY_"):
 		body_name = MainThreadGlobal.get_body_name(selection_name)
 		body_flags = MainThreadGlobal.get_body_flags(body_name)
 		
 		if target_name.begins_with("PROXY_"):
 			# polity
-			var at_body_name := _get_at_body_name(body_flags)
-			@warning_ignore("unsafe_method_access")
+			at_body_name = _get_at_body_name(body_flags)
 			_stats_grid.update_targets([target_name], [at_body_name])
 			return
 		
@@ -89,23 +86,22 @@ func _update_selection(_suppress_camera_move := false) -> void:
 	
 	# at star
 	if body_flags & BodyFlags.IS_STAR:
-		@warning_ignore("unsafe_method_access")
 		_stats_grid.update_targets([&"PROXY_SYSTEM_STAR_SUN"], [&"SYSTEM_SOLAR_SYSTEM"])
 		return
 	
-	var at_body_name := _get_at_body_name(body_flags)
+	at_body_name = _get_at_body_name(body_flags)
 	
 	# at spacecraft or small body
 	if body_flags & BodyFlags.IS_SPACECRAFT or body_flags & BodyFlags.NO_STABLE_ORBIT:
-		@warning_ignore("unsafe_method_access")
 		_stats_grid.update_targets([selection_name], [at_body_name])
 		return
 	
 	# at moonless major body
+	var targets: Array[StringName]
+	var replacement_names: Array[StringName]
 	if not body_flags & BodyFlags2.GUI_HAS_MOONS:
-		var targets := [selection_name, proxy_orbit]
-		var replacement_names := [at_body_name, &"LABEL_IN_ORBIT"]
-		@warning_ignore("unsafe_method_access")
+		targets = [selection_name, proxy_orbit]
+		replacement_names = [at_body_name, &"LABEL_IN_ORBIT"]
 		_stats_grid.update_targets(targets, replacement_names)
 		return
 	
@@ -113,9 +109,8 @@ func _update_selection(_suppress_camera_move := false) -> void:
 	var at_moon_text := &"LABEL_MOONS"
 	if body_name == &"PLANET_EARTH":
 		at_moon_text = &"LABEL_LUNAR"
-	var targets := [selection_name, proxy_orbit, proxy_moons_of]
-	var replacement_names := [at_body_name, &"LABEL_ORBIT", at_moon_text]
-	@warning_ignore("unsafe_method_access")
+	targets = [selection_name, proxy_orbit, proxy_moons_of]
+	replacement_names = [at_body_name, &"LABEL_ORBIT", at_moon_text]
 	_stats_grid.update_targets(targets, replacement_names)
 
 

@@ -26,16 +26,24 @@ var is_spaceport := false
 var market_requests: Array # bool; markets we want, indexed by resource_id
 
 # don't sync (server doesn't care)
-var bids: Array[float] = IVUtils.init_array(table_n_rows.resources, 0.0, TYPE_FLOAT)
-var asks: Array[float] = IVUtils.init_array(table_n_rows.resources, 0.0, TYPE_FLOAT)
+var bids: Array[float]
+var asks: Array[float]
 
 
 # shared from other interfaces
 var facility_interface: FacilityInterface
 
 # localized indexing
-var n_resources: int = table_n_rows.resources
+var n_resources: int = table_n_rows[&"resources"]
 
+
+func _init() -> void:
+	super()
+	bids.resize(n_resources)
+	bids.fill(0.0)
+	asks.resize(n_resources)
+	asks.fill(0.0)
+	
 
 
 func process_ai(_time: float) -> void:

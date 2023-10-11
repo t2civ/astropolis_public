@@ -99,21 +99,26 @@ func sync_server_dirty(data: Array) -> void:
 		homeworld = data[k + 4]
 
 
-func propagate_component_init(data: Array, indexes: Array) -> void:
-	operations.propagate_component_init(data[indexes[0]])
+func propagate_component_init(data: Array, indexes: Array[int]) -> void:
+	var component_data: Array = data[indexes[0]]
+	operations.propagate_component_init(component_data)
 	# skip inventory
-	financials.propagate_component_init(data[indexes[2]])
-	if data[indexes[3]]:
-		population.propagate_component_init(data[indexes[3]])
-	if data[indexes[4]]:
-		biome.propagate_component_init(data[indexes[4]])
-	if data[indexes[5]]:
-		metaverse.propagate_component_init(data[indexes[5]])
+	component_data = data[indexes[2]]
+	financials.propagate_component_init(component_data)
+	component_data = data[indexes[3]]
+	if component_data:
+		population.propagate_component_init(component_data)
+	component_data = data[indexes[4]]
+	if component_data:
+		biome.propagate_component_init(component_data)
+	component_data = data[indexes[5]]
+	if component_data:
+		metaverse.propagate_component_init(component_data)
 	assert(data[indexes[6]] >= yq)
 	yq = data[indexes[6]]
 
 
-func propagate_component_changes(data: Array, indexes: Array) -> void:
+func propagate_component_changes(data: Array, indexes: Array[int]) -> void:
 	var dirty: int = data[1]
 	if dirty & DIRTY_OPERATIONS:
 		operations.sync_server_delta(data, indexes[0])

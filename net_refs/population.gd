@@ -9,7 +9,7 @@ extends NetRef
 
 # save/load persistence for server only
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
-const PERSIST_PROPERTIES := [
+const PERSIST_PROPERTIES: Array[StringName] = [
 	&"yq",
 	&"numbers",
 	&"growth_rates",
@@ -60,7 +60,8 @@ func _init(is_new := false, is_facility := false) -> void:
 		return
 	_is_facility = true
 	growth_rates = numbers.duplicate()
-	carrying_capacities = ivutils.init_array(_table_n_rows.carrying_capacity_groups, 0.0, TYPE_FLOAT)
+	var n_carrying_capacity_groups: int = _table_n_rows.carrying_capacity_groups
+	carrying_capacities = ivutils.init_array(n_carrying_capacity_groups, 0.0, TYPE_FLOAT)
 	immigration_attractions = numbers.duplicate()
 	emigration_pressures = numbers.duplicate()
 
@@ -198,7 +199,8 @@ func propagate_component_init(data: Array) -> void:
 	# non-facilities only; reference-safe
 	var svr_yq: int = data[0]
 	assert(svr_yq >= yq, "Load order different than process order?")
-	utils.add_to_float_array_with_array(numbers, data[1])
+	var data_array: Array[float] = data[1]
+	utils.add_to_float_array_with_array(numbers, data_array)
 	
 	# expand history arrays as needed (at end and/or front) to handle this data
 	var add_history_numbers: Array[Array] = data[2]

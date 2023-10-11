@@ -83,25 +83,31 @@ func sync_server_init(data: Array) -> void:
 		metaverse = Metaverse.new(true)
 
 
-func propagate_component_init(data: Array, indexes: Array) -> void:
+func propagate_component_init(data: Array, indexes: Array[int]) -> void:
 	# only components we already have
-	if operations and data[indexes[0]]:
-		operations.propagate_component_init(data[indexes[0]])
-	if inventory and data[indexes[1]]:
-		inventory.propagate_component_init(data[indexes[1]])
-	if financials and data[indexes[2]]:
-		financials.propagate_component_init(data[indexes[2]])
-	if population and data[indexes[3]]:
-		population.propagate_component_init(data[indexes[3]])
-	if biome and data[indexes[4]]:
-		biome.propagate_component_init(data[indexes[4]])
-	if metaverse and data[indexes[5]]:
-		metaverse.propagate_component_init(data[indexes[5]])
+	var component_data: Array = data[indexes[0]]
+	if operations and component_data:
+		operations.propagate_component_init(component_data)
+	component_data = data[indexes[1]]
+	if inventory and component_data:
+		inventory.propagate_component_init(component_data)
+	component_data = data[indexes[2]]
+	if financials and component_data:
+		financials.propagate_component_init(component_data)
+	component_data = data[indexes[3]]
+	if population and component_data:
+		population.propagate_component_init(component_data)
+	component_data = data[indexes[4]]
+	if biome and component_data:
+		biome.propagate_component_init(component_data)
+	component_data = data[indexes[5]]
+	if metaverse and component_data:
+		metaverse.propagate_component_init(component_data)
 	assert(data[indexes[6]] >= yq)
 	yq = data[indexes[6]]
 
 
-func propagate_component_changes(data: Array, indexes: Array) -> void:
+func propagate_component_changes(data: Array, indexes: Array[int]) -> void:
 	# only components we already have
 	var dirty: int = data[1]
 	if operations and dirty & DIRTY_OPERATIONS:

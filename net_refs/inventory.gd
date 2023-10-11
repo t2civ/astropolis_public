@@ -12,7 +12,7 @@ extends NetRef
 
 # save/load persistence for server only
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
-const PERSIST_PROPERTIES := [
+const PERSIST_PROPERTIES: Array[StringName] = [
 	&"yq",
 	&"reserves",
 	&"markets",
@@ -138,13 +138,20 @@ func propagate_component_init(data: Array) -> void:
 	var svr_yq: int = data[0]
 	assert(svr_yq >= yq, "Load order different than process order?")
 	yq = svr_yq # TODO: histories
-	utils.add_to_float_array_with_array(reserves, data[1])
-	utils.add_to_float_array_with_array(markets, data[2])
-	utils.add_to_float_array_with_array(in_transits, data[3])
-	utils.add_to_float_array_with_array(contracteds, data[4])
-	utils.fill_array(prices, data[5])
-	utils.fill_array(bids, data[6])
-	utils.fill_array(asks, data[7])
+	var data_array: Array[float] = data[1]
+	utils.add_to_float_array_with_array(reserves, data_array)
+	data_array = data[2]
+	utils.add_to_float_array_with_array(markets, data_array)
+	data_array = data[3]
+	utils.add_to_float_array_with_array(in_transits, data_array)
+	data_array = data[4]
+	utils.add_to_float_array_with_array(contracteds, data_array)
+	data_array = data[5]
+	utils.fill_array(prices, data_array)
+	data_array = data[6]
+	utils.fill_array(bids, data_array)
+	data_array = data[7]
+	utils.fill_array(asks, data_array)
 
 
 func take_server_delta(data: Array) -> void:

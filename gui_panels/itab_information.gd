@@ -10,7 +10,7 @@ const SCENE := "res://astropolis_public/gui_panels/itab_information.tscn"
 signal header_changed(new_header)
 
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
-const PERSIST_PROPERTIES := []
+const PERSIST_PROPERTIES: Array[StringName] = []
 
 var _selection_manager: SelectionManager
 

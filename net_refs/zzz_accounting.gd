@@ -57,14 +57,27 @@ var _last_interest_update: int # solar day
 
 
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
-const PERSIST_PROPERTIES := ["optimal_cash_balance", "min_cash_balance",
-	"current_year", "current_month",
-	"revenue", "gross_income", "opex_income",
-	"nonop_income", "operating_cshflw", "investing_cshflw", "financing_cshflw",
-	"short_term_balance", "long_term_balance", "items",
-	"cash_balance", "long_term_debt",
-	"history",
-	"future_depreciation", "_last_interest_update"]
+const PERSIST_PROPERTIES: Array[StringName] = [
+	&"optimal_cash_balance",
+	&"min_cash_balance",
+	&"current_year",
+	&"current_month",
+	&"revenue",
+	&"gross_income",
+	&"opex_income",
+	&"nonop_income",
+	&"operating_cshflw",
+	&"investing_cshflw",
+	&"financing_cshflw",
+	&"short_term_balance",
+	&"long_term_balance",
+	&"items",
+	&"cash_balance",
+	&"long_term_debt",
+	&"history",
+	&"future_depreciation",
+	&"_last_interest_update",
+]
 
 var _times: Array = IVGlobal.times
 var _accounting_helper #: AccountingHelper = IVGlobal.program.AccountingHelper
