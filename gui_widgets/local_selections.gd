@@ -101,7 +101,7 @@ func _set_selections_on_ai_thread(body_name: StringName) -> void:
 	_companies.clear()
 	_offworld.clear()
 	_system.clear()
-	var body: BodyInterface = AIGlobal.get_interface_by_name(body_name)
+	var body: BodyInterface = Interface.get_interface_by_name(body_name)
 	if !body:
 		_is_busy = false
 		return
@@ -155,19 +155,20 @@ func _set_selections_recursive(body: BodyInterface, is_star: bool, root_call := 
 func _update_labels() -> void:
 	# Main thread
 	var n_labels := _vbox.get_child_count()
+	var label: Label
 	var child_index := 0
 	var section := 0
 	while section < _n_sections:
 		var section_data: Array = _section_arrays[section]
 		var n_items := section_data.size()
 		while n_labels <= n_items + child_index: # enough if open
-			var label := Label.new()
+			label = Label.new()
 			label.mouse_filter = MOUSE_FILTER_PASS
 			label.gui_input.connect(_on_gui_input.bind(label))
 			_vbox.add_child(label)
 			n_labels += 1
 		var is_open: bool = is_open_sections[section]
-		var label: Label = _vbox.get_child(child_index)
+		label = _vbox.get_child(child_index)
 		child_index += 1
 		if n_items == 0:
 			label.hide()
@@ -187,7 +188,7 @@ func _update_labels() -> void:
 	_is_busy = false # safe to call again
 	
 	while child_index < n_labels:
-		var label: Label = _vbox.get_child(child_index)
+		label = _vbox.get_child(child_index)
 		label.hide()
 		child_index += 1
 
@@ -204,8 +205,10 @@ func _on_gui_input(event: InputEvent, label: Label) -> void:
 	var lookup = _pressed_lookup.get(label.text)
 	if typeof(lookup) == TYPE_INT: # toggle section
 		if !_is_busy:
-			is_open_sections[lookup] = !is_open_sections[lookup]
+			var section: int = lookup
+			is_open_sections[section] = !is_open_sections[section]
 			_update_labels()
 	else:
-		_selection_manager.select_prefer_facility(lookup)
+		var selection_name: StringName = lookup
+		_selection_manager.select_prefer_facility(selection_name)
 

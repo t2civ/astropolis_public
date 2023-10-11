@@ -7,9 +7,8 @@ extends Interface
 
 # DO NOT MODIFY THIS FILE! To modify AI, see comments in '_base_ai.gd' files.
 #
-# This object lives and dies on the AI thread! Access from other threads is
-# possible (e.g., from main thread GUI), but see:
-# https://docs.godotengine.org/en/latest/tutorials/performance/thread_safe_apis.html
+# Warning! This object lives and dies on the AI thread! Containers and many
+# methods are not threadsafe. Accessing non-container properties is safe.
 #
 # To get the SceenTree "body" node (class IVBody) use IVGlobal.bodies[body_name].
 # Be aware that SceenTree works on the Main thread!
@@ -22,6 +21,8 @@ extends Interface
 #   Compositions - when needed (BodyInterface only!)
 
 const OBJECT_TYPE = Enums.Objects.BODY
+
+static var body_interfaces: Array[BodyInterface] = [] # indexed by body_id
 
 var body_id := -1
 var body_flags := 0
@@ -37,8 +38,7 @@ var compositions: Array[Composition] = [] # resizable container - not threadsafe
 
 
 func _init() -> void:
-	IVGlobal.about_to_free_procedural_nodes.connect(_clear_circular_references)
-	IVGlobal.about_to_quit.connect(_clear_circular_references)
+	super()
 
 
 func _clear_circular_references() -> void:
@@ -79,7 +79,7 @@ func sync_server_init(data: Array) -> void:
 	solar_occlusion = data[6]
 	var parent_name: String = data[7]
 	if parent_name:
-		parent = AIGlobal.get_interface_by_name(parent_name)
+		parent = interfaces_by_name[parent_name]
 		parent.add_satellite(self)
 	if data[8]:
 		var compositions_data: Array = data[8]
@@ -94,24 +94,28 @@ func sync_server_init(data: Array) -> void:
 			i += 1
 
 
-func propagate_component_init(data: Array, indexes: Array) -> void:
-	if data[indexes[0]]:
+func propagate_component_init(data: Array, indexes: Array[int]) -> void:
+	var component_data: Array = data[indexes[0]]
+	if component_data:
 		if !operations:
 			operations = Operations.new(true)
-		operations.propagate_component_init(data[indexes[0]])
+		operations.propagate_component_init(component_data)
 	# skip inventory, financials
-	if data[indexes[3]]:
+	component_data = data[indexes[3]]
+	if component_data:
 		if !population:
 			population = Population.new(true)
-		population.propagate_component_init(data[indexes[3]])
-	if data[indexes[4]]:
+		population.propagate_component_init(component_data)
+	component_data = data[indexes[4]]
+	if component_data:
 		if !biome:
 			biome = Biome.new(true)
-		biome.propagate_component_init(data[indexes[4]])
-	if data[indexes[5]]:
+		biome.propagate_component_init(component_data)
+	component_data = data[indexes[5]]
+	if component_data:
 		if !metaverse:
 			metaverse = Metaverse.new(true)
-		metaverse.propagate_component_init(data[indexes[5]])
+		metaverse.propagate_component_init(component_data)
 	assert(data[indexes[6]] >= yq)
 	yq = data[indexes[6]]
 
@@ -136,7 +140,7 @@ func sync_server_dirty(data: Array) -> void:
 			i += 1
 
 
-func propagate_component_changes(data: Array, indexes: Array) -> void:
+func propagate_component_changes(data: Array, indexes: Array[int]) -> void:
 	var dirty: int = data[1]
 	if dirty & DIRTY_OPERATIONS:
 		if !operations:

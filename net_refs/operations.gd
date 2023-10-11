@@ -54,7 +54,7 @@ enum { # _dirty_values
 
 # save/load persistence for server only
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
-const PERSIST_PROPERTIES := [
+const PERSIST_PROPERTIES: Array[StringName] = [
 	&"yq",
 	&"lfq_revenue",
 	&"lfq_gross_output",
@@ -160,7 +160,8 @@ func _init(is_new := false, has_financials_ := false, is_facility := false) -> v
 		return
 	has_financials = has_financials_
 	_is_facility = is_facility
-	crews = ivutils.init_array(_table_n_rows[&"populations"], 0.0, TYPE_FLOAT)
+	var n_populations: int = _table_n_rows[&"populations"]
+	crews = ivutils.init_array(n_populations, 0.0, TYPE_FLOAT)
 	capacities = ivutils.init_array(_n_operations, 0.0, TYPE_FLOAT)
 	rates = capacities.duplicate()
 	if !has_financials_:
@@ -473,14 +474,20 @@ func propagate_component_init(data: Array) -> void:
 	total_power += data[4]
 	manufacturing += data[5]
 	constructions += data[6]
-	utils.add_to_float_array_with_array(crews, data[7])
-	utils.add_to_float_array_with_array(capacities, data[8])
-	utils.add_to_float_array_with_array(rates, data[9])
+	var add_array: Array[float] = data[7]
+	utils.add_to_float_array_with_array(crews, add_array)
+	add_array = data[8]
+	utils.add_to_float_array_with_array(capacities, add_array)
+	add_array = data[9]
+	utils.add_to_float_array_with_array(rates, add_array)
 	if !has_financials:
 		return
-	utils.add_to_float_array_with_array(public_capacities, data[10])
-	utils.add_to_float_array_with_array(est_revenues, data[11])
-	utils.add_to_float_array_with_array(est_gross_incomes, data[12])
+	add_array = data[10]
+	utils.add_to_float_array_with_array(public_capacities, add_array)
+	add_array = data[11]
+	utils.add_to_float_array_with_array(est_revenues, add_array)
+	add_array = data[12]
+	utils.add_to_float_array_with_array(est_gross_incomes, add_array)
 
 
 func take_server_delta(data: Array) -> void:

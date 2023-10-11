@@ -7,10 +7,11 @@ extends Node
 # Singleton "MainThreadGlobal".
 #
 # This global provides safe data access on the main thread, mainly for GUI.
-# Note that Interfaces gotten here are not threadsafe! For Interface access on
+# Note that Interfaces gotten here are not threadsafe. For Interface access on
 # the main thread, use only Interface methods marked 'threadsafe'.
 
 signal interface_added(interface)
+signal interface_removed(interface)
 signal ai_thread_called(callable)
 
 
@@ -53,12 +54,6 @@ func set_body_selection_redirect(body_name: StringName, redirect_name: StringNam
 	else:
 		body_selection_redirect.erase(body_name)
 
-
-
-
-
-# All below have an equivilent AIGlobal method. AIGlobal has additional methods
-# that are not threadsafe.
 
 func get_interface_by_name(interface_name: StringName) -> Interface:
 	# Returns null if doesn't exist. This method is safe on main thread, but
@@ -121,4 +116,17 @@ func has_facilities(interface_name: StringName) -> bool:
 		return false
 	return interface.has_facilities()
 
+
+# *****************************************************************************
+# Server only!
+
+func add_interface(interface: Interface) -> void:
+	assert(!interfaces_by_name.has(interface.name))
+	interfaces_by_name[interface.name] = interface
+	interface_added.emit(interface)
+
+
+func remove_interface(interface: Interface) -> void:
+	interfaces_by_name.erase(interface.name)
+	interface_removed.emit(interface)
 

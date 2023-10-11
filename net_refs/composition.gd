@@ -32,7 +32,7 @@ const FOUR_PI := 4.0 * PI
 const FREE_RESOURCE_MIN_FRACTION := 0.1
 
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
-const PERSIST_PROPERTIES := [
+const PERSIST_PROPERTIES: Array[StringName] = [
 	&"name",
 	&"stratum_type",
 	&"polity_name",

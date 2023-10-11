@@ -6,7 +6,7 @@ extends PanelContainer
 
 
 const PERSIST_MODE := IVEnums.PERSIST_PROPERTIES_ONLY
-const PERSIST_PROPERTIES := [
+const PERSIST_PROPERTIES: Array[StringName] = [
 	&"anchor_top",
 	&"anchor_left",
 	&"anchor_right",

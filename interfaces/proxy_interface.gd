@@ -7,9 +7,8 @@ extends Interface
 
 # DO NOT MODIFY THIS FILE! To modify AI, see comments in '_base_ai.gd' files.
 #
-# Warning! This object lives and dies on the AI Server thread! Some access from
-# other threads is possible (e.g., from main thread GUI), but see:
-# https://docs.godotengine.org/en/latest/tutorials/performance/thread_safe_apis.html
+# Warning! This object lives and dies on the AI thread! Containers and many
+# methods are not threadsafe. Accessing non-container properties is safe.
 #
 # Proxies represent collections of facilites that may be useful for GUI data
 # display or possibly AI. Init and and data sync originate from
@@ -29,8 +28,32 @@ extends Interface
 
 const OBJECT_TYPE = Enums.Objects.PROXY
 
+static var proxy_interfaces: Array[ProxyInterface] = [] # indexed by proxy_id
+
 # read-only!
 var proxy_id := -1
+
+
+func _init() -> void:
+	super()
+
+
+static func get_or_make_proxy(proxy_name: StringName, proxy_gui_name := "",
+		has_operations := true, has_inventory := false, has_financials := false,
+		has_population := true, has_biome := true, has_metaverse := true) -> ProxyInterface:
+	# Proxy names should be prefixed 'PROXY_' and must be unique.
+	var proxy_interface: ProxyInterface = interfaces_by_name.get(proxy_name)
+	if proxy_interface:
+		return proxy_interface
+	if !proxy_gui_name:
+		proxy_gui_name = AIGlobal.tr(proxy_name)
+	AIGlobal.proxy_requested.emit(proxy_name, proxy_gui_name,
+			has_operations, has_inventory, has_financials,
+			has_population, has_biome, has_metaverse)
+	proxy_interface = interfaces_by_name.get(proxy_name)
+	assert(proxy_interface)
+	return proxy_interface
+
 
 
 # *****************************************************************************
@@ -60,25 +83,31 @@ func sync_server_init(data: Array) -> void:
 		metaverse = Metaverse.new(true)
 
 
-func propagate_component_init(data: Array, indexes: Array) -> void:
+func propagate_component_init(data: Array, indexes: Array[int]) -> void:
 	# only components we already have
-	if operations and data[indexes[0]]:
-		operations.propagate_component_init(data[indexes[0]])
-	if inventory and data[indexes[1]]:
-		inventory.propagate_component_init(data[indexes[1]])
-	if financials and data[indexes[2]]:
-		financials.propagate_component_init(data[indexes[2]])
-	if population and data[indexes[3]]:
-		population.propagate_component_init(data[indexes[3]])
-	if biome and data[indexes[4]]:
-		biome.propagate_component_init(data[indexes[4]])
-	if metaverse and data[indexes[5]]:
-		metaverse.propagate_component_init(data[indexes[5]])
+	var component_data: Array = data[indexes[0]]
+	if operations and component_data:
+		operations.propagate_component_init(component_data)
+	component_data = data[indexes[1]]
+	if inventory and component_data:
+		inventory.propagate_component_init(component_data)
+	component_data = data[indexes[2]]
+	if financials and component_data:
+		financials.propagate_component_init(component_data)
+	component_data = data[indexes[3]]
+	if population and component_data:
+		population.propagate_component_init(component_data)
+	component_data = data[indexes[4]]
+	if biome and component_data:
+		biome.propagate_component_init(component_data)
+	component_data = data[indexes[5]]
+	if metaverse and component_data:
+		metaverse.propagate_component_init(component_data)
 	assert(data[indexes[6]] >= yq)
 	yq = data[indexes[6]]
 
 
-func propagate_component_changes(data: Array, indexes: Array) -> void:
+func propagate_component_changes(data: Array, indexes: Array[int]) -> void:
 	# only components we already have
 	var dirty: int = data[1]
 	if operations and dirty & DIRTY_OPERATIONS:

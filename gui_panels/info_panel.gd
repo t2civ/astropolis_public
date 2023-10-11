@@ -16,7 +16,7 @@ signal clone_and_pin_requested(info_panel)
 
 
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
-const PERSIST_PROPERTIES := [
+const PERSIST_PROPERTIES: Array[StringName] = [
 	&"anchor_top",
 	&"anchor_left",
 	&"anchor_right",
@@ -73,7 +73,7 @@ func _init_after_system(_dummy := false) -> void:
 	var itc: InfoTabContainer = get_node("InfoTabMargin/InfoTabContainer")
 	var subpanels := itc.subpanels
 	for subpanel in subpanels:
-		@warning_ignore("unsafe_method_access")
+		@warning_ignore("unsafe_method_access", "unsafe_property_access")
 		subpanel.header_changed.connect(_set_header)
 
 

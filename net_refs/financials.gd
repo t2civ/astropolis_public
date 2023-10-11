@@ -15,7 +15,7 @@ enum { # _dirty_values
 }
 
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
-const PERSIST_PROPERTIES := [
+const PERSIST_PROPERTIES: Array[StringName] = [
 	&"yq",
 	&"revenue",
 	&"accountings",
@@ -68,7 +68,8 @@ func propagate_component_init(data: Array) -> void:
 	assert(svr_yq >= yq, "Load order different than process order?")
 	yq = svr_yq # TODO: histories
 	revenue += data[1]
-	utils.add_to_float_array_with_array(accountings, data[2])
+	var data_array: Array[float] = data[2]
+	utils.add_to_float_array_with_array(accountings, data_array)
 
 
 func take_server_delta(data: Array) -> void:

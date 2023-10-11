@@ -76,8 +76,9 @@ func _get_ai_data(body_name: StringName, selection_name: StringName) -> void:
 	var data: Array = []
 	var polity_name := ""
 	if selection_name.begins_with("FACILITY_"):
-		polity_name = AIGlobal.get_polity_name(selection_name)
-	var body_interface: BodyInterface = AIGlobal.get_interface_by_name(body_name)
+		var selection_interface := Interface.get_interface_by_name(selection_name)
+		polity_name = selection_interface.get_polity_name()
+	var body_interface: BodyInterface = Interface.get_interface_by_name(body_name)
 	if !body_interface:
 		_update_no_resources.call_deferred()
 		return
@@ -98,9 +99,10 @@ func _get_ai_data(body_name: StringName, selection_name: StringName) -> void:
 		var composition_polity := composition.polity_name
 		if polity_name and composition_polity and polity_name != composition_polity:
 			continue
+		var init_open: bool
 		if !composition_polities.has(composition_polity):
 			composition_polities.append(composition_polity)
-			var init_open := polity_name == composition_polity # "" == "" at body for commons
+			init_open = polity_name == composition_polity # "" == "" at body for commons
 			open_at_init.append(init_open)
 		var masses := composition.masses
 		var heterogeneities := composition.heterogeneities
@@ -133,7 +135,7 @@ func _get_ai_data(body_name: StringName, selection_name: StringName) -> void:
 		resources_data.sort_custom(_sort_resources)
 		
 		var evidence: StringName = _survey_names[survey_type]
-		var init_open := true
+		init_open = true
 		var composition_type: int = _composition_types.get(composition.name, -1)
 		if composition_type != -1:
 			init_open = _init_opens[composition_type]

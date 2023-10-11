@@ -2,6 +2,7 @@
 # This file is part of Astropolis
 # Copyright 2019-2023 Charlie Whitfield, all rights reserved
 # *****************************************************************************
+class_name StatsGrid
 extends MarginContainer
 
 # IDEA: Click on value to cycle representation. E.g., for population:
@@ -20,7 +21,7 @@ var zero_value := "-" # set "" to print zeros w/ units
 var show_missing_interface := true
 var force_rows := true # if false, skip rows missing in all interfaces
 var min_columns := 3 # inclues row labels
-var required_component := "operations"
+var required_component := &"operations"
 
 
 var content := [
@@ -38,21 +39,22 @@ var content := [
 	[&"LABEL_BIODIVERSITY", "biome/get_biodiversity", IVQFormat.fixed_unit.bind("species")],
 ]
 
-var targets := ["PLANET_EARTH", "PROXY_OFF_EARTH"]
-var replacement_names := [] # use instead of Interface name
-var fallback_names := ["", ""] # if "" will uses targets string
+var targets: Array[StringName] = [&"PLANET_EARTH", &"PROXY_OFF_EARTH"]
+var replacement_names: Array[StringName] = [] # use instead of Interface name
+var fallback_names: Array[StringName] = [&"", &""] # if "" will uses targets string
 
 #var _state: Dictionary = IVGlobal.state
 #var _is_running := false
-var _network_targets: Array
-var _network_fallback_names: Array
-var _network_replacement_names: Array
+var _network_targets: Array[StringName]
+var _network_fallback_names: Array[StringName]
+var _network_replacement_names: Array[StringName]
 
 #@onready var _tree: SceneTree = get_tree()
 @onready var _grid: GridContainer = $Grid
 
 
-func update_targets(targets_: Array, replacement_names_ := [], fallback_names_ := []) -> void:
+func update_targets(targets_: Array[StringName], replacement_names_: Array[StringName] = [],
+		fallback_names_: Array[StringName] = []) -> void:
 	targets = targets_
 	replacement_names = replacement_names_
 	fallback_names = fallback_names_
@@ -76,7 +78,7 @@ func _set_network_data() -> void:
 	var interfaces := []
 	var has_data := false
 	for target in _network_targets:
-		var interface: Interface = AIGlobal.interfaces_by_name.get(target)
+		var interface := Interface.get_interface_by_name(target)
 		if interface:
 			if !interface.get(required_component):
 				interface = null

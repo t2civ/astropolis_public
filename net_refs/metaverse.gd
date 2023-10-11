@@ -13,7 +13,7 @@ enum { # _dirty_values
 
 # save/load persistence for server only
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
-const PERSIST_PROPERTIES := [
+const PERSIST_PROPERTIES: Array[StringName] = [
 	&"computations",
 	&"diversity_model",
 	&"yq",
@@ -84,7 +84,8 @@ func propagate_component_init(data: Array) -> void:
 	assert(svr_yq >= yq, "Load order different than process order?")
 	yq = svr_yq # TODO: histories
 	computations += data[1]
-	utils.add_to_diversity_model(diversity_model, data[2])
+	var add_dict: Dictionary = data[2]
+	utils.add_to_diversity_model(diversity_model, add_dict)
 
 
 func take_server_delta(data: Array) -> void:

@@ -6,10 +6,14 @@ class_name TraderInterface
 extends Interface
 
 # DO NOT MODIFY THIS CLASS! See comments in "Base AI" classes to override AI.
+#
+# Warning! This object lives and dies on the AI thread! Containers and many
+# methods are not threadsafe. Accessing non-container properties is safe.
+#
 
 const OBJECT_TYPE := Enums.Objects.TRADER
 
-
+static var trader_interfaces: Array[TraderInterface] = [] # indexed by trader_id
 
 # sync from server
 var trader_id := -1
@@ -22,16 +26,24 @@ var is_spaceport := false
 var market_requests: Array # bool; markets we want, indexed by resource_id
 
 # don't sync (server doesn't care)
-var bids: Array[float] = IVUtils.init_array(table_n_rows.resources, 0.0, TYPE_FLOAT)
-var asks: Array[float] = IVUtils.init_array(table_n_rows.resources, 0.0, TYPE_FLOAT)
+var bids: Array[float]
+var asks: Array[float]
 
 
 # shared from other interfaces
 var facility_interface: FacilityInterface
 
 # localized indexing
-var n_resources: int = table_n_rows.resources
+var n_resources: int = table_n_rows[&"resources"]
 
+
+func _init() -> void:
+	super()
+	bids.resize(n_resources)
+	bids.fill(0.0)
+	asks.resize(n_resources)
+	asks.fill(0.0)
+	
 
 
 func process_ai(_time: float) -> void:
@@ -72,7 +84,7 @@ func sync_server_init(data: Array) -> void:
 	is_spaceport = data[5]
 	market_requests = data[6]
 	# Trader is associated with a Facility and shares its Inventory
-	facility_interface = AIGlobal.facility_interfaces[facility_id]
+	facility_interface = FacilityInterface.facility_interfaces[facility_id]
 	assert(facility_interface)
 	inventory = facility_interface.inventory
 
