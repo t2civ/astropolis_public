@@ -76,8 +76,9 @@ func _get_ai_data(body_name: StringName, selection_name: StringName) -> void:
 	var data: Array = []
 	var polity_name := ""
 	if selection_name.begins_with("FACILITY_"):
-		polity_name = AIGlobal.get_polity_name(selection_name)
-	var body_interface: BodyInterface = AIGlobal.get_interface_by_name(body_name)
+		var selection_interface := Interface.get_interface_by_name(selection_name)
+		polity_name = selection_interface.get_polity_name()
+	var body_interface: BodyInterface = Interface.get_interface_by_name(body_name)
 	if !body_interface:
 		_update_no_resources.call_deferred()
 		return

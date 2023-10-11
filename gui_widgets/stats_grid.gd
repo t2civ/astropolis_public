@@ -76,7 +76,7 @@ func _set_network_data() -> void:
 	var interfaces := []
 	var has_data := false
 	for target in _network_targets:
-		var interface: Interface = AIGlobal.interfaces_by_name.get(target)
+		var interface := Interface.get_interface_by_name(target)
 		if interface:
 			if !interface.get(required_component):
 				interface = null

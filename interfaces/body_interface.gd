@@ -7,9 +7,8 @@ extends Interface
 
 # DO NOT MODIFY THIS FILE! To modify AI, see comments in '_base_ai.gd' files.
 #
-# This object lives and dies on the AI thread! Access from other threads is
-# possible (e.g., from main thread GUI), but see:
-# https://docs.godotengine.org/en/latest/tutorials/performance/thread_safe_apis.html
+# Warning! This object lives and dies on the AI thread! Containers and many
+# methods are not threadsafe. Accessing non-container properties is safe.
 #
 # To get the SceenTree "body" node (class IVBody) use IVGlobal.bodies[body_name].
 # Be aware that SceenTree works on the Main thread!
@@ -22,6 +21,8 @@ extends Interface
 #   Compositions - when needed (BodyInterface only!)
 
 const OBJECT_TYPE = Enums.Objects.BODY
+
+static var body_interfaces: Array[BodyInterface] = [] # indexed by body_id
 
 var body_id := -1
 var body_flags := 0
@@ -37,8 +38,7 @@ var compositions: Array[Composition] = [] # resizable container - not threadsafe
 
 
 func _init() -> void:
-	IVGlobal.about_to_free_procedural_nodes.connect(_clear_circular_references)
-	IVGlobal.about_to_quit.connect(_clear_circular_references)
+	super()
 
 
 func _clear_circular_references() -> void:
@@ -79,7 +79,7 @@ func sync_server_init(data: Array) -> void:
 	solar_occlusion = data[6]
 	var parent_name: String = data[7]
 	if parent_name:
-		parent = AIGlobal.get_interface_by_name(parent_name)
+		parent = interfaces_by_name[parent_name]
 		parent.add_satellite(self)
 	if data[8]:
 		var compositions_data: Array = data[8]

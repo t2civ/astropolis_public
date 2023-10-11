@@ -7,9 +7,8 @@ extends RefCounted
 
 # DO NOT MODIFY THIS FILE! To modify AI, see comments in '_base_ai.gd' files.
 #
-# This object lives and dies on the AI thread! Access from other threads is
-# possible (e.g., from main thread GUI), but see:
-# https://docs.godotengine.org/en/latest/tutorials/performance/thread_safe_apis.html
+# Warning! This object lives and dies on the AI thread! Containers and many
+# methods are not threadsafe. Accessing non-container properties is safe.
 
 
 signal interface_changed(object_type, class_id, data) # on ai thread only!
@@ -41,6 +40,11 @@ enum { # sync_svr_type
 
 const INTERVAL := 7.0 * IVUnits.DAY
 
+
+static var interfaces: Array[Interface] = [] # indexed by interface_id
+static var interfaces_by_name := {} # PLANET_EARTH, PLAYER_NASA, PROXY_OFFWORLD, etc.
+
+
 var interface_id := -1
 var name := &"" # unique & immutable
 var gui_name := "" # mutable for display ("" for player means hide from GUI)
@@ -51,9 +55,9 @@ var next_interval := -INF
 # Append member names for save/load persistence; nested containers ok; NO OBJECTS!
 # Must be set at _init()!
 var persist := [
-	"yq",
-	"last_interval",
-	"next_interval",
+	&"yq",
+	&"last_interval",
+	&"next_interval",
 ]
 
 # components
@@ -83,8 +87,15 @@ var _is_server_ai := false
 var _is_local_use_ai := false # local player sets/unsets
 
 
-# *****************************************************************************
-# Common API
+func _init() -> void:
+	IVGlobal.about_to_free_procedural_nodes.connect(_clear_circular_references)
+	IVGlobal.about_to_quit.connect(_clear_circular_references)
+
+
+static func get_interface_by_name(interface_name: StringName) -> Interface:
+	# Returns null if doesn't exist.
+	return interfaces_by_name.get(interface_name)
+
 
 func get_population_and_crew(population_type: int) -> float:
 	var population_number := population.get_number(population_type) if population else 0.0
@@ -98,8 +109,14 @@ func get_population_and_crew_total() -> float:
 	return population_number + crew
 
 
-# *****************************************************************************
-# Override API - not always applicable
+func remove() -> void:
+	pass
+
+
+func _clear_circular_references() -> void:
+	# down hierarchy only
+	pass
+
 
 func get_body_name() -> StringName:
 	return &""

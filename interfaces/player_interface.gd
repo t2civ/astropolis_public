@@ -7,9 +7,8 @@ extends Interface
 
 # DO NOT MODIFY THIS FILE! To modify AI, see comments in '_base_ai.gd' files.
 #
-# Warning! This object lives and dies on the AI Server thread! Some access from
-# other threads is possible (e.g., from main thread GUI), but see:
-# https://docs.godotengine.org/en/latest/tutorials/performance/thread_safe_apis.html
+# Warning! This object lives and dies on the AI thread! Containers and many
+# methods are not threadsafe. Accessing non-container properties is safe.
 #
 # Player required components:
 #   Operations - on init
@@ -22,6 +21,7 @@ extends Interface
 
 const OBJECT_TYPE = Enums.Objects.PLAYER
 
+static var player_interfaces: Array[PlayerInterface] = [] # indexed by player_id
 
 # public read-only
 var player_id := -1
@@ -35,13 +35,12 @@ var facilities: Array[Interface] = [] # resizable container - not threadsafe!
 
 
 func _init() -> void:
+	super()
 	operations = Operations.new(true, true)
 	financials = Financials.new(true)
 	population = Population.new(true)
 	biome = Biome.new(true)
 	metaverse = Metaverse.new(true)
-	IVGlobal.about_to_free_procedural_nodes.connect(_clear_circular_references)
-	IVGlobal.about_to_quit.connect(_clear_circular_references)
 
 
 func _clear_circular_references() -> void:
@@ -83,7 +82,7 @@ func sync_server_init(data: Array) -> void:
 	gui_name = data[4]
 	player_class = data[5]
 	var part_of_name: StringName = data[6]
-	part_of = AIGlobal.interfaces_by_name[part_of_name] if part_of_name else null
+	part_of = interfaces_by_name[part_of_name] if part_of_name else null
 	polity_name = data[7]
 	homeworld = data[8]
 
@@ -95,7 +94,7 @@ func sync_server_dirty(data: Array) -> void:
 		gui_name = data[k]
 		player_class = data[k + 1]
 		var part_of_name: StringName = data[k + 2]
-		part_of = AIGlobal.interfaces_by_name[part_of_name] if part_of_name else null
+		part_of = interfaces_by_name[part_of_name] if part_of_name else null
 		polity_name = data[k + 3]
 		homeworld = data[k + 4]
 

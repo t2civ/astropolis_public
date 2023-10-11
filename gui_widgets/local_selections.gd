@@ -101,7 +101,7 @@ func _set_selections_on_ai_thread(body_name: StringName) -> void:
 	_companies.clear()
 	_offworld.clear()
 	_system.clear()
-	var body: BodyInterface = AIGlobal.get_interface_by_name(body_name)
+	var body: BodyInterface = Interface.get_interface_by_name(body_name)
 	if !body:
 		_is_busy = false
 		return

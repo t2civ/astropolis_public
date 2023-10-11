@@ -169,7 +169,7 @@ func _update_no_operations() -> void:
 
 func _get_ai_data(target_name: StringName) -> void:
 	var data := []
-	var interface: Interface = AIGlobal.get_interface_by_name(target_name)
+	var interface := Interface.get_interface_by_name(target_name)
 	if !interface:
 		_update_no_operations.call_deferred()
 		return

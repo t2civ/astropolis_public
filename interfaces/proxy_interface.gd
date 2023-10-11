@@ -7,9 +7,8 @@ extends Interface
 
 # DO NOT MODIFY THIS FILE! To modify AI, see comments in '_base_ai.gd' files.
 #
-# Warning! This object lives and dies on the AI Server thread! Some access from
-# other threads is possible (e.g., from main thread GUI), but see:
-# https://docs.godotengine.org/en/latest/tutorials/performance/thread_safe_apis.html
+# Warning! This object lives and dies on the AI thread! Containers and many
+# methods are not threadsafe. Accessing non-container properties is safe.
 #
 # Proxies represent collections of facilites that may be useful for GUI data
 # display or possibly AI. Init and and data sync originate from
@@ -29,8 +28,32 @@ extends Interface
 
 const OBJECT_TYPE = Enums.Objects.PROXY
 
+static var proxy_interfaces: Array[ProxyInterface] = [] # indexed by proxy_id
+
 # read-only!
 var proxy_id := -1
+
+
+func _init() -> void:
+	super()
+
+
+static func get_or_make_proxy(proxy_name: StringName, proxy_gui_name := "",
+		has_operations := true, has_inventory := false, has_financials := false,
+		has_population := true, has_biome := true, has_metaverse := true) -> ProxyInterface:
+	# Proxy names should be prefixed 'PROXY_' and must be unique.
+	var proxy_interface: ProxyInterface = interfaces_by_name.get(proxy_name)
+	if proxy_interface:
+		return proxy_interface
+	if !proxy_gui_name:
+		proxy_gui_name = AIGlobal.tr(proxy_name)
+	AIGlobal.proxy_requested.emit(proxy_name, proxy_gui_name,
+			has_operations, has_inventory, has_financials,
+			has_population, has_biome, has_metaverse)
+	proxy_interface = interfaces_by_name.get(proxy_name)
+	assert(proxy_interface)
+	return proxy_interface
+
 
 
 # *****************************************************************************

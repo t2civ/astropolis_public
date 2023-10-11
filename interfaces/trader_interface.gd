@@ -6,10 +6,14 @@ class_name TraderInterface
 extends Interface
 
 # DO NOT MODIFY THIS CLASS! See comments in "Base AI" classes to override AI.
+#
+# Warning! This object lives and dies on the AI thread! Containers and many
+# methods are not threadsafe. Accessing non-container properties is safe.
+#
 
 const OBJECT_TYPE := Enums.Objects.TRADER
 
-
+static var trader_interfaces: Array[TraderInterface] = [] # indexed by trader_id
 
 # sync from server
 var trader_id := -1
@@ -72,7 +76,7 @@ func sync_server_init(data: Array) -> void:
 	is_spaceport = data[5]
 	market_requests = data[6]
 	# Trader is associated with a Facility and shares its Inventory
-	facility_interface = AIGlobal.facility_interfaces[facility_id]
+	facility_interface = FacilityInterface.facility_interfaces[facility_id]
 	assert(facility_interface)
 	inventory = facility_interface.inventory
 
