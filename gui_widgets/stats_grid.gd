@@ -43,11 +43,9 @@ var targets: Array[StringName] = [&"PLANET_EARTH", &"PROXY_OFF_EARTH"]
 var replacement_names: Array[StringName] = [] # use instead of Interface name
 var fallback_names: Array[StringName] = [&"", &""] # if "" will uses targets string
 
-#var _state: Dictionary = IVGlobal.state
-#var _is_running := false
-var _network_targets: Array[StringName]
-var _network_fallback_names: Array[StringName]
-var _network_replacement_names: Array[StringName]
+var _thread_targets: Array[StringName]
+var _thread_fallback_names: Array[StringName]
+var _thread_replacement_names: Array[StringName]
 
 #@onready var _tree: SceneTree = get_tree()
 @onready var _grid: GridContainer = $Grid
@@ -62,22 +60,22 @@ func update_targets(targets_: Array[StringName], replacement_names_: Array[Strin
 
 
 func update() -> void:
-	MainThreadGlobal.call_ai_thread(_set_network_data)
+	MainThreadGlobal.call_ai_thread(_set_data)
 
 
 # *****************************************************************************
 # AI thread !!!!
 
-func _set_network_data() -> void:
+func _set_data() -> void:
 	var data := []
-	_network_targets = targets # for thread safety
-	_network_replacement_names = replacement_names
-	_network_fallback_names = fallback_names
+	_thread_targets = targets # for thread safety
+	_thread_replacement_names = replacement_names
+	_thread_fallback_names = fallback_names
 	
 	# get Interfaces and check required components
 	var interfaces := []
 	var has_data := false
-	for target in _network_targets:
+	for target in _thread_targets:
 		var interface := Interface.get_interface_by_name(target)
 		if interface:
 			if !interface.get(required_component):
@@ -107,14 +105,14 @@ func _set_network_data() -> void:
 	while i < n_interfaces:
 		var interface: Interface = interfaces[i]
 		var gui_name := ""
-		if _network_replacement_names:
-			gui_name = _network_replacement_names[i]
+		if _thread_replacement_names:
+			gui_name = _thread_replacement_names[i]
 		elif interface:
 			gui_name = interface.gui_name
-		elif _network_fallback_names[i]:
-			gui_name = _network_fallback_names[i]
+		elif _thread_fallback_names[i]:
+			gui_name = _thread_fallback_names[i]
 		else:
-			gui_name = _network_targets[i]
+			gui_name = _thread_targets[i]
 		data.append(gui_name) # header
 		i += 1
 	i = 0
@@ -203,7 +201,7 @@ func _build_grid(data: Array) -> void:
 		var row_label: Label = _grid.get_child(row * n_columns)
 		var row_text: String = data[row * n_columns]
 		row_label.text = row_text
-		row_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		row_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		row_label.show()
 		
 		# values
