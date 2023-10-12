@@ -17,7 +17,7 @@ signal interface_changed(object_type, class_id, data) # on ai thread only!
 signal persist_data_changed(network_id, data)
 
 
-enum { # _dirty flags
+enum DirtyFlags {
 	DIRTY_YQ = 1,
 	DIRTY_BASE = 1 << 1,
 	DIRTY_OPERATIONS = 1 << 2,
@@ -29,14 +29,56 @@ enum { # _dirty flags
 	DIRTY_COMPOSITIONS = 1 << 8,
 }
 
-enum { # sync_svr_type
-	SYNC_SVR_OPERATIONS,
-	SYNC_SVR_INVENTORY,
-	SYNC_SVR_FINANCIALS,
-	SYNC_SVR_POPULATION,
-	SYNC_SVR_BIOME,
-	SYNC_SVR_METAVERSE,
+const DIRTY_YQ := DirtyFlags.DIRTY_YQ
+const DIRTY_BASE := DirtyFlags.DIRTY_BASE
+const DIRTY_OPERATIONS := DirtyFlags.DIRTY_OPERATIONS
+const DIRTY_INVENTORY := DirtyFlags.DIRTY_INVENTORY
+const DIRTY_FINANCIALS := DirtyFlags.DIRTY_FINANCIALS
+const DIRTY_POPULATION := DirtyFlags.DIRTY_POPULATION
+const DIRTY_BIOME := DirtyFlags.DIRTY_BIOME
+const DIRTY_METAVERSE := DirtyFlags.DIRTY_METAVERSE
+const DIRTY_COMPOSITIONS := DirtyFlags.DIRTY_COMPOSITIONS
+
+enum EntityType {
+	ENTITY_FACILITY,
+	ENTITY_PLAYER,
+	ENTITY_BODY,
+	ENTITY_PROXY,
+	ENTITY_EXCHANGE,
+	ENTITY_MARKET,
+	ENTITY_TRADER,
+	N_ENTITY_TYPES,
 }
+
+const ENTITY_FACILITY := EntityType.ENTITY_FACILITY
+const ENTITY_PLAYER := EntityType.ENTITY_PLAYER
+const ENTITY_BODY := EntityType.ENTITY_BODY
+const ENTITY_PROXY := EntityType.ENTITY_PROXY
+const ENTITY_EXCHANGE := EntityType.ENTITY_EXCHANGE
+const ENTITY_MARKET := EntityType.ENTITY_MARKET
+const ENTITY_TRADER := EntityType.ENTITY_TRADER
+const N_ENTITY_TYPES := EntityType.N_ENTITY_TYPES
+
+enum ComponentType {
+	COMPONENT_OPERATIONS,
+	COMPONENT_INVENTORY,
+	COMPONENT_FINANCIALS,
+	COMPONENT_POPULATION,
+	COMPONENT_BIOME,
+	COMPONENT_METAVERSE,
+	COMPONENT_COMPOSITION,
+	N_COMPONENT_TYPES,
+}
+
+const COMPONENT_OPERATIONS := ComponentType.COMPONENT_OPERATIONS
+const COMPONENT_INVENTORY := ComponentType.COMPONENT_INVENTORY
+const COMPONENT_FINANCIALS := ComponentType.COMPONENT_FINANCIALS
+const COMPONENT_POPULATION := ComponentType.COMPONENT_POPULATION
+const COMPONENT_BIOME := ComponentType.COMPONENT_BIOME
+const COMPONENT_METAVERSE := ComponentType.COMPONENT_METAVERSE
+const COMPONENT_COMPOSITION := ComponentType.COMPONENT_COMPOSITION
+const N_COMPONENT_TYPES := ComponentType.N_COMPONENT_TYPES
+
 
 const INTERVAL := 7.0 * IVUnits.DAY
 
@@ -46,6 +88,7 @@ static var interfaces_by_name := {} # PLANET_EARTH, PLAYER_NASA, PROXY_OFFWORLD,
 
 
 var interface_id := -1
+var entity_type := -1
 var name := &"" # unique & immutable
 var gui_name := "" # mutable for display ("" for player means hide from GUI)
 var yq := -1 # year * 4 + (quarter - 1); never set for BodyInterface w/out a facility
@@ -109,7 +152,7 @@ func get_population_and_crew_total() -> float:
 
 
 func remove() -> void:
-	pass
+	_clear_circular_references()
 
 
 func _clear_circular_references() -> void:

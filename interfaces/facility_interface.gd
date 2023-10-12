@@ -24,8 +24,6 @@ extends Interface
 #   Biome      - when needed
 #   Metaverse  - when needed
 
-const OBJECT_TYPE := Enums.Objects.FACILITY
-
 static var facility_interfaces: Array[FacilityInterface] = [] # indexed by facility_id
 
 var facility_id := -1
@@ -46,6 +44,7 @@ var _component_indexes: Array[int] # reused for data propagation
 
 func _init() -> void:
 	super()
+	entity_type = ENTITY_FACILITY
 	operations = Operations.new(true, true, true)
 	inventory = Inventory.new(true)
 	financials = Financials.new(true)
@@ -208,7 +207,7 @@ func _sync_ai_changes() -> void:
 	if _dirty & DIRTY_OPERATIONS:
 		data.append(operations.get_interface_dirty())
 	_dirty = 0
-	AIGlobal.emit_signal("interface_changed", OBJECT_TYPE, facility_id, data)
+	AIGlobal.emit_signal("interface_changed", entity_type, facility_id, data)
 
 
 func _add_base_propagations() -> void:

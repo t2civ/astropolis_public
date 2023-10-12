@@ -20,8 +20,6 @@ extends Interface
 #   Metaverse    - when needed
 #   Compositions - when needed (BodyInterface only!)
 
-const OBJECT_TYPE = Enums.Objects.BODY
-
 static var body_interfaces: Array[BodyInterface] = [] # indexed by body_id
 
 var body_id := -1
@@ -39,6 +37,7 @@ var compositions: Array[Composition] = [] # resizable container - not threadsafe
 
 func _init() -> void:
 	super()
+	entity_type = ENTITY_BODY
 
 
 func _clear_circular_references() -> void:

@@ -26,7 +26,6 @@ extends Interface
 #   Biome      - on init or never
 #   Metaverse  - on init or never
 
-const OBJECT_TYPE = Enums.Objects.PROXY
 
 static var proxy_interfaces: Array[ProxyInterface] = [] # indexed by proxy_id
 
@@ -36,6 +35,7 @@ var proxy_id := -1
 
 func _init() -> void:
 	super()
+	entity_type = ENTITY_PROXY
 
 
 static func get_or_make_proxy(proxy_name: StringName, proxy_gui_name := "",

@@ -19,8 +19,6 @@ extends Interface
 #
 # Players are never removed, but they are effectively dead if is_facilities == false.
 
-const OBJECT_TYPE = Enums.Objects.PLAYER
-
 static var player_interfaces: Array[PlayerInterface] = [] # indexed by player_id
 
 # public read-only
@@ -36,6 +34,7 @@ var facilities: Array[Interface] = [] # resizable container - not threadsafe!
 
 func _init() -> void:
 	super()
+	entity_type = ENTITY_PLAYER
 	operations = Operations.new(true, true)
 	financials = Financials.new(true)
 	population = Population.new(true)
