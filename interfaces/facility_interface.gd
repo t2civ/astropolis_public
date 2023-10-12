@@ -132,7 +132,7 @@ func sync_server_init(data: Array) -> void:
 	if component_data:
 		metaverse = Metaverse.new(true)
 		metaverse.sync_server_init(component_data)
-	yq = data[18]
+	run_qtr = data[18]
 	
 	# add proxies
 	_add_base_propagations() # body, player, part_of_player
@@ -182,12 +182,12 @@ func sync_server_dirty(data: Array) -> void:
 		_component_indexes[5] = k
 		k = metaverse.sync_server_delta(data, k)
 	
-	assert(data[0] >= yq)
-	if data[0] > yq:
-		if yq == -1:
-			yq = data[0]
+	assert(data[0] >= run_qtr)
+	if data[0] > run_qtr:
+		if run_qtr == -1:
+			run_qtr = data[0]
 		else:
-			yq = data[0]
+			run_qtr = data[0]
 			process_ai_new_quarter() # after component histories have updated
 	
 	# propagate changes

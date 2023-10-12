@@ -16,7 +16,7 @@ enum { # _dirty_values
 
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 const PERSIST_PROPERTIES: Array[StringName] = [
-	&"yq",
+	&"run_qtr",
 	&"revenue",
 	&"accountings",
 	&"_dirty_values",
@@ -24,7 +24,7 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 ]
 
 # interface sync
-var yq := -1 # last sync, = year * 4 + (quarter - 1)
+var run_qtr := -1 # last sync, = year * 4 + (quarter - 1)
 var revenue := 0.0 # positive values of INC_STMT_GROSS
 var accountings: Array[float]
 
@@ -49,7 +49,7 @@ func _init(is_new := false) -> void:
 func get_server_init() -> Array:
 	# facility only; reference-safe
 	return [
-		yq,
+		run_qtr,
 		revenue,
 		accountings.duplicate(),
 	]
@@ -57,16 +57,16 @@ func get_server_init() -> Array:
 
 func sync_server_init(data: Array) -> void:
 	# facility only; keeps array reference!
-	yq = data[0]
+	run_qtr = data[0]
 	revenue = data[1]
 	accountings = data[2]
 
 
 func propagate_component_init(data: Array) -> void:
 	# non-facilities only; reference-safe
-	var svr_yq: int = data[0]
-	assert(svr_yq >= yq, "Load order different than process order?")
-	yq = svr_yq # TODO: histories
+	var svr_qtr: int = data[0]
+	assert(svr_qtr >= run_qtr, "Load order different than process order?")
+	run_qtr = svr_qtr # TODO: histories
 	revenue += data[1]
 	var data_array: Array[float] = data[2]
 	utils.add_to_float_array_with_array(accountings, data_array)
@@ -85,8 +85,8 @@ func take_server_delta(data: Array) -> void:
 
 func sync_server_delta(data: Array, k: int) -> int:
 	# any target; reference safe
-	var svr_yq: int = data[0]
-	yq = svr_yq # TODO: histories
+	var svr_qtr: int = data[0]
+	run_qtr = svr_qtr # TODO: histories
 	var flags: int = data[k]
 	k += 1
 	if flags & DIRTY_REVENUE:

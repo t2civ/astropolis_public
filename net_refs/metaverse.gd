@@ -16,7 +16,7 @@ const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 const PERSIST_PROPERTIES: Array[StringName] = [
 	&"computations",
 	&"diversity_model",
-	&"yq",
+	&"run_qtr",
 	&"_dirty_values",
 ]
 
@@ -25,7 +25,7 @@ var diversity_model: Dictionary # see comments in static/utils.gd, get_diversity
 
 # TODO: histories including information using get_information()
 
-var yq := -1 # last sync, = year * 4 + (quarter - 1)
+var run_qtr := -1 # last sync, = year * 4 + (quarter - 1)
 
 var _dirty_values := 0
 
@@ -65,7 +65,7 @@ func change_sp_group_abundance(key: int, change: float) -> void:
 func get_server_init() -> Array:
 	# facility only; reference-safe
 	return [
-		yq,
+		run_qtr,
 		computations,
 		diversity_model.duplicate(),
 	]
@@ -73,16 +73,16 @@ func get_server_init() -> Array:
 
 func sync_server_init(data: Array) -> void:
 	# facility only; keeps dict reference!
-	yq = data[0]
+	run_qtr = data[0]
 	computations = data[1]
 	diversity_model = data[2]
 
 
 func propagate_component_init(data: Array) -> void:
 	# non-facilities only; reference-safe
-	var svr_yq: int = data[0]
-	assert(svr_yq >= yq, "Load order different than process order?")
-	yq = svr_yq # TODO: histories
+	var svr_qtr: int = data[0]
+	assert(svr_qtr >= run_qtr, "Load order different than process order?")
+	run_qtr = svr_qtr # TODO: histories
 	computations += data[1]
 	var add_dict: Dictionary = data[2]
 	utils.add_to_diversity_model(diversity_model, add_dict)
@@ -105,8 +105,8 @@ func take_server_delta(data: Array) -> void:
 
 func sync_server_delta(data: Array, k: int) -> int:
 	# any target; reference safe
-	var svr_yq: int = data[0]
-	yq = svr_yq # TODO: histories
+	var svr_qtr: int = data[0]
+	run_qtr = svr_qtr # TODO: histories
 	var flags: int = data[k]
 	k += 1
 	if flags & DIRTY_COMPUTATIONS:

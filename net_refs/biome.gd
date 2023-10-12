@@ -16,14 +16,14 @@ enum { # _dirty_values
 # save/load persistence for server only
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 const PERSIST_PROPERTIES: Array[StringName] = [
-	&"yq",
+	&"run_qtr",
 	&"bioproductivity",
 	&"biomass",
 	&"diversity_model",
 	&"_dirty_values",
 ]
 
-var yq := -1 # last sync, = year * 4 + (quarter - 1)
+var run_qtr := -1 # last sync, = year * 4 + (quarter - 1)
 var bioproductivity := 0.0
 var biomass := 0.0
 var diversity_model: Dictionary # see comments in static/utils.gd, get_diversity_index()
@@ -71,7 +71,7 @@ func change_sp_group_abundance(key: int, change: float) -> void:
 func get_server_init() -> Array:
 	# facility only; reference-safe
 	return [
-		yq,
+		run_qtr,
 		bioproductivity,
 		biomass,
 		diversity_model.duplicate(),
@@ -80,7 +80,7 @@ func get_server_init() -> Array:
 
 func sync_server_init(data: Array) -> void:
 	# facility only; keeps dict reference!
-	yq = data[0]
+	run_qtr = data[0]
 	bioproductivity = data[1]
 	biomass = data[2]
 	diversity_model = data[3]
@@ -88,9 +88,9 @@ func sync_server_init(data: Array) -> void:
 
 func propagate_component_init(data: Array) -> void:
 	# non-facilities only; reference-safe
-	var svr_yq: int = data[0]
-	assert(svr_yq >= yq, "Load order different than process order?")
-	yq = svr_yq # TODO: histories
+	var svr_qtr: int = data[0]
+	assert(svr_qtr >= run_qtr, "Load order different than process order?")
+	run_qtr = svr_qtr # TODO: histories
 	bioproductivity += data[1]
 	biomass += data[2]
 	var add_dict: Dictionary = data[3]
@@ -117,8 +117,8 @@ func take_server_delta(data: Array) -> void:
 
 func sync_server_delta(data: Array, k: int) -> int:
 	# any target; reference safe
-	var svr_yq: int = data[0]
-	yq = svr_yq # TODO: histories
+	var svr_qtr: int = data[0]
+	run_qtr = svr_qtr # TODO: histories
 	
 	var flags: int = data[k]
 	k += 1

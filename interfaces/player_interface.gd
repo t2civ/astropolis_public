@@ -113,8 +113,8 @@ func propagate_component_init(data: Array, indexes: Array[int]) -> void:
 	component_data = data[indexes[5]]
 	if component_data:
 		metaverse.propagate_component_init(component_data)
-	assert(data[indexes[6]] >= yq)
-	yq = data[indexes[6]]
+	assert(data[indexes[6]] >= run_qtr)
+	run_qtr = data[indexes[6]]
 
 
 func propagate_component_changes(data: Array, indexes: Array[int]) -> void:
@@ -131,12 +131,12 @@ func propagate_component_changes(data: Array, indexes: Array[int]) -> void:
 	if dirty & DIRTY_METAVERSE:
 		metaverse.sync_server_delta(data, indexes[5])
 	
-	assert(data[0] >= yq)
-	if data[0] > yq:
-		if yq == -1:
-			yq = data[0]
+	assert(data[0] >= run_qtr)
+	if data[0] > run_qtr:
+		if run_qtr == -1:
+			run_qtr = data[0]
 		else:
-			yq = data[0]
+			run_qtr = data[0]
 			process_ai_new_quarter() # after component histories have updated
 
 

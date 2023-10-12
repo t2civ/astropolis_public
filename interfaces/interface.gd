@@ -18,7 +18,7 @@ signal persist_data_changed(network_id, data)
 
 
 enum DirtyFlags {
-	DIRTY_YQ = 1,
+	DIRTY_QUARTER = 1,
 	DIRTY_BASE = 1 << 1,
 	DIRTY_OPERATIONS = 1 << 2,
 	DIRTY_INVENTORY = 1 << 3,
@@ -29,7 +29,7 @@ enum DirtyFlags {
 	DIRTY_COMPOSITIONS = 1 << 8,
 }
 
-const DIRTY_YQ := DirtyFlags.DIRTY_YQ
+const DIRTY_QUARTER := DirtyFlags.DIRTY_QUARTER
 const DIRTY_BASE := DirtyFlags.DIRTY_BASE
 const DIRTY_OPERATIONS := DirtyFlags.DIRTY_OPERATIONS
 const DIRTY_INVENTORY := DirtyFlags.DIRTY_INVENTORY
@@ -91,14 +91,14 @@ var interface_id := -1
 var entity_type := -1
 var name := &"" # unique & immutable
 var gui_name := "" # mutable for display ("" for player means hide from GUI)
-var yq := -1 # year * 4 + (quarter - 1); never set for BodyInterface w/out a facility
+var run_qtr := -1 # year * 4 + (quarter - 1); never set for BodyInterface w/out a facility
 var last_interval := -INF
 var next_interval := -INF
 
 # Append member names for save/load persistence; nested containers ok; NO OBJECTS!
 # Must be set at _init()!
 var persist := [
-	&"yq",
+	&"run_qtr",
 	&"last_interval",
 	&"next_interval",
 ]

@@ -10,7 +10,7 @@ extends NetRef
 # save/load persistence for server only
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 const PERSIST_PROPERTIES: Array[StringName] = [
-	&"yq",
+	&"run_qtr",
 	&"numbers",
 	&"growth_rates",
 	&"carrying_capacities",
@@ -26,7 +26,7 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 ]
 
 # Interface read-only! All data flows server -> interface.
-var yq := -1 # last sync, = year * 4 + (quarter - 1)
+var run_qtr := -1 # last sync, = year * 4 + (quarter - 1)
 var numbers: Array[float]
 var growth_rates: Array[float] # Facility only
 var carrying_capacities: Array[float] # Facility only; indexed by carrying_capacity_group
@@ -174,7 +174,7 @@ func change_carrying_capacity(carrying_capacity_group: int, change: float) -> vo
 func get_server_init() -> Array: # new or loaded game
 	# facility only; reference-safe
 	return [
-		yq,
+		run_qtr,
 		numbers.duplicate(),
 		history_numbers.duplicate(true),
 		growth_rates.duplicate(),
@@ -186,7 +186,7 @@ func get_server_init() -> Array: # new or loaded game
 
 func sync_server_init(data: Array) -> void:
 	# facility only; keeps array references!
-	yq = data[0]
+	run_qtr = data[0]
 	numbers = data[1]
 	history_numbers = data[2]
 	growth_rates = data[3]
@@ -197,8 +197,8 @@ func sync_server_init(data: Array) -> void:
 
 func propagate_component_init(data: Array) -> void:
 	# non-facilities only; reference-safe
-	var svr_yq: int = data[0]
-	assert(svr_yq >= yq, "Load order different than process order?")
+	var svr_qtr: int = data[0]
+	assert(svr_qtr >= run_qtr, "Load order different than process order?")
 	var data_array: Array[float] = data[1]
 	utils.add_to_float_array_with_array(numbers, data_array)
 	
@@ -206,15 +206,15 @@ func propagate_component_init(data: Array) -> void:
 	var add_history_numbers: Array[Array] = data[2]
 	var add_history_size: int = add_history_numbers[0].size()
 	var history_size: int = history_numbers[0].size()
-	if yq == -1:
-		yq = svr_yq - add_history_size # set to begining of this history
-	while yq < svr_yq: # expand history end (append for newer quarters)
+	if run_qtr == -1:
+		run_qtr = svr_qtr - add_history_size # set to begining of this history
+	while run_qtr < svr_qtr: # expand history end (append for newer quarters)
 		var i := 0
 		while i < _n_populations:
 			history_numbers[i].append(0.0)
 			i += 1
 		history_size += 1
-		yq += 1
+		run_qtr += 1
 	while add_history_size > history_size: # expand history front (push_front for older quarters)
 		var i := 0
 		while i < _n_populations:
@@ -222,7 +222,7 @@ func propagate_component_init(data: Array) -> void:
 			i += 1
 		history_size += 1
 	
-	# add history (history arrays are expanded and yq is aligned with svr_yq)
+	# add history (history arrays are expanded and run_qtr is aligned with svr_qtr)
 	var quarter := -1 # history indexed from back!
 	while quarter >= -add_history_size:
 		var i := 0
@@ -249,9 +249,9 @@ func take_server_delta(data: Array) -> void:
 
 func sync_server_delta(data: Array, k: int) -> int:
 	# any target; reference safe
-	var svr_yq: int = data[0]
-	if yq < svr_yq:
-		_update_history(svr_yq) # before new quarter changes
+	var svr_qtr: int = data[0]
+	if run_qtr < svr_qtr:
+		_update_history(svr_qtr) # before new quarter changes
 	
 	k = _add_dirty_bshift(data, numbers, k)
 	
@@ -266,14 +266,14 @@ func sync_server_delta(data: Array, k: int) -> int:
 	return k
 
 
-func _update_history(svr_yq: int) -> void:
-	if yq == -1: # new - no history to save yet
-		yq = svr_yq
+func _update_history(svr_qtr: int) -> void:
+	if run_qtr == -1: # new - no history to save yet
+		run_qtr = svr_qtr
 		return
-	while yq < svr_yq: # loop in case we missed a quarter
+	while run_qtr < svr_qtr: # loop in case we missed a quarter
 		var i := 0
 		while i < _n_populations:
 			history_numbers[i].append(numbers[i])
 			i += 1
-		yq += 1
+		run_qtr += 1
 

@@ -55,7 +55,7 @@ enum { # _dirty_values
 # save/load persistence for server only
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 const PERSIST_PROPERTIES: Array[StringName] = [
-	&"yq",
+	&"run_qtr",
 	&"lfq_revenue",
 	&"lfq_gross_output",
 	&"lfq_net_income",
@@ -96,7 +96,7 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 ]
 
 # Interface read-only! Data flows server -> interface.
-var yq := -1 # last sync, = year * 4 + (quarter - 1)
+var run_qtr := -1 # last sync, = year * 4 + (quarter - 1)
 var lfq_revenue := 0.0 # last 4 quarters
 var lfq_gross_output := 0.0 # revenue w/ some exceptions; = "economy"
 var lfq_net_income := 0.0
@@ -423,7 +423,7 @@ func get_dirty_capacities_2() -> int:
 func get_server_init() -> Array:
 	# facility only; reference-safe
 	return [
-		yq,
+		run_qtr,
 		lfq_revenue,
 		lfq_gross_output,
 		lfq_net_income,
@@ -444,7 +444,7 @@ func get_server_init() -> Array:
 
 func sync_server_init(data: Array) -> void:
 	# facility only; keeps array references!
-	yq = data[0]
+	run_qtr = data[0]
 	lfq_revenue = data[1]
 	lfq_gross_output = data[2]
 	lfq_net_income = data[3]
@@ -464,9 +464,9 @@ func sync_server_init(data: Array) -> void:
 
 func propagate_component_init(data: Array) -> void:
 	# non-facilities only
-	var svr_yq: int = data[0]
-	assert(svr_yq >= yq, "Load order different than process order?")
-	yq = svr_yq # TODO: histories
+	var svr_qtr: int = data[0]
+	assert(svr_qtr >= run_qtr, "Load order different than process order?")
+	run_qtr = svr_qtr # TODO: histories
 	
 	lfq_revenue += data[1]
 	lfq_gross_output += data[2]
@@ -546,8 +546,8 @@ func take_server_delta(data: Array) -> void:
 
 func sync_server_delta(data: Array, k: int) -> int:
 	# any target
-	var svr_yq: int = data[0]
-	yq = svr_yq # TODO: histories
+	var svr_qtr: int = data[0]
+	run_qtr = svr_qtr # TODO: histories
 	
 	var flags: int = data[k]
 	k += 1
