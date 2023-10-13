@@ -74,29 +74,39 @@ func propagate_component_init(data: Array) -> void:
 
 func take_server_delta(data: Array) -> void:
 	# facility accumulator only; zero accumulators and dirty flags
-	data.append(_dirty_values)
+	
+	_int_data = data[0]
+	_float_data = data[1]
+	
+	_int_data.append(_dirty_values)
 	if _dirty_values & DIRTY_REVENUE:
-		data.append(revenue)
+		_float_data.append(revenue)
 		revenue = 0.0
 	_dirty_values = 0
-	_append_and_zero_dirty(data, accountings, _dirty_accountings)
+	
+	_append_and_zero_dirty_floats(accountings, _dirty_accountings)
 	_dirty_accountings = 0
 
 
 func add_server_delta(data: Array) -> void:
 	# any target; reference safe
-	var svr_qtr: int = data[0]
+	
+	_int_data = data[0]
+	_float_data = data[1]
+	_int_offset = data[-1]
+	_float_offset = data[-2]
+	
+	var svr_qtr := _int_data[0]
 	run_qtr = svr_qtr # TODO: histories
 	
-	_data_offset = data[-1]
-	
-	var flags: int = data[_data_offset]
-	_data_offset += 1
+	var flags := _int_data[_int_offset]
+	_int_offset += 1
 	if flags & DIRTY_REVENUE:
-		revenue += data[_data_offset]
-		_data_offset += 1
-
-	_add_dirty(data, accountings)
+		revenue += _float_data[_float_offset]
+		_float_offset += 1
 	
-	data[-1] = _data_offset
+	_add_dirty_floats(accountings)
+	
+	data[-1] = _int_offset
+	data[-2] = _float_offset
 

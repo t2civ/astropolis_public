@@ -19,8 +19,6 @@ var _int_data: Array[int]
 var _float_offset: int
 var _int_offset: int
 
-var _data_offset: int
-
 
 func get_server_init() -> Array:
 	# Facility only. Keep reference safe.
@@ -85,6 +83,8 @@ func _append_and_zero_dirty_floats(array: Array[float], flags: int, bits_offset 
 		flags &= ~lsb
 
 
+
+
 func _set_dirty_ints(array: Array[int], bits_offset := 0) -> void:
 	var flags := _int_data[_int_offset]
 	_int_offset += 1
@@ -123,86 +123,86 @@ func _add_dirty_floats(array: Array[float], bits_offset := 0) -> void:
 
 # OLD
 
-func _append_dirty(data: Array, values: Array, flags: int, bits_offset := 0) -> void:
-	data.append(flags)
-	while flags:
-		var lsb := flags & -flags
-		var i: int = LOG2_64[lsb] + bits_offset
-		data.append(values[i])
-		flags &= ~lsb
-
-
-func _append_and_zero_dirty(data: Array, values: Array, flags: int, bits_offset := 0) -> void:
-	data.append(flags)
-	while flags:
-		var lsb := flags & -flags
-		var i: int = LOG2_64[lsb] + bits_offset
-		data.append(values[i])
-		values[i] = 0.0
-		flags &= ~lsb
-
-
-func _set_dirty(data: Array, to: Array, bits_offset := 0) -> void:
-	var flags: int = data[_data_offset]
-	_data_offset += 1
-	while flags:
-		var lsb := flags & -flags
-		var i: int = LOG2_64[lsb] + bits_offset
-		to[i] = data[_data_offset]
-		_data_offset += 1
-		flags &= ~lsb
-
-
-func _add_dirty(data: Array, to: Array, bits_offset := 0) -> void:
-	var flags: int = data[_data_offset]
-	_data_offset += 1
-	while flags:
-		var lsb := flags & -flags
-		var i: int = LOG2_64[lsb] + bits_offset
-		to[i] += data[_data_offset]
-		_data_offset += 1
-		flags &= ~lsb
-
-
-# '_bshift' versions more optimal if flags right-biased or not sparse
-
-func _append_dirty_bshift(data: Array, values: Array, flags: int, bits_offset := 0) -> void:
-	data.append(flags)
-	while flags:
-		if flags & 1:
-			data.append(values[bits_offset])
-		bits_offset += 1
-		flags >>= 1
-
-
-func _append_and_zero_dirty_bshift(data: Array, values: Array, flags: int, bits_offset := 0) -> void:
-	data.append(flags)
-	while flags:
-		if flags & 1:
-			data.append(values[bits_offset])
-			values[bits_offset] = 0.0
-		bits_offset += 1
-		flags >>= 1
-
-
-func _set_dirty_bshift(data: Array, to: Array, bits_offset := 0) -> void:
-	var flags: int = data[_data_offset]
-	_data_offset += 1
-	while flags:
-		if flags & 1:
-			to[bits_offset] = data[_data_offset]
-			_data_offset += 1
-		bits_offset += 1
-		flags >>= 1
-
-
-func _add_dirty_bshift(data: Array, to: Array, bits_offset := 0) -> void:
-	var flags: int = data[_data_offset]
-	_data_offset += 1
-	while flags:
-		if flags & 1:
-			to[bits_offset] += data[_data_offset]
-			_data_offset += 1
-		bits_offset += 1
-		flags >>= 1
+#func _append_dirty(data: Array, values: Array, flags: int, bits_offset := 0) -> void:
+	#data.append(flags)
+	#while flags:
+		#var lsb := flags & -flags
+		#var i: int = LOG2_64[lsb] + bits_offset
+		#data.append(values[i])
+		#flags &= ~lsb
+#
+#
+#func _append_and_zero_dirty(data: Array, values: Array, flags: int, bits_offset := 0) -> void:
+	#data.append(flags)
+	#while flags:
+		#var lsb := flags & -flags
+		#var i: int = LOG2_64[lsb] + bits_offset
+		#data.append(values[i])
+		#values[i] = 0.0
+		#flags &= ~lsb
+#
+#
+#func _set_dirty(data: Array, to: Array, bits_offset := 0) -> void:
+	#var flags: int = data[_data_offset]
+	#_data_offset += 1
+	#while flags:
+		#var lsb := flags & -flags
+		#var i: int = LOG2_64[lsb] + bits_offset
+		#to[i] = data[_data_offset]
+		#_data_offset += 1
+		#flags &= ~lsb
+#
+#
+#func _add_dirty(data: Array, to: Array, bits_offset := 0) -> void:
+	#var flags: int = data[_data_offset]
+	#_data_offset += 1
+	#while flags:
+		#var lsb := flags & -flags
+		#var i: int = LOG2_64[lsb] + bits_offset
+		#to[i] += data[_data_offset]
+		#_data_offset += 1
+		#flags &= ~lsb
+#
+#
+## '_bshift' versions more optimal if flags right-biased or not sparse
+#
+#func _append_dirty_bshift(data: Array, values: Array, flags: int, bits_offset := 0) -> void:
+	#data.append(flags)
+	#while flags:
+		#if flags & 1:
+			#data.append(values[bits_offset])
+		#bits_offset += 1
+		#flags >>= 1
+#
+#
+#func _append_and_zero_dirty_bshift(data: Array, values: Array, flags: int, bits_offset := 0) -> void:
+	#data.append(flags)
+	#while flags:
+		#if flags & 1:
+			#data.append(values[bits_offset])
+			#values[bits_offset] = 0.0
+		#bits_offset += 1
+		#flags >>= 1
+#
+#
+#func _set_dirty_bshift(data: Array, to: Array, bits_offset := 0) -> void:
+	#var flags: int = data[_data_offset]
+	#_data_offset += 1
+	#while flags:
+		#if flags & 1:
+			#to[bits_offset] = data[_data_offset]
+			#_data_offset += 1
+		#bits_offset += 1
+		#flags >>= 1
+#
+#
+#func _add_dirty_bshift(data: Array, to: Array, bits_offset := 0) -> void:
+	#var flags: int = data[_data_offset]
+	#_data_offset += 1
+	#while flags:
+		#if flags & 1:
+			#to[bits_offset] += data[_data_offset]
+			#_data_offset += 1
+		#bits_offset += 1
+		#flags >>= 1
 

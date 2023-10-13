@@ -117,31 +117,38 @@ func propagate_component_init(data: Array, indexes: Array[int]) -> void:
 	run_qtr = data[indexes[6]]
 
 
-func propagate_component_changes(data: Array, indexes: Array[int]) -> void:
-	var dirty: int = data[1]
+func propagate_component_changes(data: Array, int_offsets: Array[int], float_offsets: Array[int]
+		) -> void:
+	var int_data: Array[int] = data[0]
+	var dirty: int = int_data[1]
 	if dirty & DIRTY_OPERATIONS:
-		data[-1] = indexes[0]
+		data[-1] = int_offsets[0]
+		data[-2] = float_offsets[0]
 		operations.add_server_delta(data)
 	# skip inventory
 	if dirty & DIRTY_FINANCIALS:
-		data[-1] = indexes[2]
+		data[-1] = int_offsets[2]
+		data[-2] = float_offsets[2]
 		financials.add_server_delta(data)
 	if dirty & DIRTY_POPULATION:
-		data[-1] = indexes[3]
+		data[-1] = int_offsets[3]
+		data[-2] = float_offsets[3]
 		population.add_server_delta(data)
 	if dirty & DIRTY_BIOME:
-		data[-1] = indexes[4]
+		data[-1] = int_offsets[4]
+		data[-2] = float_offsets[4]
 		biome.add_server_delta(data)
 	if dirty & DIRTY_METAVERSE:
-		data[-1] = indexes[5]
+		data[-1] = int_offsets[5]
+		data[-2] = float_offsets[5]
 		metaverse.add_server_delta(data)
 	
-	assert(data[0] >= run_qtr)
-	if data[0] > run_qtr:
+	assert(int_data[0] >= run_qtr)
+	if int_data[0] > run_qtr:
 		if run_qtr == -1:
-			run_qtr = data[0]
+			run_qtr = int_data[0]
 		else:
-			run_qtr = data[0]
+			run_qtr = int_data[0]
 			process_ai_new_quarter() # after component histories have updated
 
 

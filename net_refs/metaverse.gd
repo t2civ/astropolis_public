@@ -90,40 +90,50 @@ func propagate_component_init(data: Array) -> void:
 
 func take_server_delta(data: Array) -> void:
 	# facility accumulator only; zero accumulators and dirty flags
-	data.append(_dirty_values)
+	
+	_int_data = data[0]
+	_float_data = data[1]
+	
+	_int_data.append(_dirty_values)
 	if _dirty_values & DIRTY_COMPUTATIONS:
-		data.append(computations)
+		_float_data.append(computations)
 		computations = 0.0
+	
 	if _dirty_values & DIRTY_DIVERSITY_MODEL:
-		data.append(diversity_model.size())
-		for key in diversity_model: # has changes only
-			data.append(key)
-			data.append(diversity_model[key])
+		_int_data.append(diversity_model.size())
+		for key: int in diversity_model: # has changes only
+			_int_data.append(key)
+			_float_data.append(diversity_model[key])
 		diversity_model.clear()
 	_dirty_values = 0
 
 
 func add_server_delta(data: Array) -> void:
 	# any target; reference safe
-	var svr_qtr: int = data[0]
+	
+	_int_data = data[0]
+	_float_data = data[1]
+	_int_offset = data[-1]
+	_float_offset = data[-2]
+	
+	var svr_qtr := _int_data[0]
 	run_qtr = svr_qtr # TODO: histories
-	
-	_data_offset = data[-1]
-	
-	var flags: int = data[_data_offset]
-	_data_offset += 1
+
+	var flags := _int_data[_int_offset]
+	_int_offset += 1
 	if flags & DIRTY_COMPUTATIONS:
-		computations += data[_data_offset]
-		_data_offset += 1
+		computations += _float_data[_float_offset]
+		_float_offset += 1
+	
 	if flags & DIRTY_DIVERSITY_MODEL:
-		var size: int = data[_data_offset]
-		_data_offset += 1
+		var size := _int_data[_int_offset]
+		_int_offset += 1
 		var i := 0
 		while i < size:
-			var key: int = data[_data_offset]
-			_data_offset += 1
-			var change: float = data[_data_offset]
-			_data_offset += 1
+			var key := _int_data[_int_offset]
+			_int_offset += 1
+			var change := _float_data[_float_offset]
+			_float_offset += 1
 			if diversity_model.has(key):
 				diversity_model[key] += change
 				if diversity_model[key] == 0.0:
@@ -132,5 +142,6 @@ func add_server_delta(data: Array) -> void:
 				diversity_model[key] = change
 			i += 1
 	
-	data[-1] = _data_offset
+	data[-1] = _int_offset
+	data[-2] = _float_offset
 

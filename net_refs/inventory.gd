@@ -156,58 +156,66 @@ func propagate_component_init(data: Array) -> void:
 
 func take_server_delta(data: Array) -> void:
 	# facility accumulator only; zero values and dirty flags
-	# optimized for sparse dirty flags (not right-biased)
-	_append_and_zero_dirty(data, reserves, _dirty_reserves_1)
-	_append_and_zero_dirty(data, reserves, _dirty_reserves_2, 64)
-	_append_and_zero_dirty(data, markets, _dirty_markets_1)
-	_append_and_zero_dirty(data, markets, _dirty_markets_2, 64)
-	_append_and_zero_dirty(data, in_transits, _dirty_in_transits_1)
-	_append_and_zero_dirty(data, in_transits, _dirty_in_transits_2, 64)
-	_append_and_zero_dirty(data, contracteds, _dirty_contracteds_1)
-	_append_and_zero_dirty(data, contracteds, _dirty_contracteds_2, 64)
-	_append_dirty(data, prices, _dirty_prices_1)     # not accumulator!
-	_append_dirty(data, prices, _dirty_prices_2, 64) # not accumulator!
-	_append_dirty(data, bids, _dirty_bids_1)     # not accumulator!
-	_append_dirty(data, bids, _dirty_bids_2, 64) # not accumulator!
-	_append_dirty(data, asks, _dirty_asks_1)     # not accumulator!
-	_append_dirty(data, asks, _dirty_asks_2, 64) # not accumulator!
+	
+	_int_data = data[0]
+	_float_data = data[1]
+	
+	_append_and_zero_dirty_floats(reserves, _dirty_reserves_1)
 	_dirty_reserves_1 = 0
+	_append_and_zero_dirty_floats(reserves, _dirty_reserves_2, 64)
 	_dirty_reserves_2 = 0
+	_append_and_zero_dirty_floats(markets, _dirty_markets_1)
 	_dirty_markets_1 = 0
+	_append_and_zero_dirty_floats(markets, _dirty_markets_2, 64)
 	_dirty_markets_2 = 0
+	_append_and_zero_dirty_floats(in_transits, _dirty_in_transits_1)
 	_dirty_in_transits_1 = 0
+	_append_and_zero_dirty_floats(in_transits, _dirty_in_transits_2, 64)
 	_dirty_in_transits_2 = 0
+	_append_and_zero_dirty_floats(contracteds, _dirty_contracteds_1)
 	_dirty_contracteds_1 = 0
+	_append_and_zero_dirty_floats(contracteds, _dirty_contracteds_2, 64)
 	_dirty_contracteds_2 = 0
+	_append_dirty_floats(prices, _dirty_prices_1)     # not accumulator!
 	_dirty_prices_1 = 0
+	_append_dirty_floats(prices, _dirty_prices_2, 64) # not accumulator!
 	_dirty_prices_2 = 0
+	_append_dirty_floats(bids, _dirty_bids_1)     # not accumulator!
 	_dirty_bids_1 = 0
+	_append_dirty_floats(bids, _dirty_bids_2, 64) # not accumulator!
 	_dirty_bids_2 = 0
+	_append_dirty_floats(asks, _dirty_asks_1)     # not accumulator!
 	_dirty_asks_1 = 0
+	_append_dirty_floats(asks, _dirty_asks_2, 64) # not accumulator!
 	_dirty_asks_2 = 0
 
 
 func add_server_delta(data: Array) -> void:
 	# any target
-	var svr_qtr: int = data[0]
+	
+	_int_data = data[0]
+	_float_data = data[1]
+	_int_offset = data[-1]
+	_float_offset = data[-2]
+	
+	var svr_qtr := _int_data[0]
 	run_qtr = svr_qtr # TODO: histories
 	
-	_data_offset = data[-1]
+	_add_dirty_floats(reserves)
+	_add_dirty_floats(reserves, 64)
+	_add_dirty_floats(markets)
+	_add_dirty_floats(markets, 64)
+	_add_dirty_floats(in_transits)
+	_add_dirty_floats(in_transits, 64)
+	_add_dirty_floats(contracteds)
+	_add_dirty_floats(contracteds, 64)
+	_set_dirty_floats(prices)     # not accumulator!
+	_set_dirty_floats(prices, 64) # not accumulator!
+	_set_dirty_floats(bids)     # not accumulator!
+	_set_dirty_floats(bids, 64) # not accumulator!
+	_set_dirty_floats(asks)     # not accumulator!
+	_set_dirty_floats(asks, 64) # not accumulator!
 	
-	_add_dirty(data, reserves)
-	_add_dirty(data, reserves, 64)
-	_add_dirty(data, markets)
-	_add_dirty(data, markets, 64)
-	_add_dirty(data, in_transits)
-	_add_dirty(data, in_transits, 64)
-	_add_dirty(data, contracteds)
-	_add_dirty(data, contracteds, 64)
-	_set_dirty(data, prices)     # not accumulator!
-	_set_dirty(data, prices, 64) # not accumulator!
-	_set_dirty(data, bids)     # not accumulator!
-	_set_dirty(data, bids, 64) # not accumulator!
-	_set_dirty(data, asks)     # not accumulator!
-	_set_dirty(data, asks, 64) # not accumulator!
-	
-	data[-1] = _data_offset
+	data[-1] = _int_offset
+	data[-2] = _float_offset
 

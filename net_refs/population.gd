@@ -234,38 +234,48 @@ func propagate_component_init(data: Array) -> void:
 
 func take_server_delta(data: Array) -> void:
 	# facility accumulator only; zero values and dirty flags
-	# optimized for right-biased dirty flags
-	_append_and_zero_dirty_bshift(data, numbers, _dirty_numbers)
-	_append_and_zero_dirty_bshift(data, growth_rates, _dirty_growth_rates)
-	_append_and_zero_dirty_bshift(data, carrying_capacities, _dirty_carrying_capacities)
-	_append_and_zero_dirty_bshift(data, immigration_attractions, _dirty_immigration_attractions)
-	_append_and_zero_dirty_bshift(data, emigration_pressures, _dirty_emigration_pressures)
+	
+	_int_data = data[0]
+	_float_data = data[1]
+	
+	_append_and_zero_dirty_floats(numbers, _dirty_numbers)
 	_dirty_numbers = 0
+	_append_and_zero_dirty_floats(growth_rates, _dirty_growth_rates)
 	_dirty_growth_rates = 0
+	_append_and_zero_dirty_floats(carrying_capacities, _dirty_carrying_capacities)
 	_dirty_carrying_capacities = 0
+	_append_and_zero_dirty_floats(immigration_attractions, _dirty_immigration_attractions)
 	_dirty_immigration_attractions = 0
+	_append_and_zero_dirty_floats(emigration_pressures, _dirty_emigration_pressures)
 	_dirty_emigration_pressures = 0
 
 
 func add_server_delta(data: Array) -> void:
 	# any target; reference safe
-	var svr_qtr: int = data[0]
+	
+	_int_data = data[0]
+	_float_data = data[1]
+	_int_offset = data[-1]
+	_float_offset = data[-2]
+	
+	var svr_qtr: int = _int_data[0]
 	if run_qtr < svr_qtr:
 		_update_history(svr_qtr) # before new quarter changes
 	
-	_data_offset = data[-1]
-	
-	_add_dirty_bshift(data, numbers)
+	_add_dirty_floats(numbers)
 	
 	if !_is_facility:
+		data[-1] = _int_offset
+		data[-2] = _float_offset
 		return
 	
-	_add_dirty_bshift(data, growth_rates)
-	_add_dirty_bshift(data, carrying_capacities)
-	_add_dirty_bshift(data, immigration_attractions)
-	_add_dirty_bshift(data, emigration_pressures)
+	_add_dirty_floats(growth_rates)
+	_add_dirty_floats(carrying_capacities)
+	_add_dirty_floats(immigration_attractions)
+	_add_dirty_floats(emigration_pressures)
 	
-	data[-1] = _data_offset
+	data[-1] = _int_offset
+	data[-2] = _float_offset
 
 
 func _update_history(svr_qtr: int) -> void:

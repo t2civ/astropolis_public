@@ -40,6 +40,8 @@ var player: PlayerInterface
 var propagations := []
 
 var _component_indexes: Array[int] # reused for data propagation
+var _int_offsets: Array[int] = [0, 0, 0, 0, 0, 0] # reused for data propagation
+var _float_offsets: Array[int] = [0, 0, 0, 0, 0, 0] # reused for data propagation
 
 
 func _init() -> void:
@@ -148,51 +150,65 @@ func sync_server_init(data: Array) -> void:
 
 
 func sync_server_dirty(data: Array) -> void:
-	var dirty: int = data[1]
 	
-	var offset := 2
+	var int_data: Array[int] = data[0]
+	var float_data: Array[float] = data[1]
+	var string_data: Array[String] = data[2]
+	
+	var dirty: int = int_data[1]
+
+	var int_offset := 2
+	var float_offset := 0
 	
 	if dirty & DIRTY_BASE:
-		gui_name = data[offset]
-		facility_class = data[offset + 1]
-		public_sector = data[offset + 2]
-		solar_occlusion = data[offset + 3]
-		polity_name = data[offset + 4]
-		offset += 5
+		facility_class = data[int_offset]
+		int_offset += 1
+		public_sector = float_data[float_offset]
+		solar_occlusion = float_data[float_offset + 1]
+		float_offset += 2
+		gui_name = string_data[0]
+		polity_name = string_data[1]
 	
-	data.append(offset)
+	data.append(float_offset)
+	data.append(int_offset)
 	
 	if dirty & DIRTY_OPERATIONS:
-		_component_indexes[0] = offset
+		_int_offsets[0] = int_offset
+		_float_offsets[0] = float_offset
 		operations.add_server_delta(data)
 	if dirty & DIRTY_INVENTORY:
-		_component_indexes[1] = data[-1]
+		_int_offsets[1] = data[-1]
+		_float_offsets[1] = data[-2]
 		inventory.add_server_delta(data)
 	if dirty & DIRTY_FINANCIALS:
-		_component_indexes[2] = data[-1]
+		_int_offsets[2] = data[-1]
+		_float_offsets[2] = data[-2]
 		financials.add_server_delta(data)
 	if dirty & DIRTY_POPULATION:
 		if !population:
 			population = Population.new(true, true)
-		_component_indexes[3] = data[-1]
+		_int_offsets[3] = data[-1]
+		_float_offsets[3] = data[-2]
 		population.add_server_delta(data)
 	if dirty & DIRTY_BIOME:
 		if !biome:
 			biome = Biome.new(true)
-		_component_indexes[4] = data[-1]
+		_int_offsets[4] = data[-1]
+		_float_offsets[4] = data[-2]
 		biome.add_server_delta(data)
 	if dirty & DIRTY_METAVERSE:
 		if !metaverse:
 			metaverse = Metaverse.new(true)
-		_component_indexes[5] = data[-1]
+		_int_offsets[5] = data[-1]
+		_float_offsets[5] = data[-2]
 		metaverse.add_server_delta(data)
 	
-	assert(data[0] >= run_qtr)
-	if data[0] > run_qtr:
+	assert(int_data[0] >= run_qtr)
+	if int_data[0] > run_qtr:
 		if run_qtr == -1:
-			run_qtr = data[0]
+			run_qtr = int_data[0]
 		else:
-			run_qtr = data[0]
+			run_qtr = int_data[0]
 			process_ai_new_quarter() # after component histories have updated
 	
 	# propagate changes
@@ -200,7 +216,7 @@ func sync_server_dirty(data: Array) -> void:
 	var i := 0
 	while i < n_propagations:
 		var interface: Interface = propagations[i]
-		interface.propagate_component_changes(data, _component_indexes)
+		interface.propagate_component_changes(data, _int_offsets, _float_offsets)
 		i += 1
 
 

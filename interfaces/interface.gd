@@ -262,7 +262,8 @@ func propagate_component_init(_data: Array, _indexes: Array[int]) -> void:
 	pass
 
 
-func propagate_component_changes(_data: Array, _indexes: Array[int]) -> void:
+func propagate_component_changes(_data: Array, _int_offsets: Array[int], _float_offsets: Array[int]
+		) -> void:
 	pass
 
 # *****************************************************************************
