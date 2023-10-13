@@ -144,20 +144,20 @@ func propagate_component_changes(data: Array, indexes: Array[int]) -> void:
 	if dirty & DIRTY_OPERATIONS:
 		if !operations:
 			operations = Operations.new(true)
-		operations.sync_server_delta(data, indexes[0])
+		operations.add_server_delta(data, indexes[0])
 	# no inventory or financials
 	if dirty & DIRTY_POPULATION:
 		if !population:
 			population = Population.new(true)
-		population.sync_server_delta(data, indexes[3])
+		population.add_server_delta(data, indexes[3])
 	if dirty & DIRTY_BIOME:
 		if !biome:
 			biome = Biome.new(true)
-		biome.sync_server_delta(data, indexes[4])
+		biome.add_server_delta(data, indexes[4])
 	if dirty & DIRTY_METAVERSE:
 		if !metaverse:
 			metaverse = Metaverse.new(true)
-		metaverse.sync_server_delta(data, indexes[5])
+		metaverse.add_server_delta(data, indexes[5])
 	
 	assert(data[0] >= run_qtr)
 	if data[0] > run_qtr:

@@ -187,7 +187,7 @@ func take_server_delta(data: Array) -> void:
 	_dirty_asks_2 = 0
 
 
-func sync_server_delta(data: Array, k: int) -> int:
+func add_server_delta(data: Array, k: int) -> int:
 	# any target
 	var svr_qtr: int = data[0]
 	run_qtr = svr_qtr # TODO: histories

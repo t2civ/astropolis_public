@@ -159,28 +159,28 @@ func sync_server_dirty(data: Array) -> void:
 		k += 5
 	if dirty & DIRTY_OPERATIONS:
 		_component_indexes[0] = k
-		k = operations.sync_server_delta(data, k)
+		k = operations.add_server_delta(data, k)
 	if dirty & DIRTY_INVENTORY:
 		_component_indexes[1] = k
-		k = inventory.sync_server_delta(data, k)
+		k = inventory.add_server_delta(data, k)
 	if dirty & DIRTY_FINANCIALS:
 		_component_indexes[2] = k
-		k = financials.sync_server_delta(data, k)
+		k = financials.add_server_delta(data, k)
 	if dirty & DIRTY_POPULATION:
 		if !population:
 			population = Population.new(true, true)
 		_component_indexes[3] = k
-		k = population.sync_server_delta(data, k)
+		k = population.add_server_delta(data, k)
 	if dirty & DIRTY_BIOME:
 		if !biome:
 			biome = Biome.new(true)
 		_component_indexes[4] = k
-		k = biome.sync_server_delta(data, k)
+		k = biome.add_server_delta(data, k)
 	if dirty & DIRTY_METAVERSE:
 		if !metaverse:
 			metaverse = Metaverse.new(true)
 		_component_indexes[5] = k
-		k = metaverse.sync_server_delta(data, k)
+		k = metaverse.add_server_delta(data, k)
 	
 	assert(data[0] >= run_qtr)
 	if data[0] > run_qtr:

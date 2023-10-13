@@ -247,7 +247,7 @@ func take_server_delta(data: Array) -> void:
 	_dirty_emigration_pressures = 0
 
 
-func sync_server_delta(data: Array, k: int) -> int:
+func add_server_delta(data: Array, k: int) -> int:
 	# any target; reference safe
 	var svr_qtr: int = data[0]
 	if run_qtr < svr_qtr:

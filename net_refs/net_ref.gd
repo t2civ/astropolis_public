@@ -35,7 +35,7 @@ func take_server_delta(_data: Array) -> void:
 	pass
 
 
-func sync_server_delta(_data: Array, _k: int) -> int:
+func add_server_delta(_data: Array, _k: int) -> int:
 	# any target
 	return 0
 
