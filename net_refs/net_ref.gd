@@ -14,6 +14,11 @@ const ivutils := preload("res://addons/ivoyager_core/static/utils.gd")
 const utils := preload("res://astropolis_public/static/utils.gd")
 const LOG2_64 := Utils.LOG2_64
 
+var _float_data: Array[float]
+var _int_data: Array[int]
+var _float_offset: int
+var _int_offset: int
+
 var _data_offset: int
 
 
@@ -51,6 +56,72 @@ func sync_interface_dirty(_data: Array) -> void:
 
 
 # container sync
+
+func _append_dirty_ints(array: Array[int], flags: int, bits_offset := 0) -> void:
+	_int_data.append(flags)
+	while flags:
+		var lsb := flags & -flags
+		var i: int = LOG2_64[lsb] + bits_offset
+		_int_data.append(array[i])
+		flags &= ~lsb
+
+
+func _append_dirty_floats(array: Array[float], flags: int, bits_offset := 0) -> void:
+	_int_data.append(flags)
+	while flags:
+		var lsb := flags & -flags
+		var i: int = LOG2_64[lsb] + bits_offset
+		_float_data.append(array[i])
+		flags &= ~lsb
+
+
+func _append_and_zero_dirty_floats(array: Array[float], flags: int, bits_offset := 0) -> void:
+	_int_data.append(flags)
+	while flags:
+		var lsb := flags & -flags
+		var i: int = LOG2_64[lsb] + bits_offset
+		_float_data.append(array[i])
+		array[i] = 0.0
+		flags &= ~lsb
+
+
+func _set_dirty_ints(array: Array[int], bits_offset := 0) -> void:
+	var flags := _int_data[_int_offset]
+	_int_offset += 1
+	while flags:
+		var lsb := flags & -flags
+		var i: int = LOG2_64[lsb] + bits_offset
+		array[i] = _int_data[_int_offset]
+		_int_offset += 1
+		flags &= ~lsb
+
+
+func _set_dirty_floats(array: Array[float], bits_offset := 0) -> void:
+	var flags := _int_data[_int_offset]
+	_int_offset += 1
+	while flags:
+		var lsb := flags & -flags
+		var i: int = LOG2_64[lsb] + bits_offset
+		array[i] = _float_data[_float_offset]
+		_float_offset += 1
+		flags &= ~lsb
+
+
+func _add_dirty_floats(array: Array[float], bits_offset := 0) -> void:
+	var flags: int = _int_data[_int_offset]
+	_int_offset += 1
+	while flags:
+		var lsb := flags & -flags
+		var i: int = LOG2_64[lsb] + bits_offset
+		array[i] += _float_data[_float_offset]
+		_float_offset += 1
+		flags &= ~lsb
+
+
+
+
+
+# OLD
 
 func _append_dirty(data: Array, values: Array, flags: int, bits_offset := 0) -> void:
 	data.append(flags)
