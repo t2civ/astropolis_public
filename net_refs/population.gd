@@ -253,6 +253,8 @@ func add_server_delta(data: Array) -> void:
 	if run_qtr < svr_qtr:
 		_update_history(svr_qtr) # before new quarter changes
 	
+	_data_offset = data[-1]
+	
 	_add_dirty_bshift(data, numbers)
 	
 	if !_is_facility:
@@ -262,6 +264,8 @@ func add_server_delta(data: Array) -> void:
 	_add_dirty_bshift(data, carrying_capacities)
 	_add_dirty_bshift(data, immigration_attractions)
 	_add_dirty_bshift(data, emigration_pressures)
+	
+	data[-1] = _data_offset
 
 
 func _update_history(svr_qtr: int) -> void:

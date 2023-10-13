@@ -549,31 +549,29 @@ func add_server_delta(data: Array) -> void:
 	var svr_qtr: int = data[0]
 	run_qtr = svr_qtr # TODO: histories
 	
-	var offset: int = data[-1]
+	_data_offset = data[-1]
 	
-	var flags: int = data[offset]
-	offset += 1
+	var flags: int = data[_data_offset]
+	_data_offset += 1
 	if flags & DIRTY_LFQ_REVENUE:
-		lfq_revenue += data[offset]
-		offset += 1
+		lfq_revenue += data[_data_offset]
+		_data_offset += 1
 	if flags & DIRTY_LFQ_GROSS_OUTPUT:
-		lfq_gross_output += data[offset]
-		offset += 1
+		lfq_gross_output += data[_data_offset]
+		_data_offset += 1
 	if flags & DIRTY_LFQ_NET_INCOME:
-		lfq_net_income += data[offset]
-		offset += 1
+		lfq_net_income += data[_data_offset]
+		_data_offset += 1
 	if flags & DIRTY_TOTAL_POWER:
-		total_power += data[offset]
-		offset += 1
+		total_power += data[_data_offset]
+		_data_offset += 1
 	if flags & DIRTY_MANUFACTURING:
-		manufacturing += data[offset]
-		offset += 1
+		manufacturing += data[_data_offset]
+		_data_offset += 1
 	if flags & DIRTY_CONSTRUCTIONS:
-		constructions += data[offset]
-		offset += 1
+		constructions += data[_data_offset]
+		_data_offset += 1
 	
-	data[-1] = offset
-
 	_add_dirty_bshift(data, crews)
 	_add_dirty(data, capacities)
 	_add_dirty(data, capacities, 64)
@@ -593,6 +591,8 @@ func add_server_delta(data: Array) -> void:
 	_set_dirty(data, est_gross_margins, 64) # not accumulator!
 	_set_dirty(data, op_logics) # not accumulator!
 	_set_dirty(data, op_logics, 64) # not accumulator!
+	
+	data[-1] = _data_offset
 
 
 func get_interface_dirty() -> Array:

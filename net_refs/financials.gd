@@ -88,15 +88,15 @@ func add_server_delta(data: Array) -> void:
 	var svr_qtr: int = data[0]
 	run_qtr = svr_qtr # TODO: histories
 	
-	var offset: int = data[-1]
+	_data_offset = data[-1]
 	
-	var flags: int = data[offset]
-	offset += 1
+	var flags: int = data[_data_offset]
+	_data_offset += 1
 	if flags & DIRTY_REVENUE:
-		revenue += data[offset]
-		offset += 1
-	
-	data[-1] = offset
-	
+		revenue += data[_data_offset]
+		_data_offset += 1
+
 	_add_dirty(data, accountings)
+	
+	data[-1] = _data_offset
 

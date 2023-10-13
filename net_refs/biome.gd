@@ -120,25 +120,25 @@ func add_server_delta(data: Array) -> void:
 	var svr_qtr: int = data[0]
 	run_qtr = svr_qtr # TODO: histories
 	
-	var offset: int = data[-1]
+	_data_offset = data[-1]
 	
-	var flags: int = data[offset]
-	offset += 1
+	var flags: int = data[_data_offset]
+	_data_offset += 1
 	if flags & DIRTY_BIOPRODUCTIVITY:
-		bioproductivity += data[offset]
-		offset += 1
+		bioproductivity += data[_data_offset]
+		_data_offset += 1
 	if flags & DIRTY_BIOMASS:
-		biomass += data[offset]
-		offset += 1
+		biomass += data[_data_offset]
+		_data_offset += 1
 	if flags & DIRTY_DIVERSITY_MODEL:
-		var size: int = data[offset]
-		offset += 1
+		var size: int = data[_data_offset]
+		_data_offset += 1
 		var i := 0
 		while i < size:
-			var key: int = data[offset]
-			offset += 1
-			var change: float = data[offset]
-			offset += 1
+			var key: int = data[_data_offset]
+			_data_offset += 1
+			var change: float = data[_data_offset]
+			_data_offset += 1
 			if diversity_model.has(key):
 				diversity_model[key] += change
 				if diversity_model[key] == 0.0:
@@ -147,5 +147,5 @@ func add_server_delta(data: Array) -> void:
 				diversity_model[key] = change
 			i += 1
 	
-	data[-1] = offset
+	data[-1] = _data_offset
 

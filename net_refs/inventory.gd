@@ -192,6 +192,8 @@ func add_server_delta(data: Array) -> void:
 	var svr_qtr: int = data[0]
 	run_qtr = svr_qtr # TODO: histories
 	
+	_data_offset = data[-1]
+	
 	_add_dirty(data, reserves)
 	_add_dirty(data, reserves, 64)
 	_add_dirty(data, markets)
@@ -206,5 +208,6 @@ func add_server_delta(data: Array) -> void:
 	_set_dirty(data, bids, 64) # not accumulator!
 	_set_dirty(data, asks)     # not accumulator!
 	_set_dirty(data, asks, 64) # not accumulator!
-
+	
+	data[-1] = _data_offset
 

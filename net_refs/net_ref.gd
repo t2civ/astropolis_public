@@ -14,6 +14,8 @@ const ivutils := preload("res://addons/ivoyager_core/static/utils.gd")
 const utils := preload("res://astropolis_public/static/utils.gd")
 const LOG2_64 := Utils.LOG2_64
 
+var _data_offset: int
+
 
 func get_server_init() -> Array:
 	# Facility only. Keep reference safe.
@@ -48,7 +50,9 @@ func sync_interface_dirty(_data: Array) -> void:
 	pass
 
 
-static func _append_dirty(data: Array, values: Array, flags: int, bits_offset := 0) -> void:
+# container sync
+
+func _append_dirty(data: Array, values: Array, flags: int, bits_offset := 0) -> void:
 	data.append(flags)
 	while flags:
 		var lsb := flags & -flags
@@ -57,7 +61,7 @@ static func _append_dirty(data: Array, values: Array, flags: int, bits_offset :=
 		flags &= ~lsb
 
 
-static func _append_and_zero_dirty(data: Array, values: Array, flags: int, bits_offset := 0) -> void:
+func _append_and_zero_dirty(data: Array, values: Array, flags: int, bits_offset := 0) -> void:
 	data.append(flags)
 	while flags:
 		var lsb := flags & -flags
@@ -67,35 +71,31 @@ static func _append_and_zero_dirty(data: Array, values: Array, flags: int, bits_
 		flags &= ~lsb
 
 
-static func _set_dirty(data: Array, to: Array, bits_offset := 0) -> void:
-	var data_offset: int = data[-1]
-	var flags: int = data[data_offset]
-	data_offset += 1
+func _set_dirty(data: Array, to: Array, bits_offset := 0) -> void:
+	var flags: int = data[_data_offset]
+	_data_offset += 1
 	while flags:
 		var lsb := flags & -flags
 		var i: int = LOG2_64[lsb] + bits_offset
-		to[i] = data[data_offset]
-		data_offset += 1
+		to[i] = data[_data_offset]
+		_data_offset += 1
 		flags &= ~lsb
-	data[-1] = data_offset
 
 
-static func _add_dirty(data: Array, to: Array, bits_offset := 0) -> void:
-	var data_offset: int = data[-1]
-	var flags: int = data[data_offset]
-	data_offset += 1
+func _add_dirty(data: Array, to: Array, bits_offset := 0) -> void:
+	var flags: int = data[_data_offset]
+	_data_offset += 1
 	while flags:
 		var lsb := flags & -flags
 		var i: int = LOG2_64[lsb] + bits_offset
-		to[i] += data[data_offset]
-		data_offset += 1
+		to[i] += data[_data_offset]
+		_data_offset += 1
 		flags &= ~lsb
-	data[-1] = data_offset
 
 
 # '_bshift' versions more optimal if flags right-biased or not sparse
 
-static func _append_dirty_bshift(data: Array, values: Array, flags: int, bits_offset := 0) -> void:
+func _append_dirty_bshift(data: Array, values: Array, flags: int, bits_offset := 0) -> void:
 	data.append(flags)
 	while flags:
 		if flags & 1:
@@ -104,7 +104,7 @@ static func _append_dirty_bshift(data: Array, values: Array, flags: int, bits_of
 		flags >>= 1
 
 
-static func _append_and_zero_dirty_bshift(data: Array, values: Array, flags: int, bits_offset := 0) -> void:
+func _append_and_zero_dirty_bshift(data: Array, values: Array, flags: int, bits_offset := 0) -> void:
 	data.append(flags)
 	while flags:
 		if flags & 1:
@@ -114,28 +114,24 @@ static func _append_and_zero_dirty_bshift(data: Array, values: Array, flags: int
 		flags >>= 1
 
 
-static func _set_dirty_bshift(data: Array, to: Array, bits_offset := 0) -> void:
-	var data_offset: int = data[-1]
-	var flags: int = data[data_offset]
-	data_offset += 1
+func _set_dirty_bshift(data: Array, to: Array, bits_offset := 0) -> void:
+	var flags: int = data[_data_offset]
+	_data_offset += 1
 	while flags:
 		if flags & 1:
-			to[bits_offset] = data[data_offset]
-			data_offset += 1
+			to[bits_offset] = data[_data_offset]
+			_data_offset += 1
 		bits_offset += 1
 		flags >>= 1
-	data[-1] = data_offset
 
 
-static func _add_dirty_bshift(data: Array, to: Array, bits_offset := 0) -> void:
-	var data_offset: int = data[-1]
-	var flags: int = data[data_offset]
-	data_offset += 1
+func _add_dirty_bshift(data: Array, to: Array, bits_offset := 0) -> void:
+	var flags: int = data[_data_offset]
+	_data_offset += 1
 	while flags:
 		if flags & 1:
-			to[bits_offset] += data[data_offset]
-			data_offset += 1
+			to[bits_offset] += data[_data_offset]
+			_data_offset += 1
 		bits_offset += 1
 		flags >>= 1
-	data[-1] = data_offset
 
