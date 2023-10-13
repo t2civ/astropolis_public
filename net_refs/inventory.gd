@@ -187,25 +187,24 @@ func take_server_delta(data: Array) -> void:
 	_dirty_asks_2 = 0
 
 
-func add_server_delta(data: Array, k: int) -> int:
+func add_server_delta(data: Array) -> void:
 	# any target
 	var svr_qtr: int = data[0]
 	run_qtr = svr_qtr # TODO: histories
-
-	k = _add_dirty(data, reserves, k)
-	k = _add_dirty(data, reserves, k, 64)
-	k = _add_dirty(data, markets, k)
-	k = _add_dirty(data, markets, k, 64)
-	k = _add_dirty(data, in_transits, k)
-	k = _add_dirty(data, in_transits, k, 64)
-	k = _add_dirty(data, contracteds, k)
-	k = _add_dirty(data, contracteds, k, 64)
-	k = _set_dirty(data, prices, k)     # not accumulator!
-	k = _set_dirty(data, prices, k, 64) # not accumulator!
-	k = _set_dirty(data, bids, k)     # not accumulator!
-	k = _set_dirty(data, bids, k, 64) # not accumulator!
-	k = _set_dirty(data, asks, k)     # not accumulator!
-	k = _set_dirty(data, asks, k, 64) # not accumulator!
 	
-	return k
+	_add_dirty(data, reserves)
+	_add_dirty(data, reserves, 64)
+	_add_dirty(data, markets)
+	_add_dirty(data, markets, 64)
+	_add_dirty(data, in_transits)
+	_add_dirty(data, in_transits, 64)
+	_add_dirty(data, contracteds)
+	_add_dirty(data, contracteds, 64)
+	_set_dirty(data, prices)     # not accumulator!
+	_set_dirty(data, prices, 64) # not accumulator!
+	_set_dirty(data, bids)     # not accumulator!
+	_set_dirty(data, bids, 64) # not accumulator!
+	_set_dirty(data, asks)     # not accumulator!
+	_set_dirty(data, asks, 64) # not accumulator!
+
 

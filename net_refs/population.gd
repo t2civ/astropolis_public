@@ -247,23 +247,21 @@ func take_server_delta(data: Array) -> void:
 	_dirty_emigration_pressures = 0
 
 
-func add_server_delta(data: Array, k: int) -> int:
+func add_server_delta(data: Array) -> void:
 	# any target; reference safe
 	var svr_qtr: int = data[0]
 	if run_qtr < svr_qtr:
 		_update_history(svr_qtr) # before new quarter changes
 	
-	k = _add_dirty_bshift(data, numbers, k)
+	_add_dirty_bshift(data, numbers)
 	
 	if !_is_facility:
-		return 0 # not used
+		return
 	
-	k = _add_dirty_bshift(data, growth_rates, k)
-	k = _add_dirty_bshift(data, carrying_capacities, k)
-	k = _add_dirty_bshift(data, immigration_attractions, k)
-	k = _add_dirty_bshift(data, emigration_pressures, k)
-	
-	return k
+	_add_dirty_bshift(data, growth_rates)
+	_add_dirty_bshift(data, carrying_capacities)
+	_add_dirty_bshift(data, immigration_attractions)
+	_add_dirty_bshift(data, emigration_pressures)
 
 
 func _update_history(svr_qtr: int) -> void:

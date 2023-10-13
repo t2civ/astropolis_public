@@ -149,38 +149,43 @@ func sync_server_init(data: Array) -> void:
 
 func sync_server_dirty(data: Array) -> void:
 	var dirty: int = data[1]
-	var k := 2
+	
+	var offset := 2
+	
 	if dirty & DIRTY_BASE:
-		gui_name = data[k]
-		facility_class = data[k + 1]
-		public_sector = data[k + 2]
-		solar_occlusion = data[k + 3]
-		polity_name = data[k + 4]
-		k += 5
+		gui_name = data[offset]
+		facility_class = data[offset + 1]
+		public_sector = data[offset + 2]
+		solar_occlusion = data[offset + 3]
+		polity_name = data[offset + 4]
+		offset += 5
+	
+	data.append(offset)
+	
 	if dirty & DIRTY_OPERATIONS:
-		_component_indexes[0] = k
-		k = operations.add_server_delta(data, k)
+		_component_indexes[0] = offset
+		operations.add_server_delta(data)
 	if dirty & DIRTY_INVENTORY:
-		_component_indexes[1] = k
-		k = inventory.add_server_delta(data, k)
+		_component_indexes[1] = data[-1]
+		inventory.add_server_delta(data)
 	if dirty & DIRTY_FINANCIALS:
-		_component_indexes[2] = k
-		k = financials.add_server_delta(data, k)
+		_component_indexes[2] = data[-1]
+		financials.add_server_delta(data)
 	if dirty & DIRTY_POPULATION:
 		if !population:
 			population = Population.new(true, true)
-		_component_indexes[3] = k
-		k = population.add_server_delta(data, k)
+		_component_indexes[3] = data[-1]
+		population.add_server_delta(data)
 	if dirty & DIRTY_BIOME:
 		if !biome:
 			biome = Biome.new(true)
-		_component_indexes[4] = k
-		k = biome.add_server_delta(data, k)
+		_component_indexes[4] = data[-1]
+		biome.add_server_delta(data)
 	if dirty & DIRTY_METAVERSE:
 		if !metaverse:
 			metaverse = Metaverse.new(true)
-		_component_indexes[5] = k
-		k = metaverse.add_server_delta(data, k)
+		_component_indexes[5] = data[-1]
+		metaverse.add_server_delta(data)
 	
 	assert(data[0] >= run_qtr)
 	if data[0] > run_qtr:

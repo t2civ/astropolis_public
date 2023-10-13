@@ -544,52 +544,55 @@ func take_server_delta(data: Array) -> void:
 	_dirty_op_logics_2 = 0
 
 
-func add_server_delta(data: Array, k: int) -> int:
+func add_server_delta(data: Array) -> void:
 	# any target
 	var svr_qtr: int = data[0]
 	run_qtr = svr_qtr # TODO: histories
 	
-	var flags: int = data[k]
-	k += 1
+	var offset: int = data[-1]
+	
+	var flags: int = data[offset]
+	offset += 1
 	if flags & DIRTY_LFQ_REVENUE:
-		lfq_revenue += data[k]
-		k += 1
+		lfq_revenue += data[offset]
+		offset += 1
 	if flags & DIRTY_LFQ_GROSS_OUTPUT:
-		lfq_gross_output += data[k]
-		k += 1
+		lfq_gross_output += data[offset]
+		offset += 1
 	if flags & DIRTY_LFQ_NET_INCOME:
-		lfq_net_income += data[k]
-		k += 1
+		lfq_net_income += data[offset]
+		offset += 1
 	if flags & DIRTY_TOTAL_POWER:
-		total_power += data[k]
-		k += 1
+		total_power += data[offset]
+		offset += 1
 	if flags & DIRTY_MANUFACTURING:
-		manufacturing += data[k]
-		k += 1
+		manufacturing += data[offset]
+		offset += 1
 	if flags & DIRTY_CONSTRUCTIONS:
-		constructions += data[k]
-		k += 1
+		constructions += data[offset]
+		offset += 1
+	
+	data[-1] = offset
 
-	k = _add_dirty_bshift(data, crews, k)
-	k = _add_dirty(data, capacities, k)
-	k = _add_dirty(data, capacities, k, 64)
-	k = _add_dirty(data, rates, k)
-	k = _add_dirty(data, rates, k, 64)
+	_add_dirty_bshift(data, crews)
+	_add_dirty(data, capacities)
+	_add_dirty(data, capacities, 64)
+	_add_dirty(data, rates)
+	_add_dirty(data, rates, 64)
 	if !has_financials:
-		return 0 # not used
-	k = _add_dirty(data, public_capacities, k)
-	k = _add_dirty(data, public_capacities, k, 64)
-	k = _add_dirty(data, est_revenues, k)
-	k = _add_dirty(data, est_revenues, k, 64)
-	k = _add_dirty(data, est_gross_incomes, k)
-	k = _add_dirty(data, est_gross_incomes, k, 64)
+		return
+	_add_dirty(data, public_capacities)
+	_add_dirty(data, public_capacities, 64)
+	_add_dirty(data, est_revenues)
+	_add_dirty(data, est_revenues, 64)
+	_add_dirty(data, est_gross_incomes)
+	_add_dirty(data, est_gross_incomes, 64)
 	if !_is_facility:
-		return 0 # not used
-	k = _set_dirty(data, est_gross_margins, k) # not accumulator!
-	k = _set_dirty(data, est_gross_margins, k, 64) # not accumulator!
-	k = _set_dirty(data, op_logics, k) # not accumulator!
-	k = _set_dirty(data, op_logics, k, 64) # not accumulator!
-	return k
+		return
+	_set_dirty(data, est_gross_margins) # not accumulator!
+	_set_dirty(data, est_gross_margins, 64) # not accumulator!
+	_set_dirty(data, op_logics) # not accumulator!
+	_set_dirty(data, op_logics, 64) # not accumulator!
 
 
 func get_interface_dirty() -> Array:
@@ -604,8 +607,8 @@ func get_interface_dirty() -> Array:
 
 func sync_interface_dirty(data: Array) -> void:
 	# TODO: parallel pattern above to set FacilityInterface data
-	var k := _set_dirty(data, op_commands, 0)
-	_set_dirty(data, op_commands, k, 64)
+	_set_dirty(data, op_commands)
+	_set_dirty(data, op_commands, 64)
 
 
 

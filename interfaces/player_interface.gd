@@ -120,16 +120,21 @@ func propagate_component_init(data: Array, indexes: Array[int]) -> void:
 func propagate_component_changes(data: Array, indexes: Array[int]) -> void:
 	var dirty: int = data[1]
 	if dirty & DIRTY_OPERATIONS:
-		operations.add_server_delta(data, indexes[0])
+		data[-1] = indexes[0]
+		operations.add_server_delta(data)
 	# skip inventory
 	if dirty & DIRTY_FINANCIALS:
-		financials.add_server_delta(data, indexes[2])
+		data[-1] = indexes[2]
+		financials.add_server_delta(data)
 	if dirty & DIRTY_POPULATION:
-		population.add_server_delta(data, indexes[3])
+		data[-1] = indexes[3]
+		population.add_server_delta(data)
 	if dirty & DIRTY_BIOME:
-		biome.add_server_delta(data, indexes[4])
+		data[-1] = indexes[4]
+		biome.add_server_delta(data)
 	if dirty & DIRTY_METAVERSE:
-		metaverse.add_server_delta(data, indexes[5])
+		data[-1] = indexes[5]
+		metaverse.add_server_delta(data)
 	
 	assert(data[0] >= run_qtr)
 	if data[0] > run_qtr:

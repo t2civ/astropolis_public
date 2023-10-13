@@ -35,9 +35,9 @@ func take_server_delta(_data: Array) -> void:
 	pass
 
 
-func add_server_delta(_data: Array, _k: int) -> int:
+func add_server_delta(_data: Array) -> void:
 	# any target
-	return 0
+	pass
 
 
 func get_interface_dirty() -> Array:
@@ -48,89 +48,94 @@ func sync_interface_dirty(_data: Array) -> void:
 	pass
 
 
-static func _append_dirty(data: Array, values: Array, flags: int, index_offset := 0) -> void:
+static func _append_dirty(data: Array, values: Array, flags: int, bits_offset := 0) -> void:
 	data.append(flags)
 	while flags:
 		var lsb := flags & -flags
-		var i: int = LOG2_64[lsb] + index_offset
+		var i: int = LOG2_64[lsb] + bits_offset
 		data.append(values[i])
 		flags &= ~lsb
 
 
-static func _append_and_zero_dirty(data: Array, values: Array, flags: int, index_offset := 0) -> void:
+static func _append_and_zero_dirty(data: Array, values: Array, flags: int, bits_offset := 0) -> void:
 	data.append(flags)
 	while flags:
 		var lsb := flags & -flags
-		var i: int = LOG2_64[lsb] + index_offset
+		var i: int = LOG2_64[lsb] + bits_offset
 		data.append(values[i])
 		values[i] = 0.0
 		flags &= ~lsb
 
 
-static func _set_dirty(data: Array, to: Array, data_offset := 0, index_offset := 0) -> int:
+static func _set_dirty(data: Array, to: Array, bits_offset := 0) -> void:
+	var data_offset: int = data[-1]
 	var flags: int = data[data_offset]
 	data_offset += 1
 	while flags:
 		var lsb := flags & -flags
-		var i: int = LOG2_64[lsb] + index_offset
+		var i: int = LOG2_64[lsb] + bits_offset
 		to[i] = data[data_offset]
 		data_offset += 1
 		flags &= ~lsb
-	return data_offset
+	data[-1] = data_offset
 
 
-static func _add_dirty(data: Array, to: Array, data_offset := 0, index_offset := 0) -> int:
+static func _add_dirty(data: Array, to: Array, bits_offset := 0) -> void:
+	var data_offset: int = data[-1]
 	var flags: int = data[data_offset]
 	data_offset += 1
 	while flags:
 		var lsb := flags & -flags
-		var i: int = LOG2_64[lsb] + index_offset
+		var i: int = LOG2_64[lsb] + bits_offset
 		to[i] += data[data_offset]
 		data_offset += 1
 		flags &= ~lsb
-	return data_offset
+	data[-1] = data_offset
 
 
 # '_bshift' versions more optimal if flags right-biased or not sparse
 
-static func _append_dirty_bshift(data: Array, values: Array, flags: int, index_offset := 0) -> void:
+static func _append_dirty_bshift(data: Array, values: Array, flags: int, bits_offset := 0) -> void:
 	data.append(flags)
 	while flags:
 		if flags & 1:
-			data.append(values[index_offset])
-		index_offset += 1
+			data.append(values[bits_offset])
+		bits_offset += 1
 		flags >>= 1
 
-static func _append_and_zero_dirty_bshift(data: Array, values: Array, flags: int, index_offset := 0) -> void:
+
+static func _append_and_zero_dirty_bshift(data: Array, values: Array, flags: int, bits_offset := 0) -> void:
 	data.append(flags)
 	while flags:
 		if flags & 1:
-			data.append(values[index_offset])
-			values[index_offset] = 0.0
-		index_offset += 1
+			data.append(values[bits_offset])
+			values[bits_offset] = 0.0
+		bits_offset += 1
 		flags >>= 1
 
 
-static func _set_dirty_bshift(data: Array, to: Array, data_offset := 0, index_offset := 0) -> int:
+static func _set_dirty_bshift(data: Array, to: Array, bits_offset := 0) -> void:
+	var data_offset: int = data[-1]
 	var flags: int = data[data_offset]
 	data_offset += 1
 	while flags:
 		if flags & 1:
-			to[index_offset] = data[data_offset]
+			to[bits_offset] = data[data_offset]
 			data_offset += 1
-		index_offset += 1
+		bits_offset += 1
 		flags >>= 1
-	return data_offset
+	data[-1] = data_offset
 
 
-static func _add_dirty_bshift(data: Array, to: Array, data_offset := 0, index_offset := 0) -> int:
+static func _add_dirty_bshift(data: Array, to: Array, bits_offset := 0) -> void:
+	var data_offset: int = data[-1]
 	var flags: int = data[data_offset]
 	data_offset += 1
 	while flags:
 		if flags & 1:
-			to[index_offset] += data[data_offset]
+			to[bits_offset] += data[data_offset]
 			data_offset += 1
-		index_offset += 1
+		bits_offset += 1
 		flags >>= 1
-	return data_offset
+	data[-1] = data_offset
 
