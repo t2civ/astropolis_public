@@ -11,7 +11,7 @@ extends RefCounted
 # methods are not threadsafe. Accessing non-container properties is safe.
 
 
-signal interface_changed(object_type, class_id, data) # on ai thread only!
+signal interface_changed(entity_type, entity_id, data) # on ai thread only!
 
 # don't emit these directly; use API below
 signal persist_data_changed(network_id, data)
@@ -40,6 +40,7 @@ const DIRTY_METAVERSE := DirtyFlags.DIRTY_METAVERSE
 const DIRTY_COMPOSITIONS := DirtyFlags.DIRTY_COMPOSITIONS
 
 enum EntityType {
+	ENTITY_SERVER,
 	ENTITY_FACILITY,
 	ENTITY_PLAYER,
 	ENTITY_BODY,
@@ -50,6 +51,7 @@ enum EntityType {
 	N_ENTITY_TYPES,
 }
 
+const ENTITY_SERVER := EntityType.ENTITY_SERVER
 const ENTITY_FACILITY := EntityType.ENTITY_FACILITY
 const ENTITY_PLAYER := EntityType.ENTITY_PLAYER
 const ENTITY_BODY := EntityType.ENTITY_BODY
