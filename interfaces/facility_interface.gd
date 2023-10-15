@@ -40,8 +40,6 @@ var player: PlayerInterface
 var propagations := []
 
 var _component_indexes: Array[int] # reused for data propagation
-var _int_offsets: Array[int] = [0, 0, 0, 0, 0, 0] # reused for data propagation
-var _float_offsets: Array[int] = [0, 0, 0, 0, 0, 0] # reused for data propagation
 
 
 func _init() -> void:
@@ -155,11 +153,10 @@ func sync_server_dirty(data: Array) -> void:
 	var float_data: Array[float] = data[1]
 	var string_data: Array[String] = data[2]
 	
-	var dirty: int = int_data[1]
-
-	var int_offset := 2
+	var int_offset := 14
 	var float_offset := 0
 	
+	var dirty: int = int_data[1]
 	if dirty & DIRTY_BASE:
 		facility_class = data[int_offset]
 		int_offset += 1
@@ -169,38 +166,23 @@ func sync_server_dirty(data: Array) -> void:
 		gui_name = string_data[0]
 		polity_name = string_data[1]
 	
-	data.append(float_offset)
-	data.append(int_offset)
-	
 	if dirty & DIRTY_OPERATIONS:
-		_int_offsets[0] = int_offset
-		_float_offsets[0] = float_offset
 		operations.add_server_delta(data)
 	if dirty & DIRTY_INVENTORY:
-		_int_offsets[1] = data[-1]
-		_float_offsets[1] = data[-2]
 		inventory.add_server_delta(data)
 	if dirty & DIRTY_FINANCIALS:
-		_int_offsets[2] = data[-1]
-		_float_offsets[2] = data[-2]
 		financials.add_server_delta(data)
 	if dirty & DIRTY_POPULATION:
 		if !population:
 			population = Population.new(true, true)
-		_int_offsets[3] = data[-1]
-		_float_offsets[3] = data[-2]
 		population.add_server_delta(data)
 	if dirty & DIRTY_BIOME:
 		if !biome:
 			biome = Biome.new(true)
-		_int_offsets[4] = data[-1]
-		_float_offsets[4] = data[-2]
 		biome.add_server_delta(data)
 	if dirty & DIRTY_METAVERSE:
 		if !metaverse:
 			metaverse = Metaverse.new(true)
-		_int_offsets[5] = data[-1]
-		_float_offsets[5] = data[-2]
 		metaverse.add_server_delta(data)
 	
 	assert(int_data[0] >= run_qtr)
@@ -216,7 +198,7 @@ func sync_server_dirty(data: Array) -> void:
 	var i := 0
 	while i < n_propagations:
 		var interface: Interface = propagations[i]
-		interface.propagate_component_changes(data, _int_offsets, _float_offsets)
+		interface.propagate_component_changes(data)
 		i += 1
 
 

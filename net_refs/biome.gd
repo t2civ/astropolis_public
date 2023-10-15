@@ -103,6 +103,9 @@ func take_server_delta(data: Array) -> void:
 	_int_data = data[0]
 	_float_data = data[1]
 	
+	_int_data[10] = _int_data.size()
+	_int_data[11] = _float_data.size()
+	
 	_int_data.append(_dirty_values)
 	if _dirty_values & DIRTY_BIOPRODUCTIVITY:
 		_float_data.append(bioproductivity)
@@ -125,8 +128,9 @@ func add_server_delta(data: Array) -> void:
 	
 	_int_data = data[0]
 	_float_data = data[1]
-	_int_offset = data[-1]
-	_float_offset = data[-2]
+	
+	_int_offset = _int_data[10]
+	_float_offset = _int_data[11]
 	
 	var svr_qtr := _int_data[0]
 	run_qtr = svr_qtr # TODO: histories
@@ -156,6 +160,4 @@ func add_server_delta(data: Array) -> void:
 			else:
 				diversity_model[key] = change
 			i += 1
-	
-	data[-1] = _int_offset
-	data[-2] = _float_offset
+

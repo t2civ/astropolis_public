@@ -236,6 +236,9 @@ func take_server_delta(data: Array) -> void:
 	_int_data = data[0]
 	_float_data = data[1]
 	
+	_int_data[8] = _int_data.size()
+	_int_data[9] = _float_data.size()
+	
 	_append_and_zero_dirty_floats(numbers, _dirty_numbers)
 	_dirty_numbers = 0
 	_append_and_zero_dirty_floats(growth_rates, _dirty_growth_rates)
@@ -253,8 +256,9 @@ func add_server_delta(data: Array) -> void:
 	
 	_int_data = data[0]
 	_float_data = data[1]
-	_int_offset = data[-1]
-	_float_offset = data[-2]
+	
+	_int_offset = _int_data[8]
+	_float_offset = _int_data[9]
 	
 	var svr_qtr: int = _int_data[0]
 	if run_qtr < svr_qtr:
@@ -263,17 +267,12 @@ func add_server_delta(data: Array) -> void:
 	_add_dirty_floats(numbers)
 	
 	if !_is_facility:
-		data[-1] = _int_offset
-		data[-2] = _float_offset
 		return
 	
 	_add_dirty_floats(growth_rates)
 	_add_dirty_floats(carrying_capacities)
 	_add_dirty_floats(immigration_attractions)
 	_add_dirty_floats(emigration_pressures)
-	
-	data[-1] = _int_offset
-	data[-2] = _float_offset
 
 
 func _update_history(svr_qtr: int) -> void:

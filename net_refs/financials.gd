@@ -78,6 +78,9 @@ func take_server_delta(data: Array) -> void:
 	_int_data = data[0]
 	_float_data = data[1]
 	
+	_int_data[6] = _int_data.size()
+	_int_data[7] = _float_data.size()
+	
 	_int_data.append(_dirty_values)
 	if _dirty_values & DIRTY_REVENUE:
 		_float_data.append(revenue)
@@ -93,8 +96,9 @@ func add_server_delta(data: Array) -> void:
 	
 	_int_data = data[0]
 	_float_data = data[1]
-	_int_offset = data[-1]
-	_float_offset = data[-2]
+	
+	_int_offset = _int_data[6]
+	_float_offset = _int_data[7]
 	
 	var svr_qtr := _int_data[0]
 	run_qtr = svr_qtr # TODO: histories
@@ -106,7 +110,4 @@ func add_server_delta(data: Array) -> void:
 		_float_offset += 1
 	
 	_add_dirty_floats(accountings)
-	
-	data[-1] = _int_offset
-	data[-2] = _float_offset
 

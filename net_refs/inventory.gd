@@ -160,6 +160,9 @@ func take_server_delta(data: Array) -> void:
 	_int_data = data[0]
 	_float_data = data[1]
 	
+	_int_data[4] = _int_data.size()
+	_int_data[5] = _float_data.size()
+	
 	_append_and_zero_dirty_floats(reserves, _dirty_reserves_1)
 	_dirty_reserves_1 = 0
 	_append_and_zero_dirty_floats(reserves, _dirty_reserves_2, 64)
@@ -195,8 +198,9 @@ func add_server_delta(data: Array) -> void:
 	
 	_int_data = data[0]
 	_float_data = data[1]
-	_int_offset = data[-1]
-	_float_offset = data[-2]
+	
+	_int_offset = _int_data[4]
+	_float_offset = _int_data[5]
 	
 	var svr_qtr := _int_data[0]
 	run_qtr = svr_qtr # TODO: histories
@@ -215,7 +219,4 @@ func add_server_delta(data: Array) -> void:
 	_set_dirty_floats(bids, 64) # not accumulator!
 	_set_dirty_floats(asks)     # not accumulator!
 	_set_dirty_floats(asks, 64) # not accumulator!
-	
-	data[-1] = _int_offset
-	data[-2] = _float_offset
 

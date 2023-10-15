@@ -139,34 +139,25 @@ func sync_server_dirty(data: Array) -> void:
 			i += 1
 
 
-func propagate_component_changes(data: Array, int_offsets: Array[int], float_offsets: Array[int]
-		) -> void:
+func propagate_component_changes(data: Array) -> void:
 	var int_data: Array[int] = data[0]
 	var dirty: int = int_data[1]
 	if dirty & DIRTY_OPERATIONS:
 		if !operations:
 			operations = Operations.new(true)
-		data[-1] = int_offsets[0]
-		data[-2] = float_offsets[0]
 		operations.add_server_delta(data)
 	# no inventory or financials
 	if dirty & DIRTY_POPULATION:
 		if !population:
 			population = Population.new(true)
-		data[-1] = int_offsets[3]
-		data[-2] = float_offsets[3]
 		population.add_server_delta(data)
 	if dirty & DIRTY_BIOME:
 		if !biome:
 			biome = Biome.new(true)
-		data[-1] = int_offsets[4]
-		data[-2] = float_offsets[4]
 		biome.add_server_delta(data)
 	if dirty & DIRTY_METAVERSE:
 		if !metaverse:
 			metaverse = Metaverse.new(true)
-		data[-1] = int_offsets[5]
-		data[-2] = float_offsets[5]
 		metaverse.add_server_delta(data)
 	
 	assert(int_data[0] >= run_qtr)

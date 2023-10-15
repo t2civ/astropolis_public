@@ -494,6 +494,9 @@ func take_server_delta(data: Array) -> void:
 	_int_data = data[0]
 	_float_data = data[1]
 	
+	_int_data[2] = _int_data.size()
+	_int_data[3] = _float_data.size()
+	
 	_int_data.append(_dirty_values)
 	if _dirty_values & DIRTY_LFQ_REVENUE:
 		_float_data.append(lfq_revenue)
@@ -552,8 +555,9 @@ func add_server_delta(data: Array) -> void:
 	
 	_int_data = data[0]
 	_float_data = data[1]
-	_int_offset = data[-1]
-	_float_offset = data[-2]
+	
+	_int_offset = _int_data[2]
+	_float_offset = _int_data[3]
 	
 	var svr_qtr := _int_data[0]
 	run_qtr = svr_qtr # TODO: histories
@@ -585,8 +589,6 @@ func add_server_delta(data: Array) -> void:
 	_add_dirty_floats(rates)
 	_add_dirty_floats(rates, 64)
 	if !has_financials:
-		data[-1] = _int_offset
-		data[-2] = _float_offset
 		return
 	_add_dirty_floats(public_capacities)
 	_add_dirty_floats(public_capacities, 64)
@@ -595,16 +597,11 @@ func add_server_delta(data: Array) -> void:
 	_add_dirty_floats(est_gross_incomes)
 	_add_dirty_floats(est_gross_incomes, 64)
 	if !_is_facility:
-		data[-1] = _int_offset
-		data[-2] = _float_offset
 		return
 	_set_dirty_floats(est_gross_margins) # not accumulator!
 	_set_dirty_floats(est_gross_margins, 64) # not accumulator!
 	_set_dirty_ints(op_logics) # not accumulator!
 	_set_dirty_ints(op_logics, 64) # not accumulator!
-	
-	data[-1] = _int_offset
-	data[-2] = _float_offset
 
 
 func get_interface_dirty() -> Array:
