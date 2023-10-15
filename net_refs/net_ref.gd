@@ -14,6 +14,11 @@ const ivutils := preload("res://addons/ivoyager_core/static/utils.gd")
 const utils := preload("res://astropolis_public/static/utils.gd")
 const LOG2_64 := Utils.LOG2_64
 
+
+static var tables: Dictionary = IVTableData.tables
+static var table_n_rows: Dictionary = IVTableData.table_n_rows
+
+
 var _float_data: Array[float]
 var _int_data: Array[int]
 var _float_offset: int

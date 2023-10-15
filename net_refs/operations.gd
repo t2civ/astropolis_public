@@ -148,11 +148,9 @@ var _dirty_op_commands_1 := 0
 var _dirty_op_commands_2 := 0 # max 128
 
 # indexing & table data
-var _tables: Dictionary = IVTableData.tables
-var _table_n_rows: Dictionary = IVTableData.table_n_rows
-var _table_operations: Dictionary = _tables[&"operations"]
-var _n_operations: int = _table_n_rows[&"operations"]
-var _op_groups_operations: Array[Array] = _tables[&"op_groups_operations"]
+var _table_operations: Dictionary = tables[&"operations"]
+var _n_operations: int = table_n_rows[&"operations"]
+var _op_groups_operations: Array[Array] = tables[&"op_groups_operations"]
 
 
 func _init(is_new := false, has_financials_ := false, is_facility := false) -> void:
@@ -160,7 +158,7 @@ func _init(is_new := false, has_financials_ := false, is_facility := false) -> v
 		return
 	has_financials = has_financials_
 	_is_facility = is_facility
-	var n_populations: int = _table_n_rows[&"populations"]
+	var n_populations: int = table_n_rows[&"populations"]
 	crews = ivutils.init_array(n_populations, 0.0, TYPE_FLOAT)
 	capacities = ivutils.init_array(_n_operations, 0.0, TYPE_FLOAT)
 	rates = capacities.duplicate()
@@ -238,7 +236,7 @@ func get_mass_flow(type: int) -> float:
 func get_manufacturing_mass_flow_total() -> float:
 	var mass_flows: Array = _table_operations.mass_flow
 	var sum := 0.0
-	for type in _tables.is_manufacturing_operations:
+	for type in tables.is_manufacturing_operations:
 		sum += rates[type] * mass_flows[type]
 	return sum
 
