@@ -86,17 +86,6 @@ func sync_server_init(data: Array) -> void:
 	diversity_model = data[3]
 
 
-func propagate_component_init(data: Array) -> void:
-	# non-facilities only; reference-safe
-	var svr_qtr: int = data[0]
-	assert(svr_qtr >= run_qtr, "Load order different than process order?")
-	run_qtr = svr_qtr # TODO: histories
-	bioproductivity += data[1]
-	biomass += data[2]
-	var add_dict: Dictionary = data[3]
-	utils.add_to_diversity_model(diversity_model, add_dict)
-
-
 func take_server_delta(data: Array) -> void:
 	# facility accumulator only; zero accumulators and dirty flags
 	

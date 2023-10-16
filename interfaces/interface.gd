@@ -262,11 +262,7 @@ func _sync_ai_changes() -> void:
 	_dirty = 0
 
 
-func propagate_component_init(_data: Array, _indexes: Array[int]) -> void:
-	pass
-
-
-func propagate_component_changes(_data: Array) -> void:
+func propagate_server_delta(_data: Array) -> void:
 	pass
 
 # *****************************************************************************

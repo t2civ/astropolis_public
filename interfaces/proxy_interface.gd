@@ -19,12 +19,12 @@ extends Interface
 # method to add or modify.
 #
 # Proxy optional components:
-#   Operations - on init or never
-#   Inventory  - on init or never
-#   Financials - on init or never
-#   Population - on init or never
-#   Biome      - on init or never
-#   Metaverse  - on init or never
+#   Operations - on server init or never
+#   Inventory  - on server init or never
+#   Financials - on server init or never
+#   Population - on server init or never
+#   Biome      - on server init or never
+#   Metaverse  - on server init or never
 
 
 static var proxy_interfaces: Array[ProxyInterface] = [] # indexed by proxy_id
@@ -38,24 +38,6 @@ func _init() -> void:
 	entity_type = ENTITY_PROXY
 
 
-static func get_or_make_proxy(proxy_name: StringName, proxy_gui_name := "",
-		has_operations := true, has_inventory := false, has_financials := false,
-		has_population := true, has_biome := true, has_metaverse := true) -> ProxyInterface:
-	# Proxy names should be prefixed 'PROXY_' and must be unique.
-	var proxy_interface: ProxyInterface = interfaces_by_name.get(proxy_name)
-	if proxy_interface:
-		return proxy_interface
-	if !proxy_gui_name:
-		proxy_gui_name = AIGlobal.tr(proxy_name)
-	AIGlobal.proxy_requested.emit(proxy_name, proxy_gui_name,
-			has_operations, has_inventory, has_financials,
-			has_population, has_biome, has_metaverse)
-	proxy_interface = interfaces_by_name.get(proxy_name)
-	assert(proxy_interface)
-	return proxy_interface
-
-
-
 # *****************************************************************************
 # sync - DON'T MODIFY!
 
@@ -63,51 +45,33 @@ func sync_server_init(data: Array) -> void:
 	proxy_id = data[2]
 	name = data[3]
 	gui_name = data[4]
-	var has_operations: bool = data[5]
-	var has_inventory: bool = data[6]
-	var has_financials: bool = data[7]
-	var has_population: bool = data[8]
-	var has_biome: bool = data[9]
-	var has_metaverse: bool = data[10]
-	if has_operations:
-		operations = Operations.new(true, has_financials)
-	if has_inventory:
+	var operations_data: Array = data[5]
+	var inventory_data: Array = data[6]
+	var financials_data: Array = data[7]
+	var population_data: Array = data[8]
+	var biome_data: Array = data[9]
+	var metaverse_data: Array = data[10]
+	if operations_data:
+		operations = Operations.new(true, !financials_data.is_empty())
+		operations.sync_server_init(operations_data)
+	if inventory_data:
 		inventory = Inventory.new(true)
-	if has_financials:
+		inventory.sync_server_init(inventory_data)
+	if financials_data:
 		financials = Financials.new(true)
-	if has_population:
+		financials.sync_server_init(financials_data)
+	if population_data:
 		population = Population.new(true)
-	if has_biome:
+		population.sync_server_init(population_data)
+	if biome_data:
 		biome = Biome.new(true)
-	if has_metaverse:
+		biome.sync_server_init(biome_data)
+	if metaverse_data:
 		metaverse = Metaverse.new(true)
+		metaverse.sync_server_init(metaverse_data)
 
 
-func propagate_component_init(data: Array, indexes: Array[int]) -> void:
-	# only components we already have
-	var component_data: Array = data[indexes[0]]
-	if operations and component_data:
-		operations.propagate_component_init(component_data)
-	component_data = data[indexes[1]]
-	if inventory and component_data:
-		inventory.propagate_component_init(component_data)
-	component_data = data[indexes[2]]
-	if financials and component_data:
-		financials.propagate_component_init(component_data)
-	component_data = data[indexes[3]]
-	if population and component_data:
-		population.propagate_component_init(component_data)
-	component_data = data[indexes[4]]
-	if biome and component_data:
-		biome.propagate_component_init(component_data)
-	component_data = data[indexes[5]]
-	if metaverse and component_data:
-		metaverse.propagate_component_init(component_data)
-	assert(data[indexes[6]] >= run_qtr)
-	run_qtr = data[indexes[6]]
-
-
-func propagate_component_changes(data: Array) -> void:
+func propagate_server_delta(data: Array) -> void:
 	# only components we already have
 	var int_data: Array[int] = data[0]
 	var dirty: int = int_data[1]

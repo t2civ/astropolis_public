@@ -12,8 +12,6 @@ extends Node
 
 # emit on ai thread only!
 signal interface_added(interface)
-signal proxy_requested(proxy_name, gui_name, has_operations, has_inventory, has_financials,
-	has_population, has_biome, has_metaverse)
 signal interface_changed(entity_type, entity_id, data)
 
 signal player_owner_changed(fixme) # FIXME - added for NetworkLobby; not hooked up anywhere else

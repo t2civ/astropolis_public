@@ -133,27 +133,6 @@ func sync_server_init(data: Array) -> void:
 	asks = data[7]
 
 
-func propagate_component_init(data: Array) -> void:
-	# non-facilities only
-	var svr_qtr: int = data[0]
-	assert(svr_qtr >= run_qtr, "Load order different than process order?")
-	run_qtr = svr_qtr # TODO: histories
-	var data_array: Array[float] = data[1]
-	utils.add_to_float_array_with_array(reserves, data_array)
-	data_array = data[2]
-	utils.add_to_float_array_with_array(markets, data_array)
-	data_array = data[3]
-	utils.add_to_float_array_with_array(in_transits, data_array)
-	data_array = data[4]
-	utils.add_to_float_array_with_array(contracteds, data_array)
-	data_array = data[5]
-	utils.fill_array(prices, data_array)
-	data_array = data[6]
-	utils.fill_array(bids, data_array)
-	data_array = data[7]
-	utils.fill_array(asks, data_array)
-
-
 func take_server_delta(data: Array) -> void:
 	# facility accumulator only; zero values and dirty flags
 	

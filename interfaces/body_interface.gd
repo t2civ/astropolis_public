@@ -80,8 +80,13 @@ func sync_server_init(data: Array) -> void:
 	if parent_name:
 		parent = interfaces_by_name[parent_name]
 		parent.add_satellite(self)
-	if data[8]:
-		var compositions_data: Array = data[8]
+	var compositions_data: Array = data[8]
+	var operations_data: Array = data[9]
+	var population_data: Array = data[10]
+	var biome_data: Array = data[11]
+	var metaverse_data: Array = data[12]
+	
+	if compositions_data:
 		var n_compositions := compositions_data.size()
 		compositions.resize(n_compositions)
 		var i := 0
@@ -91,33 +96,19 @@ func sync_server_init(data: Array) -> void:
 			composition.sync_server_init(composition_data)
 			compositions[i] = composition
 			i += 1
-
-
-func propagate_component_init(data: Array, indexes: Array[int]) -> void:
-	var component_data: Array = data[indexes[0]]
-	if component_data:
-		if !operations:
-			operations = Operations.new(true)
-		operations.propagate_component_init(component_data)
-	# skip inventory, financials
-	component_data = data[indexes[3]]
-	if component_data:
-		if !population:
-			population = Population.new(true)
-		population.propagate_component_init(component_data)
-	component_data = data[indexes[4]]
-	if component_data:
-		if !biome:
-			biome = Biome.new(true)
-		biome.propagate_component_init(component_data)
-	component_data = data[indexes[5]]
-	if component_data:
-		if !metaverse:
-			metaverse = Metaverse.new(true)
-		metaverse.propagate_component_init(component_data)
-	assert(data[indexes[6]] >= run_qtr)
-	run_qtr = data[indexes[6]]
-
+	if operations_data:
+		operations = Operations.new(true)
+		operations.sync_server_init(operations_data)
+	if population_data:
+		population = Population.new(true)
+		population.sync_server_init(population_data)
+	if biome_data:
+		biome = Biome.new(true)
+		biome.sync_server_init(biome_data)
+	if metaverse_data:
+		metaverse = Metaverse.new(true)
+		metaverse.sync_server_init(metaverse_data)
+	
 
 func sync_server_dirty(data: Array) -> void:
 	var dirty: int = data[0]
@@ -139,7 +130,7 @@ func sync_server_dirty(data: Array) -> void:
 			i += 1
 
 
-func propagate_component_changes(data: Array) -> void:
+func propagate_server_delta(data: Array) -> void:
 	var int_data: Array[int] = data[0]
 	var dirty: int = int_data[1]
 	if dirty & DIRTY_OPERATIONS:

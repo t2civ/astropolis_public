@@ -193,43 +193,6 @@ func sync_server_init(data: Array) -> void:
 	emigration_pressures = data[6]
 
 
-func propagate_component_init(data: Array) -> void:
-	# non-facilities only; reference-safe
-	var svr_qtr: int = data[0]
-	assert(svr_qtr >= run_qtr, "Load order different than process order?")
-	var data_array: Array[float] = data[1]
-	utils.add_to_float_array_with_array(numbers, data_array)
-	
-	# expand history arrays as needed (at end and/or front) to handle this data
-	var add_history_numbers: Array[Array] = data[2]
-	var add_history_size: int = add_history_numbers[0].size()
-	var history_size: int = history_numbers[0].size()
-	if run_qtr == -1:
-		run_qtr = svr_qtr - add_history_size # set to begining of this history
-	while run_qtr < svr_qtr: # expand history end (append for newer quarters)
-		var i := 0
-		while i < _n_populations:
-			history_numbers[i].append(0.0)
-			i += 1
-		history_size += 1
-		run_qtr += 1
-	while add_history_size > history_size: # expand history front (push_front for older quarters)
-		var i := 0
-		while i < _n_populations:
-			history_numbers[i].push_front(0.0)
-			i += 1
-		history_size += 1
-	
-	# add history (history arrays are expanded and run_qtr is aligned with svr_qtr)
-	var quarter := -1 # history indexed from back!
-	while quarter >= -add_history_size:
-		var i := 0
-		while i < _n_populations:
-			history_numbers[i] += add_history_numbers[i]
-			i += 1
-		quarter -= 1
-
-
 func take_server_delta(data: Array) -> void:
 	# facility accumulator only; zero values and dirty flags
 	

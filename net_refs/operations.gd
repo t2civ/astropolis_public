@@ -460,34 +460,6 @@ func sync_server_init(data: Array) -> void:
 	op_commands = data[15]
 
 
-func propagate_component_init(data: Array) -> void:
-	# non-facilities only
-	var svr_qtr: int = data[0]
-	assert(svr_qtr >= run_qtr, "Load order different than process order?")
-	run_qtr = svr_qtr # TODO: histories
-	
-	lfq_revenue += data[1]
-	lfq_gross_output += data[2]
-	lfq_net_income += data[3]
-	total_power += data[4]
-	manufacturing += data[5]
-	constructions += data[6]
-	var add_array: Array[float] = data[7]
-	utils.add_to_float_array_with_array(crews, add_array)
-	add_array = data[8]
-	utils.add_to_float_array_with_array(capacities, add_array)
-	add_array = data[9]
-	utils.add_to_float_array_with_array(rates, add_array)
-	if !has_financials:
-		return
-	add_array = data[10]
-	utils.add_to_float_array_with_array(public_capacities, add_array)
-	add_array = data[11]
-	utils.add_to_float_array_with_array(est_revenues, add_array)
-	add_array = data[12]
-	utils.add_to_float_array_with_array(est_gross_incomes, add_array)
-
-
 func take_server_delta(data: Array) -> void:
 	# facility accumulator only; zero accumulators and dirty flags
 	

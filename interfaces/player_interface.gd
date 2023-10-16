@@ -84,6 +84,18 @@ func sync_server_init(data: Array) -> void:
 	part_of = interfaces_by_name[part_of_name] if part_of_name else null
 	polity_name = data[7]
 	homeworld = data[8]
+	
+	var operations_data: Array = data[9]
+	var financials_data: Array = data[10]
+	var population_data: Array = data[11]
+	var biome_data: Array = data[12]
+	var metaverse_data: Array = data[13]
+	
+	operations.sync_server_init(operations_data)
+	financials.sync_server_init(financials_data)
+	population.sync_server_init(population_data)
+	biome.sync_server_init(biome_data)
+	metaverse.sync_server_init(metaverse_data)
 
 
 func sync_server_dirty(data: Array) -> void:
@@ -98,26 +110,7 @@ func sync_server_dirty(data: Array) -> void:
 		homeworld = data[k + 4]
 
 
-func propagate_component_init(data: Array, indexes: Array[int]) -> void:
-	var component_data: Array = data[indexes[0]]
-	operations.propagate_component_init(component_data)
-	# skip inventory
-	component_data = data[indexes[2]]
-	financials.propagate_component_init(component_data)
-	component_data = data[indexes[3]]
-	if component_data:
-		population.propagate_component_init(component_data)
-	component_data = data[indexes[4]]
-	if component_data:
-		biome.propagate_component_init(component_data)
-	component_data = data[indexes[5]]
-	if component_data:
-		metaverse.propagate_component_init(component_data)
-	assert(data[indexes[6]] >= run_qtr)
-	run_qtr = data[indexes[6]]
-
-
-func propagate_component_changes(data: Array) -> void:
+func propagate_server_delta(data: Array) -> void:
 	var int_data: Array[int] = data[0]
 	var dirty: int = int_data[1]
 	if dirty & DIRTY_OPERATIONS:

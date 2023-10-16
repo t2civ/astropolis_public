@@ -35,11 +35,8 @@ var polity_name: StringName
 
 var body: BodyInterface
 var player: PlayerInterface
+var proxies: Array[ProxyInterface] = []
 
-
-var propagations := []
-
-var _component_indexes: Array[int] # reused for data propagation
 
 
 func _init() -> void:
@@ -88,15 +85,6 @@ func get_polity_name() -> StringName:
 	return polity_name
 
 
-func add_propagation(interface: Interface) -> void:
-	assert(!propagations.has(interface))
-	propagations.append(interface)
-
-
-func remove_propagation(interface: Interface) -> void:
-	propagations.erase(interface)
-
-
 # *****************************************************************************
 # sync
 
@@ -113,38 +101,32 @@ func sync_server_init(data: Array) -> void:
 	player.add_facility(self)
 	body = interfaces_by_name[data[11]]
 	body.add_facility(self)
-	_component_indexes = [12, 13, 14, 15, 16, 17, 18]
-	var component_data: Array = data[12]
-	operations.sync_server_init(component_data)
-	component_data = data[13]
-	inventory.sync_server_init(component_data)
-	component_data = data[14]
-	financials.sync_server_init(component_data)
-	component_data = data[15]
-	if component_data:
+	var proxy_names: Array = data[12]
+	for proxy_name: StringName in proxy_names:
+		var proxy: ProxyInterface = get_interface_by_name(proxy_name)
+		assert(!proxies.has(proxy))
+		proxies.append(proxy)
+	
+	var operations_data: Array = data[13]
+	var inventory_data: Array = data[14]
+	var financials_data: Array = data[15]
+	var population_data: Array = data[16]
+	var biome_data: Array = data[17]
+	var metaverse_data: Array = data[18]
+	
+	operations.sync_server_init(operations_data)
+	inventory.sync_server_init(inventory_data)
+	financials.sync_server_init(financials_data)
+	
+	if population_data:
 		population = Population.new(true, true)
-		population.sync_server_init(component_data)
-	component_data = data[16]
-	if component_data:
+		population.sync_server_init(population_data)
+	if biome_data:
 		biome = Biome.new(true)
-		biome.sync_server_init(component_data)
-	component_data = data[17]
-	if component_data:
+		biome.sync_server_init(biome_data)
+	if metaverse_data:
 		metaverse = Metaverse.new(true)
-		metaverse.sync_server_init(component_data)
-	run_qtr = data[18]
-	
-	# add proxies
-	_add_base_propagations() # body, player, part_of_player
-	_add_proxies() # off-earth, solar system, etc.
-	
-	# propagate init data
-	var n_propagations := propagations.size()
-	var i := 0
-	while i < n_propagations:
-		var interface: Interface = propagations[i]
-		interface.propagate_component_init(data, _component_indexes)
-		i += 1
+		metaverse.sync_server_init(metaverse_data)
 
 
 func sync_server_dirty(data: Array) -> void:
@@ -193,13 +175,10 @@ func sync_server_dirty(data: Array) -> void:
 			run_qtr = int_data[0]
 			process_ai_new_quarter() # after component histories have updated
 	
-	# propagate changes
-	var n_propagations := propagations.size()
-	var i := 0
-	while i < n_propagations:
-		var interface: Interface = propagations[i]
-		interface.propagate_component_changes(data)
-		i += 1
+	body.propagate_server_delta(data)
+	player.propagate_server_delta(data)
+	for proxy in proxies:
+		proxy.propagate_server_delta(data)
 
 
 func _sync_ai_changes() -> void:
@@ -211,82 +190,4 @@ func _sync_ai_changes() -> void:
 		data.append(operations.get_interface_dirty())
 	_dirty = 0
 	AIGlobal.emit_signal("interface_changed", entity_type, facility_id, data)
-
-
-func _add_base_propagations() -> void:
-	add_propagation(body)
-	add_propagation(player)
-	if player.part_of:
-		add_propagation(player.part_of)
-
-
-func _add_proxies() -> void:
-	# Currently we add:
-	#
-	#  PROXY_OFF_EARTH                          - all facilities not on Earth
-	#  PROXY_PLANET_EARTH_<polity_name>         - facilities of polity on Earth
-	#  PROXY_ORBIT_<body_name>                  - all facilities in orbit of planet or moon
-	#  PROXY_ORBIT_<body_name>_<player_name>    - as above for player facilities
-	#  PROXY_MOONS_OF_<body_name>               - all facilities at or orbiting a planet's moons
-	#  PROXY_MOONS_OF_<body_name>_<player_name> - as above for player facilities
-	#  PROXY_SYSTEM_<star_name>                 - all facilities under star
-	
-	var proxy_name: StringName
-	var proxy_gui_name: String
-	var proxy_interface: ProxyInterface
-	
-	# off-Earth
-	if body.name != "PLANET_EARTH":
-		proxy_name = "PROXY_OFF_EARTH"
-		proxy_interface = ProxyInterface.get_or_make_proxy(proxy_name)
-		add_propagation(proxy_interface)
-	
-	# polity on Earth
-	# TODO: generalize to PROXY_HOMEWORLD_<polity_name>, e.g., for new Martian polity
-	if body.name == "PLANET_EARTH":
-		proxy_name = "PROXY_PLANET_EARTH_" + polity_name
-		proxy_gui_name = tr("PLANET_EARTH") + " / " + tr(polity_name)
-		proxy_interface = ProxyInterface.get_or_make_proxy(proxy_name, proxy_gui_name, true, true, true)
-		add_propagation(proxy_interface)
-	
-	# search up body tree for others...
-	var BodyFlags: Dictionary = IVEnums.BodyFlags
-	var in_orbit_of_planet_or_moon: Interface
-	var at_moons_of_planet: Interface
-	var in_star_system: Interface
-	var up_body := body.parent
-	if up_body.body_flags & BodyFlags.IS_PLANET_OR_MOON:
-		in_orbit_of_planet_or_moon = up_body
-	while true:
-		if up_body.body_flags & BodyFlags.IS_STAR:
-			in_star_system = up_body
-			break
-		if up_body.body_flags & BodyFlags.IS_PLANET:
-			if up_body != in_orbit_of_planet_or_moon:
-				at_moons_of_planet = up_body
-		up_body = up_body.parent
-	
-	# in orbit of planet or moon - all players & player-specific
-	if in_orbit_of_planet_or_moon:
-		proxy_name = "PROXY_ORBIT_" + in_orbit_of_planet_or_moon.name
-		proxy_interface = ProxyInterface.get_or_make_proxy(proxy_name)
-		add_propagation(proxy_interface)
-		proxy_name += "_" + player.name
-		proxy_interface = ProxyInterface.get_or_make_proxy(proxy_name)
-		add_propagation(proxy_interface)
-	
-	# at moons of planet - all players & player-specific
-	if at_moons_of_planet:
-		proxy_name = "PROXY_MOONS_OF_" + at_moons_of_planet.name
-		proxy_interface = ProxyInterface.get_or_make_proxy(proxy_name)
-		add_propagation(proxy_interface)
-		proxy_name += "_" + player.name
-		proxy_interface = ProxyInterface.get_or_make_proxy(proxy_name)
-		add_propagation(proxy_interface)
-	
-	# in star system - all facilities!
-	proxy_name = "PROXY_SYSTEM_" + in_star_system.name
-	proxy_gui_name = tr("SYSTEM_" + in_star_system.name) # for STAR_SUN translates to 'Solar System'
-	proxy_interface = ProxyInterface.get_or_make_proxy(proxy_name, proxy_gui_name)
-	add_propagation(proxy_interface)
 
