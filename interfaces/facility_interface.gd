@@ -88,7 +88,7 @@ func get_polity_name() -> StringName:
 # *****************************************************************************
 # sync
 
-func sync_server_init(data: Array) -> void:
+func set_server_init(data: Array) -> void:
 	facility_id = data[2]
 	name = data[3]
 	gui_name = data[4]
@@ -114,19 +114,19 @@ func sync_server_init(data: Array) -> void:
 	var biome_data: Array = data[17]
 	var metaverse_data: Array = data[18]
 	
-	operations.sync_server_init(operations_data)
-	inventory.sync_server_init(inventory_data)
-	financials.sync_server_init(financials_data)
+	operations.set_server_init(operations_data)
+	inventory.set_server_init(inventory_data)
+	financials.set_server_init(financials_data)
 	
 	if population_data:
 		population = Population.new(true, true)
-		population.sync_server_init(population_data)
+		population.set_server_init(population_data)
 	if biome_data:
 		biome = Biome.new(true)
-		biome.sync_server_init(biome_data)
+		biome.set_server_init(biome_data)
 	if metaverse_data:
 		metaverse = Metaverse.new(true)
-		metaverse.sync_server_init(metaverse_data)
+		metaverse.set_server_init(metaverse_data)
 
 
 func sync_server_dirty(data: Array) -> void:

@@ -70,7 +70,7 @@ func get_facilities() -> Array[Interface]:
 # *****************************************************************************
 # sync - DON'T MODIFY!
 
-func sync_server_init(data: Array) -> void:
+func set_server_init(data: Array) -> void:
 	body_id = data[2]
 	name = data[3]
 	gui_name = data[4]
@@ -93,21 +93,21 @@ func sync_server_init(data: Array) -> void:
 		while i < n_compositions:
 			var composition_data: Array = compositions_data[i]
 			var composition := Composition.new(true)
-			composition.sync_server_init(composition_data)
+			composition.set_server_init(composition_data)
 			compositions[i] = composition
 			i += 1
 	if operations_data:
 		operations = Operations.new(true)
-		operations.sync_server_init(operations_data)
+		operations.set_server_init(operations_data)
 	if population_data:
 		population = Population.new(true)
-		population.sync_server_init(population_data)
+		population.set_server_init(population_data)
 	if biome_data:
 		biome = Biome.new(true)
-		biome.sync_server_init(biome_data)
+		biome.set_server_init(biome_data)
 	if metaverse_data:
 		metaverse = Metaverse.new(true)
-		metaverse.sync_server_init(metaverse_data)
+		metaverse.set_server_init(metaverse_data)
 	
 
 func sync_server_dirty(data: Array) -> void:

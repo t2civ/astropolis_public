@@ -11,9 +11,7 @@ extends NetRef
 # In trade units or in internal units????
 
 # save/load persistence for server only
-const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
-const PERSIST_PROPERTIES: Array[StringName] = [
-	&"run_qtr",
+const PERSIST_PROPERTIES2: Array[StringName] = [
 	&"reserves",
 	&"markets",
 	&"in_transits",
@@ -41,7 +39,6 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 
 
 # Interface read-only! Data flows server -> interface.
-var run_qtr := -1 # last sync, = year * 4 + (quarter - 1)
 var reserves: Array[float] # exists here; we may need it (>= 0.0)
 var markets: Array[float] # exists here; Trader may commit (>= 0.0)
 var in_transits: Array[float] # on the way (>= 0.0), probably under contract
@@ -106,32 +103,6 @@ func set_price(type: int, value: float) -> void:
 	
 
 # ********************************** SYNC *************************************
-
-func get_server_init() -> Array:
-	# facility only; reference-safe
-	return [
-		run_qtr,
-		reserves.duplicate(),
-		markets.duplicate(),
-		in_transits.duplicate(),
-		contracteds.duplicate(),
-		prices.duplicate(),
-		bids.duplicate(),
-		asks.duplicate(),
-	]
-
-
-func sync_server_init(data: Array) -> void:
-	# facility only; keeps array references!
-	run_qtr = data[0]
-	reserves = data[1]
-	markets = data[2]
-	in_transits = data[3]
-	contracteds = data[4]
-	prices = data[5]
-	bids = data[6]
-	asks = data[7]
-
 
 func take_server_delta(data: Array) -> void:
 	# facility accumulator only; zero values and dirty flags

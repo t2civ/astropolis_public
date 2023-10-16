@@ -75,7 +75,7 @@ func get_facilities() -> Array[Interface]:
 # *****************************************************************************
 # sync
 
-func sync_server_init(data: Array) -> void:
+func set_server_init(data: Array) -> void:
 	player_id = data[2]
 	name = data[3]
 	gui_name = data[4]
@@ -91,11 +91,11 @@ func sync_server_init(data: Array) -> void:
 	var biome_data: Array = data[12]
 	var metaverse_data: Array = data[13]
 	
-	operations.sync_server_init(operations_data)
-	financials.sync_server_init(financials_data)
-	population.sync_server_init(population_data)
-	biome.sync_server_init(biome_data)
-	metaverse.sync_server_init(metaverse_data)
+	operations.set_server_init(operations_data)
+	financials.set_server_init(financials_data)
+	population.set_server_init(population_data)
+	biome.set_server_init(biome_data)
+	metaverse.set_server_init(metaverse_data)
 
 
 func sync_server_dirty(data: Array) -> void:

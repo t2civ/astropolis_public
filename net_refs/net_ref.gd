@@ -14,10 +14,19 @@ const ivutils := preload("res://addons/ivoyager_core/static/utils.gd")
 const utils := preload("res://astropolis_public/static/utils.gd")
 const LOG2_64 := Utils.LOG2_64
 
+const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
+const PERSIST_PROPERTIES: Array[StringName] = [
+	&"run_qtr",
+	&"_dirty",
+]
 
 static var tables: Dictionary = IVTableData.tables
 static var table_n_rows: Dictionary = IVTableData.table_n_rows
 
+var run_qtr := -1 # last sync, = year * 4 + (quarter - 1)
+
+@warning_ignore("unused_private_class_variable")
+var _dirty := 0
 
 var _float_data: Array[float]
 var _int_data: Array[int]
@@ -26,13 +35,11 @@ var _int_offset: int
 
 
 func get_server_init() -> Array:
-	# Facility only. Keep reference safe.
-	return []
+	return IVSaveBuilder.get_persist_properties(self)
 
 
-func sync_server_init(_data: Array) -> void:
-	# Facility only. May keep nested array references.
-	pass
+func set_server_init(data: Array) -> void:
+	IVSaveBuilder.set_persist_properties(self, data)
 
 
 func take_server_delta(_data: Array) -> void:

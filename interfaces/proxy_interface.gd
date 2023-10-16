@@ -41,7 +41,7 @@ func _init() -> void:
 # *****************************************************************************
 # sync - DON'T MODIFY!
 
-func sync_server_init(data: Array) -> void:
+func set_server_init(data: Array) -> void:
 	proxy_id = data[2]
 	name = data[3]
 	gui_name = data[4]
@@ -53,22 +53,22 @@ func sync_server_init(data: Array) -> void:
 	var metaverse_data: Array = data[10]
 	if operations_data:
 		operations = Operations.new(true, !financials_data.is_empty())
-		operations.sync_server_init(operations_data)
+		operations.set_server_init(operations_data)
 	if inventory_data:
 		inventory = Inventory.new(true)
-		inventory.sync_server_init(inventory_data)
+		inventory.set_server_init(inventory_data)
 	if financials_data:
 		financials = Financials.new(true)
-		financials.sync_server_init(financials_data)
+		financials.set_server_init(financials_data)
 	if population_data:
 		population = Population.new(true)
-		population.sync_server_init(population_data)
+		population.set_server_init(population_data)
 	if biome_data:
 		biome = Biome.new(true)
-		biome.sync_server_init(biome_data)
+		biome.set_server_init(biome_data)
 	if metaverse_data:
 		metaverse = Metaverse.new(true)
-		metaverse.sync_server_init(metaverse_data)
+		metaverse.set_server_init(metaverse_data)
 
 
 func propagate_server_delta(data: Array) -> void:

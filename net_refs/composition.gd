@@ -19,7 +19,7 @@ extends NetRef
 
 
 
-enum { # _dirty_values bit flags
+enum { # _dirty bit flags
 	DIRTY_HEADERS = 1,
 	DIRTY_STRATUM = 1 << 1,
 	DIRTY_ESTIMATION = 1 << 2,
@@ -31,8 +31,7 @@ const FOUR_PI := 4.0 * PI
 
 const FREE_RESOURCE_MIN_FRACTION := 0.1
 
-const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
-const PERSIST_PROPERTIES: Array[StringName] = [
+const PERSIST_PROPERTIES2: Array[StringName] = [
 	&"name",
 	&"stratum_type",
 	&"polity_name",
@@ -51,7 +50,6 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"density_bias",
 	&"masses_biases",
 	&"heterogeneities_biases",
-	&"_dirty_values",
 	&"_dirty_masses",
 	&"_dirty_heterogeneities",
 ]
@@ -82,7 +80,6 @@ var masses_biases: Array[float]
 var heterogeneities_biases: Array[float]
 
 # dirty data
-var _dirty_values := 0 # enum DIRTY_ flags
 var _dirty_masses := 0 # dirty indexes as bit flags (max index 63)
 var _dirty_heterogeneities := 0 # dirty indexes as bit flags (max index 63)
 
@@ -243,6 +240,7 @@ func _init(is_new := false, is_server := false) -> void:
 
 
 func get_server_init() -> Array:
+	
 	# reference-safe
 	var est_masses := masses.duplicate()
 	utils.multiply_float_array_by_array(est_masses, masses_biases)
@@ -265,7 +263,7 @@ func get_server_init() -> Array:
 	]
 
 
-func sync_server_init(data: Array) -> void:
+func set_server_init(data: Array) -> void:
 	# NOT reference-safe!
 	name = data[0]
 	stratum_type = data[1]
@@ -285,25 +283,25 @@ func sync_server_init(data: Array) -> void:
 func get_server_dirty(data: Array) -> void:
 	# get changed values or array indexes only; zero dirty flags
 	
-	var any_dirty := _dirty_values or _dirty_masses or _dirty_heterogeneities
+	var any_dirty := _dirty or _dirty_masses or _dirty_heterogeneities
 	data.append(any_dirty)
 	if !any_dirty:
 		return
 
 	# non-arrays
-	data.append(_dirty_values)
-	if _dirty_values & DIRTY_HEADERS: # very rare
+	data.append(_dirty)
+	if _dirty & DIRTY_HEADERS: # very rare
 		data.append(polity_name)
-	if _dirty_values & DIRTY_STRATUM:
+	if _dirty & DIRTY_STRATUM:
 		data.append(body_radius)
 		data.append(outer_depth)
 		data.append(thickness)
 		data.append(spherical_fraction)
 		data.append(area)
 		data.append(density * density_bias)
-	if _dirty_values & DIRTY_ESTIMATION:
+	if _dirty & DIRTY_ESTIMATION:
 		data.append(survey_type)
-	_dirty_values = 0
+	_dirty = 0
 	
 	var lsb: int # least significant bit
 	var i: int

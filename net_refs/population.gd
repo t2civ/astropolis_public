@@ -8,9 +8,7 @@ extends NetRef
 # Arrays indexed by population_type unless noted otherwise.
 
 # save/load persistence for server only
-const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
-const PERSIST_PROPERTIES: Array[StringName] = [
-	&"run_qtr",
+const PERSIST_PROPERTIES2: Array[StringName] = [
 	&"numbers",
 	&"growth_rates",
 	&"carrying_capacities",
@@ -26,7 +24,6 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 ]
 
 # Interface read-only! All data flows server -> interface.
-var run_qtr := -1 # last sync, = year * 4 + (quarter - 1)
 var numbers: Array[float]
 var growth_rates: Array[float] # Facility only
 var carrying_capacities: Array[float] # Facility only; indexed by carrying_capacity_group
@@ -167,31 +164,6 @@ func change_carrying_capacity(carrying_capacity_group: int, change: float) -> vo
 
 
 # ********************************* SYNC **************************************
-
-
-func get_server_init() -> Array: # new or loaded game
-	# facility only; reference-safe
-	return [
-		run_qtr,
-		numbers.duplicate(),
-		history_numbers.duplicate(true),
-		growth_rates.duplicate(),
-		carrying_capacities.duplicate(),
-		immigration_attractions.duplicate(),
-		emigration_pressures.duplicate(),
-	]
-
-
-func sync_server_init(data: Array) -> void:
-	# facility only; keeps array references!
-	run_qtr = data[0]
-	numbers = data[1]
-	history_numbers = data[2]
-	growth_rates = data[3]
-	carrying_capacities = data[4]
-	immigration_attractions = data[5]
-	emigration_pressures = data[6]
-
 
 func take_server_delta(data: Array) -> void:
 	# facility accumulator only; zero values and dirty flags

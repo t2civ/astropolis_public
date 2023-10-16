@@ -43,7 +43,7 @@ enum OpCommands {
 	N_OP_COMMANDS,
 }
 
-enum { # _dirty_values
+enum { # _dirty
 	DIRTY_LFQ_REVENUE = 1,
 	DIRTY_LFQ_GROSS_OUTPUT = 1 << 1,
 	DIRTY_LFQ_NET_INCOME = 1 << 2,
@@ -53,9 +53,7 @@ enum { # _dirty_values
 }
 
 # save/load persistence for server only
-const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
-const PERSIST_PROPERTIES: Array[StringName] = [
-	&"run_qtr",
+const PERSIST_PROPERTIES2: Array[StringName] = [
 	&"lfq_revenue",
 	&"lfq_gross_output",
 	&"lfq_net_income",
@@ -75,7 +73,6 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"has_financials",
 	&"_is_facility",
 	
-	&"_dirty_values",
 	&"_dirty_crew",
 	&"_dirty_capacities_1",
 	&"_dirty_capacities_2",
@@ -96,7 +93,6 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 ]
 
 # Interface read-only! Data flows server -> interface.
-var run_qtr := -1 # last sync, = year * 4 + (quarter - 1)
 var lfq_revenue := 0.0 # last 4 quarters
 var lfq_gross_output := 0.0 # revenue w/ some exceptions; = "economy"
 var lfq_net_income := 0.0
@@ -128,7 +124,6 @@ var has_financials := false
 var _is_facility := false
 
 # server dirty data (dirty indexes as bit flags)
-var _dirty_values := 0 # enum DIRTY_ flags
 var _dirty_crews := 0 # max 64
 var _dirty_capacities_1 := 0
 var _dirty_capacities_2 := 0 # max 128
@@ -418,48 +413,6 @@ func get_dirty_capacities_2() -> int:
 
 # ********************************** SYNC *************************************
 
-func get_server_init() -> Array:
-	# facility only; reference-safe
-	return [
-		run_qtr,
-		lfq_revenue,
-		lfq_gross_output,
-		lfq_net_income,
-		total_power,
-		manufacturing,
-		constructions,
-		crews.duplicate(),
-		capacities.duplicate(),
-		rates.duplicate(),
-		public_capacities.duplicate(),
-		est_revenues.duplicate(),
-		est_gross_incomes.duplicate(),
-		est_gross_margins.duplicate(),
-		op_logics.duplicate(),
-		op_commands.duplicate(),
-	]
-
-
-func sync_server_init(data: Array) -> void:
-	# facility only; keeps array references!
-	run_qtr = data[0]
-	lfq_revenue = data[1]
-	lfq_gross_output = data[2]
-	lfq_net_income = data[3]
-	total_power = data[4]
-	manufacturing = data[5]
-	constructions = data[6]
-	crews = data[7]
-	capacities = data[8]
-	rates = data[9]
-	public_capacities = data[10]
-	est_revenues = data[11]
-	est_gross_incomes = data[12]
-	est_gross_margins = data[13]
-	op_logics = data[14]
-	op_commands = data[15]
-
-
 func take_server_delta(data: Array) -> void:
 	# facility accumulator only; zero accumulators and dirty flags
 	
@@ -469,26 +422,26 @@ func take_server_delta(data: Array) -> void:
 	_int_data[2] = _int_data.size()
 	_int_data[3] = _float_data.size()
 	
-	_int_data.append(_dirty_values)
-	if _dirty_values & DIRTY_LFQ_REVENUE:
+	_int_data.append(_dirty)
+	if _dirty & DIRTY_LFQ_REVENUE:
 		_float_data.append(lfq_revenue)
 		lfq_revenue = 0.0
-	if _dirty_values & DIRTY_LFQ_GROSS_OUTPUT:
+	if _dirty & DIRTY_LFQ_GROSS_OUTPUT:
 		_float_data.append(lfq_gross_output)
 		lfq_gross_output = 0.0
-	if _dirty_values & DIRTY_LFQ_NET_INCOME:
+	if _dirty & DIRTY_LFQ_NET_INCOME:
 		_float_data.append(lfq_net_income)
 		lfq_net_income = 0.0
-	if _dirty_values & DIRTY_TOTAL_POWER:
+	if _dirty & DIRTY_TOTAL_POWER:
 		_float_data.append(total_power)
 		total_power = 0.0
-	if _dirty_values & DIRTY_MANUFACTURING:
+	if _dirty & DIRTY_MANUFACTURING:
 		_float_data.append(manufacturing)
 		manufacturing = 0.0
-	if _dirty_values & DIRTY_CONSTRUCTIONS:
+	if _dirty & DIRTY_CONSTRUCTIONS:
 		_float_data.append(constructions)
 		constructions = 0.0
-	_dirty_values = 0
+	_dirty = 0
 	
 	_append_and_zero_dirty_floats(crews, _dirty_crews)
 	_dirty_crews = 0
