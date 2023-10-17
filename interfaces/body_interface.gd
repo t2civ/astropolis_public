@@ -33,6 +33,11 @@ var parent: BodyInterface # null for top body
 var satellites: Array[BodyInterface] = [] # resizable container - not threadsafe!
 var facilities: Array[Interface] = [] # resizable container - not threadsafe!
 var compositions: Array[Composition] = [] # resizable container - not threadsafe!
+var operations: Operations
+var population: Population
+var biome: Biome
+var metaverse: Metaverse
+
 
 
 func _init() -> void:
@@ -66,6 +71,23 @@ func get_facilities() -> Array[Interface]:
 	# AI thread only!
 	return facilities
 
+
+func get_total_population() -> float:
+	var total_population := 0.0
+	if population:
+		total_population = population.get_number_total()
+	if operations:
+		total_population += operations.get_crew_total()
+	return total_population
+
+
+func get_total_population_by_type(population_type: int) -> float:
+	var total_population := 0.0
+	if population:
+		total_population = population.get_number(population_type)
+	if operations:
+		total_population += operations.get_crew(population_type)
+	return total_population
 
 # *****************************************************************************
 # sync - DON'T MODIFY!

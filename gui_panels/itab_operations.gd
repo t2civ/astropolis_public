@@ -175,7 +175,7 @@ func _get_ai_data(target_name: StringName) -> void:
 		return
 	
 	var tab := current_tab
-	var operations: Operations = interface.operations
+	var operations: Operations = interface.get(&"operations")
 	assert(operations)
 	var has_financials := operations.has_financials
 	var op_groups: Array = _op_classes_op_groups[tab]

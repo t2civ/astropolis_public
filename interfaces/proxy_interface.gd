@@ -29,6 +29,16 @@ extends Interface
 
 static var proxy_interfaces: Array[ProxyInterface] = [] # indexed by proxy_id
 
+
+var operations: Operations
+var inventory: Inventory
+var financials: Financials
+var population: Population
+var biome: Biome
+var metaverse: Metaverse
+
+
+
 # read-only!
 var proxy_id := -1
 
@@ -36,6 +46,27 @@ var proxy_id := -1
 func _init() -> void:
 	super()
 	entity_type = ENTITY_PROXY
+
+
+# *****************************************************************************
+# interface API
+
+func get_total_population() -> float:
+	var total_population := 0.0
+	if population:
+		total_population = population.get_number_total()
+	if operations:
+		total_population += operations.get_crew_total()
+	return total_population
+
+
+func get_total_population_by_type(population_type: int) -> float:
+	var total_population := 0.0
+	if population:
+		total_population = population.get_number(population_type)
+	if operations:
+		total_population += operations.get_crew(population_type)
+	return total_population
 
 
 # *****************************************************************************

@@ -31,15 +31,17 @@ var is_facilities := true # 'alive' player test
 
 var facilities: Array[Interface] = [] # resizable container - not threadsafe!
 
+var operations := Operations.new(true, true)
+var financials := Financials.new(true)
+var population := Population.new(true)
+var biome := Biome.new(true)
+var metaverse := Metaverse.new(true)
+
+
 
 func _init() -> void:
 	super()
 	entity_type = ENTITY_PLAYER
-	operations = Operations.new(true, true)
-	financials = Financials.new(true)
-	population = Population.new(true)
-	biome = Biome.new(true)
-	metaverse = Metaverse.new(true)
 
 
 func _clear_circular_references() -> void:
@@ -70,6 +72,14 @@ func has_facilities() -> bool:
 func get_facilities() -> Array[Interface]:
 	# AI thread only!
 	return facilities
+
+
+func get_total_population() -> float:
+	return population.get_number_total() + operations.get_crew_total()
+
+
+func get_total_population_by_type(population_type: int) -> float:
+	return population.get_number(population_type) + operations.get_crew(population_type)
 
 
 # *****************************************************************************

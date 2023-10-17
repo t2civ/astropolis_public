@@ -31,8 +31,10 @@ var asks: Array[float]
 # shared from other interfaces
 var facility_interface: FacilityInterface
 
+var inventory: Inventory
+
 # localized indexing
-var n_resources: int = table_n_rows[&"resources"]
+var n_resources: int = _table_n_rows[&"resources"]
 
 
 func _init() -> void:

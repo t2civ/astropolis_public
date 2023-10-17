@@ -26,7 +26,7 @@ var required_component := &"operations"
 
 var content := [
 	# label_txt, target_path
-	[&"LABEL_POPULATION", "get_population_and_crew_total", IVQFormat.named_number],
+	[&"LABEL_POPULATION", "get_total_population", IVQFormat.named_number],
 	[&"LABEL_ECONOMY", "operations/lfq_gross_output", IVQFormat.prefixed_named_number.bind("$")],
 	[&"LABEL_ENERGY", "operations/get_power_total", IVQFormat.prefixed_unit.bind("W")],
 	[&"LABEL_MANUFACTURING", "operations/get_manufacturing_mass_flow_total",

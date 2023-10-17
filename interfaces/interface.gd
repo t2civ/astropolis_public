@@ -107,22 +107,19 @@ var persist := [
 	&"next_interval",
 ]
 
-# components
-var operations: Operations
-var inventory: Inventory
-var financials: Financials
-var population: Population
-var biome: Biome
-var metaverse: Metaverse
-
 var use_this_ai := false # read-only
 
 # localized globals
-static var times: Array = IVGlobal.times # [time (s, J2000), engine_time (s), solar_day (d)] (floats)
-static var date: Array = IVGlobal.date # Gregorian [year, month, day] (ints)
-static var clock: Array = IVGlobal.clock # UT [hour, minute, second] (ints)
-static var tables: Dictionary = IVTableData.tables
-static var table_n_rows: Dictionary = IVTableData.table_n_rows
+@warning_ignore("unused_private_class_variable")
+static var _times: Array = IVGlobal.times # [time (s, J2000), engine_time (s), solar_day (d)] (floats)
+@warning_ignore("unused_private_class_variable")
+static var _date: Array = IVGlobal.date # Gregorian [year, month, day] (ints)
+@warning_ignore("unused_private_class_variable")
+static var _clock: Array = IVGlobal.clock # UT [hour, minute, second] (ints)
+@warning_ignore("unused_private_class_variable")
+static var _tables: Dictionary = IVTableData.tables
+@warning_ignore("unused_private_class_variable")
+static var _table_n_rows: Dictionary = IVTableData.table_n_rows
 
 # private
 var _dirty := 0
@@ -138,31 +135,24 @@ func _init() -> void:
 	IVGlobal.about_to_free_procedural_nodes.connect(_clear_circular_references)
 
 
+func remove() -> void:
+	_clear_circular_references()
+
+
 static func get_interface_by_name(interface_name: StringName) -> Interface:
 	# Returns null if doesn't exist.
 	return interfaces_by_name.get(interface_name)
 
 
-func get_population_and_crew(population_type: int) -> float:
-	var population_number := population.get_number(population_type) if population else 0.0
-	var crew := operations.get_crew(population_type) if operations else 0.0
-	return population_number + crew
+func get_total_population() -> float:
+	return 0.0
 
 
-func get_population_and_crew_total() -> float:
-	var population_number := population.get_number_total() if population else 0.0
-	var crew := operations.get_crew_total() if operations else 0.0
-	return population_number + crew
+func get_total_population_by_type(_population_type: int) -> float:
+	return 0.0
 
 
-func remove() -> void:
-	_clear_circular_references()
-
-
-func _clear_circular_references() -> void:
-	# down hierarchy only
-	pass
-
+# override below if applicable
 
 func get_body_name() -> StringName:
 	return &""
@@ -191,7 +181,6 @@ func has_facilities() -> bool:
 func get_facilities() -> Array[Interface]:
 	# AI thread only!
 	return []
-
 
 
 
@@ -263,6 +252,14 @@ func _sync_ai_changes() -> void:
 
 
 func propagate_server_delta(_data: Array) -> void:
+	pass
+
+
+# *****************************************************************************
+# Private
+
+func _clear_circular_references() -> void:
+	# down hierarchy only
 	pass
 
 # *****************************************************************************

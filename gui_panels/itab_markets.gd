@@ -160,7 +160,7 @@ func _get_ai_data(target_name: StringName) -> void:
 	if !interface:
 		_update_no_markets.call_deferred()
 		return
-	var inventory := interface.inventory
+	var inventory: Inventory = interface.get(&"inventory")
 	if !inventory:
 		_update_no_markets.call_deferred()
 		return

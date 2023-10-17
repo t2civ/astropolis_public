@@ -37,14 +37,18 @@ var body: BodyInterface
 var player: PlayerInterface
 var proxies: Array[ProxyInterface] = []
 
+var operations := Operations.new(true, true, true)
+var inventory := Inventory.new(true)
+var financials := Financials.new(true)
+var population: Population
+var biome: Biome
+var metaverse: Metaverse
+
 
 
 func _init() -> void:
 	super()
 	entity_type = ENTITY_FACILITY
-	operations = Operations.new(true, true, true)
-	inventory = Inventory.new(true)
-	financials = Financials.new(true)
 
 
 #func process_ai_interval(_delta: float) -> void:
@@ -84,6 +88,19 @@ func get_player_class() -> int:
 func get_polity_name() -> StringName:
 	return polity_name
 
+
+func get_total_population() -> float:
+	var total_population := operations.get_crew_total()
+	if population:
+		total_population += population.get_number_total()
+	return total_population
+
+
+func get_total_population_by_type(population_type: int) -> float:
+	var total_population := operations.get_crew(population_type)
+	if population:
+		total_population += population.get_number(population_type)
+	return total_population
 
 # *****************************************************************************
 # sync
