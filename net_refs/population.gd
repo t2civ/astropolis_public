@@ -40,13 +40,21 @@ var _dirty_carrying_capacities := 0
 var _dirty_immigration_attractions := 0
 var _dirty_emigration_pressures := 0
 
-var _n_populations: int = table_n_rows[&"populations"]
-var _table_populations: Dictionary = tables[&"populations"]
-var _carrying_capacity_groups: Array[int] = _table_populations[&"carrying_capacity_group"]
-var _carrying_capacity_group2s: Array[int] = _table_populations[&"carrying_capacity_group2"]
+static var _n_populations: int
+static var _table_populations: Dictionary
+static var _carrying_capacity_groups: Array[int]
+static var _carrying_capacity_group2s: Array[int]
+static var _is_class_instanced := false
+
 
 
 func _init(is_new := false, is_facility := false) -> void:
+	if !_is_class_instanced:
+		_is_class_instanced = true
+		_n_populations = _table_n_rows[&"populations"]
+		_table_populations = _tables[&"populations"]
+		_carrying_capacity_groups = _table_populations[&"carrying_capacity_group"]
+		_carrying_capacity_group2s = _table_populations[&"carrying_capacity_group2"]
 	if !is_new: # game load
 		return
 	numbers = ivutils.init_array(_n_populations, 0.0, TYPE_FLOAT)
@@ -55,7 +63,7 @@ func _init(is_new := false, is_facility := false) -> void:
 		return
 	_is_facility = true
 	growth_rates = numbers.duplicate()
-	var n_carrying_capacity_groups: int = table_n_rows.carrying_capacity_groups
+	var n_carrying_capacity_groups: int = _table_n_rows.carrying_capacity_groups
 	carrying_capacities = ivutils.init_array(n_carrying_capacity_groups, 0.0, TYPE_FLOAT)
 	immigration_attractions = numbers.duplicate()
 	emigration_pressures = numbers.duplicate()

@@ -74,7 +74,7 @@ var survey_type := -1 # surveys.tsv, table errors give estimation uncertainties
 
 var may_have_free_resources: bool # from strata.tsv
 
-# server only
+# server only TODO: Dictionaries of biases indexed by player
 var density_bias := 1.0 # the server is lying to you...
 var masses_biases: Array[float]
 var heterogeneities_biases: Array[float]
@@ -87,19 +87,40 @@ var _dirty_heterogeneities := 0 # dirty indexes as bit flags (max index 63)
 var _needs_volume_mass_calculation := true
 
 # indexing
-var _tables: Dictionary = IVTableData.tables
-var _resource_maybe_free: Array[bool] = _tables[&"resources"][&"maybe_free"]
-var _extraction_resources: Array[int] = _tables[&"extraction_resources"] # maps index to resource_type
-var _resource_extractions: Array[int] = _tables[&"resource_extractions"] # maps resource_type to index
-var _survey_density_errors: Array[float] = _tables[&"surveys"][&"density_error"] # coeff of variation
-var _survey_masses_errors: Array[float] = _tables[&"surveys"][&"masses_error"]
-#var _survey_heterogeneities_errors: Array = _tables.surveys.heterogeneities_error
-var _survey_deposits_sds: Array[float] = _tables[&"surveys"][&"deposits_sigma"]
+static var _resource_maybe_free: Array[bool]
+static var _extraction_resources: Array[int] # maps index to resource_type
+static var _resource_extractions: Array[int] # maps resource_type to index
+static var _survey_density_errors: Array[float] # coeff of variation
+static var _survey_masses_errors: Array[float]
+static var _survey_deposits_sds: Array[float]
+static var _is_class_instanced := false
 
 
 # TODO: Operations/Extractions organized by strata
 #var mine_targets: Array # relative focus; index by is_mine_target
 #var well_targets: Array # relative focus; index by is_well_target
+
+
+
+func _init(is_new := false, is_server := false) -> void:
+	if !_is_class_instanced:
+		_is_class_instanced = true
+		_resource_maybe_free = _tables[&"resources"][&"maybe_free"]
+		_extraction_resources = _tables[&"extraction_resources"]
+		_resource_extractions = _tables[&"resource_extractions"]
+		_survey_density_errors = _tables[&"surveys"][&"density_error"]
+		_survey_masses_errors = _tables[&"surveys"][&"masses_error"]
+		_survey_deposits_sds = _tables[&"surveys"][&"deposits_sigma"]
+		
+	if !is_new: # loaded game
+		return
+	var n_is_extraction_resources := _extraction_resources.size()
+	masses = ivutils.init_array(n_is_extraction_resources, 0.0, TYPE_FLOAT)
+	heterogeneities = masses.duplicate()
+	if !is_server:
+		return
+	masses_biases = ivutils.init_array(n_is_extraction_resources, 1.0, TYPE_FLOAT)
+	heterogeneities_biases = masses_biases.duplicate()
 
 
 # ********************************** READ *************************************
@@ -221,23 +242,8 @@ func change_mass(resource_type: int, change: float) -> void:
 	_dirty_masses |= 1 << index
 
 
-
-
-
 # *****************************************************************************
-# init & sync
-
-func _init(is_new := false, is_server := false) -> void:
-	if !is_new: # loaded game
-		return
-	var n_is_extraction_resources := _extraction_resources.size()
-	masses = ivutils.init_array(n_is_extraction_resources, 0.0, TYPE_FLOAT)
-	heterogeneities = masses.duplicate()
-	if !is_server:
-		return
-	masses_biases = ivutils.init_array(n_is_extraction_resources, 1.0, TYPE_FLOAT)
-	heterogeneities_biases = masses_biases.duplicate()
-
+# sync
 
 func get_server_init() -> Array:
 	

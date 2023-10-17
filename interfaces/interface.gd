@@ -92,7 +92,7 @@ static var interfaces_by_name := {} # PLANET_EARTH, PLAYER_NASA, PROXY_OFFWORLD,
 
 
 var interface_id := -1
-var entity_type := -1
+var entity_type := -1 # server entity
 var name := &"" # unique & immutable
 var gui_name := "" # mutable for display ("" for player means hide from GUI)
 var run_qtr := -1 # year * 4 + (quarter - 1); never set for BodyInterface w/out a facility
@@ -118,11 +118,11 @@ var metaverse: Metaverse
 var use_this_ai := false # read-only
 
 # localized globals
-var times: Array = IVGlobal.times # [time (s, J2000), engine_time (s), solar_day (d)] (floats)
-var date: Array = IVGlobal.date # Gregorian [year, month, day] (ints)
-var clock: Array = IVGlobal.clock # UT [hour, minute, second] (ints)
-var tables: Dictionary = IVTableData.tables
-var table_n_rows: Dictionary = IVTableData.table_n_rows
+static var times: Array = IVGlobal.times # [time (s, J2000), engine_time (s), solar_day (d)] (floats)
+static var date: Array = IVGlobal.date # Gregorian [year, month, day] (ints)
+static var clock: Array = IVGlobal.clock # UT [hour, minute, second] (ints)
+static var tables: Dictionary = IVTableData.tables
+static var table_n_rows: Dictionary = IVTableData.table_n_rows
 
 # private
 var _dirty := 0

@@ -20,18 +20,23 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"_dirty",
 ]
 
-static var tables: Dictionary = IVTableData.tables
-static var table_n_rows: Dictionary = IVTableData.table_n_rows
-
+# persisted
 var run_qtr := -1 # last sync, = year * 4 + (quarter - 1)
-
 @warning_ignore("unused_private_class_variable")
 var _dirty := 0
 
+# processing
 var _float_data: Array[float]
 var _int_data: Array[int]
 var _float_offset: int
 var _int_offset: int
+
+# indexing & localized
+@warning_ignore("unused_private_class_variable")
+static var _tables: Dictionary = IVTableData.tables
+@warning_ignore("unused_private_class_variable")
+static var _table_n_rows: Dictionary = IVTableData.table_n_rows
+
 
 
 func get_server_init() -> Array:

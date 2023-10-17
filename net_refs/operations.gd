@@ -71,7 +71,7 @@ const PERSIST_PROPERTIES2: Array[StringName] = [
 	&"op_commands",
 	
 	&"has_financials",
-	&"_is_facility",
+	&"is_facility",
 	
 	&"_dirty_crew",
 	&"_dirty_capacities_1",
@@ -121,7 +121,7 @@ var op_commands: Array[int] # enum; Facility only
 
 
 var has_financials := false
-var _is_facility := false
+var is_facility := false
 
 # server dirty data (dirty indexes as bit flags)
 var _dirty_crews := 0 # max 64
@@ -142,18 +142,25 @@ var _dirty_op_logics_2 := 0 # max 128
 var _dirty_op_commands_1 := 0
 var _dirty_op_commands_2 := 0 # max 128
 
-# indexing & table data
-var _table_operations: Dictionary = tables[&"operations"]
-var _n_operations: int = table_n_rows[&"operations"]
-var _op_groups_operations: Array[Array] = tables[&"op_groups_operations"]
+# localized indexing & table data
+static var _table_operations: Dictionary
+static var _n_operations: int
+static var _op_groups_operations: Array[Array]
+static var _is_class_instanced := false
 
 
-func _init(is_new := false, has_financials_ := false, is_facility := false) -> void:
+
+func _init(is_new := false, has_financials_ := false, is_facility_ := false) -> void:
+	if !_is_class_instanced:
+		_is_class_instanced = true
+		_table_operations = _tables[&"operations"]
+		_n_operations = _table_n_rows[&"operations"]
+		_op_groups_operations = _tables[&"op_groups_operations"]
 	if !is_new: # game load
 		return
 	has_financials = has_financials_
-	_is_facility = is_facility
-	var n_populations: int = table_n_rows[&"populations"]
+	is_facility = is_facility_
+	var n_populations: int = _table_n_rows[&"populations"]
 	crews = ivutils.init_array(n_populations, 0.0, TYPE_FLOAT)
 	capacities = ivutils.init_array(_n_operations, 0.0, TYPE_FLOAT)
 	rates = capacities.duplicate()
@@ -162,7 +169,7 @@ func _init(is_new := false, has_financials_ := false, is_facility := false) -> v
 	public_capacities  = capacities.duplicate()
 	est_revenues = capacities.duplicate()
 	est_gross_incomes = capacities.duplicate()
-	if !is_facility:
+	if !is_facility_:
 		return
 	est_gross_margins = ivutils.init_array(_n_operations, NAN, TYPE_FLOAT)
 	op_logics = ivutils.init_array(_n_operations, OpLogics.IS_IDLE_UNPROFITABLE, TYPE_INT)
@@ -231,7 +238,7 @@ func get_mass_flow(type: int) -> float:
 func get_manufacturing_mass_flow_total() -> float:
 	var mass_flows: Array = _table_operations.mass_flow
 	var sum := 0.0
-	for type in tables.is_manufacturing_operations:
+	for type in _tables.is_manufacturing_operations:
 		sum += rates[type] * mass_flows[type]
 	return sum
 
@@ -251,7 +258,7 @@ func get_est_gross_income(type: int) -> float:
 func get_est_gross_margin(type: int) -> float:
 	if !has_financials:
 		return NAN
-	if _is_facility: # facilities (only) have margin even if revenue = 0
+	if is_facility: # facilities (only) have margin even if revenue = 0
 		return est_gross_margins[type]
 	if est_revenues[type] == 0.0:
 		return NAN
@@ -521,7 +528,7 @@ func add_server_delta(data: Array) -> void:
 	_add_dirty_floats(est_revenues, 64)
 	_add_dirty_floats(est_gross_incomes)
 	_add_dirty_floats(est_gross_incomes, 64)
-	if !_is_facility:
+	if !is_facility:
 		return
 	_set_dirty_floats(est_gross_margins) # not accumulator!
 	_set_dirty_floats(est_gross_margins, 64) # not accumulator!
