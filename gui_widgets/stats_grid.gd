@@ -26,17 +26,16 @@ var required_component := &"operations"
 
 var content := [
 	# label_txt, target_path
-	[&"LABEL_POPULATION", "get_total_population", IVQFormat.named_number],
-	[&"LABEL_ECONOMY", "operations/lfq_gross_output", IVQFormat.prefixed_named_number.bind("$")],
-	[&"LABEL_ENERGY", "operations/get_power_total", IVQFormat.prefixed_unit.bind("W")],
-	[&"LABEL_MANUFACTURING", "operations/get_manufacturing_mass_flow_total",
-			IVQFormat.prefixed_unit.bind("t/d")],
-	[&"LABEL_CONSTRUCTIONS", "operations/constructions", IVQFormat.prefixed_unit.bind("t")],
-	[&"LABEL_COMPUTATIONS", "metaverse/computations", IVQFormat.prefixed_unit.bind("flops")],
-	[&"LABEL_INFORMATION", "metaverse/get_information", IVQFormat.prefixed_unit.bind("bits")],
-	[&"LABEL_BIOPRODUCTIVITY", "biome/bioproductivity", IVQFormat.prefixed_unit.bind("t/d")],
-	[&"LABEL_BIOMASS", "biome/biomass", IVQFormat.prefixed_unit.bind("t")],
-	[&"LABEL_BIODIVERSITY", "biome/get_biodiversity", IVQFormat.fixed_unit.bind("species")],
+	[&"LABEL_POPULATION", &"get_total_population", IVQFormat.named_number],
+	[&"LABEL_ECONOMY", &"get_lfq_gross_output", IVQFormat.prefixed_named_number.bind("$")],
+	[&"LABEL_ENERGY", &"get_total_power", IVQFormat.prefixed_unit.bind(&"W")],
+	[&"LABEL_MANUFACTURING", &"get_total_manufacturing", IVQFormat.prefixed_unit.bind(&"t/d")],
+	[&"LABEL_CONSTRUCTIONS", &"get_total_constructions", IVQFormat.prefixed_unit.bind(&"t")],
+	[&"LABEL_COMPUTATIONS", &"get_total_computations", IVQFormat.prefixed_unit.bind(&"flops")],
+	[&"LABEL_INFORMATION", &"get_information", IVQFormat.prefixed_unit.bind(&"bits")],
+	[&"LABEL_BIOPRODUCTIVITY", &"get_total_bioproductivity", IVQFormat.prefixed_unit.bind(&"t/d")],
+	[&"LABEL_BIOMASS", &"get_total_biomass", IVQFormat.prefixed_unit.bind(&"t")],
+	[&"LABEL_BIODIVERSITY", &"get_biodiversity", IVQFormat.fixed_unit.bind(&"species")],
 ]
 
 var targets: Array[StringName] = [&"PLANET_EARTH", &"PROXY_OFF_EARTH"]
@@ -73,22 +72,19 @@ func _set_data() -> void:
 	_thread_fallback_names = fallback_names
 	
 	# get Interfaces and check required components
-	var interfaces := []
+	var interfaces: Array[Interface] = []
 	var has_data := false
 	for target in _thread_targets:
 		var interface := Interface.get_interface_by_name(target)
 		if interface:
-			if !interface.get(required_component):
+			if interface.get(required_component):
+				has_data = true
+			else:
 				interface = null
-		if interface:
-			if interface.has_method(&"calculate_proxy_data"): # ProxyInterface
-				@warning_ignore("unsafe_method_access")
-				interface.calculate_proxy_data()
-			has_data = true
 		if interface or show_missing_interface:
 			interfaces.append(interface) # may be null
 	if !has_data:
-		call_deferred("_no_data")
+		_no_data.call_deferred()
 		return
 
 	# do counts
@@ -123,13 +119,13 @@ func _set_data() -> void:
 	# data rows
 	var row := 1
 	for line_array in content:
-		var path: String = line_array[1]
+		var method: StringName = line_array[1]
 		var values := []
 		var is_data := false
 		for interface in interfaces:
 			var value = 0.0
 			if interface:
-				value = ivutils.get_path_result(interface, path)
+				value = interface.call(method)
 				if value != null:
 					is_data = true
 			values.append(value)

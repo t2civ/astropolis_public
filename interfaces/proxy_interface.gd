@@ -17,30 +17,19 @@ extends Interface
 #
 # See FacilityInterface._add_proxies() for existing proxies. Override this
 # method to add or modify.
-#
-# Proxy optional components:
-#   Operations - on server init or never
-#   Inventory  - on server init or never
-#   Financials - on server init or never
-#   Population - on server init or never
-#   Biome      - on server init or never
-#   Metaverse  - on server init or never
-
 
 static var proxy_interfaces: Array[ProxyInterface] = [] # indexed by proxy_id
 
-
-var operations: Operations
-var inventory: Inventory
-var financials: Financials
-var population: Population
-var biome: Biome
-var metaverse: Metaverse
-
-
+var operations: Operations # always created on server init
+var inventory: Inventory # on server init or never
+var financials: Financials # on server init or never
+var population: Population # on server init or never
+var biome: Biome # on server init or never
+var metaverse: Metaverse # on server init or never
 
 # read-only!
 var proxy_id := -1
+
 
 
 func _init() -> void:
@@ -52,21 +41,63 @@ func _init() -> void:
 # interface API
 
 func get_total_population() -> float:
-	var total_population := 0.0
+	var total_population := operations.get_crew_total()
 	if population:
-		total_population = population.get_number_total()
-	if operations:
-		total_population += operations.get_crew_total()
+		total_population += population.get_number_total()
 	return total_population
 
 
 func get_total_population_by_type(population_type: int) -> float:
-	var total_population := 0.0
+	var total_population := operations.get_crew(population_type)
 	if population:
-		total_population = population.get_number(population_type)
-	if operations:
-		total_population += operations.get_crew(population_type)
+		total_population += population.get_number(population_type)
 	return total_population
+
+
+func get_lfq_gross_output() -> float:
+	return operations.lfq_gross_output
+
+
+func get_total_power() -> float:
+	return operations.get_total_power()
+
+
+func get_total_manufacturing() -> float:
+	return operations.get_total_manufacturing()
+
+
+func get_total_constructions() -> float:
+	return operations.constructions
+
+
+func get_total_computations() -> float:
+	if metaverse:
+		return metaverse.computations
+	return 0.0
+
+
+func get_information() -> float:
+	if metaverse:
+		return metaverse.get_information()
+	return 0.0
+
+
+func get_total_bioproductivity() -> float:
+	if biome:
+		return biome.bioproductivity
+	return 0.0
+
+
+func get_total_biomass() -> float:
+	if biome:
+		return biome.biomass
+	return 0.0
+
+
+func get_biodiversity() -> float:
+	if biome:
+		return biome.get_biodiversity()
+	return 0.0
 
 
 # *****************************************************************************
@@ -82,9 +113,8 @@ func set_server_init(data: Array) -> void:
 	var population_data: Array = data[8]
 	var biome_data: Array = data[9]
 	var metaverse_data: Array = data[10]
-	if operations_data:
-		operations = Operations.new(true, !financials_data.is_empty())
-		operations.set_server_init(operations_data)
+	operations = Operations.new(true, !financials_data.is_empty())
+	operations.set_server_init(operations_data)
 	if inventory_data:
 		inventory = Inventory.new(true)
 		inventory.set_server_init(inventory_data)

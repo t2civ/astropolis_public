@@ -144,6 +144,8 @@ static func get_interface_by_name(interface_name: StringName) -> Interface:
 	return interfaces_by_name.get(interface_name)
 
 
+# override below if applicable
+
 func get_total_population() -> float:
 	return 0.0
 
@@ -152,7 +154,41 @@ func get_total_population_by_type(_population_type: int) -> float:
 	return 0.0
 
 
-# override below if applicable
+func get_lfq_gross_output() -> float:
+	return 0.0
+
+
+func get_total_power() -> float:
+	return 0.0
+
+
+func get_total_manufacturing() -> float:
+	return 0.0
+
+
+func get_total_constructions() -> float:
+	return 0.0
+
+
+func get_total_computations() -> float:
+	return 0.0
+
+
+func get_information() -> float:
+	return 0.0
+
+
+func get_total_bioproductivity() -> float:
+	return 0.0
+
+
+func get_total_biomass() -> float:
+	return 0.0
+
+
+func get_biodiversity() -> float:
+	return 0.0
+
 
 func get_body_name() -> StringName:
 	return &""

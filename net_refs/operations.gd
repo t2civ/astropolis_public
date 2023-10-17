@@ -209,7 +209,7 @@ func get_power(type: int) -> float:
 	return rates[type] * _table_operations.power[type]
 
 
-func get_power_total() -> float:
+func get_total_power() -> float:
 	var operation_powers: Array = _table_operations.power
 	var sum := 0.0
 	var i := 0
@@ -235,7 +235,7 @@ func get_mass_flow(type: int) -> float:
 	return rates[type] * _table_operations.mass_flow[type]
 
 
-func get_manufacturing_mass_flow_total() -> float:
+func get_total_manufacturing() -> float:
 	var mass_flows: Array = _table_operations.mass_flow
 	var sum := 0.0
 	for type in _tables.is_manufacturing_operations:

@@ -15,14 +15,6 @@ extends Interface
 # components. FacilityInterface then propagates component changes to
 # BodyInterface, PlayerInterface and any ProxyInterfaces held in 'propagations'
 # array.
-#
-# Facility required & optional components:
-#   Operations - on init
-#   Inventory  - on init
-#   Financials - on init
-#   Population - when needed
-#   Biome      - when needed
-#   Metaverse  - when needed
 
 static var facility_interfaces: Array[FacilityInterface] = [] # indexed by facility_id
 
@@ -40,9 +32,9 @@ var proxies: Array[ProxyInterface] = []
 var operations := Operations.new(true, true, true)
 var inventory := Inventory.new(true)
 var financials := Financials.new(true)
-var population: Population
-var biome: Biome
-var metaverse: Metaverse
+var population: Population # when/if needed
+var biome: Biome # when/if needed
+var metaverse: Metaverse # when/if needed
 
 
 
@@ -101,6 +93,54 @@ func get_total_population_by_type(population_type: int) -> float:
 	if population:
 		total_population += population.get_number(population_type)
 	return total_population
+
+
+func get_lfq_gross_output() -> float:
+	return operations.lfq_gross_output
+
+
+func get_total_power() -> float:
+	return operations.get_total_power()
+
+
+func get_total_manufacturing() -> float:
+	return operations.get_total_manufacturing()
+
+
+func get_total_constructions() -> float:
+	return operations.constructions
+
+
+func get_total_computations() -> float:
+	if metaverse:
+		return metaverse.computations
+	return 0.0
+
+
+func get_information() -> float:
+	if metaverse:
+		return metaverse.get_information()
+	return 0.0
+
+
+func get_total_bioproductivity() -> float:
+	if biome:
+		return biome.bioproductivity
+	return 0.0
+
+
+func get_total_biomass() -> float:
+	if biome:
+		return biome.biomass
+	return 0.0
+
+
+func get_biodiversity() -> float:
+	if biome:
+		return biome.get_biodiversity()
+	return 0.0
+
+
 
 # *****************************************************************************
 # sync

@@ -10,13 +10,6 @@ extends Interface
 # Warning! This object lives and dies on the AI thread! Containers and many
 # methods are not threadsafe. Accessing non-container properties is safe.
 #
-# Player required components:
-#   Operations - on init
-#   Financials - on init
-#   Population - on init
-#   Biome      - on init
-#   Metaverse  - on init
-#
 # Players are never removed, but they are effectively dead if is_facilities == false.
 
 static var player_interfaces: Array[PlayerInterface] = [] # indexed by player_id
@@ -80,6 +73,44 @@ func get_total_population() -> float:
 
 func get_total_population_by_type(population_type: int) -> float:
 	return population.get_number(population_type) + operations.get_crew(population_type)
+
+
+func get_lfq_gross_output() -> float:
+	return operations.lfq_gross_output
+
+
+func get_total_power() -> float:
+	return operations.get_total_power()
+
+
+func get_total_manufacturing() -> float:
+	return operations.get_total_manufacturing()
+
+
+func get_total_constructions() -> float:
+	return operations.constructions
+
+
+func get_total_computations() -> float:
+	return metaverse.computations
+
+
+func get_information() -> float:
+	return metaverse.get_information()
+
+
+func get_total_bioproductivity() -> float:
+	return biome.bioproductivity
+
+
+func get_total_biomass() -> float:
+	return biome.biomass
+
+
+func get_biodiversity() -> float:
+	return biome.get_biodiversity()
+
+
 
 
 # *****************************************************************************

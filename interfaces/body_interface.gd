@@ -12,13 +12,6 @@ extends Interface
 #
 # To get the SceenTree "body" node (class IVBody) use IVGlobal.bodies[body_name].
 # Be aware that SceenTree works on the Main thread!
-#
-# Body optional components:
-#   Operations   - when needed
-#   Population   - when needed
-#   Biome        - when needed
-#   Metaverse    - when needed
-#   Compositions - when needed (BodyInterface only!)
 
 static var body_interfaces: Array[BodyInterface] = [] # indexed by body_id
 
@@ -33,10 +26,10 @@ var parent: BodyInterface # null for top body
 var satellites: Array[BodyInterface] = [] # resizable container - not threadsafe!
 var facilities: Array[Interface] = [] # resizable container - not threadsafe!
 var compositions: Array[Composition] = [] # resizable container - not threadsafe!
-var operations: Operations
-var population: Population
-var biome: Biome
-var metaverse: Metaverse
+var operations: Operations # when/if needed
+var population: Population # when/if needed
+var biome: Biome # when/if needed
+var metaverse: Metaverse # when/if needed
 
 
 
@@ -88,6 +81,62 @@ func get_total_population_by_type(population_type: int) -> float:
 	if operations:
 		total_population += operations.get_crew(population_type)
 	return total_population
+
+
+func get_lfq_gross_output() -> float:
+	if operations:
+		return operations.lfq_gross_output
+	return 0.0
+
+
+func get_total_power() -> float:
+	if operations:
+		return operations.get_total_power()
+	return 0.0
+
+
+func get_total_manufacturing() -> float:
+	if operations:
+		return operations.get_total_manufacturing()
+	return 0.0
+
+
+func get_total_constructions() -> float:
+	if operations:
+		return operations.constructions
+	return 0.0
+
+
+func get_total_computations() -> float:
+	if metaverse:
+		return metaverse.computations
+	return 0.0
+
+
+func get_information() -> float:
+	if metaverse:
+		return metaverse.get_information()
+	return 0.0
+
+
+func get_total_bioproductivity() -> float:
+	if biome:
+		return biome.bioproductivity
+	return 0.0
+
+
+func get_total_biomass() -> float:
+	if biome:
+		return biome.biomass
+	return 0.0
+
+
+func get_biodiversity() -> float:
+	if biome:
+		return biome.get_biodiversity()
+	return 0.0
+
+
 
 # *****************************************************************************
 # sync - DON'T MODIFY!
