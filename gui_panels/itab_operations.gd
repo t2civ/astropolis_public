@@ -239,8 +239,8 @@ func _update_tab_display(target_name: StringName, tab: int, n_op_groups: int, ha
 	# header changes
 	var revenue_hdr: Label = _revenue_hdrs[tab]
 	var margin_hdr: Label = _margin_hdrs[tab]
-	revenue_hdr.text = "Est Rev" if has_financials else ""
-	margin_hdr.text = "Est Mrgn" if has_financials else ""
+	revenue_hdr.text = "Revenue" if has_financials else ""
+	margin_hdr.text = "Margin" if has_financials else ""
 	
 	# make GroupBoxes as needed
 	var vbox: VBoxContainer = _vboxes[tab]
@@ -369,7 +369,7 @@ class RowItem extends HBoxContainer:
 			group_button.size_flags_horizontal = SIZE_EXPAND_FILL
 			group_button.custom_minimum_size.x = _name_column_width
 			group_button.flat = true
-			group_button.alignment = HORIZONTAL_ALIGNMENT_CENTER
+			group_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			add_child(group_button)
 		else:
 			ops_label = Label.new()
