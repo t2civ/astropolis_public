@@ -79,8 +79,8 @@ func get_lfq_gross_output() -> float:
 	return operations.lfq_gross_output
 
 
-func get_total_power() -> float:
-	return operations.get_total_power()
+func get_total_energy() -> float:
+	return operations.get_total_energy()
 
 
 func get_total_manufacturing() -> float:

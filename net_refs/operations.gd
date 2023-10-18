@@ -47,9 +47,7 @@ enum { # _dirty
 	DIRTY_LFQ_REVENUE = 1,
 	DIRTY_LFQ_GROSS_OUTPUT = 1 << 1,
 	DIRTY_LFQ_NET_INCOME = 1 << 2,
-	DIRTY_TOTAL_POWER = 1 << 3,
-	DIRTY_MANUFACTURING = 1 << 4,
-	DIRTY_CONSTRUCTIONS = 1 << 5,
+	DIRTY_CONSTRUCTIONS = 1 << 3,
 }
 
 # save/load persistence for server only
@@ -57,8 +55,6 @@ const PERSIST_PROPERTIES2: Array[StringName] = [
 	&"lfq_revenue",
 	&"lfq_gross_output",
 	&"lfq_net_income",
-	&"total_power",
-	&"manufacturing",
 	&"constructions",
 	&"crews",
 	&"capacities",
@@ -96,8 +92,6 @@ const PERSIST_PROPERTIES2: Array[StringName] = [
 var lfq_revenue := 0.0 # last 4 quarters
 var lfq_gross_output := 0.0 # revenue w/ some exceptions; = "economy"
 var lfq_net_income := 0.0
-var total_power := 0.0 # DEPRECIATE - we have a method
-var manufacturing := 0.0 # present mass rate of manufactured products; DEPRECIATE for method
 var constructions := 0.0 # total mass of all constructions
 
 var crews: Array[float] # indexed by population_type (can have crew w/out Population component)
@@ -205,16 +199,30 @@ func get_utilization(type: int) -> float:
 	return rates[type] / capacities[type]
 
 
-func get_power(type: int) -> float:
-	return rates[type] * _table_operations.power[type]
+func get_electricity(type: int) -> float:
+	return rates[type] * _table_operations[&"electricity"][type]
 
 
-func get_total_power() -> float:
-	var operation_powers: Array = _table_operations.power
+func get_total_electricity() -> float:
+	var operation_electricities: Array = _table_operations[&"electricity"]
 	var sum := 0.0
 	var i := 0
 	while i < _n_operations:
-		sum += rates[i] * operation_powers[i]
+		sum += rates[i] * operation_electricities[i]
+		i += 1
+	return sum
+
+
+func get_energy(type: int) -> float:
+	return rates[type] * _table_operations[&"energy"][type]
+
+
+func get_total_energy() -> float:
+	var operation_energies: Array = _table_operations[&"energy"]
+	var sum := 0.0
+	var i := 0
+	while i < _n_operations:
+		sum += rates[i] * operation_energies[i]
 		i += 1
 	return sum
 
@@ -294,11 +302,11 @@ func get_group_utilization(op_group: int) -> float:
 	return sum_rates / sum_capacities
 
 
-func get_group_power(op_group: int) -> float:
-	var powers: Array = _table_operations.power
+func get_group_energy(op_group: int) -> float:
+	var energies: Array = _table_operations[&"energy"]
 	var sum := 0.0
 	for type in _op_groups_operations[op_group]:
-		sum += rates[type] * powers[type]
+		sum += rates[type] * energies[type]
 	return sum
 
 
@@ -439,12 +447,6 @@ func take_server_delta(data: Array) -> void:
 	if _dirty & DIRTY_LFQ_NET_INCOME:
 		_float_data.append(lfq_net_income)
 		lfq_net_income = 0.0
-	if _dirty & DIRTY_TOTAL_POWER:
-		_float_data.append(total_power)
-		total_power = 0.0
-	if _dirty & DIRTY_MANUFACTURING:
-		_float_data.append(manufacturing)
-		manufacturing = 0.0
 	if _dirty & DIRTY_CONSTRUCTIONS:
 		_float_data.append(constructions)
 		constructions = 0.0
@@ -504,12 +506,6 @@ func add_server_delta(data: Array) -> void:
 		_float_offset += 1
 	if flags & DIRTY_LFQ_NET_INCOME:
 		lfq_net_income += _float_data[_float_offset]
-		_float_offset += 1
-	if flags & DIRTY_TOTAL_POWER:
-		total_power += _float_data[_float_offset]
-		_float_offset += 1
-	if flags & DIRTY_MANUFACTURING:
-		manufacturing += _float_data[_float_offset]
 		_float_offset += 1
 	if flags & DIRTY_CONSTRUCTIONS:
 		constructions += _float_data[_float_offset]

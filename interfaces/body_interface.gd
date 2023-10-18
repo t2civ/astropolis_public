@@ -89,9 +89,9 @@ func get_lfq_gross_output() -> float:
 	return 0.0
 
 
-func get_total_power() -> float:
+func get_total_energy() -> float:
 	if operations:
-		return operations.get_total_power()
+		return operations.get_total_energy()
 	return 0.0
 
 

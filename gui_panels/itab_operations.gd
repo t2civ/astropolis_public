@@ -186,7 +186,7 @@ func _get_ai_data(target_name: StringName) -> void:
 		var group_data := [
 			_op_group_names[op_group_type],
 			operations.get_group_utilization(op_group_type),
-			operations.get_group_power(op_group_type),
+			operations.get_group_energy(op_group_type),
 			NAN,
 			operations.get_group_est_revenue(op_group_type) if has_financials else NAN,
 			operations.get_group_est_gross_margin(op_group_type) if has_financials else NAN,
@@ -211,7 +211,10 @@ func _get_ai_data(target_name: StringName) -> void:
 			var op_data := [
 				_operation_names[operation_type],
 				operations.get_utilization(operation_type),
-				operations.get_power(operation_type),
+				
+				# FIXME: Below should be electricity
+				
+				operations.get_electricity(operation_type),
 				flow,
 				operations.get_est_revenue(operation_type) if has_financials else NAN,
 				operations.get_est_gross_margin(operation_type) if has_financials else NAN,

@@ -28,7 +28,7 @@ var content := [
 	# label_txt, target_path
 	[&"LABEL_POPULATION", &"get_total_population", IVQFormat.named_number],
 	[&"LABEL_ECONOMY", &"get_lfq_gross_output", IVQFormat.prefixed_named_number.bind("$")],
-	[&"LABEL_ENERGY", &"get_total_power", IVQFormat.prefixed_unit.bind(&"W")],
+	[&"LABEL_ENERGY", &"get_total_energy", IVQFormat.prefixed_unit.bind(&"W")],
 	[&"LABEL_MANUFACTURING", &"get_total_manufacturing", IVQFormat.prefixed_unit.bind(&"t/d")],
 	[&"LABEL_CONSTRUCTIONS", &"get_total_constructions", IVQFormat.prefixed_unit.bind(&"t")],
 	[&"LABEL_COMPUTATIONS", &"get_total_computations", IVQFormat.prefixed_unit.bind(&"flops")],
