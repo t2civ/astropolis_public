@@ -4,7 +4,7 @@
 # *****************************************************************************
 extends RefCounted
 
-const VERSION := "0.0.4-dev"
+const VERSION := "0.0.4.dev"
 
 const AI_VERBOSE := false
 const AI_VERBOSE2 := false

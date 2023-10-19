@@ -22,10 +22,10 @@ extends IVSelectionManager
 const PLAYER_CLASS_POLITY := Enums.PlayerClasses.PLAYER_CLASS_POLITY
 
 const PERSIST_PROPERTIES2: Array[StringName] = [
-	&"_info_panel_target_name",
+	&"info_panel_target_name",
 ]
 
-var _info_panel_target_name: StringName # facility, body or proxy
+var info_panel_target_name: StringName # facility, body or proxy
 
 
 
@@ -91,7 +91,7 @@ func get_body_gui_name() -> String:
 
 
 func get_info_target_name() -> StringName:
-	return _info_panel_target_name
+	return info_panel_target_name
 
 
 func _set_info_target_name(selection_: IVSelection) -> void:
@@ -107,10 +107,10 @@ func _set_info_target_name(selection_: IVSelection) -> void:
 			# polity proxy (combines polity player, agency & companies)
 			body_name = selection_.get_body_name()
 			var polity_name: StringName = MainThreadGlobal.get_polity_name(selection_name)
-			_info_panel_target_name = StringName("PROXY_" + body_name + "_" + polity_name)
+			info_panel_target_name = StringName("PROXY_" + body_name + "_" + polity_name)
 			return
 		# agency or company facility is the target
-		_info_panel_target_name = selection_name
+		info_panel_target_name = selection_name
 		return
 	# must be body selection
 	body_name = selection_.get_body_name()
@@ -119,8 +119,8 @@ func _set_info_target_name(selection_: IVSelection) -> void:
 	if body_flags & BodyFlags.IS_STAR:
 		# solar system
 		var system_name := "SYSTEM_" + body_name
-		_info_panel_target_name = StringName("PROXY_" + system_name)
+		info_panel_target_name = StringName("PROXY_" + system_name)
 		return
 	# body is the target
-	_info_panel_target_name = selection_name
+	info_panel_target_name = selection_name
 
