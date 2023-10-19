@@ -9,9 +9,6 @@ const SCENE := "res://astropolis_public/gui_panels/itab_markets.tscn"
 # Tabs follow row enumerations in resource_classes.tsv.
 # TODO: complete localizations
 
-
-signal header_changed(new_header)
-
 const N_COLUMNS := 6
 
 const TRADE_CLASS_TEXTS := [ # correspond to TradeClasses
@@ -36,19 +33,7 @@ var unit_multipliers := IVUnits.unit_multipliers
 var current_tab := 0
 var _on_ready_tab := 0
 
-# not persisted
 
-var _header_suffix := "  -  " + tr(&"LABEL_MARKETS")
-var _subheader_suffixes := [
-	" / " + tr(&"LABEL_ENERGY"),
-	" / " + tr(&"LABEL_ORES"),
-	" / " + tr(&"LABEL_VOLATILES"),
-	" / " + tr(&"LABEL_MATERIALS"),
-	" / " + tr(&"LABEL_MANUFACTURED"),
-	" / " + tr(&"LABEL_BIOLOGICALS"),
-	" / " + tr(&"LABEL_CYBER"),
-]
-#var _show_subheader := true
 var _state: Dictionary = IVGlobal.state
 var _selection_manager: SelectionManager
 var _suppress_tab_listener := true
@@ -128,25 +113,18 @@ func _select_tab(tab: int) -> void:
 func _update_tab(_suppress_camera_move := false) -> void:
 	if !visible or !_state.is_running:
 		return
-	var selection_data := _selection_manager.get_info_panel_data()
-	if !selection_data:
+	if !visible or !_state.is_running:
 		return
-	var target_name: StringName = selection_data[0]
-	var header_text: String = selection_data[1] + _header_suffix
-	var is_developed: bool = selection_data[2]
-	var has_market := is_developed and (target_name.begins_with("FACILITY_")
-			or target_name.begins_with("PROXY_"))
-	if has_market:
+	var target_name := _selection_manager.get_info_target_name()
+	if MainThreadGlobal.has_markets(target_name):
 		MainThreadGlobal.call_ai_thread(_get_ai_data.bind(target_name))
-		header_text += _subheader_suffixes[current_tab]
 	else:
-		_update_no_markets(is_developed)
-	header_changed.emit(header_text)
+		_update_no_markets(MainThreadGlobal.has_development(target_name))
 
 
-func _update_no_markets(is_developed := false) -> void:
+func _update_no_markets(has_development := false) -> void:
 	_tab_container.hide()
-	_no_markets_label.text = (&"LABEL_NO_MARKETS_SELECT_ENTITY" if is_developed
+	_no_markets_label.text = (&"LABEL_NO_MARKETS_SELECT_ENTITY" if has_development
 			else &"LABEL_NO_MARKETS")
 	_no_markets_label.show()
 

@@ -46,6 +46,14 @@ func _clear_circular_references() -> void:
 # interface API
 
 
+func has_development() -> bool:
+	return true
+
+
+func has_markets() -> bool:
+	return false
+
+
 func get_player_name() -> StringName:
 	return name
 
@@ -56,10 +64,6 @@ func get_player_class() -> int:
 
 func get_polity_name() -> StringName:
 	return polity_name
-
-
-func has_facilities() -> bool:
-	return is_facilities
 
 
 func get_facilities() -> Array[Interface]:

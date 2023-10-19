@@ -6,9 +6,6 @@ class_name ITabDevelopment
 extends MarginContainer
 const SCENE := "res://astropolis_public/gui_panels/itab_development.tscn"
 
-
-signal header_changed(new_header)
-
 const BodyFlags: Dictionary = IVEnums.BodyFlags
 const BodyFlags2: Dictionary = Enums.BodyFlags2
 const PLAYER_CLASS_POLITY := Enums.PlayerClasses.PLAYER_CLASS_POLITY
@@ -16,7 +13,6 @@ const PLAYER_CLASS_POLITY := Enums.PlayerClasses.PLAYER_CLASS_POLITY
 const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
 const PERSIST_PROPERTIES: Array[StringName] = []
 
-var _header_suffix := "  -  " + tr(&"LABEL_DEVELOPMENT")
 var _state: Dictionary = IVGlobal.state
 var _selection_manager: SelectionManager
 
@@ -42,25 +38,21 @@ func _update_no_development(has_stats: bool) -> void:
 	_no_dev_label.visible = !has_stats
 
 
-func _update_selection(_suppress_camera_move := false) -> void:
+func _update_selection(_dummy := false) -> void:
 	if !visible or !_state.is_running:
 		return
-	var selection_data := _selection_manager.get_info_panel_data()
-	if !selection_data:
-		return
-	var target_name: StringName = selection_data[0]
-	var header_text: String = selection_data[1]
-	header_text += _header_suffix
-	header_changed.emit(header_text)
-	
 	var selection_name := _selection_manager.get_selection_name()
+	if !selection_name:
+		return
+	var target_name := _selection_manager.get_info_target_name()
+	assert(target_name)
 	
 	var body_name: StringName
 	var body_flags: int
 	var proxy_orbit: StringName
 	var proxy_moons_of: StringName
 	
-	# Below replicates some logic in SelectionManager.get_info_panel_data(); could be cleaned up.
+	# Below replicates some logic in SelectionManager; could be cleaned up.
 	var at_body_name: StringName
 	if selection_name.begins_with("FACILITY_"):
 		body_name = MainThreadGlobal.get_body_name(selection_name)

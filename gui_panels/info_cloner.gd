@@ -47,7 +47,6 @@ func _pin_info_panel(info_panel: InfoPanel) -> void:
 	panel_clone.clone_and_pin_requested.connect(_pin_info_panel)
 	panel_clone.selection_manager = sm_clone
 	panel_clone.is_pinned = true
-	panel_clone.header_text = info_panel.header_text
 
 	# build the tree
 	var astro_gui: AstroGUI = IVGlobal.program.AstroGUI

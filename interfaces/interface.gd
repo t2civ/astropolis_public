@@ -146,6 +146,14 @@ static func get_interface_by_name(interface_name: StringName) -> Interface:
 
 # override below if applicable
 
+func has_development() -> bool:
+	return false
+
+
+func has_markets() -> bool:
+	return false
+
+
 func get_total_population() -> float:
 	return 0.0
 
@@ -208,10 +216,6 @@ func get_player_class() -> int:
 
 func get_polity_name() -> StringName:
 	return &""
-
-
-func has_facilities() -> bool:
-	return false
 
 
 func get_facilities() -> Array[Interface]:

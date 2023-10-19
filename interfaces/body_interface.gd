@@ -48,16 +48,20 @@ func _clear_circular_references() -> void:
 # interface API
 
 
+func has_development() -> bool:
+	return is_facilities
+
+
+func has_markets() -> bool:
+	return false
+
+
 func get_body_name() -> StringName:
 	return name
 
 
 func get_body_flags() -> int:
 	return body_flags
-
-
-func has_facilities() -> bool:
-	return is_facilities
 
 
 func get_facilities() -> Array[Interface]:

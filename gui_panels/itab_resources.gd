@@ -7,8 +7,6 @@ extends MarginContainer
 const SCENE := "res://astropolis_public/gui_panels/itab_resources.tscn"
 
 
-signal header_changed(new_header)
-
 const SUPER_OPEN_PREFIX := "\u2304 "
 const SUPER_CLOSED_PREFIX := "> "
 const STRATUM_OPEN_PREFIX := "  \u2304 "
@@ -34,8 +32,6 @@ var _composition_types: Dictionary # table name enumeration
 var _state: Dictionary = IVGlobal.state
 var _selection_manager: SelectionManager
 
-var _header_suffix := "  -  " + tr(&"LABEL_RESOURCES")
-
 @onready var _vbox: VBoxContainer = $VBox
 @onready var _no_resources: Label = $NoResources
 @onready var _resource_vbox: VBoxContainer = $"%ResourceVBox"
@@ -58,14 +54,10 @@ func timer_update() -> void:
 func _update_selection(_suppress_camera_move := false) -> void:
 	if !visible or !_state.is_running:
 		return
-	var selection_data := _selection_manager.get_info_panel_data()
-	if !selection_data:
-		return
-	var header_text: String = selection_data[1] + _header_suffix
-	header_changed.emit(header_text)
-	
-	var body_name := _selection_manager.get_body_name()
 	var selection_name := _selection_manager.get_selection_name() # body or facility
+	if !selection_name:
+		return
+	var body_name := _selection_manager.get_body_name()
 	MainThreadGlobal.call_ai_thread(_get_ai_data.bind(body_name, selection_name))
 
 

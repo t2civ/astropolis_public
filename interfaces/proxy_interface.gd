@@ -40,6 +40,14 @@ func _init() -> void:
 # *****************************************************************************
 # interface API
 
+func has_development() -> bool:
+	return true
+
+
+func has_markets() -> bool:
+	return inventory != null
+	
+
 func get_total_population() -> float:
 	var total_population := operations.get_crew_total()
 	if population:

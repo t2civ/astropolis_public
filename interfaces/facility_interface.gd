@@ -61,6 +61,14 @@ func set_gui_name(new_gui_name: String) -> void:
 	gui_name = new_gui_name
 
 
+func has_development() -> bool:
+	return true
+
+
+func has_markets() -> bool:
+	return true
+
+
 func get_body_name() -> StringName:
 	return body.name
 
