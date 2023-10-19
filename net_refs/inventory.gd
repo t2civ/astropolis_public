@@ -11,9 +11,7 @@ extends NetRef
 # In trade units or in internal units????
 
 # save/load persistence for server only
-const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
-const PERSIST_PROPERTIES: Array[StringName] = [
-	&"yq",
+const PERSIST_PROPERTIES2: Array[StringName] = [
 	&"reserves",
 	&"markets",
 	&"in_transits",
@@ -41,7 +39,6 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 
 
 # Interface read-only! Data flows server -> interface.
-var yq := -1 # last sync, = year * 4 + (quarter - 1)
 var reserves: Array[float] # exists here; we may need it (>= 0.0)
 var markets: Array[float] # exists here; Trader may commit (>= 0.0)
 var in_transits: Array[float] # on the way (>= 0.0), probably under contract
@@ -107,105 +104,69 @@ func set_price(type: int, value: float) -> void:
 
 # ********************************** SYNC *************************************
 
-func get_server_init() -> Array:
-	# facility only; reference-safe
-	return [
-		yq,
-		reserves.duplicate(),
-		markets.duplicate(),
-		in_transits.duplicate(),
-		contracteds.duplicate(),
-		prices.duplicate(),
-		bids.duplicate(),
-		asks.duplicate(),
-	]
-
-
-func sync_server_init(data: Array) -> void:
-	# facility only; keeps array references!
-	yq = data[0]
-	reserves = data[1]
-	markets = data[2]
-	in_transits = data[3]
-	contracteds = data[4]
-	prices = data[5]
-	bids = data[6]
-	asks = data[7]
-
-
-func propagate_component_init(data: Array) -> void:
-	# non-facilities only
-	var svr_yq: int = data[0]
-	assert(svr_yq >= yq, "Load order different than process order?")
-	yq = svr_yq # TODO: histories
-	var data_array: Array[float] = data[1]
-	utils.add_to_float_array_with_array(reserves, data_array)
-	data_array = data[2]
-	utils.add_to_float_array_with_array(markets, data_array)
-	data_array = data[3]
-	utils.add_to_float_array_with_array(in_transits, data_array)
-	data_array = data[4]
-	utils.add_to_float_array_with_array(contracteds, data_array)
-	data_array = data[5]
-	utils.fill_array(prices, data_array)
-	data_array = data[6]
-	utils.fill_array(bids, data_array)
-	data_array = data[7]
-	utils.fill_array(asks, data_array)
-
-
 func take_server_delta(data: Array) -> void:
 	# facility accumulator only; zero values and dirty flags
-	# optimized for sparse dirty flags (not right-biased)
-	_append_and_zero_dirty(data, reserves, _dirty_reserves_1)
-	_append_and_zero_dirty(data, reserves, _dirty_reserves_2, 64)
-	_append_and_zero_dirty(data, markets, _dirty_markets_1)
-	_append_and_zero_dirty(data, markets, _dirty_markets_2, 64)
-	_append_and_zero_dirty(data, in_transits, _dirty_in_transits_1)
-	_append_and_zero_dirty(data, in_transits, _dirty_in_transits_2, 64)
-	_append_and_zero_dirty(data, contracteds, _dirty_contracteds_1)
-	_append_and_zero_dirty(data, contracteds, _dirty_contracteds_2, 64)
-	_append_dirty(data, prices, _dirty_prices_1)     # not accumulator!
-	_append_dirty(data, prices, _dirty_prices_2, 64) # not accumulator!
-	_append_dirty(data, bids, _dirty_bids_1)     # not accumulator!
-	_append_dirty(data, bids, _dirty_bids_2, 64) # not accumulator!
-	_append_dirty(data, asks, _dirty_asks_1)     # not accumulator!
-	_append_dirty(data, asks, _dirty_asks_2, 64) # not accumulator!
+	
+	_int_data = data[0]
+	_float_data = data[1]
+	
+	_int_data[4] = _int_data.size()
+	_int_data[5] = _float_data.size()
+	
+	_append_and_zero_dirty_floats(reserves, _dirty_reserves_1)
 	_dirty_reserves_1 = 0
+	_append_and_zero_dirty_floats(reserves, _dirty_reserves_2, 64)
 	_dirty_reserves_2 = 0
+	_append_and_zero_dirty_floats(markets, _dirty_markets_1)
 	_dirty_markets_1 = 0
+	_append_and_zero_dirty_floats(markets, _dirty_markets_2, 64)
 	_dirty_markets_2 = 0
+	_append_and_zero_dirty_floats(in_transits, _dirty_in_transits_1)
 	_dirty_in_transits_1 = 0
+	_append_and_zero_dirty_floats(in_transits, _dirty_in_transits_2, 64)
 	_dirty_in_transits_2 = 0
+	_append_and_zero_dirty_floats(contracteds, _dirty_contracteds_1)
 	_dirty_contracteds_1 = 0
+	_append_and_zero_dirty_floats(contracteds, _dirty_contracteds_2, 64)
 	_dirty_contracteds_2 = 0
+	_append_dirty_floats(prices, _dirty_prices_1)     # not accumulator!
 	_dirty_prices_1 = 0
+	_append_dirty_floats(prices, _dirty_prices_2, 64) # not accumulator!
 	_dirty_prices_2 = 0
+	_append_dirty_floats(bids, _dirty_bids_1)     # not accumulator!
 	_dirty_bids_1 = 0
+	_append_dirty_floats(bids, _dirty_bids_2, 64) # not accumulator!
 	_dirty_bids_2 = 0
+	_append_dirty_floats(asks, _dirty_asks_1)     # not accumulator!
 	_dirty_asks_1 = 0
+	_append_dirty_floats(asks, _dirty_asks_2, 64) # not accumulator!
 	_dirty_asks_2 = 0
 
 
-func sync_server_delta(data: Array, k: int) -> int:
+func add_server_delta(data: Array) -> void:
 	# any target
-	var svr_yq: int = data[0]
-	yq = svr_yq # TODO: histories
-
-	k = _add_dirty(data, reserves, k)
-	k = _add_dirty(data, reserves, k, 64)
-	k = _add_dirty(data, markets, k)
-	k = _add_dirty(data, markets, k, 64)
-	k = _add_dirty(data, in_transits, k)
-	k = _add_dirty(data, in_transits, k, 64)
-	k = _add_dirty(data, contracteds, k)
-	k = _add_dirty(data, contracteds, k, 64)
-	k = _set_dirty(data, prices, k)     # not accumulator!
-	k = _set_dirty(data, prices, k, 64) # not accumulator!
-	k = _set_dirty(data, bids, k)     # not accumulator!
-	k = _set_dirty(data, bids, k, 64) # not accumulator!
-	k = _set_dirty(data, asks, k)     # not accumulator!
-	k = _set_dirty(data, asks, k, 64) # not accumulator!
 	
-	return k
+	_int_data = data[0]
+	_float_data = data[1]
+	
+	_int_offset = _int_data[4]
+	_float_offset = _int_data[5]
+	
+	var svr_qtr := _int_data[0]
+	run_qtr = svr_qtr # TODO: histories
+	
+	_add_dirty_floats(reserves)
+	_add_dirty_floats(reserves, 64)
+	_add_dirty_floats(markets)
+	_add_dirty_floats(markets, 64)
+	_add_dirty_floats(in_transits)
+	_add_dirty_floats(in_transits, 64)
+	_add_dirty_floats(contracteds)
+	_add_dirty_floats(contracteds, 64)
+	_set_dirty_floats(prices)     # not accumulator!
+	_set_dirty_floats(prices, 64) # not accumulator!
+	_set_dirty_floats(bids)     # not accumulator!
+	_set_dirty_floats(bids, 64) # not accumulator!
+	_set_dirty_floats(asks)     # not accumulator!
+	_set_dirty_floats(asks, 64) # not accumulator!
 

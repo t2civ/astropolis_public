@@ -11,8 +11,6 @@ extends Interface
 # methods are not threadsafe. Accessing non-container properties is safe.
 #
 
-const OBJECT_TYPE := Enums.Objects.TRADER
-
 static var trader_interfaces: Array[TraderInterface] = [] # indexed by trader_id
 
 # sync from server
@@ -33,12 +31,15 @@ var asks: Array[float]
 # shared from other interfaces
 var facility_interface: FacilityInterface
 
+var inventory: Inventory
+
 # localized indexing
-var n_resources: int = table_n_rows[&"resources"]
+var n_resources: int = _table_n_rows[&"resources"]
 
 
 func _init() -> void:
 	super()
+	entity_type = ENTITY_TRADER
 	bids.resize(n_resources)
 	bids.fill(0.0)
 	asks.resize(n_resources)
@@ -75,7 +76,7 @@ func attempt_replace_order(_order_id: int, _new_order: Array) -> void:
 # *****************************************************************************
 # sync from server
 
-func sync_server_init(data: Array) -> void:
+func set_server_init(data: Array) -> void:
 	trader_id = data[0]
 	name = data[1]
 	facility_id = data[2]

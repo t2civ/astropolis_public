@@ -26,28 +26,25 @@ var required_component := &"operations"
 
 var content := [
 	# label_txt, target_path
-	[&"LABEL_POPULATION", "get_population_and_crew_total", IVQFormat.named_number],
-	[&"LABEL_ECONOMY", "operations/lfq_gross_output", IVQFormat.prefixed_named_number.bind("$")],
-	[&"LABEL_ENERGY", "operations/get_power_total", IVQFormat.prefixed_unit.bind("W")],
-	[&"LABEL_MANUFACTURING", "operations/get_manufacturing_mass_flow_total",
-			IVQFormat.prefixed_unit.bind("t/d")],
-	[&"LABEL_CONSTRUCTIONS", "operations/constructions", IVQFormat.prefixed_unit.bind("t")],
-	[&"LABEL_COMPUTATIONS", "metaverse/computations", IVQFormat.prefixed_unit.bind("flops")],
-	[&"LABEL_INFORMATION", "metaverse/get_information", IVQFormat.prefixed_unit.bind("bits")],
-	[&"LABEL_BIOPRODUCTIVITY", "biome/bioproductivity", IVQFormat.prefixed_unit.bind("t/d")],
-	[&"LABEL_BIOMASS", "biome/biomass", IVQFormat.prefixed_unit.bind("t")],
-	[&"LABEL_BIODIVERSITY", "biome/get_biodiversity", IVQFormat.fixed_unit.bind("species")],
+	[&"LABEL_POPULATION", &"get_total_population", IVQFormat.named_number],
+	[&"LABEL_ECONOMY", &"get_lfq_gross_output", IVQFormat.prefixed_named_number.bind("$")],
+	[&"LABEL_ENERGY", &"get_total_energy", IVQFormat.prefixed_unit.bind(&"W")],
+	[&"LABEL_MANUFACTURING", &"get_total_manufacturing", IVQFormat.prefixed_unit.bind(&"t/d")],
+	[&"LABEL_CONSTRUCTIONS", &"get_total_constructions", IVQFormat.prefixed_unit.bind(&"t")],
+	[&"LABEL_COMPUTATIONS", &"get_total_computations", IVQFormat.prefixed_unit.bind(&"flops")],
+	[&"LABEL_INFORMATION", &"get_information", IVQFormat.prefixed_unit.bind(&"bits")],
+	[&"LABEL_BIOPRODUCTIVITY", &"get_total_bioproductivity", IVQFormat.prefixed_unit.bind(&"t/d")],
+	[&"LABEL_BIOMASS", &"get_total_biomass", IVQFormat.prefixed_unit.bind(&"t")],
+	[&"LABEL_BIODIVERSITY", &"get_biodiversity", IVQFormat.fixed_unit.bind(&"species")],
 ]
 
 var targets: Array[StringName] = [&"PLANET_EARTH", &"PROXY_OFF_EARTH"]
 var replacement_names: Array[StringName] = [] # use instead of Interface name
 var fallback_names: Array[StringName] = [&"", &""] # if "" will uses targets string
 
-#var _state: Dictionary = IVGlobal.state
-#var _is_running := false
-var _network_targets: Array[StringName]
-var _network_fallback_names: Array[StringName]
-var _network_replacement_names: Array[StringName]
+var _thread_targets: Array[StringName]
+var _thread_fallback_names: Array[StringName]
+var _thread_replacement_names: Array[StringName]
 
 #@onready var _tree: SceneTree = get_tree()
 @onready var _grid: GridContainer = $Grid
@@ -62,35 +59,32 @@ func update_targets(targets_: Array[StringName], replacement_names_: Array[Strin
 
 
 func update() -> void:
-	MainThreadGlobal.call_ai_thread(_set_network_data)
+	MainThreadGlobal.call_ai_thread(_set_data)
 
 
 # *****************************************************************************
 # AI thread !!!!
 
-func _set_network_data() -> void:
+func _set_data() -> void:
 	var data := []
-	_network_targets = targets # for thread safety
-	_network_replacement_names = replacement_names
-	_network_fallback_names = fallback_names
+	_thread_targets = targets # for thread safety
+	_thread_replacement_names = replacement_names
+	_thread_fallback_names = fallback_names
 	
 	# get Interfaces and check required components
-	var interfaces := []
+	var interfaces: Array[Interface] = []
 	var has_data := false
-	for target in _network_targets:
+	for target in _thread_targets:
 		var interface := Interface.get_interface_by_name(target)
 		if interface:
-			if !interface.get(required_component):
+			if interface.get(required_component):
+				has_data = true
+			else:
 				interface = null
-		if interface:
-			if interface.has_method(&"calculate_proxy_data"): # ProxyInterface
-				@warning_ignore("unsafe_method_access")
-				interface.calculate_proxy_data()
-			has_data = true
 		if interface or show_missing_interface:
 			interfaces.append(interface) # may be null
 	if !has_data:
-		call_deferred("_no_data")
+		_no_data.call_deferred()
 		return
 
 	# do counts
@@ -107,14 +101,14 @@ func _set_network_data() -> void:
 	while i < n_interfaces:
 		var interface: Interface = interfaces[i]
 		var gui_name := ""
-		if _network_replacement_names:
-			gui_name = _network_replacement_names[i]
+		if _thread_replacement_names:
+			gui_name = _thread_replacement_names[i]
 		elif interface:
 			gui_name = interface.gui_name
-		elif _network_fallback_names[i]:
-			gui_name = _network_fallback_names[i]
+		elif _thread_fallback_names[i]:
+			gui_name = _thread_fallback_names[i]
 		else:
-			gui_name = _network_targets[i]
+			gui_name = _thread_targets[i]
 		data.append(gui_name) # header
 		i += 1
 	i = 0
@@ -125,13 +119,13 @@ func _set_network_data() -> void:
 	# data rows
 	var row := 1
 	for line_array in content:
-		var path: String = line_array[1]
+		var method: StringName = line_array[1]
 		var values := []
 		var is_data := false
 		for interface in interfaces:
 			var value = 0.0
 			if interface:
-				value = ivutils.get_path_result(interface, path)
+				value = interface.call(method)
 				if value != null:
 					is_data = true
 			values.append(value)
@@ -203,7 +197,7 @@ func _build_grid(data: Array) -> void:
 		var row_label: Label = _grid.get_child(row * n_columns)
 		var row_text: String = data[row * n_columns]
 		row_label.text = row_text
-		row_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		row_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		row_label.show()
 		
 		# values

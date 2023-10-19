@@ -19,7 +19,7 @@ extends NetRef
 
 
 
-enum { # _dirty_values bit flags
+enum { # _dirty bit flags
 	DIRTY_HEADERS = 1,
 	DIRTY_STRATUM = 1 << 1,
 	DIRTY_ESTIMATION = 1 << 2,
@@ -31,8 +31,7 @@ const FOUR_PI := 4.0 * PI
 
 const FREE_RESOURCE_MIN_FRACTION := 0.1
 
-const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
-const PERSIST_PROPERTIES: Array[StringName] = [
+const PERSIST_PROPERTIES2: Array[StringName] = [
 	&"name",
 	&"stratum_type",
 	&"polity_name",
@@ -51,7 +50,6 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"density_bias",
 	&"masses_biases",
 	&"heterogeneities_biases",
-	&"_dirty_values",
 	&"_dirty_masses",
 	&"_dirty_heterogeneities",
 ]
@@ -76,13 +74,12 @@ var survey_type := -1 # surveys.tsv, table errors give estimation uncertainties
 
 var may_have_free_resources: bool # from strata.tsv
 
-# server only
+# server only TODO: Dictionaries of biases indexed by player
 var density_bias := 1.0 # the server is lying to you...
 var masses_biases: Array[float]
 var heterogeneities_biases: Array[float]
 
 # dirty data
-var _dirty_values := 0 # enum DIRTY_ flags
 var _dirty_masses := 0 # dirty indexes as bit flags (max index 63)
 var _dirty_heterogeneities := 0 # dirty indexes as bit flags (max index 63)
 
@@ -90,19 +87,40 @@ var _dirty_heterogeneities := 0 # dirty indexes as bit flags (max index 63)
 var _needs_volume_mass_calculation := true
 
 # indexing
-var _tables: Dictionary = IVTableData.tables
-var _resource_maybe_free: Array[bool] = _tables[&"resources"][&"maybe_free"]
-var _extraction_resources: Array[int] = _tables[&"extraction_resources"] # maps index to resource_type
-var _resource_extractions: Array[int] = _tables[&"resource_extractions"] # maps resource_type to index
-var _survey_density_errors: Array[float] = _tables[&"surveys"][&"density_error"] # coeff of variation
-var _survey_masses_errors: Array[float] = _tables[&"surveys"][&"masses_error"]
-#var _survey_heterogeneities_errors: Array = _tables.surveys.heterogeneities_error
-var _survey_deposits_sds: Array[float] = _tables[&"surveys"][&"deposits_sigma"]
+static var _resource_maybe_free: Array[bool]
+static var _extraction_resources: Array[int] # maps index to resource_type
+static var _resource_extractions: Array[int] # maps resource_type to index
+static var _survey_density_errors: Array[float] # coeff of variation
+static var _survey_masses_errors: Array[float]
+static var _survey_deposits_sds: Array[float]
+static var _is_class_instanced := false
 
 
 # TODO: Operations/Extractions organized by strata
 #var mine_targets: Array # relative focus; index by is_mine_target
 #var well_targets: Array # relative focus; index by is_well_target
+
+
+
+func _init(is_new := false, is_server := false) -> void:
+	if !_is_class_instanced:
+		_is_class_instanced = true
+		_resource_maybe_free = _tables[&"resources"][&"maybe_free"]
+		_extraction_resources = _tables[&"extraction_resources"]
+		_resource_extractions = _tables[&"resource_extractions"]
+		_survey_density_errors = _tables[&"surveys"][&"density_error"]
+		_survey_masses_errors = _tables[&"surveys"][&"masses_error"]
+		_survey_deposits_sds = _tables[&"surveys"][&"deposits_sigma"]
+		
+	if !is_new: # loaded game
+		return
+	var n_is_extraction_resources := _extraction_resources.size()
+	masses = ivutils.init_array(n_is_extraction_resources, 0.0, TYPE_FLOAT)
+	heterogeneities = masses.duplicate()
+	if !is_server:
+		return
+	masses_biases = ivutils.init_array(n_is_extraction_resources, 1.0, TYPE_FLOAT)
+	heterogeneities_biases = masses_biases.duplicate()
 
 
 # ********************************** READ *************************************
@@ -224,25 +242,11 @@ func change_mass(resource_type: int, change: float) -> void:
 	_dirty_masses |= 1 << index
 
 
-
-
-
 # *****************************************************************************
-# init & sync
-
-func _init(is_new := false, is_server := false) -> void:
-	if !is_new: # loaded game
-		return
-	var n_is_extraction_resources := _extraction_resources.size()
-	masses = ivutils.init_array(n_is_extraction_resources, 0.0, TYPE_FLOAT)
-	heterogeneities = masses.duplicate()
-	if !is_server:
-		return
-	masses_biases = ivutils.init_array(n_is_extraction_resources, 1.0, TYPE_FLOAT)
-	heterogeneities_biases = masses_biases.duplicate()
-
+# sync
 
 func get_server_init() -> Array:
+	
 	# reference-safe
 	var est_masses := masses.duplicate()
 	utils.multiply_float_array_by_array(est_masses, masses_biases)
@@ -265,7 +269,7 @@ func get_server_init() -> Array:
 	]
 
 
-func sync_server_init(data: Array) -> void:
+func set_server_init(data: Array) -> void:
 	# NOT reference-safe!
 	name = data[0]
 	stratum_type = data[1]
@@ -285,25 +289,25 @@ func sync_server_init(data: Array) -> void:
 func get_server_dirty(data: Array) -> void:
 	# get changed values or array indexes only; zero dirty flags
 	
-	var any_dirty := _dirty_values or _dirty_masses or _dirty_heterogeneities
+	var any_dirty := _dirty or _dirty_masses or _dirty_heterogeneities
 	data.append(any_dirty)
 	if !any_dirty:
 		return
 
 	# non-arrays
-	data.append(_dirty_values)
-	if _dirty_values & DIRTY_HEADERS: # very rare
+	data.append(_dirty)
+	if _dirty & DIRTY_HEADERS: # very rare
 		data.append(polity_name)
-	if _dirty_values & DIRTY_STRATUM:
+	if _dirty & DIRTY_STRATUM:
 		data.append(body_radius)
 		data.append(outer_depth)
 		data.append(thickness)
 		data.append(spherical_fraction)
 		data.append(area)
 		data.append(density * density_bias)
-	if _dirty_values & DIRTY_ESTIMATION:
+	if _dirty & DIRTY_ESTIMATION:
 		data.append(survey_type)
-	_dirty_values = 0
+	_dirty = 0
 	
 	var lsb: int # least significant bit
 	var i: int

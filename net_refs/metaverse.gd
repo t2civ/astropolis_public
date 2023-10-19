@@ -6,18 +6,15 @@ class_name Metaverse
 extends NetRef
 
 
-enum { # _dirty_values
+enum { # _dirty
 	DIRTY_COMPUTATIONS = 1,
 	DIRTY_DIVERSITY_MODEL = 1 << 1,
 }
 
 # save/load persistence for server only
-const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
-const PERSIST_PROPERTIES: Array[StringName] = [
+const PERSIST_PROPERTIES2: Array[StringName] = [
 	&"computations",
 	&"diversity_model",
-	&"yq",
-	&"_dirty_values",
 ]
 
 var computations := 0.0
@@ -25,9 +22,7 @@ var diversity_model: Dictionary # see comments in static/utils.gd, get_diversity
 
 # TODO: histories including information using get_information()
 
-var yq := -1 # last sync, = year * 4 + (quarter - 1)
 
-var _dirty_values := 0
 
 
 func _init(is_new := false) -> void:
@@ -61,66 +56,56 @@ func change_sp_group_abundance(key: int, change: float) -> void:
 
 # ********************************** SYNC *************************************
 
-
-func get_server_init() -> Array:
-	# facility only; reference-safe
-	return [
-		yq,
-		computations,
-		diversity_model.duplicate(),
-	]
-
-
-func sync_server_init(data: Array) -> void:
-	# facility only; keeps dict reference!
-	yq = data[0]
-	computations = data[1]
-	diversity_model = data[2]
-
-
-func propagate_component_init(data: Array) -> void:
-	# non-facilities only; reference-safe
-	var svr_yq: int = data[0]
-	assert(svr_yq >= yq, "Load order different than process order?")
-	yq = svr_yq # TODO: histories
-	computations += data[1]
-	var add_dict: Dictionary = data[2]
-	utils.add_to_diversity_model(diversity_model, add_dict)
-
-
 func take_server_delta(data: Array) -> void:
 	# facility accumulator only; zero accumulators and dirty flags
-	data.append(_dirty_values)
-	if _dirty_values & DIRTY_COMPUTATIONS:
-		data.append(computations)
+	
+	_int_data = data[0]
+	_float_data = data[1]
+	
+	_int_data[12] = _int_data.size()
+	_int_data[13] = _float_data.size()
+	
+	_int_data.append(_dirty)
+	if _dirty & DIRTY_COMPUTATIONS:
+		_float_data.append(computations)
 		computations = 0.0
-	if _dirty_values & DIRTY_DIVERSITY_MODEL:
-		data.append(diversity_model.size())
-		for key in diversity_model: # has changes only
-			data.append(key)
-			data.append(diversity_model[key])
+	
+	if _dirty & DIRTY_DIVERSITY_MODEL:
+		_int_data.append(diversity_model.size())
+		for key: int in diversity_model: # has changes only
+			_int_data.append(key)
+			_float_data.append(diversity_model[key])
 		diversity_model.clear()
-	_dirty_values = 0
+	_dirty = 0
 
 
-func sync_server_delta(data: Array, k: int) -> int:
+func add_server_delta(data: Array) -> void:
 	# any target; reference safe
-	var svr_yq: int = data[0]
-	yq = svr_yq # TODO: histories
-	var flags: int = data[k]
-	k += 1
+	
+	_int_data = data[0]
+	_float_data = data[1]
+	
+	_int_offset = _int_data[12]
+	_float_offset = _int_data[13]
+	
+	var svr_qtr := _int_data[0]
+	run_qtr = svr_qtr # TODO: histories
+
+	var flags := _int_data[_int_offset]
+	_int_offset += 1
 	if flags & DIRTY_COMPUTATIONS:
-		computations += data[k]
-		k += 1
+		computations += _float_data[_float_offset]
+		_float_offset += 1
+	
 	if flags & DIRTY_DIVERSITY_MODEL:
-		var size: int = data[k]
-		k += 1
+		var size := _int_data[_int_offset]
+		_int_offset += 1
 		var i := 0
 		while i < size:
-			var key: int = data[k]
-			k += 1
-			var change: float = data[k]
-			k += 1
+			var key := _int_data[_int_offset]
+			_int_offset += 1
+			var change := _float_data[_float_offset]
+			_float_offset += 1
 			if diversity_model.has(key):
 				diversity_model[key] += change
 				if diversity_model[key] == 0.0:
@@ -128,5 +113,4 @@ func sync_server_delta(data: Array, k: int) -> int:
 			else:
 				diversity_model[key] = change
 			i += 1
-	return k
 

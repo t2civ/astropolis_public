@@ -4,10 +4,10 @@
 # *****************************************************************************
 extends RefCounted
 
-const VERSION := "0.0.4-dev"
+const VERSION := "0.0.4.dev"
 
-const AI_VERBOSE := true
-const AI_VERBOSE2 := true
+const AI_VERBOSE := false
+const AI_VERBOSE2 := false
 const IVOYAGER_VERBOSE := false
 const USE_THREADS := false
 

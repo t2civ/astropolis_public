@@ -10,16 +10,7 @@ extends Interface
 # Warning! This object lives and dies on the AI thread! Containers and many
 # methods are not threadsafe. Accessing non-container properties is safe.
 #
-# Player required components:
-#   Operations - on init
-#   Financials - on init
-#   Population - on init
-#   Biome      - on init
-#   Metaverse  - on init
-#
 # Players are never removed, but they are effectively dead if is_facilities == false.
-
-const OBJECT_TYPE = Enums.Objects.PLAYER
 
 static var player_interfaces: Array[PlayerInterface] = [] # indexed by player_id
 
@@ -33,14 +24,17 @@ var is_facilities := true # 'alive' player test
 
 var facilities: Array[Interface] = [] # resizable container - not threadsafe!
 
+var operations := Operations.new(true, true)
+var financials := Financials.new(true)
+var population := Population.new(true)
+var biome := Biome.new(true)
+var metaverse := Metaverse.new(true)
+
+
 
 func _init() -> void:
 	super()
-	operations = Operations.new(true, true)
-	financials = Financials.new(true)
-	population = Population.new(true)
-	biome = Biome.new(true)
-	metaverse = Metaverse.new(true)
+	entity_type = ENTITY_PLAYER
 
 
 func _clear_circular_references() -> void:
@@ -50,6 +44,14 @@ func _clear_circular_references() -> void:
 
 # *****************************************************************************
 # interface API
+
+
+func has_development() -> bool:
+	return true
+
+
+func has_markets() -> bool:
+	return false
 
 
 func get_player_name() -> StringName:
@@ -64,19 +66,61 @@ func get_polity_name() -> StringName:
 	return polity_name
 
 
-func has_facilities() -> bool:
-	return is_facilities
-
-
 func get_facilities() -> Array[Interface]:
 	# AI thread only!
 	return facilities
 
 
+func get_total_population() -> float:
+	return population.get_number_total() + operations.get_crew_total()
+
+
+func get_total_population_by_type(population_type: int) -> float:
+	return population.get_number(population_type) + operations.get_crew(population_type)
+
+
+func get_lfq_gross_output() -> float:
+	return operations.lfq_gross_output
+
+
+func get_total_energy() -> float:
+	return operations.get_total_energy()
+
+
+func get_total_manufacturing() -> float:
+	return operations.get_total_manufacturing()
+
+
+func get_total_constructions() -> float:
+	return operations.constructions
+
+
+func get_total_computations() -> float:
+	return metaverse.computations
+
+
+func get_information() -> float:
+	return metaverse.get_information()
+
+
+func get_total_bioproductivity() -> float:
+	return biome.bioproductivity
+
+
+func get_total_biomass() -> float:
+	return biome.biomass
+
+
+func get_biodiversity() -> float:
+	return biome.get_biodiversity()
+
+
+
+
 # *****************************************************************************
 # sync
 
-func sync_server_init(data: Array) -> void:
+func set_server_init(data: Array) -> void:
 	player_id = data[2]
 	name = data[3]
 	gui_name = data[4]
@@ -85,6 +129,18 @@ func sync_server_init(data: Array) -> void:
 	part_of = interfaces_by_name[part_of_name] if part_of_name else null
 	polity_name = data[7]
 	homeworld = data[8]
+	
+	var operations_data: Array = data[9]
+	var financials_data: Array = data[10]
+	var population_data: Array = data[11]
+	var biome_data: Array = data[12]
+	var metaverse_data: Array = data[13]
+	
+	operations.set_server_init(operations_data)
+	financials.set_server_init(financials_data)
+	population.set_server_init(population_data)
+	biome.set_server_init(biome_data)
+	metaverse.set_server_init(metaverse_data)
 
 
 func sync_server_dirty(data: Array) -> void:
@@ -99,45 +155,27 @@ func sync_server_dirty(data: Array) -> void:
 		homeworld = data[k + 4]
 
 
-func propagate_component_init(data: Array, indexes: Array[int]) -> void:
-	var component_data: Array = data[indexes[0]]
-	operations.propagate_component_init(component_data)
-	# skip inventory
-	component_data = data[indexes[2]]
-	financials.propagate_component_init(component_data)
-	component_data = data[indexes[3]]
-	if component_data:
-		population.propagate_component_init(component_data)
-	component_data = data[indexes[4]]
-	if component_data:
-		biome.propagate_component_init(component_data)
-	component_data = data[indexes[5]]
-	if component_data:
-		metaverse.propagate_component_init(component_data)
-	assert(data[indexes[6]] >= yq)
-	yq = data[indexes[6]]
-
-
-func propagate_component_changes(data: Array, indexes: Array[int]) -> void:
-	var dirty: int = data[1]
+func propagate_server_delta(data: Array) -> void:
+	var int_data: Array[int] = data[0]
+	var dirty: int = int_data[1]
 	if dirty & DIRTY_OPERATIONS:
-		operations.sync_server_delta(data, indexes[0])
+		operations.add_server_delta(data)
 	# skip inventory
 	if dirty & DIRTY_FINANCIALS:
-		financials.sync_server_delta(data, indexes[2])
+		financials.add_server_delta(data)
 	if dirty & DIRTY_POPULATION:
-		population.sync_server_delta(data, indexes[3])
+		population.add_server_delta(data)
 	if dirty & DIRTY_BIOME:
-		biome.sync_server_delta(data, indexes[4])
+		biome.add_server_delta(data)
 	if dirty & DIRTY_METAVERSE:
-		metaverse.sync_server_delta(data, indexes[5])
+		metaverse.add_server_delta(data)
 	
-	assert(data[0] >= yq)
-	if data[0] > yq:
-		if yq == -1:
-			yq = data[0]
+	assert(int_data[0] >= run_qtr)
+	if int_data[0] > run_qtr:
+		if run_qtr == -1:
+			run_qtr = int_data[0]
 		else:
-			yq = data[0]
+			run_qtr = int_data[0]
 			process_ai_new_quarter() # after component histories have updated
 
 

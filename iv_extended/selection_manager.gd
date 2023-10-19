@@ -21,7 +21,12 @@ extends IVSelectionManager
 
 const PLAYER_CLASS_POLITY := Enums.PlayerClasses.PLAYER_CLASS_POLITY
 
-var all_suffix := " / " + tr(&"LABEL_ALL")
+const PERSIST_PROPERTIES2: Array[StringName] = [
+	&"info_panel_target_name",
+]
+
+var info_panel_target_name: StringName # facility, body or proxy
+
 
 
 static func get_or_make_selection(selection_name: StringName) -> IVSelection:
@@ -57,6 +62,11 @@ static func _duplicate_body_selection(body_selection: IVSelection) -> IVSelectio
 	return selection_
 
 
+func select(selection_: IVSelection, suppress_camera_move := false) -> void:
+	_set_info_target_name(selection_)
+	super(selection_, suppress_camera_move)
+
+
 func select_body(body: IVBody, _suppress_camera_move := false) -> void:
 	# We override base method so navigation GUI sends us to a facility, usually.
 	# Use select_by_name() if you really need the body.
@@ -80,41 +90,37 @@ func get_body_gui_name() -> String:
 	return MainThreadGlobal.get_gui_name(body_name)
 
 
-func get_info_panel_data() -> Array:
-	# [target_name, header_text, is_developed] or empty array
-	# target is proxy in some cases; header_text is already translated
-	var selection_name := get_selection_name()
-	if !selection_name:
-		return []
-	var header: String
+func get_info_target_name() -> StringName:
+	return info_panel_target_name
+
+
+func _set_info_target_name(selection_: IVSelection) -> void:
+	# Target is for InfoPanel; could be facility, body or proxy.
+	if !selection_:
+		return
+	var selection_name := selection_.name
 	var body_name: StringName
 	if selection_name.begins_with("FACILITY_"):
 		var player_name: StringName = MainThreadGlobal.get_player_name(selection_name)
 		var player_class := MainThreadGlobal.get_player_class(player_name)
 		if player_class == PLAYER_CLASS_POLITY:
 			# polity proxy (combines polity player, agency & companies)
-			body_name = get_body_name()
+			body_name = selection_.get_body_name()
 			var polity_name: StringName = MainThreadGlobal.get_polity_name(selection_name)
-			var proxy_name := "PROXY_" + body_name + "_" + polity_name
-			header = get_gui_name()
-			return [proxy_name, header, true]
+			info_panel_target_name = StringName("PROXY_" + body_name + "_" + polity_name)
+			return
 		# agency or company facility is the target
-		return [selection_name, get_gui_name(), true]
+		info_panel_target_name = selection_name
+		return
 	# must be body selection
-	body_name = get_body_name()
+	body_name = selection_.get_body_name()
 	assert(body_name == selection_name)
 	var body_flags := MainThreadGlobal.get_body_flags(body_name)
 	if body_flags & BodyFlags.IS_STAR:
 		# solar system
 		var system_name := "SYSTEM_" + body_name
-		var proxy_name := "PROXY_" + system_name
-		return [proxy_name, tr(system_name) + all_suffix, true]
+		info_panel_target_name = StringName("PROXY_" + system_name)
+		return
 	# body is the target
-	header = get_gui_name()
-	var is_developed := false
-	if MainThreadGlobal.has_facilities(body_name):
-		header += all_suffix
-		is_developed = true
-	return [body_name, header, is_developed]
-
+	info_panel_target_name = selection_name
 

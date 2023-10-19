@@ -8,9 +8,7 @@ extends NetRef
 # Arrays indexed by population_type unless noted otherwise.
 
 # save/load persistence for server only
-const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
-const PERSIST_PROPERTIES: Array[StringName] = [
-	&"yq",
+const PERSIST_PROPERTIES2: Array[StringName] = [
 	&"numbers",
 	&"growth_rates",
 	&"carrying_capacities",
@@ -26,7 +24,6 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 ]
 
 # Interface read-only! All data flows server -> interface.
-var yq := -1 # last sync, = year * 4 + (quarter - 1)
 var numbers: Array[float]
 var growth_rates: Array[float] # Facility only
 var carrying_capacities: Array[float] # Facility only; indexed by carrying_capacity_group
@@ -43,15 +40,21 @@ var _dirty_carrying_capacities := 0
 var _dirty_immigration_attractions := 0
 var _dirty_emigration_pressures := 0
 
-var _tables: Dictionary = IVTableData.tables
-var _table_n_rows: Dictionary = IVTableData.table_n_rows
-var _n_populations: int = _table_n_rows[&"populations"]
-var _table_populations: Dictionary = _tables[&"populations"]
-var _carrying_capacity_groups: Array[int] = _table_populations[&"carrying_capacity_group"]
-var _carrying_capacity_group2s: Array[int] = _table_populations[&"carrying_capacity_group2"]
+static var _n_populations: int
+static var _table_populations: Dictionary
+static var _carrying_capacity_groups: Array[int]
+static var _carrying_capacity_group2s: Array[int]
+static var _is_class_instanced := false
+
 
 
 func _init(is_new := false, is_facility := false) -> void:
+	if !_is_class_instanced:
+		_is_class_instanced = true
+		_n_populations = _table_n_rows[&"populations"]
+		_table_populations = _tables[&"populations"]
+		_carrying_capacity_groups = _table_populations[&"carrying_capacity_group"]
+		_carrying_capacity_group2s = _table_populations[&"carrying_capacity_group2"]
 	if !is_new: # game load
 		return
 	numbers = ivutils.init_array(_n_populations, 0.0, TYPE_FLOAT)
@@ -170,110 +173,59 @@ func change_carrying_capacity(carrying_capacity_group: int, change: float) -> vo
 
 # ********************************* SYNC **************************************
 
-
-func get_server_init() -> Array: # new or loaded game
-	# facility only; reference-safe
-	return [
-		yq,
-		numbers.duplicate(),
-		history_numbers.duplicate(true),
-		growth_rates.duplicate(),
-		carrying_capacities.duplicate(),
-		immigration_attractions.duplicate(),
-		emigration_pressures.duplicate(),
-	]
-
-
-func sync_server_init(data: Array) -> void:
-	# facility only; keeps array references!
-	yq = data[0]
-	numbers = data[1]
-	history_numbers = data[2]
-	growth_rates = data[3]
-	carrying_capacities = data[4]
-	immigration_attractions = data[5]
-	emigration_pressures = data[6]
-
-
-func propagate_component_init(data: Array) -> void:
-	# non-facilities only; reference-safe
-	var svr_yq: int = data[0]
-	assert(svr_yq >= yq, "Load order different than process order?")
-	var data_array: Array[float] = data[1]
-	utils.add_to_float_array_with_array(numbers, data_array)
-	
-	# expand history arrays as needed (at end and/or front) to handle this data
-	var add_history_numbers: Array[Array] = data[2]
-	var add_history_size: int = add_history_numbers[0].size()
-	var history_size: int = history_numbers[0].size()
-	if yq == -1:
-		yq = svr_yq - add_history_size # set to begining of this history
-	while yq < svr_yq: # expand history end (append for newer quarters)
-		var i := 0
-		while i < _n_populations:
-			history_numbers[i].append(0.0)
-			i += 1
-		history_size += 1
-		yq += 1
-	while add_history_size > history_size: # expand history front (push_front for older quarters)
-		var i := 0
-		while i < _n_populations:
-			history_numbers[i].push_front(0.0)
-			i += 1
-		history_size += 1
-	
-	# add history (history arrays are expanded and yq is aligned with svr_yq)
-	var quarter := -1 # history indexed from back!
-	while quarter >= -add_history_size:
-		var i := 0
-		while i < _n_populations:
-			history_numbers[i] += add_history_numbers[i]
-			i += 1
-		quarter -= 1
-
-
 func take_server_delta(data: Array) -> void:
 	# facility accumulator only; zero values and dirty flags
-	# optimized for right-biased dirty flags
-	_append_and_zero_dirty_bshift(data, numbers, _dirty_numbers)
-	_append_and_zero_dirty_bshift(data, growth_rates, _dirty_growth_rates)
-	_append_and_zero_dirty_bshift(data, carrying_capacities, _dirty_carrying_capacities)
-	_append_and_zero_dirty_bshift(data, immigration_attractions, _dirty_immigration_attractions)
-	_append_and_zero_dirty_bshift(data, emigration_pressures, _dirty_emigration_pressures)
+	
+	_int_data = data[0]
+	_float_data = data[1]
+	
+	_int_data[8] = _int_data.size()
+	_int_data[9] = _float_data.size()
+	
+	_append_and_zero_dirty_floats(numbers, _dirty_numbers)
 	_dirty_numbers = 0
+	_append_and_zero_dirty_floats(growth_rates, _dirty_growth_rates)
 	_dirty_growth_rates = 0
+	_append_and_zero_dirty_floats(carrying_capacities, _dirty_carrying_capacities)
 	_dirty_carrying_capacities = 0
+	_append_and_zero_dirty_floats(immigration_attractions, _dirty_immigration_attractions)
 	_dirty_immigration_attractions = 0
+	_append_and_zero_dirty_floats(emigration_pressures, _dirty_emigration_pressures)
 	_dirty_emigration_pressures = 0
 
 
-func sync_server_delta(data: Array, k: int) -> int:
+func add_server_delta(data: Array) -> void:
 	# any target; reference safe
-	var svr_yq: int = data[0]
-	if yq < svr_yq:
-		_update_history(svr_yq) # before new quarter changes
 	
-	k = _add_dirty_bshift(data, numbers, k)
+	_int_data = data[0]
+	_float_data = data[1]
+	
+	_int_offset = _int_data[8]
+	_float_offset = _int_data[9]
+	
+	var svr_qtr: int = _int_data[0]
+	if run_qtr < svr_qtr:
+		_update_history(svr_qtr) # before new quarter changes
+	
+	_add_dirty_floats(numbers)
 	
 	if !_is_facility:
-		return 0 # not used
-	
-	k = _add_dirty_bshift(data, growth_rates, k)
-	k = _add_dirty_bshift(data, carrying_capacities, k)
-	k = _add_dirty_bshift(data, immigration_attractions, k)
-	k = _add_dirty_bshift(data, emigration_pressures, k)
-	
-	return k
-
-
-func _update_history(svr_yq: int) -> void:
-	if yq == -1: # new - no history to save yet
-		yq = svr_yq
 		return
-	while yq < svr_yq: # loop in case we missed a quarter
+	
+	_add_dirty_floats(growth_rates)
+	_add_dirty_floats(carrying_capacities)
+	_add_dirty_floats(immigration_attractions)
+	_add_dirty_floats(emigration_pressures)
+
+
+func _update_history(svr_qtr: int) -> void:
+	if run_qtr == -1: # new - no history to save yet
+		run_qtr = svr_qtr
+		return
+	while run_qtr < svr_qtr: # loop in case we missed a quarter
 		var i := 0
 		while i < _n_populations:
 			history_numbers[i].append(numbers[i])
 			i += 1
-		yq += 1
+		run_qtr += 1
 

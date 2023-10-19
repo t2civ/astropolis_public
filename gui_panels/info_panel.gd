@@ -23,19 +23,17 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"anchor_bottom",
 	&"selection_manager",
 	&"is_pinned",
-	&"header_text",
 ]
 
-# persisted
 var selection_manager: SelectionManager
 var is_pinned := false
-var header_text := ""
 
-
+var _state: Dictionary = IVGlobal.state
 var _build_subpanels := false
 var _selection: IVSelection
 
 @onready var _header_label: Label = $HeaderLabel
+
 
 
 func _ready() -> void:
@@ -47,8 +45,6 @@ func _ready() -> void:
 	else:
 		IVGlobal.system_tree_ready.connect(_init_after_system, CONNECT_ONE_SHOT)
 		($TRButtons/Close as Button).hide()
-	if header_text:
-		_set_header(header_text)
 
 
 func _clear() -> void:
@@ -65,21 +61,22 @@ func _init_after_system(_dummy := false) -> void:
 	if !selection_manager:
 		# This is the original (non-cloned) InfoPanel and a new game!
 		@warning_ignore("unsafe_property_access")
-		selection_manager = get_parent().get_parent().selection_manager
+		selection_manager = get_parent().get_parent().selection_manager # FIXME: Needs function
+	selection_manager.selection_changed.connect(_update_selection)
+	IVGlobal.update_gui_requested.connect(_update_selection)
+	visibility_changed.connect(_update_selection)
+	_update_selection()
+	
 	if _build_subpanels:
 		var info_tab_margin := InfoTabMargin.new(true)
 		add_child(info_tab_margin)
-	await get_tree().process_frame
-	var itc: InfoTabContainer = get_node("InfoTabMargin/InfoTabContainer")
-	var subpanels := itc.subpanels
-	for subpanel in subpanels:
-		@warning_ignore("unsafe_method_access", "unsafe_property_access")
-		subpanel.header_changed.connect(_set_header)
 
 
-func _set_header(header_text_: String) -> void:
-	header_text = header_text_
-	_header_label.text = header_text_
+func _update_selection(_dummy := false) -> void:
+	if !visible or !_state.is_running:
+		return
+	var target_name := selection_manager.get_info_target_name()
+	_header_label.text = MainThreadGlobal.get_gui_name(target_name)
 
 
 func _clone_and_pin() -> void:
@@ -88,3 +85,4 @@ func _clone_and_pin() -> void:
 
 func _close() -> void:
 	queue_free()
+

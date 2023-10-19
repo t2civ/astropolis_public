@@ -12,15 +12,6 @@ extends Interface
 #
 # To get the SceenTree "body" node (class IVBody) use IVGlobal.bodies[body_name].
 # Be aware that SceenTree works on the Main thread!
-#
-# Body optional components:
-#   Operations   - when needed
-#   Population   - when needed
-#   Biome        - when needed
-#   Metaverse    - when needed
-#   Compositions - when needed (BodyInterface only!)
-
-const OBJECT_TYPE = Enums.Objects.BODY
 
 static var body_interfaces: Array[BodyInterface] = [] # indexed by body_id
 
@@ -35,10 +26,16 @@ var parent: BodyInterface # null for top body
 var satellites: Array[BodyInterface] = [] # resizable container - not threadsafe!
 var facilities: Array[Interface] = [] # resizable container - not threadsafe!
 var compositions: Array[Composition] = [] # resizable container - not threadsafe!
+var operations: Operations # when/if needed
+var population: Population # when/if needed
+var biome: Biome # when/if needed
+var metaverse: Metaverse # when/if needed
+
 
 
 func _init() -> void:
 	super()
+	entity_type = ENTITY_BODY
 
 
 func _clear_circular_references() -> void:
@@ -51,6 +48,14 @@ func _clear_circular_references() -> void:
 # interface API
 
 
+func has_development() -> bool:
+	return is_facilities
+
+
+func has_markets() -> bool:
+	return false
+
+
 func get_body_name() -> StringName:
 	return name
 
@@ -59,19 +64,88 @@ func get_body_flags() -> int:
 	return body_flags
 
 
-func has_facilities() -> bool:
-	return is_facilities
-
-
 func get_facilities() -> Array[Interface]:
 	# AI thread only!
 	return facilities
 
 
+func get_total_population() -> float:
+	var total_population := 0.0
+	if population:
+		total_population = population.get_number_total()
+	if operations:
+		total_population += operations.get_crew_total()
+	return total_population
+
+
+func get_total_population_by_type(population_type: int) -> float:
+	var total_population := 0.0
+	if population:
+		total_population = population.get_number(population_type)
+	if operations:
+		total_population += operations.get_crew(population_type)
+	return total_population
+
+
+func get_lfq_gross_output() -> float:
+	if operations:
+		return operations.lfq_gross_output
+	return 0.0
+
+
+func get_total_energy() -> float:
+	if operations:
+		return operations.get_total_energy()
+	return 0.0
+
+
+func get_total_manufacturing() -> float:
+	if operations:
+		return operations.get_total_manufacturing()
+	return 0.0
+
+
+func get_total_constructions() -> float:
+	if operations:
+		return operations.constructions
+	return 0.0
+
+
+func get_total_computations() -> float:
+	if metaverse:
+		return metaverse.computations
+	return 0.0
+
+
+func get_information() -> float:
+	if metaverse:
+		return metaverse.get_information()
+	return 0.0
+
+
+func get_total_bioproductivity() -> float:
+	if biome:
+		return biome.bioproductivity
+	return 0.0
+
+
+func get_total_biomass() -> float:
+	if biome:
+		return biome.biomass
+	return 0.0
+
+
+func get_biodiversity() -> float:
+	if biome:
+		return biome.get_biodiversity()
+	return 0.0
+
+
+
 # *****************************************************************************
 # sync - DON'T MODIFY!
 
-func sync_server_init(data: Array) -> void:
+func set_server_init(data: Array) -> void:
 	body_id = data[2]
 	name = data[3]
 	gui_name = data[4]
@@ -81,44 +155,35 @@ func sync_server_init(data: Array) -> void:
 	if parent_name:
 		parent = interfaces_by_name[parent_name]
 		parent.add_satellite(self)
-	if data[8]:
-		var compositions_data: Array = data[8]
+	var compositions_data: Array = data[8]
+	var operations_data: Array = data[9]
+	var population_data: Array = data[10]
+	var biome_data: Array = data[11]
+	var metaverse_data: Array = data[12]
+	
+	if compositions_data:
 		var n_compositions := compositions_data.size()
 		compositions.resize(n_compositions)
 		var i := 0
 		while i < n_compositions:
 			var composition_data: Array = compositions_data[i]
 			var composition := Composition.new(true)
-			composition.sync_server_init(composition_data)
+			composition.set_server_init(composition_data)
 			compositions[i] = composition
 			i += 1
-
-
-func propagate_component_init(data: Array, indexes: Array[int]) -> void:
-	var component_data: Array = data[indexes[0]]
-	if component_data:
-		if !operations:
-			operations = Operations.new(true)
-		operations.propagate_component_init(component_data)
-	# skip inventory, financials
-	component_data = data[indexes[3]]
-	if component_data:
-		if !population:
-			population = Population.new(true)
-		population.propagate_component_init(component_data)
-	component_data = data[indexes[4]]
-	if component_data:
-		if !biome:
-			biome = Biome.new(true)
-		biome.propagate_component_init(component_data)
-	component_data = data[indexes[5]]
-	if component_data:
-		if !metaverse:
-			metaverse = Metaverse.new(true)
-		metaverse.propagate_component_init(component_data)
-	assert(data[indexes[6]] >= yq)
-	yq = data[indexes[6]]
-
+	if operations_data:
+		operations = Operations.new(true)
+		operations.set_server_init(operations_data)
+	if population_data:
+		population = Population.new(true)
+		population.set_server_init(population_data)
+	if biome_data:
+		biome = Biome.new(true)
+		biome.set_server_init(biome_data)
+	if metaverse_data:
+		metaverse = Metaverse.new(true)
+		metaverse.set_server_init(metaverse_data)
+	
 
 func sync_server_dirty(data: Array) -> void:
 	var dirty: int = data[0]
@@ -140,32 +205,33 @@ func sync_server_dirty(data: Array) -> void:
 			i += 1
 
 
-func propagate_component_changes(data: Array, indexes: Array[int]) -> void:
-	var dirty: int = data[1]
+func propagate_server_delta(data: Array) -> void:
+	var int_data: Array[int] = data[0]
+	var dirty: int = int_data[1]
 	if dirty & DIRTY_OPERATIONS:
 		if !operations:
 			operations = Operations.new(true)
-		operations.sync_server_delta(data, indexes[0])
+		operations.add_server_delta(data)
 	# no inventory or financials
 	if dirty & DIRTY_POPULATION:
 		if !population:
 			population = Population.new(true)
-		population.sync_server_delta(data, indexes[3])
+		population.add_server_delta(data)
 	if dirty & DIRTY_BIOME:
 		if !biome:
 			biome = Biome.new(true)
-		biome.sync_server_delta(data, indexes[4])
+		biome.add_server_delta(data)
 	if dirty & DIRTY_METAVERSE:
 		if !metaverse:
 			metaverse = Metaverse.new(true)
-		metaverse.sync_server_delta(data, indexes[5])
+		metaverse.add_server_delta(data)
 	
-	assert(data[0] >= yq)
-	if data[0] > yq:
-		if yq == -1:
-			yq = data[0]
+	assert(int_data[0] >= run_qtr)
+	if int_data[0] > run_qtr:
+		if run_qtr == -1:
+			run_qtr = int_data[0]
 		else:
-			yq = data[0]
+			run_qtr = int_data[0]
 			process_ai_new_quarter() # after component histories have updated
 
 

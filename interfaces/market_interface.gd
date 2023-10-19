@@ -9,3 +9,7 @@ extends Interface
 # like. See comments in "Base AI" classes to override AI.
 
 
+
+func _init() -> void:
+	super()
+	entity_type = ENTITY_MARKET

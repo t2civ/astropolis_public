@@ -139,7 +139,7 @@ func _set_selections_recursive(body: BodyInterface, is_star: bool, root_call := 
 		elif player.homeworld == body.name: # has precedence over any others
 			_pressed_lookup[label_text] = facility.name
 	
-	if !root_call and body.has_facilities():
+	if !root_call and body.has_development():
 		# add body
 		var label_text := sub_prefix + body.gui_name
 		if is_star:

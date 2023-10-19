@@ -43,24 +43,18 @@ enum OpCommands {
 	N_OP_COMMANDS,
 }
 
-enum { # _dirty_values
+enum { # _dirty
 	DIRTY_LFQ_REVENUE = 1,
 	DIRTY_LFQ_GROSS_OUTPUT = 1 << 1,
 	DIRTY_LFQ_NET_INCOME = 1 << 2,
-	DIRTY_TOTAL_POWER = 1 << 3,
-	DIRTY_MANUFACTURING = 1 << 4,
-	DIRTY_CONSTRUCTIONS = 1 << 5,
+	DIRTY_CONSTRUCTIONS = 1 << 3,
 }
 
 # save/load persistence for server only
-const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
-const PERSIST_PROPERTIES: Array[StringName] = [
-	&"yq",
+const PERSIST_PROPERTIES2: Array[StringName] = [
 	&"lfq_revenue",
 	&"lfq_gross_output",
 	&"lfq_net_income",
-	&"total_power",
-	&"manufacturing",
 	&"constructions",
 	&"crews",
 	&"capacities",
@@ -73,9 +67,8 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"op_commands",
 	
 	&"has_financials",
-	&"_is_facility",
+	&"is_facility",
 	
-	&"_dirty_values",
 	&"_dirty_crew",
 	&"_dirty_capacities_1",
 	&"_dirty_capacities_2",
@@ -96,12 +89,9 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 ]
 
 # Interface read-only! Data flows server -> interface.
-var yq := -1 # last sync, = year * 4 + (quarter - 1)
 var lfq_revenue := 0.0 # last 4 quarters
 var lfq_gross_output := 0.0 # revenue w/ some exceptions; = "economy"
 var lfq_net_income := 0.0
-var total_power := 0.0 # DEPRECIATE - we have a method
-var manufacturing := 0.0 # present mass rate of manufactured products; DEPRECIATE for method
 var constructions := 0.0 # total mass of all constructions
 
 var crews: Array[float] # indexed by population_type (can have crew w/out Population component)
@@ -125,10 +115,9 @@ var op_commands: Array[int] # enum; Facility only
 
 
 var has_financials := false
-var _is_facility := false
+var is_facility := false
 
 # server dirty data (dirty indexes as bit flags)
-var _dirty_values := 0 # enum DIRTY_ flags
 var _dirty_crews := 0 # max 64
 var _dirty_capacities_1 := 0
 var _dirty_capacities_2 := 0 # max 128
@@ -147,19 +136,24 @@ var _dirty_op_logics_2 := 0 # max 128
 var _dirty_op_commands_1 := 0
 var _dirty_op_commands_2 := 0 # max 128
 
-# indexing & table data
-var _tables: Dictionary = IVTableData.tables
-var _table_n_rows: Dictionary = IVTableData.table_n_rows
-var _table_operations: Dictionary = _tables[&"operations"]
-var _n_operations: int = _table_n_rows[&"operations"]
-var _op_groups_operations: Array[Array] = _tables[&"op_groups_operations"]
+# localized indexing & table data
+static var _table_operations: Dictionary
+static var _n_operations: int
+static var _op_groups_operations: Array[Array]
+static var _is_class_instanced := false
 
 
-func _init(is_new := false, has_financials_ := false, is_facility := false) -> void:
+
+func _init(is_new := false, has_financials_ := false, is_facility_ := false) -> void:
+	if !_is_class_instanced:
+		_is_class_instanced = true
+		_table_operations = _tables[&"operations"]
+		_n_operations = _table_n_rows[&"operations"]
+		_op_groups_operations = _tables[&"op_groups_operations"]
 	if !is_new: # game load
 		return
 	has_financials = has_financials_
-	_is_facility = is_facility
+	is_facility = is_facility_
 	var n_populations: int = _table_n_rows[&"populations"]
 	crews = ivutils.init_array(n_populations, 0.0, TYPE_FLOAT)
 	capacities = ivutils.init_array(_n_operations, 0.0, TYPE_FLOAT)
@@ -169,7 +163,7 @@ func _init(is_new := false, has_financials_ := false, is_facility := false) -> v
 	public_capacities  = capacities.duplicate()
 	est_revenues = capacities.duplicate()
 	est_gross_incomes = capacities.duplicate()
-	if !is_facility:
+	if !is_facility_:
 		return
 	est_gross_margins = ivutils.init_array(_n_operations, NAN, TYPE_FLOAT)
 	op_logics = ivutils.init_array(_n_operations, OpLogics.IS_IDLE_UNPROFITABLE, TYPE_INT)
@@ -205,16 +199,30 @@ func get_utilization(type: int) -> float:
 	return rates[type] / capacities[type]
 
 
-func get_power(type: int) -> float:
-	return rates[type] * _table_operations.power[type]
+func get_electricity(type: int) -> float:
+	return rates[type] * _table_operations[&"electricity"][type]
 
 
-func get_power_total() -> float:
-	var operation_powers: Array = _table_operations.power
+func get_total_electricity() -> float:
+	var operation_electricities: Array = _table_operations[&"electricity"]
 	var sum := 0.0
 	var i := 0
 	while i < _n_operations:
-		sum += rates[i] * operation_powers[i]
+		sum += rates[i] * operation_electricities[i]
+		i += 1
+	return sum
+
+
+func get_energy(type: int) -> float:
+	return rates[type] * _table_operations[&"energy"][type]
+
+
+func get_total_energy() -> float:
+	var operation_energies: Array = _table_operations[&"energy"]
+	var sum := 0.0
+	var i := 0
+	while i < _n_operations:
+		sum += rates[i] * operation_energies[i]
 		i += 1
 	return sum
 
@@ -235,7 +243,7 @@ func get_mass_flow(type: int) -> float:
 	return rates[type] * _table_operations.mass_flow[type]
 
 
-func get_manufacturing_mass_flow_total() -> float:
+func get_total_manufacturing() -> float:
 	var mass_flows: Array = _table_operations.mass_flow
 	var sum := 0.0
 	for type in _tables.is_manufacturing_operations:
@@ -258,7 +266,7 @@ func get_est_gross_income(type: int) -> float:
 func get_est_gross_margin(type: int) -> float:
 	if !has_financials:
 		return NAN
-	if _is_facility: # facilities (only) have margin even if revenue = 0
+	if is_facility: # facilities (only) have margin even if revenue = 0
 		return est_gross_margins[type]
 	if est_revenues[type] == 0.0:
 		return NAN
@@ -294,11 +302,11 @@ func get_group_utilization(op_group: int) -> float:
 	return sum_rates / sum_capacities
 
 
-func get_group_power(op_group: int) -> float:
-	var powers: Array = _table_operations.power
+func get_group_energy(op_group: int) -> float:
+	var energies: Array = _table_operations[&"energy"]
 	var sum := 0.0
 	for type in _op_groups_operations[op_group]:
-		sum += rates[type] * powers[type]
+		sum += rates[type] * energies[type]
 	return sum
 
 
@@ -420,192 +428,125 @@ func get_dirty_capacities_2() -> int:
 
 # ********************************** SYNC *************************************
 
-func get_server_init() -> Array:
-	# facility only; reference-safe
-	return [
-		yq,
-		lfq_revenue,
-		lfq_gross_output,
-		lfq_net_income,
-		total_power,
-		manufacturing,
-		constructions,
-		crews.duplicate(),
-		capacities.duplicate(),
-		rates.duplicate(),
-		public_capacities.duplicate(),
-		est_revenues.duplicate(),
-		est_gross_incomes.duplicate(),
-		est_gross_margins.duplicate(),
-		op_logics.duplicate(),
-		op_commands.duplicate(),
-	]
-
-
-func sync_server_init(data: Array) -> void:
-	# facility only; keeps array references!
-	yq = data[0]
-	lfq_revenue = data[1]
-	lfq_gross_output = data[2]
-	lfq_net_income = data[3]
-	total_power = data[4]
-	manufacturing = data[5]
-	constructions = data[6]
-	crews = data[7]
-	capacities = data[8]
-	rates = data[9]
-	public_capacities = data[10]
-	est_revenues = data[11]
-	est_gross_incomes = data[12]
-	est_gross_margins = data[13]
-	op_logics = data[14]
-	op_commands = data[15]
-
-
-func propagate_component_init(data: Array) -> void:
-	# non-facilities only
-	var svr_yq: int = data[0]
-	assert(svr_yq >= yq, "Load order different than process order?")
-	yq = svr_yq # TODO: histories
-	
-	lfq_revenue += data[1]
-	lfq_gross_output += data[2]
-	lfq_net_income += data[3]
-	total_power += data[4]
-	manufacturing += data[5]
-	constructions += data[6]
-	var add_array: Array[float] = data[7]
-	utils.add_to_float_array_with_array(crews, add_array)
-	add_array = data[8]
-	utils.add_to_float_array_with_array(capacities, add_array)
-	add_array = data[9]
-	utils.add_to_float_array_with_array(rates, add_array)
-	if !has_financials:
-		return
-	add_array = data[10]
-	utils.add_to_float_array_with_array(public_capacities, add_array)
-	add_array = data[11]
-	utils.add_to_float_array_with_array(est_revenues, add_array)
-	add_array = data[12]
-	utils.add_to_float_array_with_array(est_gross_incomes, add_array)
-
-
 func take_server_delta(data: Array) -> void:
 	# facility accumulator only; zero accumulators and dirty flags
-	data.append(_dirty_values)
-	if _dirty_values & DIRTY_LFQ_REVENUE:
-		data.append(lfq_revenue)
+	
+	_int_data = data[0]
+	_float_data = data[1]
+	
+	_int_data[2] = _int_data.size()
+	_int_data[3] = _float_data.size()
+	
+	_int_data.append(_dirty)
+	if _dirty & DIRTY_LFQ_REVENUE:
+		_float_data.append(lfq_revenue)
 		lfq_revenue = 0.0
-	if _dirty_values & DIRTY_LFQ_GROSS_OUTPUT:
-		data.append(lfq_gross_output)
+	if _dirty & DIRTY_LFQ_GROSS_OUTPUT:
+		_float_data.append(lfq_gross_output)
 		lfq_gross_output = 0.0
-	if _dirty_values & DIRTY_LFQ_NET_INCOME:
-		data.append(lfq_net_income)
+	if _dirty & DIRTY_LFQ_NET_INCOME:
+		_float_data.append(lfq_net_income)
 		lfq_net_income = 0.0
-	if _dirty_values & DIRTY_TOTAL_POWER:
-		data.append(total_power)
-		total_power = 0.0
-	if _dirty_values & DIRTY_MANUFACTURING:
-		data.append(manufacturing)
-		manufacturing = 0.0
-	if _dirty_values & DIRTY_CONSTRUCTIONS:
-		data.append(constructions)
+	if _dirty & DIRTY_CONSTRUCTIONS:
+		_float_data.append(constructions)
 		constructions = 0.0
-	_dirty_values = 0
-	_append_and_zero_dirty_bshift(data, crews, _dirty_crews)
-	_append_and_zero_dirty(data, capacities, _dirty_capacities_1)
-	_append_and_zero_dirty(data, capacities, _dirty_capacities_2, 64)
-	_append_and_zero_dirty(data, rates, _dirty_rates_1)
-	_append_and_zero_dirty(data, rates, _dirty_rates_2, 64)
-	_append_and_zero_dirty(data, public_capacities, _dirty_public_capacities_1)
-	_append_and_zero_dirty(data, public_capacities, _dirty_public_capacities_2, 64)
-	_append_and_zero_dirty(data, est_revenues, _dirty_est_revenues_1)
-	_append_and_zero_dirty(data, est_revenues, _dirty_est_revenues_2, 64)
-	_append_and_zero_dirty(data, est_gross_incomes, _dirty_est_gross_incomes_1)
-	_append_and_zero_dirty(data, est_gross_incomes, _dirty_est_gross_incomes_2, 64)
-	_append_dirty(data, op_logics, _dirty_est_gross_margins_1) # not accumulator!
-	_append_dirty(data, op_logics, _dirty_est_gross_margins_2, 64) # not accumulator!
-	_append_dirty(data, op_logics, _dirty_op_logics_1) # not accumulator!
-	_append_dirty(data, op_logics, _dirty_op_logics_2, 64) # not accumulator!
+	_dirty = 0
+	
+	_append_and_zero_dirty_floats(crews, _dirty_crews)
 	_dirty_crews = 0
+	_append_and_zero_dirty_floats(capacities, _dirty_capacities_1)
 	_dirty_capacities_1 = 0
+	_append_and_zero_dirty_floats(capacities, _dirty_capacities_2, 64)
 	_dirty_capacities_2 = 0
+	_append_and_zero_dirty_floats(rates, _dirty_rates_1)
 	_dirty_rates_1 = 0
+	_append_and_zero_dirty_floats(rates, _dirty_rates_2, 64)
 	_dirty_rates_2 = 0
+	_append_and_zero_dirty_floats(public_capacities, _dirty_public_capacities_1)
 	_dirty_public_capacities_1 = 0
+	_append_and_zero_dirty_floats(public_capacities, _dirty_public_capacities_2, 64)
 	_dirty_public_capacities_2 = 0
+	_append_and_zero_dirty_floats(est_revenues, _dirty_est_revenues_1)
 	_dirty_est_revenues_1 = 0
+	_append_and_zero_dirty_floats(est_revenues, _dirty_est_revenues_2, 64)
 	_dirty_est_revenues_2 = 0
+	_append_and_zero_dirty_floats(est_gross_incomes, _dirty_est_gross_incomes_1)
 	_dirty_est_gross_incomes_1 = 0
+	_append_and_zero_dirty_floats(est_gross_incomes, _dirty_est_gross_incomes_2, 64)
 	_dirty_est_gross_incomes_2 = 0
+	_append_dirty_floats(est_gross_margins, _dirty_est_gross_margins_1) # not accumulator!
 	_dirty_est_gross_margins_1 = 0
+	_append_dirty_floats(est_gross_margins, _dirty_est_gross_margins_2, 64) # not accumulator!
 	_dirty_est_gross_margins_2 = 0
+	_append_dirty_ints(op_logics, _dirty_op_logics_1) # not accumulator!
 	_dirty_op_logics_1 = 0
+	_append_dirty_ints(op_logics, _dirty_op_logics_2, 64) # not accumulator!
 	_dirty_op_logics_2 = 0
 
 
-func sync_server_delta(data: Array, k: int) -> int:
+func add_server_delta(data: Array) -> void:
 	# any target
-	var svr_yq: int = data[0]
-	yq = svr_yq # TODO: histories
 	
-	var flags: int = data[k]
-	k += 1
+	_int_data = data[0]
+	_float_data = data[1]
+	
+	_int_offset = _int_data[2]
+	_float_offset = _int_data[3]
+	
+	var svr_qtr := _int_data[0]
+	run_qtr = svr_qtr # TODO: histories
+		
+	var flags := _int_data[_int_offset]
+	_int_offset += 1
 	if flags & DIRTY_LFQ_REVENUE:
-		lfq_revenue += data[k]
-		k += 1
+		lfq_revenue += _float_data[_float_offset]
+		_float_offset += 1
 	if flags & DIRTY_LFQ_GROSS_OUTPUT:
-		lfq_gross_output += data[k]
-		k += 1
+		lfq_gross_output += _float_data[_float_offset]
+		_float_offset += 1
 	if flags & DIRTY_LFQ_NET_INCOME:
-		lfq_net_income += data[k]
-		k += 1
-	if flags & DIRTY_TOTAL_POWER:
-		total_power += data[k]
-		k += 1
-	if flags & DIRTY_MANUFACTURING:
-		manufacturing += data[k]
-		k += 1
+		lfq_net_income += _float_data[_float_offset]
+		_float_offset += 1
 	if flags & DIRTY_CONSTRUCTIONS:
-		constructions += data[k]
-		k += 1
-
-	k = _add_dirty_bshift(data, crews, k)
-	k = _add_dirty(data, capacities, k)
-	k = _add_dirty(data, capacities, k, 64)
-	k = _add_dirty(data, rates, k)
-	k = _add_dirty(data, rates, k, 64)
+		constructions += _float_data[_float_offset]
+		_float_offset += 1
+	
+	_add_dirty_floats(crews)
+	_add_dirty_floats(capacities)
+	_add_dirty_floats(capacities, 64)
+	_add_dirty_floats(rates)
+	_add_dirty_floats(rates, 64)
 	if !has_financials:
-		return 0 # not used
-	k = _add_dirty(data, public_capacities, k)
-	k = _add_dirty(data, public_capacities, k, 64)
-	k = _add_dirty(data, est_revenues, k)
-	k = _add_dirty(data, est_revenues, k, 64)
-	k = _add_dirty(data, est_gross_incomes, k)
-	k = _add_dirty(data, est_gross_incomes, k, 64)
-	if !_is_facility:
-		return 0 # not used
-	k = _set_dirty(data, est_gross_margins, k) # not accumulator!
-	k = _set_dirty(data, est_gross_margins, k, 64) # not accumulator!
-	k = _set_dirty(data, op_logics, k) # not accumulator!
-	k = _set_dirty(data, op_logics, k, 64) # not accumulator!
-	return k
+		return
+	_add_dirty_floats(public_capacities)
+	_add_dirty_floats(public_capacities, 64)
+	_add_dirty_floats(est_revenues)
+	_add_dirty_floats(est_revenues, 64)
+	_add_dirty_floats(est_gross_incomes)
+	_add_dirty_floats(est_gross_incomes, 64)
+	if !is_facility:
+		return
+	_set_dirty_floats(est_gross_margins) # not accumulator!
+	_set_dirty_floats(est_gross_margins, 64) # not accumulator!
+	_set_dirty_ints(op_logics) # not accumulator!
+	_set_dirty_ints(op_logics, 64) # not accumulator!
 
 
 func get_interface_dirty() -> Array:
 	# TODO: parallel pattern above to get FacilityInterface data
 	var data := []
-	_append_dirty(data, op_commands, _dirty_op_commands_1)
-	_append_dirty(data, op_commands, _dirty_op_commands_2, 64)
-	_dirty_op_commands_1 = 0
-	_dirty_op_commands_2 = 0
+	#_append_dirty(data, op_commands, _dirty_op_commands_1)
+	#_append_dirty(data, op_commands, _dirty_op_commands_2, 64)
+	#_dirty_op_commands_1 = 0
+	#_dirty_op_commands_2 = 0
 	return data
 
 
-func sync_interface_dirty(data: Array) -> void:
+func sync_interface_dirty(_data: Array) -> void:
 	# TODO: parallel pattern above to set FacilityInterface data
-	var k := _set_dirty(data, op_commands, 0)
-	_set_dirty(data, op_commands, k, 64)
+	pass
+	#_set_dirty(data, op_commands)
+	#_set_dirty(data, op_commands, 64)
 
 
 

@@ -26,6 +26,7 @@ func _pin_info_panel(info_panel: InfoPanel) -> void:
 	var selection_manager: SelectionManager = info_panel.selection_manager
 	var sm_clone: SelectionManager = SelectionManager.new()
 	sm_clone.set_selection_and_history(selection_manager.get_selection_and_history())
+	sm_clone.info_panel_target_name = selection_manager.info_panel_target_name
 	sm_clone.is_action_listener = false
 
 	# clone subpanel tree w/ persist properties
@@ -36,18 +37,17 @@ func _pin_info_panel(info_panel: InfoPanel) -> void:
 	var subpanel_clones := itc_clone.subpanels
 	var n_subpanels := subpanels.size()
 	assert(subpanel_clones.size() == n_subpanels)
-	_clone_persist_properties(itc, itc_clone)
+	IVSaveBuilder.clone_persist_properties(itc, itc_clone)
 	var i := 0
 	while i < n_subpanels:
-		_clone_persist_properties(subpanels[i], subpanel_clones[i])
+		IVSaveBuilder.clone_persist_properties(subpanels[i], subpanel_clones[i])
 		i += 1
-
+	
 	# clone InfoPanel (no persist properties we need to worry about)
 	var panel_clone: InfoPanel = IVFiles.make_object_or_scene(InfoPanel)
 	panel_clone.clone_and_pin_requested.connect(_pin_info_panel)
 	panel_clone.selection_manager = sm_clone
 	panel_clone.is_pinned = true
-	panel_clone.header_text = info_panel.header_text
 
 	# build the tree
 	var astro_gui: AstroGUI = IVGlobal.program.AstroGUI
@@ -60,16 +60,4 @@ func _pin_info_panel(info_panel: InfoPanel) -> void:
 	await IVGlobal.get_tree().process_frame
 	@warning_ignore("unsafe_method_access")
 	panel_clone.get_node("ControlMod").finish_move()
-
-
-func _clone_persist_properties(original: Container, clone: Container) -> void:
-	if not &"PERSIST_PROPERTIES" in original:
-		return
-	for persist_property: StringName in original.get(&"PERSIST_PROPERTIES"):
-		var value = original.get(persist_property)
-		var type := typeof(value)
-		if type == TYPE_ARRAY or type == TYPE_DICTIONARY:
-			@warning_ignore("unsafe_method_access")
-			value = value.duplicate(true)
-		clone.set(persist_property, value)
 

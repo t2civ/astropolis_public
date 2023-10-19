@@ -14,20 +14,37 @@ const ivutils := preload("res://addons/ivoyager_core/static/utils.gd")
 const utils := preload("res://astropolis_public/static/utils.gd")
 const LOG2_64 := Utils.LOG2_64
 
+const PERSIST_MODE := IVEnums.PERSIST_PROCEDURAL
+const PERSIST_PROPERTIES: Array[StringName] = [
+	&"run_qtr",
+	&"_dirty",
+]
+
+# persisted
+var run_qtr := -1 # last sync, = year * 4 + (quarter - 1)
+@warning_ignore("unused_private_class_variable")
+var _dirty := 0
+
+# processing
+var _float_data: Array[float]
+var _int_data: Array[int]
+var _float_offset: int
+var _int_offset: int
+
+# indexing & localized
+@warning_ignore("unused_private_class_variable")
+static var _tables: Dictionary = IVTableData.tables
+@warning_ignore("unused_private_class_variable")
+static var _table_n_rows: Dictionary = IVTableData.table_n_rows
+
+
 
 func get_server_init() -> Array:
-	# Facility only. Keep reference safe.
-	return []
+	return IVSaveBuilder.get_persist_properties(self)
 
 
-func sync_server_init(_data: Array) -> void:
-	# Facility only. May keep nested array references.
-	pass
-
-
-func propagate_component_init(_data: Array) -> void:
-	# non-facilities only
-	pass
+func set_server_init(data: Array) -> void:
+	IVSaveBuilder.set_persist_properties(self, data)
 
 
 func take_server_delta(_data: Array) -> void:
@@ -35,9 +52,9 @@ func take_server_delta(_data: Array) -> void:
 	pass
 
 
-func sync_server_delta(_data: Array, _k: int) -> int:
+func add_server_delta(_data: Array) -> void:
 	# any target
-	return 0
+	pass
 
 
 func get_interface_dirty() -> Array:
@@ -48,89 +65,65 @@ func sync_interface_dirty(_data: Array) -> void:
 	pass
 
 
-static func _append_dirty(data: Array, values: Array, flags: int, index_offset := 0) -> void:
-	data.append(flags)
+# container sync
+
+func _append_dirty_ints(array: Array[int], flags: int, bits_offset := 0) -> void:
+	_int_data.append(flags)
 	while flags:
 		var lsb := flags & -flags
-		var i: int = LOG2_64[lsb] + index_offset
-		data.append(values[i])
+		var i: int = LOG2_64[lsb] + bits_offset
+		_int_data.append(array[i])
 		flags &= ~lsb
 
 
-static func _append_and_zero_dirty(data: Array, values: Array, flags: int, index_offset := 0) -> void:
-	data.append(flags)
+func _append_dirty_floats(array: Array[float], flags: int, bits_offset := 0) -> void:
+	_int_data.append(flags)
 	while flags:
 		var lsb := flags & -flags
-		var i: int = LOG2_64[lsb] + index_offset
-		data.append(values[i])
-		values[i] = 0.0
+		var i: int = LOG2_64[lsb] + bits_offset
+		_float_data.append(array[i])
 		flags &= ~lsb
 
 
-static func _set_dirty(data: Array, to: Array, data_offset := 0, index_offset := 0) -> int:
-	var flags: int = data[data_offset]
-	data_offset += 1
+func _append_and_zero_dirty_floats(array: Array[float], flags: int, bits_offset := 0) -> void:
+	_int_data.append(flags)
 	while flags:
 		var lsb := flags & -flags
-		var i: int = LOG2_64[lsb] + index_offset
-		to[i] = data[data_offset]
-		data_offset += 1
+		var i: int = LOG2_64[lsb] + bits_offset
+		_float_data.append(array[i])
+		array[i] = 0.0
 		flags &= ~lsb
-	return data_offset
 
 
-static func _add_dirty(data: Array, to: Array, data_offset := 0, index_offset := 0) -> int:
-	var flags: int = data[data_offset]
-	data_offset += 1
+func _set_dirty_ints(array: Array[int], bits_offset := 0) -> void:
+	var flags := _int_data[_int_offset]
+	_int_offset += 1
 	while flags:
 		var lsb := flags & -flags
-		var i: int = LOG2_64[lsb] + index_offset
-		to[i] += data[data_offset]
-		data_offset += 1
+		var i: int = LOG2_64[lsb] + bits_offset
+		array[i] = _int_data[_int_offset]
+		_int_offset += 1
 		flags &= ~lsb
-	return data_offset
 
 
-# '_bshift' versions more optimal if flags right-biased or not sparse
-
-static func _append_dirty_bshift(data: Array, values: Array, flags: int, index_offset := 0) -> void:
-	data.append(flags)
+func _set_dirty_floats(array: Array[float], bits_offset := 0) -> void:
+	var flags := _int_data[_int_offset]
+	_int_offset += 1
 	while flags:
-		if flags & 1:
-			data.append(values[index_offset])
-		index_offset += 1
-		flags >>= 1
+		var lsb := flags & -flags
+		var i: int = LOG2_64[lsb] + bits_offset
+		array[i] = _float_data[_float_offset]
+		_float_offset += 1
+		flags &= ~lsb
 
-static func _append_and_zero_dirty_bshift(data: Array, values: Array, flags: int, index_offset := 0) -> void:
-	data.append(flags)
+
+func _add_dirty_floats(array: Array[float], bits_offset := 0) -> void:
+	var flags: int = _int_data[_int_offset]
+	_int_offset += 1
 	while flags:
-		if flags & 1:
-			data.append(values[index_offset])
-			values[index_offset] = 0.0
-		index_offset += 1
-		flags >>= 1
-
-
-static func _set_dirty_bshift(data: Array, to: Array, data_offset := 0, index_offset := 0) -> int:
-	var flags: int = data[data_offset]
-	data_offset += 1
-	while flags:
-		if flags & 1:
-			to[index_offset] = data[data_offset]
-			data_offset += 1
-		index_offset += 1
-		flags >>= 1
-	return data_offset
-
-
-static func _add_dirty_bshift(data: Array, to: Array, data_offset := 0, index_offset := 0) -> int:
-	var flags: int = data[data_offset]
-	data_offset += 1
-	while flags:
-		if flags & 1:
-			to[index_offset] += data[data_offset]
-			data_offset += 1
-		index_offset += 1
-		flags >>= 1
-	return data_offset
+		var lsb := flags & -flags
+		var i: int = LOG2_64[lsb] + bits_offset
+		array[i] += _float_data[_float_offset]
+		_float_offset += 1
+		flags &= ~lsb
 

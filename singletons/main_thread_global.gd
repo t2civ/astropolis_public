@@ -109,12 +109,20 @@ func get_polity_name(interface_name: StringName) -> StringName:
 	return interface.get_polity_name()
 
 
-func has_facilities(interface_name: StringName) -> bool:
-	# Return is useful (possibly true) for body and player.
+func has_development(interface_name: StringName) -> bool:
+	# True for facility, proxy & player; true for body if it has facilities.
 	var interface: Interface = interfaces_by_name.get(interface_name)
 	if !interface:
 		return false
-	return interface.has_facilities()
+	return interface.has_development()
+
+
+func has_markets(interface_name: StringName) -> bool:
+	# True if interface has inventory.
+	var interface: Interface = interfaces_by_name.get(interface_name)
+	if !interface:
+		return false
+	return interface.has_markets()
 
 
 # *****************************************************************************

@@ -9,7 +9,6 @@ const SCENE := "res://astropolis_public/gui_panels/itab_operations.tscn"
 # Tabs follow row enumerations in op_classes.tsv.
 # TODO: complete localizations
 
-signal header_changed(new_header)
 
 enum {
 	GROUP_OPEN,
@@ -35,16 +34,7 @@ var current_tab := 0
 var _on_ready_tab := 0
 
 # not persisted
-var _header_suffix := "  -  " + tr(&"LABEL_OPERATIONS")
-var _subheader_suffixes := [
-	" / " + tr(&"LABEL_ENERGY"),
-	" / " + tr(&"LABEL_EXTRACTION"),
-	" / " + tr(&"LABEL_REFINING"),
-	" / " + tr(&"LABEL_MANUFACTURING"),
-	" / " + tr(&"LABEL_BIOMES"),
-	" / " + tr(&"LABEL_SERVICES"),
-]
-#var _show_subheader := true
+
 var _state: Dictionary = IVGlobal.state
 var _selection_manager: SelectionManager
 var _suppress_tab_listener := true
@@ -58,9 +48,6 @@ var _op_group_names: Array = _tables.op_groups.name
 var _op_groups_operations: Array = _tables.op_groups_operations
 var _operation_names: Array = _tables.operations.name
 var _operation_flow_units: Array = _tables.operations.flow_unit
-#var _resources_is_extraction: Array = _tables.extraction_resources
-#var _n_resources_is_extraction := _resources_is_extraction.size()
-#var _resource_names: Array = _tables.resources.name
 
 @onready var _multipliers := IVUnits.unit_multipliers
 @warning_ignore("unsafe_property_access")
@@ -142,21 +129,14 @@ func _select_tab(tab: int) -> void:
 	_update_tab()
 
 
-func _update_tab(_suppress_camera_move := false) -> void:
+func _update_tab(_dummy := false) -> void:
 	if !visible or !_state.is_running:
 		return
-	var selection_data := _selection_manager.get_info_panel_data()
-	if !selection_data:
-		return
-	var target_name: StringName = selection_data[0]
-	var header_text: String = selection_data[1] + _header_suffix
-	var is_developed: bool = selection_data[2]
-	if is_developed:
+	var target_name := _selection_manager.get_info_target_name()
+	if MainThreadGlobal.has_development(target_name):
 		MainThreadGlobal.call_ai_thread(_get_ai_data.bind(target_name))
-		header_text += _subheader_suffixes[current_tab]
 	else:
 		_update_no_operations()
-	header_changed.emit(header_text)
 
 
 func _update_no_operations() -> void:
@@ -175,7 +155,7 @@ func _get_ai_data(target_name: StringName) -> void:
 		return
 	
 	var tab := current_tab
-	var operations: Operations = interface.operations
+	var operations: Operations = interface.get(&"operations")
 	assert(operations)
 	var has_financials := operations.has_financials
 	var op_groups: Array = _op_classes_op_groups[tab]
@@ -186,7 +166,7 @@ func _get_ai_data(target_name: StringName) -> void:
 		var group_data := [
 			_op_group_names[op_group_type],
 			operations.get_group_utilization(op_group_type),
-			operations.get_group_power(op_group_type),
+			operations.get_group_energy(op_group_type),
 			NAN,
 			operations.get_group_est_revenue(op_group_type) if has_financials else NAN,
 			operations.get_group_est_gross_margin(op_group_type) if has_financials else NAN,
@@ -211,7 +191,10 @@ func _get_ai_data(target_name: StringName) -> void:
 			var op_data := [
 				_operation_names[operation_type],
 				operations.get_utilization(operation_type),
-				operations.get_power(operation_type),
+				
+				# FIXME: Below should be electricity
+				
+				operations.get_electricity(operation_type),
 				flow,
 				operations.get_est_revenue(operation_type) if has_financials else NAN,
 				operations.get_est_gross_margin(operation_type) if has_financials else NAN,
@@ -236,8 +219,8 @@ func _update_tab_display(target_name: StringName, tab: int, n_op_groups: int, ha
 	# header changes
 	var revenue_hdr: Label = _revenue_hdrs[tab]
 	var margin_hdr: Label = _margin_hdrs[tab]
-	revenue_hdr.text = "Est Rev" if has_financials else ""
-	margin_hdr.text = "Est Mrgn" if has_financials else ""
+	revenue_hdr.text = "Revenue" if has_financials else ""
+	margin_hdr.text = "Margin" if has_financials else ""
 	
 	# make GroupBoxes as needed
 	var vbox: VBoxContainer = _vboxes[tab]
@@ -366,7 +349,7 @@ class RowItem extends HBoxContainer:
 			group_button.size_flags_horizontal = SIZE_EXPAND_FILL
 			group_button.custom_minimum_size.x = _name_column_width
 			group_button.flat = true
-			group_button.alignment = HORIZONTAL_ALIGNMENT_CENTER
+			group_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			add_child(group_button)
 		else:
 			ops_label = Label.new()
