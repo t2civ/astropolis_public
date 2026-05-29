@@ -1,0 +1,245 @@
+# dev_stats.gd
+# This file is part of Astropolis
+# https://t2civ.com
+# *****************************************************************************
+# Copyright 2019-2026 Charlie Whitfield; ALL RIGHTS RESERVED
+# Astropolis is a registered trademark of Charlie Whitfield in the US
+# *****************************************************************************
+class_name DevStats
+extends MarginContainer
+
+## Multi-target development-stats grid. Shows population, economy, power,
+## manufacturing, etc. as rows × proxy targets as columns.
+##
+## Used by [ITabDevelopment] and the standalone development panel. Calls
+## proxy methods on the proxy thread, then builds the grid on the main
+## thread.
+
+
+## Emitted whenever the grid is rebuilt with [param has_stats] true if any
+## target has data.
+signal has_stats_changed(has_stats: bool)
+
+# GUI values - parent should set only once at init
+## Display string for zero values. Set to [code]""[/code] to print zeros
+## with units instead of a placeholder.
+var zero_value := "-"
+## If true, missing proxies still get a column (with no data).
+var show_missing_proxy := true
+## If false, rows that have no data across all targets are skipped.
+var force_rows := true
+## Minimum number of columns including the row-label column. Pads with empty
+## columns if there are fewer targets than this.
+var min_columns := 3
+## Component name (string property on [Proxy]) that must exist for a
+## target to count as having data.
+var required_component := &"operations"
+
+
+## Per-row spec: [code][label, getter_method, format_callable][/code].
+## Override to add or remove development metrics.
+var content: Array[Array] = [
+	# label_txt, target_path
+	[&"LABEL_POPULATION", &"get_development_population", IVQFormat.named_number.bind(3,
+			IVQFormat.TextFormat.SHORT_MIXED_CASE, true)],
+	[&"LABEL_ECONOMY", &"get_development_economy", IVQFormat.modified_named_number.bind(3,
+			IVQFormat.TextFormat.SHORT_MIXED_CASE, false, 999999.5, "$", "",
+			1.0 / IVUnits.unit_multipliers[&"$"])],
+	[&"LABEL_POWER", &"get_development_power", IVQFormat.prefixed_unit.bind(&"W")],
+	[&"LABEL_CONSTRUCTIONS", &"get_development_constructions", IVQFormat.prefixed_unit.bind(&"t")],
+	[&"LABEL_MANUFACTURING", &"get_development_manufacturing", IVQFormat.prefixed_unit.bind(&"t/h")],
+	[&"LABEL_INFORMATION", &"get_development_information", IVQFormat.prefixed_unit.bind(&"bit")],
+	[&"LABEL_COMPUTATION", &"get_development_computation", IVQFormat.prefixed_unit.bind(&"flop/s")],
+	[&"LABEL_BIOMASS", &"get_development_biomass", IVQFormat.dynamic_unit.bind(
+			&"mass_g_kg_prefixed_t")],
+	[&"LABEL_BIOPRODUCTIVITY", &"get_development_bioproductivity", IVQFormat.prefixed_unit.bind(
+			&"t/h")],
+	[&"LABEL_BIODIVERSITY", &"get_development_biodiversity", IVQFormat.prefixed_unit.bind(&"spp")],
+]
+
+## Proxy names to query, one per column.
+var targets: Array[StringName] = [&"PLANET_EARTH", &"JOIN_OFFWORLD"]
+## Header text per column (translated keys); if non-empty, used instead of
+## the proxy's own name.
+var column_names: Array[StringName] = [&"PLANET_EARTH", &"TXT_OFF_EARTH"]
+## Fallback header per column when [member column_names] is empty and the
+## target proxy is missing. Empty entries fall back to the target string.
+var fallback_names: Array[StringName] = [&"", &""]
+
+var _thread_targets: Array[StringName]
+var _thread_fallback_names: Array[StringName]
+var _thread_column_names: Array[StringName]
+
+@onready var _grid: GridContainer = $Grid
+
+
+## Replaces [member targets], [member column_names], and
+## [member fallback_names], then triggers an update.
+func update_targets(targets_: Array[StringName], column_names_: Array[StringName] = [],
+		fallback_names_: Array[StringName] = []) -> void:
+	targets = targets_
+	column_names = column_names_
+	fallback_names = fallback_names_
+	update()
+
+
+## Refreshes the grid by dispatching to the proxy thread.
+func update() -> void:
+	MainThreadGlobal.call_proxy_thread(_set_data)
+
+
+# ******************************* PROXY THREAD ********************************
+
+func _set_data() -> void:
+	var data := []
+	_thread_targets = targets # for thread safety
+	_thread_column_names = column_names
+	_thread_fallback_names = fallback_names
+	
+	# get Proxies and check required components
+	var proxies: Array[Proxy] = []
+	var has_data := false
+	for target in _thread_targets:
+		var proxy := Proxy.get_proxy_by_name(target)
+		if proxy:
+			if proxy.get(required_component):
+				has_data = true
+			else:
+				proxy = null
+		if proxy or show_missing_proxy:
+			proxies.append(proxy) # may be null
+	if !has_data:
+		_no_data.call_deferred()
+		return
+
+	# do counts
+	var n_proxies := proxies.size()
+	var n_spacers := 0
+	if n_proxies < min_columns - 1:
+		n_spacers = min_columns - n_proxies - 1
+
+	# start building data
+	data.append(n_proxies + 1 + n_spacers) # n_columns
+
+	# headers
+	var i := 0
+	while i < n_proxies:
+		var proxy: Proxy = proxies[i]
+		var use_name := ""
+		if _thread_column_names:
+			use_name = _thread_column_names[i]
+		elif proxy:
+			use_name = proxy.gui_name if proxy.gui_name else tr(proxy.name)
+		elif _thread_fallback_names[i]:
+			use_name = _thread_fallback_names[i]
+		else:
+			use_name = _thread_targets[i]
+		data.append(use_name) # header
+		i += 1
+	i = 0
+	while i < n_spacers:
+		data.append("")
+		i += 1
+
+	# data rows
+	var row := 1
+	for line_array in content:
+		var method: StringName = line_array[1]
+		var values := []
+		var is_data := false
+		for proxy in proxies:
+			var value: Variant = 0.0
+			if proxy:
+				value = proxy.call(method)
+				if value != null:
+					is_data = true
+			values.append(value)
+		
+		if !force_rows and !is_data:
+			continue # don't add row
+			
+		# add row label
+		var row_text: String = line_array[0] # row label
+		data.append(row_text)
+		
+		var format_callable: Callable = line_array[2]
+		
+		# add values
+		for value: Variant in values:
+			var value_text: String
+			if value != null and (value or !zero_value):
+				value_text = format_callable.call(value)
+			else:
+				value_text = zero_value
+			data.append(value_text)
+		i = 0
+		while i < n_spacers:
+			data.append("")
+			i += 1
+		
+		# next row
+		row += 1
+
+	# add n_rows and finish
+	data.append(row)
+	_build_grid.call_deferred(data)
+
+
+# ******************************** MAIN THREAD ********************************
+
+func _no_data() -> void:
+	_grid.hide()
+	has_stats_changed.emit(false)
+
+
+func _build_grid(data: Array) -> void:
+	var n_columns: int = data[0] # includes labels
+	_grid.columns = n_columns
+	var n_rows: int = data[-1] # includes headers
+	var n_cells_needed := n_rows * n_columns
+	var n_cells := _grid.get_child_count()
+	while n_cells < n_cells_needed:
+		var label := Label.new()
+		#label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.size_flags_horizontal = SIZE_EXPAND_FILL
+		_grid.add_child(label)
+		n_cells += 1
+		
+	# headers
+	var column := 1
+	while column < n_columns:
+		var header_label: Label = _grid.get_child(column)
+		var header_text: String = data[column]
+		header_label.text = header_text
+		header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		header_label.show()
+		column += 1
+		
+	# data rows
+	var row := 1
+	while row < n_rows:
+		var row_label: Label = _grid.get_child(row * n_columns)
+		var row_text: String = data[row * n_columns]
+		row_label.text = row_text
+		row_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		row_label.show()
+		
+		# values
+		column = 1
+		while column < n_columns:
+			var value_label: Label = _grid.get_child(row * n_columns + column)
+			var value_text: String = data[row * n_columns + column]
+			value_label.text = value_text
+			value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			value_label.show()
+			column += 1
+		row += 1
+	
+	# hide unsused cells
+	while n_cells > n_cells_needed:
+		n_cells -= 1
+		var label: Label = _grid.get_child(n_cells)
+		label.hide()
+	
+	has_stats_changed.emit(true)
+	_grid.show()
