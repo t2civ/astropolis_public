@@ -1,0 +1,4 @@
+# Astropolis public submodule ignores:
+
+*.translation
+~*

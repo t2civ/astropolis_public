@@ -1,0 +1,37 @@
+id,en
+HINT_MODULE_SOLAR_ARRAYS,Solar Arrays
+HINT_MODULE_COMBUSTION_GENERATORS,Combustion Generators
+HINT_MODULE_FISSION_REACTORS,Fission Reactors
+HINT_MODULE_DT_FUSION_REACTORS,Deuterium-Tritium Fusion Reactors
+HINT_MODULE_DD_FUSION_REACTORS,Deuterium-Deuterium Fusion Reactors
+HINT_MODULE_DHe3_FUSION_REACTORS,Deuterium-Helium-3 Fusion Reactors
+HINT_MODULE_He3He3_FUSION_REACTORS,Helium-3-Helium-3 Fusion Rectors
+HINT_MODULE_MINES,Mines
+HINT_MODULE_AIR_CONDENSERS,Atmosphere Condensers
+HINT_MODULE_FARMS,Farms
+HINT_MODULE_REFINERIES,Refineries
+HINT_MODULE_GASSIFIERS,Gassifiers
+HINT_MODULE_GAS_CONVERTERS,Gas Converters
+HINT_MODULE_WATER_ELECTROLYZERS,Water Electrolyzers
+HINT_MODULE_ISOTOPE_SEPARATORS,Isotope Separators
+HINT_MODULE_SMELTERS,Smelters
+HINT_MODULE_CEMENT_KILNS,Cement Kilns
+HINT_MODULE_GLASS_KILNS,Glass Kilns
+HINT_MODULE_FERMENTERS,Fermenters
+HINT_MODULE_RECYCLING_PLANTS,Recycling Plants
+HINT_MODULE_FACTORIES,Factories
+HINT_MODULE_CHIP_FABRICATORS,Chip Fabricatiors
+HINT_MODULE_CHEMICAL_PLANTS,Chemical Plants
+HINT_MODULE_PHARMACEUTICAL_PLANTS,Pharmaceutical Plants
+HINT_STRATUM_FORMAT_1,%s\n\nRadius:           %s\nVolume:         %s\nDensity:          %s\nTotal Mass:   %s
+HINT_STRATUM_FORMAT_2,%s\n\nThickness:     %s\nVolume:         %s\nDensity:          %s\nTotal Mass:   %s
+HINT_5_QUARTERS,past 4 quarters / current estimate
+HINT_AI,Singular artificial intelligences that may or may not manefest in physical form(s) 
+HINT_CYBORG,"Cyborgs are mechanically transformed persons that retain only a small biological part,  possibly only a brain or parts of a brain"
+HINT_EMBODIED,Embodied are uploaded persons generally (re-)manefesting in a physical body of some sort
+HINT_IN_ORBIT,"Satellites including minor moons, but not major moons nor their satellites"
+HINT_LARGE_BODIES,Planets and their satellites
+HINT_ORGANIC,"Organic persons are primarily biological,  but may be modified in form or mechanically augmented"
+HINT_SMALL_BODIES,"Asteroids,  comets and spacecraft in heliocentric orbit"
+HINT_SUBORBITAL,"Subsurface,  surface and atomosphere (if any)"
+HINT_UPLOADED,"Uploaded are electronic copies of living biological persons and the electronic offspring of such persons,  generally existing in virtual reality only"

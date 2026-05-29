@@ -1,0 +1,136 @@
+# public_preinitializer.gd
+# This file is part of Astropolis
+# https://t2civ.com
+# *****************************************************************************
+# Copyright 2019-2026 Charlie Whitfield; ALL RIGHTS RESERVED
+# Astropolis is a registered trademark of Charlie Whitfield in the US
+# *****************************************************************************
+extends RefCounted
+
+## Public Astropolis preinitializer. Runs once at startup before
+## [code]IVCoreInitializer[/code] builds the program tree, and wires
+## ivoyager plugins (core, save, units, assistant) up to Astropolis-specific
+## defaults.
+##
+## Configures: proxy thread verbosity, start time and sim time mode, program
+## class registration ([InfoCloner], [code]AstropolisGUI[/code]),
+## translations, units formatting, save/load gates, and the
+## [code]IVAssistantServer[/code] ready predicate.
+
+
+const PROXY_VERBOSE := false  ## Enable proxy verbose logging.
+const PROXY_VERBOSE2 := false  ## Enable extra-verbose proxy logging.
+const IVOYAGER_VERBOSE := false  ## Enable ivoyager core verbose logging.
+const USE_THREADS := true  ## Run the simulation on worker threads (recommended).
+
+
+func _init() -> void:
+	
+	var version: String = ProjectSettings.get_setting("application/config/version")
+	print("Astropolis v%s - https://t2civ.com" % version)
+	print("USE_THREADS = %s" % USE_THREADS)
+	
+	IVStateManager.core_init_object_instantiated.connect(_on_init_object_instantiated)
+	IVGlobal.data_tables_postprocessed.connect(_on_data_tables_postprocessed)
+	IVStateManager.core_init_program_objects_instantiated.connect(_on_program_objects_instantiated)
+
+	# properties
+	ProxyBus.verbose = PROXY_VERBOSE
+	ProxyBus.verbose2 = PROXY_VERBOSE2
+	IVCoreSettings.use_threads = USE_THREADS
+	IVCoreSettings.start_time_date_clock = [2025, 1, 1, 12, 0, 0]
+	IVCoreSettings.start_time_is_terrestrial_time = false
+	
+	# changed classes
+	IVCoreInitializer.program_refcounteds[&"InfoCloner"] = InfoCloner
+	IVCoreInitializer.program_refcounteds.erase(&"CompositionBuilder")
+	IVCoreInitializer.tree_program_nodes.append(&"AstropolisGUI")
+	
+	# translations
+	var path_format := "res://public/text/%s.translation"
+	IVTranslationImporter.translations.append(path_format % "entities.en")
+	IVTranslationImporter.translations.append(path_format % "gui.en")
+	IVTranslationImporter.translations.append(path_format % "hints.en")
+	IVTranslationImporter.translations.append(path_format % "text.en")
+	
+	# Units plugin
+	IVQFormat.exponent_str = "e"
+	
+	# Save plugin
+	IVSave.file_extension = "AstropolisSave"
+	IVSave.file_description = "Astropolis Save"
+	IVSave.autosave_uses_suffix_generator = true
+	IVSave.quicksave_uses_suffix_generator = true
+	# Block save/load until Proxies have settled on the main thread. The proxy
+	# thread posts add_proxy() calls via call_deferred for several frames
+	# after simulator_started, so MainThreadGlobal.proxies_ready_emitted is
+	# the correct barrier. See main_thread_global.gd.
+	IVSave.save_permit = func() -> bool:
+		return IVStateManager.started and MainThreadGlobal.proxies_ready_emitted
+	IVSave.load_permit = func() -> bool:
+		return IVStateManager.started and MainThreadGlobal.proxies_ready_emitted
+	IVSave.configure_save_plugin()
+
+	# Astropolis readiness predicate for the Assistant TCP server. The +10 frame
+	# tail comes from min_ready_delay_frames in ivoyager_assistant.cfg.
+	IVAssistantServer.ready_predicate = func() -> bool:
+		return MainThreadGlobal.proxies_ready_emitted
+	
+	# Core plugin static files
+	IVSettingsManager.set_default(&"save_base_name", "Astropolis")
+	IVSettingsManager.set_default(&"autosave_time_min", 0)
+
+
+func _on_init_object_instantiated(object: Object) -> void:
+	var table_initializer := object as IVTableInitializer
+	if table_initializer:
+		_on_table_initializer_instantiated(table_initializer)
+
+
+func _on_table_initializer_instantiated(_table_initializer: IVTableInitializer) -> void:
+	# WARNING: Static vars could be modified earlier, but we need to wait so
+	# core can do some modding related changes first.
+	
+	var tables := IVTableInitializer.tables
+	tables.erase("wiki_extras")
+	
+	var path_format := "res://public/tables/%s.tsv"
+	
+	tables.carrying_capacity_groups = path_format % "carrying_capacity_groups"
+	tables.facilities = path_format % "facilities"
+	tables.facilities_modules = path_format % "facilities_modules"
+	tables.facilities_operations = path_format % "facilities_operations"
+	tables.modules = path_format % "modules"
+	tables.op_classes = path_format % "op_classes"
+	tables.operations = path_format % "operations"
+	tables.players = path_format % "players"
+	tables.populations = path_format % "populations"
+	tables.resource_classes = path_format % "resource_classes"
+	tables.resources = path_format % "resources"
+	tables.spacecrafts = path_format % "spacecrafts" # ivoyager replacement!
+	tables.storage_classes = path_format % "storage_classes"
+	tables.strata = path_format % "strata"
+	tables.stratum_groups = path_format % "stratum_groups"
+	tables.surveys = path_format % "surveys"
+	tables.views = path_format % "views" # ivoyager replacement!
+	# primary table mods (modify existing ivoyager tables)
+	tables.planets_mod = path_format % "planets_mod"
+	tables.moons_mod = path_format % "moons_mod"
+	# entity x entity tables
+	tables.facilities_resources = path_format % "facilities_resources"
+	tables.facilities_modules = path_format % "facilities_modules"
+	tables.facilities_operations = path_format % "facilities_operations"
+	tables.strata_resources = path_format % "strata_resources"
+
+
+func _on_data_tables_postprocessed() -> void:
+	for trade_unit: StringName in IVTableData.db_tables[&"resources"][&"trade_unit"]:
+		# Add all trade_unit strings to unit_multipliers for subsequent direct access.
+		IVQConvert.include_compound_unit(trade_unit)
+
+
+func _on_program_objects_instantiated() -> void:
+	# program object changes
+
+	var speed_manager: IVSpeedManager = IVGlobal.program.SpeedManager
+	speed_manager.start_speed = 0
