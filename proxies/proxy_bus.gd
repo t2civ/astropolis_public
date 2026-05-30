@@ -8,11 +8,9 @@
 class_name ProxyBus
 extends RefCounted
 
-## Public registry bus for the proxy thread. Holds the proxy lookup arrays
-## and the registry signal.
+## Public registry bus for the proxy thread.
 ##
-## Sync signals and outgoing queues are on [code]SvrProxyBus[/code]
-## (nonpublic).
+## Holds the proxy lookup arrays and the registry signal.
 
 
 ## Emitted on the proxy thread when a new [Proxy] joins the registry.

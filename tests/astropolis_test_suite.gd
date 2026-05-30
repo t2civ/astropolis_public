@@ -134,7 +134,7 @@ func _list_components(params: Dictionary) -> Variant:
 	var table_n_rows := IVTableData.table_n_rows
 	var components := {}
 
-	var ops: OperationsNet = proxy.get(&"operations")
+	var ops: _OperationsNet = proxy.get(&"operations")
 	if ops:
 		components["operations"] = {
 			"present": true,
@@ -146,7 +146,7 @@ func _list_components(params: Dictionary) -> Variant:
 	else:
 		components["operations"] = {"present": false}
 
-	var inv: InventoryNet = proxy.get(&"inventory")
+	var inv: _InventoryNet = proxy.get(&"inventory")
 	if inv:
 		components["inventory"] = {
 			"present": true,
@@ -156,7 +156,7 @@ func _list_components(params: Dictionary) -> Variant:
 	else:
 		components["inventory"] = {"present": false}
 
-	var pop: PopulationNet = proxy.get(&"population")
+	var pop: _PopulationNet = proxy.get(&"population")
 	if pop:
 		components["population"] = {
 			"present": true,
@@ -231,17 +231,17 @@ func _do_component_query(params: Dictionary, entry_filter: Array,
 
 	match component:
 		"operations":
-			var ops: OperationsNet = proxy.get(&"operations")
+			var ops: _OperationsNet = proxy.get(&"operations")
 			if !ops:
 				return _no_component_error(proxy, component)
 			return _read_operations(ops, nonzero, entry_filter, field_filter)
 		"inventory":
-			var inv: InventoryNet = proxy.get(&"inventory")
+			var inv: _InventoryNet = proxy.get(&"inventory")
 			if !inv:
 				return _no_component_error(proxy, component)
 			return _read_inventory(inv, nonzero, entry_filter, field_filter)
 		"population":
-			var pop: PopulationNet = proxy.get(&"population")
+			var pop: _PopulationNet = proxy.get(&"population")
 			if !pop:
 				return _no_component_error(proxy, component)
 			return _read_population(pop, nonzero, entry_filter, field_filter)
@@ -251,17 +251,17 @@ func _do_component_query(params: Dictionary, entry_filter: Array,
 				return _no_component_error(proxy, component)
 			return _read_market(market, nonzero, entry_filter, field_filter)
 		"financials":
-			var fin: FinancialsNet = proxy.get(&"financials")
+			var fin: _FinancialsNet = proxy.get(&"financials")
 			if !fin:
 				return _no_component_error(proxy, component)
 			return _read_financials(fin)
 		"biome":
-			var bio: BiomeNet = proxy.get(&"biome")
+			var bio: _BiomeNet = proxy.get(&"biome")
 			if !bio:
 				return _no_component_error(proxy, component)
 			return _read_biome(bio)
 		"cyberspace":
-			var cyb: CyberspaceNet = proxy.get(&"cyberspace")
+			var cyb: _CyberspaceNet = proxy.get(&"cyberspace")
 			if !cyb:
 				return _no_component_error(proxy, component)
 			return _read_cyberspace(cyb)
@@ -323,7 +323,7 @@ func _get_entry_indices(table_name: StringName, entry_filter: Array) -> Array:
 	return filtered_indices
 
 
-func _read_operations(ops: OperationsNet, nonzero: bool,
+func _read_operations(ops: _OperationsNet, nonzero: bool,
 		entry_filter: Array, field_filter: Array) -> Dictionary:
 	var indices := _get_entry_indices(&"operations", entry_filter)
 	var has_fin := ops.has_financials()
@@ -399,7 +399,7 @@ func _read_operations(ops: OperationsNet, nonzero: bool,
 	}
 
 
-func _read_inventory(inv: InventoryNet, nonzero: bool,
+func _read_inventory(inv: _InventoryNet, nonzero: bool,
 		entry_filter: Array, field_filter: Array) -> Dictionary:
 	var indices := _get_entry_indices(&"resources", entry_filter)
 	var entries := {}
@@ -457,7 +457,7 @@ func _read_inventory(inv: InventoryNet, nonzero: bool,
 	}
 
 
-func _read_population(pop: PopulationNet, nonzero: bool,
+func _read_population(pop: _PopulationNet, nonzero: bool,
 		entry_filter: Array, field_filter: Array) -> Dictionary:
 	var indices := _get_entry_indices(&"populations", entry_filter)
 	var entries := {}
@@ -528,7 +528,7 @@ func _read_market(market: MarketProxy, nonzero: bool,
 	}
 
 
-func _read_financials(fin: FinancialsNet) -> Dictionary:
+func _read_financials(fin: _FinancialsNet) -> Dictionary:
 	return {
 		"component": "financials",
 		"ordinal_qtr": fin.ordinal_qtr,
@@ -540,7 +540,7 @@ func _read_financials(fin: FinancialsNet) -> Dictionary:
 	}
 
 
-func _read_biome(bio: BiomeNet) -> Dictionary:
+func _read_biome(bio: _BiomeNet) -> Dictionary:
 	return {
 		"component": "biome",
 		"ordinal_qtr": bio.ordinal_qtr,
@@ -550,7 +550,7 @@ func _read_biome(bio: BiomeNet) -> Dictionary:
 	}
 
 
-func _read_cyberspace(cyb: CyberspaceNet) -> Dictionary:
+func _read_cyberspace(cyb: _CyberspaceNet) -> Dictionary:
 	return {
 		"component": "cyberspace",
 		"ordinal_qtr": cyb.ordinal_qtr,

@@ -75,8 +75,7 @@ func get_market(player_id: int) -> MarketProxy:
 	return broker.get_market(player_id) if broker else null
 
 
-# Strata. The composition layers live on BodySvrProxy; these read-only
-# accessors are implemented there.
+# Strata. The composition layers live on the server.
 
 ## Returns true if this body has any stratum composition layers.
 @abstract func has_strata() -> bool

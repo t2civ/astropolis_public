@@ -14,10 +14,7 @@ extends RefCounted
 ## All GUI and in-game AI interaction with game internals goes through a
 ## [Proxy]. Subclasses ([FacilityProxy], [PlayerProxy], [BodyProxy],
 ## [JoinProxy], [TraderProxy], [MarketProxy], [BrokerProxy]) declare the
-## API. Sync plumbing and concrete instantiation live on the corresponding
-## server-side [code]*SvrProxy[/code] classes (nonpublic).
-##
-## To modify AI, see [BaseAI] and the [code]*_base_ai.gd[/code] files.
+## API. Sync plumbing and concrete instantiation live on server-side entities.
 ##
 ## WARNING: Lives on the proxy thread. Containers and many methods are not
 ## threadsafe; accessing non-container properties is safe.

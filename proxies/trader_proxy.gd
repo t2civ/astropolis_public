@@ -79,7 +79,7 @@ func get_market(_player_id: int) -> MarketProxy:
 
 
 # ******************************** AI METHODS *********************************
-# Call on proxy thread. Concrete implementations live on TraderSvrProxy.
+# Call on proxy thread.
 
 ## Adds a spot sell order. [param unit_quantity] and [param unit_price] are
 ## with respect to trade unit. [param expiration] is epoch day.
