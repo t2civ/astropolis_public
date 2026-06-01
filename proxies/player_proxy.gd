@@ -38,7 +38,6 @@ var facilities: Array[Proxy] = []
 func _clear_for_destruction() -> void:
 	polity = null
 	facilities.clear()
-	ai = null
 
 
 # ********************************* PROXY API *********************************

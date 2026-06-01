@@ -196,7 +196,7 @@ func bind_proxy(proxy_: Proxy) -> void:
 
 
 func process_ai_init() -> void:
-	_facility_ai = proxy.facility.ai as FacilityBaseAI
+	_facility_ai = Proxy.proxy_bus.facility_ais[proxy.facility_id]
 	assert(_facility_ai, "TraderBaseAI expects facility's AI to be FacilityBaseAI")
 	_facility_ai.facility_resource_strategy_changed.connect(_on_facility_resource_strategy_changed)
 

@@ -66,10 +66,6 @@ var gui_name := ""  ## Display name; mutable. Empty player gui_name hides from G
 ## [BodyProxy] without a facility.
 var ordinal_qtr := -1
 
-## AI paired with this proxy, or null on peers that don't run AI for this
-## entity. Read-only; managed by [code]ProxyServer[/code].
-var ai: BaseAI
-
 ## Member names persisted by save/load. Append in subclass [code]_init()[/code].
 ## Nested containers are ok; NO OBJECTS!
 ##

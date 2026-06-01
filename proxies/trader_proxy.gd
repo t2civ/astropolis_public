@@ -46,7 +46,6 @@ func _clear_for_destruction() -> void:
 	facility = null
 	broker = null
 	market = null
-	ai = null
 
 
 # ***************************** THREAD-SAFE READ ******************************

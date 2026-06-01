@@ -148,7 +148,6 @@ func _clear_for_destruction() -> void:
 	joins.clear()
 	market = null
 	texture_2d = null
-	ai = null
 
 
 # ********************************* PROXY API *********************************
