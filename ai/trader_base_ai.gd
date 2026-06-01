@@ -8,22 +8,21 @@
 class_name TraderBaseAI
 extends BaseAI
 
-## Default AI for traders the local player owns. Subclass to write custom
-## trader AI by extending this class and adding
-## [code]const OVERRIDE_AI := true[/code].
+## Default AI for traders the local player owns.
 ##
-## Strategies are declarative. Each [code]select_*_strategy()[/code] returns
-## an [int] enum id (see [enum TraderStrategies], [enum ResourceStrategies])
-## cached in a [code]<name>_strategy[/code] field; children read parent
-## declarations during their own selection. Cached selections persist via
-## [member BaseAI.persist] and are re-derived on each quarter tick.
-## Execution (bid/ask submission) lives in [method process_ai_interval].
+## To implement a custom trader AI, extend this class and add
+## [code]const OVERRIDE_AI := true[/code].[br][br]
+##
+## TODO: Need API so trader can refresh memory if needed. E.g., for Trader,
+## all the trade memory is known by server market. Could be packaged and sent
+## back if AI loses memory.
 
 
 ## Trader-posture strategies.
 enum TraderStrategies {
-	## Starting / no-op stance; no special posture.
-	NEUTRAL,
+	## Init / no-op. Trader should quickly move on to something (usuaally
+	## FACILITY_SUPPORT) and start trading.
+	INIT,
 	## Trade primarily to service the facility's operational needs — replenish
 	## inputs, clear outputs. Analog: a procurement / sales desk inside a
 	## manufacturing firm.
@@ -98,7 +97,7 @@ enum ResourceStrategies {
 
 ## Trader-posture strategy definitions; index = [enum TraderStrategies] value.
 static var trader_strategy_defs: Array[Dictionary] = [
-	{}, # NEUTRAL
+	{}, # INIT
 	{}, # FACILITY_SUPPORT
 	{}, # PROFIT_FOCUS
 	{}, # CONSERVATIVE
@@ -139,6 +138,24 @@ var trader_strategy := 0
 ## Per-resource strategies. See [enum ResourceStrategies].
 var resource_strategies: PackedInt32Array
 
+
+## Memory of spot ask totals (unit quantity per resource).
+var _spot_ask_totals: PackedInt64Array
+## Memory of spot bid totals (unit quantity per resource).
+var _spot_bid_totals: PackedInt64Array
+## Memory of last known spot ask price for each resource. This will be THE
+## resource ask price if trader AI only has one ask per resource at a time.
+var _spot_ask_prices: PackedInt64Array
+## Memory of last known spot bid price for each resource. This will be THE
+## resource bid price if trader AI only has one bid per resource at a time.
+var _spot_bid_prices: PackedInt64Array
+## Memory of last known spot ask_id for each resource. This will be THE
+## resource ask_id if trader AI only has one ask per resource at a time.
+var _spot_ask_ids: PackedInt64Array
+## Memory of last known spot bid_id for each resource. This will be THE
+## resource bid_id if trader AI only has one bid per resource at a time.
+var _spot_bid_ids: PackedInt64Array
+
 # *****************************************************************************
 
 var _facility_ai: FacilityBaseAI
@@ -149,8 +166,22 @@ var _facility_ai: FacilityBaseAI
 func _init() -> void:
 	persist.append(&"trader_strategy")
 	persist.append(&"resource_strategies")
+	persist.append(&"_spot_ask_totals")
+	persist.append(&"_spot_bid_totals")
+	persist.append(&"_spot_ask_prices")
+	persist.append(&"_spot_bid_prices")
+	persist.append(&"_spot_ask_ids")
+	persist.append(&"_spot_bid_ids")
 	var n_resources: int = _table_n_rows[&"resources"]
 	resource_strategies.resize(n_resources)
+	_spot_ask_totals.resize(n_resources)
+	_spot_bid_totals.resize(n_resources)
+	_spot_ask_prices.resize(n_resources)
+	_spot_bid_prices.resize(n_resources)
+	_spot_ask_ids.resize(n_resources)
+	_spot_bid_ids.resize(n_resources)
+	_spot_ask_ids.fill(-1)
+	_spot_bid_ids.fill(-1)
 
 
 func _clear_for_destruction() -> void:
@@ -160,6 +191,8 @@ func _clear_for_destruction() -> void:
 
 func bind_proxy(proxy_: Proxy) -> void:
 	proxy = proxy_ as TraderProxy
+	proxy.ask_updated.connect(_on_ask_updated)
+	proxy.bid_updated.connect(_on_bid_updated)
 
 
 func process_ai_init() -> void:
@@ -172,7 +205,52 @@ func process_ai_interval(_delta: float) -> void:
 	pass
 
 
-# **************************** STRATEGY LISTENERS *****************************
+# ******************************* AI / PROXY API ******************************
+# Call on proxy thread.
+
+## Submit ask orders here so we can track our own ask totals. Resulting BOOKED
+## ask_id and/or subsequent trades come back via _on_ask_updated().
+func _spot_ask(resource_type: int, unit_quantity: int, unit_price: int, expiration: int) -> void:
+	_spot_ask_totals[resource_type] += unit_quantity
+	_spot_ask_prices[resource_type] = unit_price
+	proxy.spot_ask(resource_type, unit_quantity, unit_price, expiration)
+
+
+## Submit bid orders here so we can track our own bid totals. Resulting BOOKED
+## bid_id and/or subsequent trades come back via _on_bid_updated().
+func _spot_bid(resource_type: int, unit_quantity: int, unit_price: int, expiration: int) -> void:
+	_spot_bid_totals[resource_type] += unit_quantity
+	_spot_bid_prices[resource_type] = unit_price
+	proxy.spot_bid(resource_type, unit_quantity, unit_price, expiration)
+
+
+# ********************************* LISTENERS *********************************
 
 func _on_facility_resource_strategy_changed(_resource_type: int, _strategy_id: int) -> void:
 	pass
+
+
+func _on_ask_updated(resource_type: int, unit_quantity: int, _unit_price: int,
+		ask_id: int, ask_status: Proxy.TradeOrderStatus) -> void:
+	const BOOKED := Proxy.TradeOrderStatus.BOOKED
+	const PARTIALLY_FILLED := Proxy.TradeOrderStatus.PARTIALLY_FILLED
+	if ask_status == BOOKED:
+		_spot_ask_ids[resource_type] = ask_id
+		return
+	_spot_ask_totals[resource_type] -= unit_quantity
+	if ask_status != PARTIALLY_FILLED and ask_id == _spot_ask_ids[resource_type]:
+		_spot_ask_ids[resource_type] = -1
+		_spot_ask_prices[resource_type] = 0
+
+
+func _on_bid_updated(resource_type: int, unit_quantity: int, _unit_price: int,
+		bid_id: int, bid_status: Proxy.TradeOrderStatus) -> void:
+	const BOOKED := Proxy.TradeOrderStatus.BOOKED
+	const PARTIALLY_FILLED := Proxy.TradeOrderStatus.PARTIALLY_FILLED
+	if bid_status == BOOKED:
+		_spot_bid_ids[resource_type] = bid_id
+		return
+	_spot_bid_totals[resource_type] -= unit_quantity
+	if bid_status != PARTIALLY_FILLED and bid_id == _spot_bid_ids[resource_type]:
+		_spot_bid_ids[resource_type] = -1
+		_spot_bid_prices[resource_type] = 0

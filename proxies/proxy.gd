@@ -20,6 +20,14 @@ extends RefCounted
 ## threadsafe; accessing non-container properties is safe.
 
 
+## Market order status.
+enum TradeOrderStatus {
+	BOOKED,
+	FILLED,
+	PARTIALLY_FILLED,
+	CANCELLED,
+}
+
 ## Indices into the [PackedFloat64Array] rows returned by
 ## [method get_module_data] and [method get_operation_data]. Rate fields may
 ## be NAN where not applicable (e.g. fuel rate for a non-generator).
@@ -64,6 +72,8 @@ var ai: BaseAI
 
 ## Member names persisted by save/load. Append in subclass [code]_init()[/code].
 ## Nested containers are ok; NO OBJECTS!
+##
+## @deprecate: See TODO/WIP in _ProxyServer
 var persist: Array[StringName] = []
 
 
