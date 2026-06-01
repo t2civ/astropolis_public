@@ -105,9 +105,14 @@ const DAY := IVUnits.DAY
 const SPREAD := 0.02
 ## Minimum order size in trade units; smaller surpluses/deficits are not quoted.
 const MIN_LOT := 1
-## Standing-order lifetime in AI intervals — a generous backstop, since the AI
-## re-quotes (cancel then repost) every interval.
+## Standing-order lifetime in AI intervals. A backstop only: the AI re-evaluates
+## each interval and re-quotes on material divergence, and the market reports
+## CANCELLED on expiry so memory stays correct.
 const ORDER_LIFETIME := 4
+## Re-quote a standing order when its price drifts beyond this fraction of its price.
+const PRICE_TOLERANCE := 0.05
+## Re-quote a standing order when its desired quantity drifts beyond this fraction.
+const QTY_TOLERANCE := 0.25
 
 
 ## Trader-posture strategy definitions; index = [enum TraderStrategies] value.
@@ -230,11 +235,10 @@ func process_ai_init() -> void:
 
 func process_ai_interval(_delta: float) -> void:
 	# Respond to the facility's per-resource strategy: a producer sells stock held
-	# above its reserve target; a consumer buys up toward it. We re-quote each
-	# interval — cancel any standing order first, then repost from current
-	# inventory. The server does not echo cancel/expire back, so per-resource
-	# memory is authoritative; the *_totals == 0 guard avoids stacking a still-
-	# unacknowledged order.
+	# above its reserve target; a consumer buys up toward it. A still-valid standing
+	# order is left untouched (no traffic); we re-quote only when the desired order
+	# materially diverges (see _maintain_ask / _maintain_bid). Order memory is kept
+	# truthful by the market's BOOKED / FILLED / CANCELLED updates.
 	const PRIMARY_PRODUCT := FacilityBaseAI.FacilityResourceStrategies.PRIMARY_PRODUCT
 	const SECONDARY_PRODUCT := FacilityBaseAI.FacilityResourceStrategies.SECONDARY_PRODUCT
 	const COPRODUCT := FacilityBaseAI.FacilityResourceStrategies.COPRODUCT
@@ -250,34 +254,31 @@ func process_ai_interval(_delta: float) -> void:
 	var expiration := epoch_day + ORDER_LIFETIME * int(INTERVAL / DAY)
 	var strategies := _facility_ai.facility_resource_strategies
 	for resource_type in strategies.size():
-		_cancel_ask(resource_type)
-		_cancel_bid(resource_type)
 		var fstrat := strategies[resource_type]
 		var is_producer := (fstrat == PRIMARY_PRODUCT or fstrat == SECONDARY_PRODUCT
 				or fstrat == COPRODUCT or fstrat == BYPRODUCT)
 		var is_consumer := (fstrat == CRITICAL_INPUT or fstrat == ROUTINE_INPUT
 				or fstrat == CONSUMABLE)
-		if not is_producer and not is_consumer:
-			continue
 		var reference_price := market.get_spot_unit_price(resource_type)
-		if reference_price <= 0:
+		if reference_price <= 0 or (not is_producer and not is_consumer):
+			# Not trading this resource now: drop any standing orders.
+			_cancel_ask(resource_type)
+			_cancel_bid(resource_type)
 			continue
 		var multiplier := _trade_unit_multipliers[resource_type]
 		var target := (_facility.get_resource_ops_reserve(resource_type)
 				+ _facility.get_resource_strategic_reserve(resource_type))
 		if is_producer:
+			_cancel_bid(resource_type)
 			var surplus := _facility.get_resource_stock(resource_type) - target
-			var unit_quantity := int(surplus / multiplier)
-			if unit_quantity >= MIN_LOT and _spot_ask_totals[resource_type] == 0:
-				var ask_price := maxi(1, floori(reference_price * (1.0 - SPREAD)))
-				_spot_ask(resource_type, unit_quantity, ask_price, expiration)
+			var ask_price := maxi(1, floori(reference_price * (1.0 - SPREAD)))
+			_maintain_ask(resource_type, int(surplus / multiplier), ask_price, expiration)
 		else:
+			_cancel_ask(resource_type)
 			var deficit := (target - _facility.get_resource_stock(resource_type)
 					- _facility.get_resource_in_transit(resource_type))
-			var unit_quantity := int(deficit / multiplier)
-			if unit_quantity >= MIN_LOT and _spot_bid_totals[resource_type] == 0:
-				var bid_price := maxi(1, ceili(reference_price * (1.0 + SPREAD)))
-				_spot_bid(resource_type, unit_quantity, bid_price, expiration)
+			var bid_price := maxi(1, ceili(reference_price * (1.0 + SPREAD)))
+			_maintain_bid(resource_type, int(deficit / multiplier), bid_price, expiration)
 
 
 # ******************************* AI / PROXY API ******************************
@@ -322,6 +323,53 @@ func _cancel_bid(resource_type: int) -> void:
 	_spot_bid_ids[resource_type] = -1
 	_spot_bid_totals[resource_type] = 0
 	_spot_bid_prices[resource_type] = 0
+
+
+## Brings our standing ask for [param resource_type] in line with the desired
+## quantity and price, re-quoting only on material divergence (see
+## [method _needs_requote]). A desired quantity below [constant MIN_LOT] drops
+## any standing ask.
+func _maintain_ask(resource_type: int, want_quantity: int, want_price: int, expiration: int) -> void:
+	if want_quantity < MIN_LOT:
+		_cancel_ask(resource_type)
+		return
+	if _spot_ask_ids[resource_type] == -1:
+		# No resting order known: post only if nothing is still outstanding (a
+		# posted-but-unacknowledged order keeps totals > 0 — wait for its update).
+		if _spot_ask_totals[resource_type] == 0:
+			_spot_ask(resource_type, want_quantity, want_price, expiration)
+		return
+	if _needs_requote(_spot_ask_totals[resource_type], _spot_ask_prices[resource_type],
+			want_quantity, want_price):
+		_cancel_ask(resource_type)
+		_spot_ask(resource_type, want_quantity, want_price, expiration)
+
+
+## Bid counterpart of [method _maintain_ask].
+func _maintain_bid(resource_type: int, want_quantity: int, want_price: int, expiration: int) -> void:
+	if want_quantity < MIN_LOT:
+		_cancel_bid(resource_type)
+		return
+	if _spot_bid_ids[resource_type] == -1:
+		if _spot_bid_totals[resource_type] == 0:
+			_spot_bid(resource_type, want_quantity, want_price, expiration)
+		return
+	if _needs_requote(_spot_bid_totals[resource_type], _spot_bid_prices[resource_type],
+			want_quantity, want_price):
+		_cancel_bid(resource_type)
+		_spot_bid(resource_type, want_quantity, want_price, expiration)
+
+
+## True when a standing order's price or quantity has drifted from the desired
+## values by more than [constant PRICE_TOLERANCE] / [constant QTY_TOLERANCE].
+func _needs_requote(have_quantity: int, have_price: int, want_quantity: int, want_price: int) -> bool:
+	if have_price <= 0 or have_quantity <= 0:
+		return true
+	if absf(float(want_price - have_price) / have_price) > PRICE_TOLERANCE:
+		return true
+	if absf(float(want_quantity - have_quantity) / have_quantity) > QTY_TOLERANCE:
+		return true
+	return false
 
 
 # ********************************* LISTENERS *********************************
