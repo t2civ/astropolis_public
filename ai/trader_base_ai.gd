@@ -13,6 +13,9 @@ extends BaseAI
 ## To implement a custom trader AI, extend this class and add
 ## [code]const OVERRIDE_AI := true[/code].[br][br]
 ##
+## Note that traders are paired 1-to-1 with facilities. This trader AI has
+## awareness of its facility's resource strategies and inventory.
+##
 ## TODO: Need API so trader can refresh memory if needed. E.g., for Trader,
 ## all the trade memory is known by server market. Could be packaged and sent
 ## back if AI loses memory.
@@ -95,6 +98,18 @@ enum ResourceStrategies {
 }
 
 
+## Epoch-day conversion: market order expirations are in integer days.
+const DAY := IVUnits.DAY
+## Quote offset from the reference price: asks are placed this fraction below it
+## and bids this fraction above, so a producer's ask and a consumer's bid cross.
+const SPREAD := 0.02
+## Minimum order size in trade units; smaller surpluses/deficits are not quoted.
+const MIN_LOT := 1
+## Standing-order lifetime in AI intervals — a generous backstop, since the AI
+## re-quotes (cancel then repost) every interval.
+const ORDER_LIFETIME := 4
+
+
 ## Trader-posture strategy definitions; index = [enum TraderStrategies] value.
 static var trader_strategy_defs: Array[Dictionary] = [
 	{}, # INIT
@@ -140,6 +155,8 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 
 
 static var _table_n_rows := IVTableData.table_n_rows
+static var _times: Array = IVGlobal.times
+static var _trade_unit_multipliers := ThreadsafeGlobal.resource_trade_unit_multipliers
 
 
 var proxy: TraderProxy
@@ -174,6 +191,7 @@ var _spot_bid_ids: PackedInt64Array
 # *****************************************************************************
 
 var _facility_ai: FacilityBaseAI
+var _facility: FacilityProxy  ## Paired facility proxy, cached for inventory reads.
 
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
@@ -194,6 +212,7 @@ func _init() -> void:
 func _clear_for_destruction() -> void:
 	proxy = null
 	_facility_ai = null
+	_facility = null
 
 
 func bind_proxy(proxy_: Proxy) -> void:
@@ -203,13 +222,62 @@ func bind_proxy(proxy_: Proxy) -> void:
 
 
 func process_ai_init() -> void:
+	_facility = proxy.facility
 	_facility_ai = Proxy.proxy_bus.facility_ais[proxy.facility_id]
 	assert(_facility_ai, "TraderBaseAI expects facility's AI to be FacilityBaseAI")
 	_facility_ai.facility_resource_strategy_changed.connect(_on_facility_resource_strategy_changed)
 
 
 func process_ai_interval(_delta: float) -> void:
-	pass
+	# Respond to the facility's per-resource strategy: a producer sells stock held
+	# above its reserve target; a consumer buys up toward it. We re-quote each
+	# interval — cancel any standing order first, then repost from current
+	# inventory. The server does not echo cancel/expire back, so per-resource
+	# memory is authoritative; the *_totals == 0 guard avoids stacking a still-
+	# unacknowledged order.
+	const PRIMARY_PRODUCT := FacilityBaseAI.FacilityResourceStrategies.PRIMARY_PRODUCT
+	const SECONDARY_PRODUCT := FacilityBaseAI.FacilityResourceStrategies.SECONDARY_PRODUCT
+	const COPRODUCT := FacilityBaseAI.FacilityResourceStrategies.COPRODUCT
+	const BYPRODUCT := FacilityBaseAI.FacilityResourceStrategies.BYPRODUCT
+	const CRITICAL_INPUT := FacilityBaseAI.FacilityResourceStrategies.CRITICAL_INPUT
+	const ROUTINE_INPUT := FacilityBaseAI.FacilityResourceStrategies.ROUTINE_INPUT
+	const CONSUMABLE := FacilityBaseAI.FacilityResourceStrategies.CONSUMABLE
+	var market := proxy.market
+	if !market:
+		return
+	var time: float = _times[0]
+	var epoch_day := int(time / DAY)
+	var expiration := epoch_day + ORDER_LIFETIME * int(INTERVAL / DAY)
+	var strategies := _facility_ai.facility_resource_strategies
+	for resource_type in strategies.size():
+		_cancel_ask(resource_type)
+		_cancel_bid(resource_type)
+		var fstrat := strategies[resource_type]
+		var is_producer := (fstrat == PRIMARY_PRODUCT or fstrat == SECONDARY_PRODUCT
+				or fstrat == COPRODUCT or fstrat == BYPRODUCT)
+		var is_consumer := (fstrat == CRITICAL_INPUT or fstrat == ROUTINE_INPUT
+				or fstrat == CONSUMABLE)
+		if not is_producer and not is_consumer:
+			continue
+		var reference_price := market.get_spot_unit_price(resource_type)
+		if reference_price <= 0:
+			continue
+		var multiplier := _trade_unit_multipliers[resource_type]
+		var target := (_facility.get_resource_ops_reserve(resource_type)
+				+ _facility.get_resource_strategic_reserve(resource_type))
+		if is_producer:
+			var surplus := _facility.get_resource_stock(resource_type) - target
+			var unit_quantity := int(surplus / multiplier)
+			if unit_quantity >= MIN_LOT and _spot_ask_totals[resource_type] == 0:
+				var ask_price := maxi(1, floori(reference_price * (1.0 - SPREAD)))
+				_spot_ask(resource_type, unit_quantity, ask_price, expiration)
+		else:
+			var deficit := (target - _facility.get_resource_stock(resource_type)
+					- _facility.get_resource_in_transit(resource_type))
+			var unit_quantity := int(deficit / multiplier)
+			if unit_quantity >= MIN_LOT and _spot_bid_totals[resource_type] == 0:
+				var bid_price := maxi(1, ceili(reference_price * (1.0 + SPREAD)))
+				_spot_bid(resource_type, unit_quantity, bid_price, expiration)
 
 
 # ******************************* AI / PROXY API ******************************
@@ -229,6 +297,31 @@ func _spot_bid(resource_type: int, unit_quantity: int, unit_price: int, expirati
 	_spot_bid_totals[resource_type] += unit_quantity
 	_spot_bid_prices[resource_type] = unit_price
 	proxy.spot_bid(resource_type, unit_quantity, unit_price, expiration)
+
+
+## Cancels our standing ask for [param resource_type] (if any) and clears local
+## memory of it. The server does not echo cancellations back, so we update our
+## own bookkeeping here.
+func _cancel_ask(resource_type: int) -> void:
+	var ask_id := _spot_ask_ids[resource_type]
+	if ask_id == -1:
+		return
+	proxy.cancel_spot_ask(ask_id)
+	_spot_ask_ids[resource_type] = -1
+	_spot_ask_totals[resource_type] = 0
+	_spot_ask_prices[resource_type] = 0
+
+
+## Cancels our standing bid for [param resource_type] (if any) and clears local
+## memory of it.
+func _cancel_bid(resource_type: int) -> void:
+	var bid_id := _spot_bid_ids[resource_type]
+	if bid_id == -1:
+		return
+	proxy.cancel_spot_bid(bid_id)
+	_spot_bid_ids[resource_type] = -1
+	_spot_bid_totals[resource_type] = 0
+	_spot_bid_prices[resource_type] = 0
 
 
 # ********************************* LISTENERS *********************************

@@ -8,18 +8,13 @@
 class_name FacilityBaseAI
 extends BaseAI
 
-## Default AI for facilities the local player owns. Subclass to write custom
-## facility AI by extending this class and adding
-## [code]const OVERRIDE_AI := true[/code].
+## Default AI for facilities the local player owns.
 ##
-## Strategies are declarative. Each [code]select_*_strategy()[/code] returns
-## an [int] enum id (see [enum FacilityStrategies],
-## [enum FacilityResourceStrategies], [enum OperationStrategies]) cached in a
-## [code]<name>_strategy[/code] field; children read parent declarations
-## during their own selection. Cached selections persist so player intent
-## survives save/load, and are re-derived on each quarter tick. Execution
-## (operation throttling, etc.)
-## lives in [method process_ai_interval].
+## To implement a custom facility AI, extend this class and add
+## [code]const OVERRIDE_AI := true[/code].[br][br]
+##
+## Strategy selections are in part declarative. Note that the paired
+## TraderBaseAI is aware of this AI's resource strategies.
 
 
 ## Emitted when [member facility_strategy] changes.
@@ -173,6 +168,14 @@ enum OperationStrategies {
 }
 
 
+## Net-rate deadband for classifying a resource as net producer vs. net
+## consumer; magnitudes within this band are treated as NEUTRAL (not traded).
+const RATE_EPSILON := 1e-9
+## Strategic reserve held for a critical input, as a multiple of its
+## (consumption rate × facility time horizon), beyond the operational reserve.
+const STRATEGIC_RESERVE_FACTOR := 1.0
+
+
 ## Facility-posture strategy definitions; index = [enum FacilityStrategies]
 ## value.
 static var facility_strategy_defs: Array[Dictionary] = [
@@ -237,6 +240,10 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 
 static var _table_n_rows := IVTableData.table_n_rows
 
+## Per-resource spot-tradability mask (1 = tradable), indexed by resource_type.
+## Built once; a resource is tradable if it is a commodity with a storage class.
+static var _is_tradable: PackedByteArray
+
 
 var proxy: FacilityProxy
 
@@ -263,6 +270,8 @@ func _init() -> void:
 	facility_resource_strategies.resize(n_resources)
 	var n_operations: int = _table_n_rows[&"operations"]
 	operation_strategies.resize(n_operations)
+	if _is_tradable.is_empty():
+		_build_tradable_mask(n_resources)
 
 
 func _clear_for_destruction() -> void:
@@ -284,7 +293,27 @@ func process_ai_init() -> void:
 
 
 func process_ai_interval(_delta: float) -> void:
-	pass
+	# Classify each tradable resource by its net rate so the paired trader knows
+	# whether to sell surplus or buy toward reserve, and set a strategic reserve
+	# for critical inputs. Non-tradable resources are left NEUTRAL.
+	const NEUTRAL := FacilityResourceStrategies.NEUTRAL
+	const PRIMARY_PRODUCT := FacilityResourceStrategies.PRIMARY_PRODUCT
+	const CRITICAL_INPUT := FacilityResourceStrategies.CRITICAL_INPUT
+	var time_horizon := proxy.time_horizon
+	for resource_type in _is_tradable.size():
+		if !_is_tradable[resource_type]:
+			continue
+		var expected_rate := proxy.get_resource_expected_rate(resource_type)
+		if expected_rate > RATE_EPSILON:
+			_set_facility_resource_strategy(resource_type, PRIMARY_PRODUCT)
+			proxy.set_inventory_strategic_reserve(resource_type, 0.0)
+		elif expected_rate < -RATE_EPSILON:
+			_set_facility_resource_strategy(resource_type, CRITICAL_INPUT)
+			proxy.set_inventory_strategic_reserve(resource_type,
+					-expected_rate * time_horizon * STRATEGIC_RESERVE_FACTOR)
+		else:
+			_set_facility_resource_strategy(resource_type, NEUTRAL)
+			proxy.set_inventory_strategic_reserve(resource_type, 0.0)
 
 
 # **************************** STRATEGY LISTENERS *****************************
@@ -303,3 +332,25 @@ func _on_player_facility_strategy_changed(_facility_id: int, _strategy_id: int) 
 
 func _on_player_body_strategy_changed(_target_body_id: int, _strategy_id: int) -> void:
 	pass
+
+
+# **************************** INTERNAL PRIVATE *******************************
+
+## Sets [member facility_resource_strategies] for [param resource_type],
+## emitting [signal facility_resource_strategy_changed] only on change.
+func _set_facility_resource_strategy(resource_type: int, strategy_id: int) -> void:
+	if facility_resource_strategies[resource_type] == strategy_id:
+		return
+	facility_resource_strategies[resource_type] = strategy_id
+	facility_resource_strategy_changed.emit(resource_type, strategy_id)
+
+
+static func _build_tradable_mask(n_resources: int) -> void:
+	_is_tradable.resize(n_resources)
+	var resource_table: Dictionary[StringName, Array] = IVTableData.db_tables[&"resources"]
+	var commodities: Array = resource_table[&"commodity"]
+	var storage_classes := PackedInt32Array(resource_table[&"storage_class"])
+	for resource_type in n_resources:
+		var is_commodity: bool = commodities[resource_type]
+		var tradable := is_commodity and storage_classes[resource_type] != -1
+		_is_tradable[resource_type] = 1 if tradable else 0

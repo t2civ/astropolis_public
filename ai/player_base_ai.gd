@@ -8,16 +8,13 @@
 class_name PlayerBaseAI
 extends BaseAI
 
-## Default AI for the local player. Subclass to write custom player AI by
-## extending this class and adding [code]const OVERRIDE_AI := true[/code];
-## see [PlayerCustomAI].
+## Default AI for the local player.
 ##
-## Strategies are declarative. Each [code]select_*_strategy()[/code] returns
-## an [int] enum id (see [enum GlobalStrategies], [enum PlayerResourceStrategies],
-## etc.) cached in a [code]<name>_strategy[/code] field or per-item container;
-## child AIs ([FacilityBaseAI], [TraderBaseAI]) read these declarations
-## during their own selection. Cached selections persist across save/load and
-## are re-derived on each quarter tick.
+## To implement a custom player AI, extend this class and add
+## [code]const OVERRIDE_AI := true[/code].[br][br]
+##
+## Strategy selections are in part declarative. Note that FacilityBaseAI is
+## aware of all of its PlayerBaseAI strategies.
 
 
 ## Emitted when [member global_strategy] changes.

@@ -269,3 +269,33 @@ func get_resource_stock(_resource_type: int) -> float:
 
 func get_resource_contracted(_resource_type: int) -> float:
 	return 0.0
+
+
+## Returns the operational reserve target for [param resource_type] — the stock
+## level the facility aims to keep on hand to sustain its operations. Default 0.0.
+func get_resource_ops_reserve(_resource_type: int) -> float:
+	return 0.0
+
+
+## Returns the strategic reserve target for [param resource_type] — an AI-set
+## buffer held beyond operational need. Default 0.0.
+func get_resource_strategic_reserve(_resource_type: int) -> float:
+	return 0.0
+
+
+## Returns the smoothed expected net rate for [param resource_type] (positive =
+## net production, negative = net consumption). Default 0.0.
+func get_resource_expected_rate(_resource_type: int) -> float:
+	return 0.0
+
+
+## Returns the in-transit quantity for [param resource_type] (en route to this
+## facility; always >= 0.0). Default 0.0.
+func get_resource_in_transit(_resource_type: int) -> float:
+	return 0.0
+
+
+## Returns the most recent measured net rate for [param resource_type] (positive
+## = production, negative = consumption). Default 0.0.
+func get_resource_rate(_resource_type: int) -> float:
+	return 0.0
