@@ -25,10 +25,12 @@ extends RefCounted
 ## Time between [method process_ai_interval] calls. Mirrors [constant Proxy.INTERVAL].
 const INTERVAL := Proxy.INTERVAL
 
-
-## Member names persisted by save/load. Append in subclass [code]_init()[/code].
-## Nested containers are ok; NO OBJECTS!
-var persist: Array[StringName] = []
+## ivoyager save/load category. AI instances are rebuilt on game load. Persisted
+## members are listed by the concrete [code]*BaseAI[/code] subclass in its
+## [code]PERSIST_PROPERTIES[/code] (interval timing + strategy state); this keeps
+## [code]PERSIST_PROPERTIES2[/code] free for a [code]*CustomAI[/code] subclass to
+## persist its own added state.
+const PERSIST_MODE := IVGlobal.PERSIST_PROCEDURAL
 
 
 var _last_interval := -INF

@@ -46,6 +46,13 @@ enum OperationDataIndex {
 
 const INTERVAL := 7.0 * IVUnits.DAY ## AI tick interval. See [constant BaseAI.INTERVAL].
 
+## ivoyager save/load category. A Proxy is rebuilt blank on load and persists
+## NONE of its own state: all "truth" re-flows from the server entity via
+## set_network_init() + dirty-sync, and resolve_proxy_refs() side effects (e.g.
+## player.add_facility(self), the assert(!joins.has(join))) stay idempotent only
+## because the rebuilt proxy is blank. Do NOT add PERSIST_PROPERTIES to a Proxy.
+const PERSIST_MODE := IVGlobal.PERSIST_PROCEDURAL
+
 
 static var proxy_bus: ProxyBus ## Shared [ProxyBus] for proxy-thread signals and data.
 
@@ -65,12 +72,6 @@ var gui_name := ""  ## Display name; mutable. Empty player gui_name hides from G
 ## Quarterly clock as [code]year * 4 + (quarter - 1)[/code]. Never set for a
 ## [BodyProxy] without a facility.
 var ordinal_qtr := -1
-
-## Member names persisted by save/load. Append in subclass [code]_init()[/code].
-## Nested containers are ok; NO OBJECTS!
-##
-## @deprecate: See TODO/WIP in _ProxyServer
-var persist: Array[StringName] = []
 
 
 @warning_ignore_start("unused_private_class_variable") # used by subclasses

@@ -124,6 +124,21 @@ static var resource_strategy_defs: Array[Dictionary] = [
 ]
 
 
+## Member names persisted by save/load (interval timing inherited from BaseAI).
+const PERSIST_PROPERTIES: Array[StringName] = [
+	&"_last_interval",
+	&"_next_interval",
+	&"trader_strategy",
+	&"resource_strategies",
+	&"_spot_ask_totals",
+	&"_spot_bid_totals",
+	&"_spot_ask_prices",
+	&"_spot_bid_prices",
+	&"_spot_ask_ids",
+	&"_spot_bid_ids",
+]
+
+
 static var _table_n_rows := IVTableData.table_n_rows
 
 
@@ -164,14 +179,6 @@ var _facility_ai: FacilityBaseAI
 # ************************* VIRTUAL & IMPLEMENTATION **************************
 
 func _init() -> void:
-	persist.append(&"trader_strategy")
-	persist.append(&"resource_strategies")
-	persist.append(&"_spot_ask_totals")
-	persist.append(&"_spot_bid_totals")
-	persist.append(&"_spot_ask_prices")
-	persist.append(&"_spot_bid_prices")
-	persist.append(&"_spot_ask_ids")
-	persist.append(&"_spot_bid_ids")
 	var n_resources: int = _table_n_rows[&"resources"]
 	resource_strategies.resize(n_resources)
 	_spot_ask_totals.resize(n_resources)

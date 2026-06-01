@@ -16,8 +16,8 @@ extends BaseAI
 ## an [int] enum id (see [enum GlobalStrategies], [enum PlayerResourceStrategies],
 ## etc.) cached in a [code]<name>_strategy[/code] field or per-item container;
 ## child AIs ([FacilityBaseAI], [TraderBaseAI]) read these declarations
-## during their own selection. Cached selections persist via
-## [member BaseAI.persist] and are re-derived on each quarter tick.
+## during their own selection. Cached selections persist across save/load and
+## are re-derived on each quarter tick.
 
 
 ## Emitted when [member global_strategy] changes.
@@ -271,6 +271,18 @@ static var counterparty_strategy_defs: Array[Dictionary] = [
 ]
 
 
+## Member names persisted by save/load (interval timing inherited from BaseAI).
+const PERSIST_PROPERTIES: Array[StringName] = [
+	&"_last_interval",
+	&"_next_interval",
+	&"global_strategy",
+	&"player_resource_strategies",
+	&"player_facility_strategies",
+	&"body_strategies",
+	&"counterparty_strategies",
+]
+
+
 static var _table_n_rows := IVTableData.table_n_rows
 
 
@@ -300,11 +312,6 @@ var counterparty_strategies: Dictionary[int, int]
 # ************************* VIRTUAL & IMPLEMENTATION **************************
 
 func _init() -> void:
-	persist.append(&"global_strategy")
-	persist.append(&"player_resource_strategies")
-	persist.append(&"player_facility_strategies")
-	persist.append(&"body_strategies")
-	persist.append(&"counterparty_strategies")
 	var n_resources: int = _table_n_rows[&"resources"]
 	player_resource_strategies.resize(n_resources)
 

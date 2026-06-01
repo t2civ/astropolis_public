@@ -16,9 +16,9 @@ extends BaseAI
 ## an [int] enum id (see [enum FacilityStrategies],
 ## [enum FacilityResourceStrategies], [enum OperationStrategies]) cached in a
 ## [code]<name>_strategy[/code] field; children read parent declarations
-## during their own selection. Cached selections persist via
-## [member BaseAI.persist] so player intent survives save/load, and are
-## re-derived on each quarter tick. Execution (operation throttling, etc.)
+## during their own selection. Cached selections persist so player intent
+## survives save/load, and are re-derived on each quarter tick. Execution
+## (operation throttling, etc.)
 ## lives in [method process_ai_interval].
 
 
@@ -225,6 +225,16 @@ static var operation_strategy_defs: Array[Dictionary] = [
 ]
 
 
+## Member names persisted by save/load (interval timing inherited from BaseAI).
+const PERSIST_PROPERTIES: Array[StringName] = [
+	&"_last_interval",
+	&"_next_interval",
+	&"facility_strategy",
+	&"facility_resource_strategies",
+	&"operation_strategies",
+]
+
+
 static var _table_n_rows := IVTableData.table_n_rows
 
 
@@ -249,9 +259,6 @@ var _player_ai: PlayerBaseAI
 # ************************* VIRTUAL & IMPLEMENTATION **************************
 
 func _init() -> void:
-	persist.append(&"facility_strategy")
-	persist.append(&"facility_resource_strategies")
-	persist.append(&"operation_strategies")
 	var n_resources: int = _table_n_rows[&"resources"]
 	facility_resource_strategies.resize(n_resources)
 	var n_operations: int = _table_n_rows[&"operations"]
