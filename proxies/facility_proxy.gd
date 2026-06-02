@@ -114,6 +114,8 @@ var trader_id := -1  ## [member TraderProxy.trader_id] of this facility's paired
 var public_sector: float
 ## True if this is a small focused activity (affects stats and tax treatment).
 var is_unitary: bool
+## Large and/or port facilities act as market makers.
+var market_maker: bool
 ## True if all resource streams flow from/to inventory (no atmosphere/surface
 ## market).
 var closed_cycle_ops: bool
