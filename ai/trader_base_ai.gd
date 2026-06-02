@@ -13,8 +13,14 @@ extends BaseAI
 ## To implement a custom trader AI, extend this class and add
 ## [code]const OVERRIDE_AI := true[/code].[br][br]
 ##
-## Note that traders are paired 1-to-1 with facilities. This trader AI has
-## awareness of its facility's resource strategies and inventory.
+## Traders are paired 1-to-1 with facilities. This trader AI has awareness of
+## its facility's resource strategies and inventory (it trusts that this
+## already incorporates player resource strategies).[br][br]
+##
+## Trade memory is [b]optimistic about new orders, pessimistic about
+## cancellations and replacements[/b]. It updates quantity memory immediately
+## when placing a new order, but waits for notification when cancelling or
+## replacing. This is the correct memory model.[br][br]
 ##
 ## TODO: Need API so trader can refresh memory if needed. E.g., for Trader,
 ## all the trade memory is known by server market. Could be packaged and sent
@@ -300,36 +306,50 @@ func _spot_bid(resource_type: int, unit_quantity: int, unit_price: int, expirati
 	proxy.spot_bid(resource_type, unit_quantity, unit_price, expiration)
 
 
-## Cancels our standing ask for [param resource_type] (if any) and clears local
-## memory of it. The server does not echo cancellations back, so we update our
-## own bookkeeping here.
+## Reprices/resizes our standing ask for [param resource_type] in place to
+## [param new_quantity] / [param new_price], keeping its id. No-op if we have no
+## known resting ask id. We assume nothing at submit time (the order may already be
+## gone); local memory is updated when the REPLACED echo (or a fill) arrives via
+## [method _on_ask_updated].
+func _replace_ask(resource_type: int, new_quantity: int, new_price: int, expiration: int) -> void:
+	var ask_id := _spot_ask_ids[resource_type]
+	if ask_id == -1:
+		return
+	proxy.replace_spot_ask(ask_id, new_quantity, new_price, expiration)
+
+
+## Bid counterpart of [method _replace_ask].
+func _replace_bid(resource_type: int, new_quantity: int, new_price: int, expiration: int) -> void:
+	var bid_id := _spot_bid_ids[resource_type]
+	if bid_id == -1:
+		return
+	proxy.replace_spot_bid(bid_id, new_quantity, new_price, expiration)
+
+
+## Cancels our standing ask for [param resource_type] (if any). Local memory is
+## cleared when the market's CANCELLED update arrives (see [method _on_ask_updated]),
+## not here, so fills already in flight are still counted correctly.
 func _cancel_ask(resource_type: int) -> void:
 	var ask_id := _spot_ask_ids[resource_type]
 	if ask_id == -1:
 		return
 	proxy.cancel_spot_ask(ask_id)
-	_spot_ask_ids[resource_type] = -1
-	_spot_ask_totals[resource_type] = 0
-	_spot_ask_prices[resource_type] = 0
 
 
-## Cancels our standing bid for [param resource_type] (if any) and clears local
-## memory of it.
+## Bid counterpart of [method _cancel_ask].
 func _cancel_bid(resource_type: int) -> void:
 	var bid_id := _spot_bid_ids[resource_type]
 	if bid_id == -1:
 		return
 	proxy.cancel_spot_bid(bid_id)
-	_spot_bid_ids[resource_type] = -1
-	_spot_bid_totals[resource_type] = 0
-	_spot_bid_prices[resource_type] = 0
 
 
 ## Brings our standing ask for [param resource_type] in line with the desired
 ## quantity and price, re-quoting only on material divergence (see
 ## [method _needs_requote]). A desired quantity below [constant MIN_LOT] drops
 ## any standing ask.
-func _maintain_ask(resource_type: int, want_quantity: int, want_price: int, expiration: int) -> void:
+func _maintain_ask(resource_type: int, want_quantity: int, want_price: int, expiration: int
+		) -> void:
 	if want_quantity < MIN_LOT:
 		_cancel_ask(resource_type)
 		return
@@ -341,12 +361,12 @@ func _maintain_ask(resource_type: int, want_quantity: int, want_price: int, expi
 		return
 	if _needs_requote(_spot_ask_totals[resource_type], _spot_ask_prices[resource_type],
 			want_quantity, want_price):
-		_cancel_ask(resource_type)
-		_spot_ask(resource_type, want_quantity, want_price, expiration)
+		_replace_ask(resource_type, want_quantity, want_price, expiration)
 
 
 ## Bid counterpart of [method _maintain_ask].
-func _maintain_bid(resource_type: int, want_quantity: int, want_price: int, expiration: int) -> void:
+func _maintain_bid(resource_type: int, want_quantity: int, want_price: int, expiration: int
+		) -> void:
 	if want_quantity < MIN_LOT:
 		_cancel_bid(resource_type)
 		return
@@ -356,13 +376,13 @@ func _maintain_bid(resource_type: int, want_quantity: int, want_price: int, expi
 		return
 	if _needs_requote(_spot_bid_totals[resource_type], _spot_bid_prices[resource_type],
 			want_quantity, want_price):
-		_cancel_bid(resource_type)
-		_spot_bid(resource_type, want_quantity, want_price, expiration)
+		_replace_bid(resource_type, want_quantity, want_price, expiration)
 
 
 ## True when a standing order's price or quantity has drifted from the desired
 ## values by more than [constant PRICE_TOLERANCE] / [constant QTY_TOLERANCE].
-func _needs_requote(have_quantity: int, have_price: int, want_quantity: int, want_price: int) -> bool:
+func _needs_requote(have_quantity: int, have_price: int, want_quantity: int, want_price: int
+		) -> bool:
 	if have_price <= 0 or have_quantity <= 0:
 		return true
 	if absf(float(want_price - have_price) / have_price) > PRICE_TOLERANCE:
@@ -378,12 +398,19 @@ func _on_facility_resource_strategy_changed(_resource_type: int, _strategy_id: i
 	pass
 
 
-func _on_ask_updated(resource_type: int, unit_quantity: int, _unit_price: int,
+func _on_ask_updated(resource_type: int, unit_quantity: int, unit_price: int,
 		ask_id: int, ask_status: Proxy.TradeOrderStatus) -> void:
 	const BOOKED := Proxy.TradeOrderStatus.BOOKED
 	const PARTIALLY_FILLED := Proxy.TradeOrderStatus.PARTIALLY_FILLED
+	const REPLACED := Proxy.TradeOrderStatus.REPLACED
 	if ask_status == BOOKED:
 		_spot_ask_ids[resource_type] = ask_id
+		return
+	if ask_status == REPLACED:
+		# unit_quantity is a signed unfilled delta here; the order keeps its id.
+		if ask_id == _spot_ask_ids[resource_type]:
+			_spot_ask_totals[resource_type] += unit_quantity
+			_spot_ask_prices[resource_type] = unit_price
 		return
 	_spot_ask_totals[resource_type] -= unit_quantity
 	if ask_status != PARTIALLY_FILLED and ask_id == _spot_ask_ids[resource_type]:
@@ -391,12 +418,19 @@ func _on_ask_updated(resource_type: int, unit_quantity: int, _unit_price: int,
 		_spot_ask_prices[resource_type] = 0
 
 
-func _on_bid_updated(resource_type: int, unit_quantity: int, _unit_price: int,
+func _on_bid_updated(resource_type: int, unit_quantity: int, unit_price: int,
 		bid_id: int, bid_status: Proxy.TradeOrderStatus) -> void:
 	const BOOKED := Proxy.TradeOrderStatus.BOOKED
 	const PARTIALLY_FILLED := Proxy.TradeOrderStatus.PARTIALLY_FILLED
+	const REPLACED := Proxy.TradeOrderStatus.REPLACED
 	if bid_status == BOOKED:
 		_spot_bid_ids[resource_type] = bid_id
+		return
+	if bid_status == REPLACED:
+		# unit_quantity is a signed unfilled delta here; the order keeps its id.
+		if bid_id == _spot_bid_ids[resource_type]:
+			_spot_bid_totals[resource_type] += unit_quantity
+			_spot_bid_prices[resource_type] = unit_price
 		return
 	_spot_bid_totals[resource_type] -= unit_quantity
 	if bid_status != PARTIALLY_FILLED and bid_id == _spot_bid_ids[resource_type]:

@@ -68,6 +68,14 @@ func get_market(_player_id: int) -> MarketProxy:
 @abstract func cancel_spot_ask(ask_id: int) -> void
 
 
+## Reprices and resizes a resting spot sell order in place, keeping its id.
+## [param new_quantity] becomes the new unfilled quantity and [param new_unit_price]
+## the new price (both with respect to trade unit); [param expiration] is epoch day.
+## No effect if the order was already filled or cancelled.
+@abstract func replace_spot_ask(ask_id: int, new_quantity: int, new_unit_price: int,
+		expiration: int) -> void
+
+
 ## Adds a spot buy order. [param unit_quantity] and [param unit_price] are
 ## with respect to trade unit. [param expiration] is epoch day.
 @abstract func spot_bid(resource_type: int, unit_quantity: int, unit_price: int,
@@ -76,3 +84,11 @@ func get_market(_player_id: int) -> MarketProxy:
 
 ## Removes a spot buy order if not processed already.
 @abstract func cancel_spot_bid(bid_id: int) -> void
+
+
+## Reprices and resizes a resting spot buy order in place, keeping its id.
+## [param new_quantity] becomes the new unfilled quantity and [param new_unit_price]
+## the new price (both with respect to trade unit); [param expiration] is epoch day.
+## No effect if the order was already filled or cancelled.
+@abstract func replace_spot_bid(bid_id: int, new_quantity: int, new_unit_price: int,
+		expiration: int) -> void

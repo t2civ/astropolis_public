@@ -26,6 +26,9 @@ enum TradeOrderStatus {
 	FILLED,
 	PARTIALLY_FILLED,
 	CANCELLED,
+	## Resting order repriced/resized in place. The order keeps its id; the
+	## update's quantity field carries a SIGNED unfilled delta (new − old).
+	REPLACED,
 }
 
 ## Indices into the [PackedFloat64Array] rows returned by
