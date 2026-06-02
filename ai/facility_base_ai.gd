@@ -174,6 +174,9 @@ const RATE_EPSILON := 1e-9
 ## Strategic reserve held for a critical input, as a multiple of its
 ## (consumption rate × facility time horizon), beyond the operational reserve.
 const STRATEGIC_RESERVE_FACTOR := 1.0
+## Market-maker trade-reserve floor per relevant resource, in trade units; gives a
+## standing two-sided quote even for resources with no current throughput.
+const MM_BASE_LOT := 4
 
 
 ## Facility-posture strategy definitions; index = [enum FacilityStrategies]
@@ -239,6 +242,7 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 
 
 static var _table_n_rows := IVTableData.table_n_rows
+static var _trade_unit_multipliers := ThreadsafeGlobal.resource_trade_unit_multipliers
 
 ## Per-resource spot-tradability mask (1 = tradable), indexed by resource_type.
 ## Built once; a resource is tradable if it is a commodity with a storage class.
@@ -261,6 +265,7 @@ var operation_strategies: PackedInt32Array
 # *****************************************************************************
 
 var _player_ai: PlayerBaseAI
+var _was_market_maker := false # last-seen market_maker; drives one-shot revert cleanup
 
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
@@ -314,6 +319,7 @@ func process_ai_interval(_delta: float) -> void:
 		else:
 			_set_facility_resource_strategy(resource_type, NEUTRAL)
 			proxy.set_inventory_strategic_reserve(resource_type, 0.0)
+	_update_market_maker_reserves()
 
 
 # **************************** STRATEGY LISTENERS *****************************
@@ -343,6 +349,33 @@ func _set_facility_resource_strategy(resource_type: int, strategy_id: int) -> vo
 		return
 	facility_resource_strategies[resource_type] = strategy_id
 	facility_resource_strategy_changed.emit(resource_type, strategy_id)
+
+
+func _update_market_maker_reserves() -> void:
+	const MARKET_RELEVANT := FacilityProxy.InventoryFlags.MARKET_RELEVANT
+	const PROTECT_STRATEGIC_RESERVE := FacilityProxy.InventoryFlags.PROTECT_STRATEGIC_RESERVE
+	const FROM_PROXY_MASK := FacilityProxy.InventoryFlags.FROM_PROXY_MASK
+	if proxy.market_maker:
+		# Hold a trade reserve on every market-relevant resource and protect it from the
+		# facility's own operations, so the trader always has buffer stock to quote.
+		var time_horizon := proxy.time_horizon
+		for resource_type in _is_tradable.size():
+			var inv_flags := proxy.get_inventory_flags(resource_type)
+			if !(inv_flags & MARKET_RELEVANT):
+				continue
+			var throughput := absf(proxy.get_resource_expected_rate(resource_type))
+			var reserve := (time_horizon * throughput
+					+ MM_BASE_LOT * _trade_unit_multipliers[resource_type])
+			proxy.set_inventory_strategic_reserve(resource_type, reserve)
+			proxy.set_inventory_flags(resource_type,
+					(inv_flags & FROM_PROXY_MASK) | PROTECT_STRATEGIC_RESERVE)
+	elif _was_market_maker:
+		# No longer a market maker: drop the protect bit we may have set (the classify
+		# loop already reset the reserve itself).
+		for resource_type in _is_tradable.size():
+			var inv_flags := proxy.get_inventory_flags(resource_type) & FROM_PROXY_MASK
+			proxy.set_inventory_flags(resource_type, inv_flags & ~PROTECT_STRATEGIC_RESERVE)
+	_was_market_maker = proxy.market_maker
 
 
 static func _build_tradable_mask(n_resources: int) -> void:

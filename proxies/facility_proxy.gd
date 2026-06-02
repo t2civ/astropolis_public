@@ -60,6 +60,10 @@ enum InventoryFlags {
 	STORAGE_SURPLUS = 1 << 3,
 	## No market spot price is established for this resource at this location.
 	PRICE_UNKNOWN = 1 << 4,
+	## Set by the server when this facility's operations handle this resource and it
+	## is tradable; market-maker AI uses it to choose resources to make a two-sided
+	## market in.
+	MARKET_RELEVANT = 1 << 5,
 	## Mask of all server-published signal bits.
 	FROM_SERVER_MASK = (1 << 32) - 1,
 

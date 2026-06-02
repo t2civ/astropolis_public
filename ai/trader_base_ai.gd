@@ -111,6 +111,9 @@ const DAY := IVUnits.DAY
 const SPREAD := 0.02
 ## Minimum order size in trade units; smaller surpluses/deficits are not quoted.
 const MIN_LOT := 1
+## Market-maker bid ceiling above the trade-reserve target, in trade units; the maker
+## buys up toward target + this band and sells down to its operational reserve.
+const MM_BAND_LOTS := 2
 ## Standing-order lifetime in AI intervals. A backstop only: the AI re-evaluates
 ## each interval and re-quotes on material divergence, and the market reports
 ## CANCELLED on expiry so memory stays correct.
@@ -168,6 +171,9 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 static var _table_n_rows := IVTableData.table_n_rows
 static var _times: Array = IVGlobal.times
 static var _trade_unit_multipliers := ThreadsafeGlobal.resource_trade_unit_multipliers
+## Per-resource fiat price anchor (USD per trade unit) from resources.tsv start_price,
+## used when no live spot price exists yet. Built once.
+static var _start_unit_prices: PackedInt32Array
 
 
 var proxy: TraderProxy
@@ -218,6 +224,9 @@ func _init() -> void:
 	_spot_bid_ids.resize(n_resources)
 	_spot_ask_ids.fill(-1)
 	_spot_bid_ids.fill(-1)
+	if _start_unit_prices.is_empty():
+		var resources_table: Dictionary[StringName, Array] = IVTableData.db_tables[&"resources"]
+		_start_unit_prices = PackedInt32Array(resources_table[&"start_price"])
 
 
 func _clear_for_destruction() -> void:
@@ -240,11 +249,32 @@ func process_ai_init() -> void:
 
 
 func process_ai_interval(_delta: float) -> void:
-	# Respond to the facility's per-resource strategy: a producer sells stock held
-	# above its reserve target; a consumer buys up toward it. A still-valid standing
-	# order is left untouched (no traffic); we re-quote only when the desired order
-	# materially diverges (see _maintain_ask / _maintain_bid). Order memory is kept
-	# truthful by the market's BOOKED / FILLED / CANCELLED updates.
+	# A market maker quotes both sides for its market-relevant resources; every other
+	# resource is traded one-sided to service facility operations (see the two helpers).
+	const MARKET_RELEVANT := FacilityProxy.InventoryFlags.MARKET_RELEVANT
+	const NEUTRAL := ResourceStrategies.NEUTRAL
+	const MARKET_MAKING := ResourceStrategies.MARKET_MAKING
+	var market := proxy.market
+	if !market:
+		return
+	var time: float = _times[0]
+	var epoch_day := int(time / DAY)
+	var expiration := epoch_day + ORDER_LIFETIME * int(INTERVAL / DAY)
+	var market_maker := _facility.market_maker
+	for resource_type in resource_strategies.size():
+		if market_maker and (_facility.get_inventory_flags(resource_type) & MARKET_RELEVANT):
+			resource_strategies[resource_type] = MARKET_MAKING
+			_process_market_making(resource_type, market, expiration)
+		else:
+			resource_strategies[resource_type] = NEUTRAL
+			_process_facility_support(resource_type, market, expiration)
+
+
+## Trades one resource to service facility operations: a producer sells stock held above
+## its reserve target; a consumer buys up toward it. A still-valid standing order is left
+## untouched; we re-quote only on material divergence (see [method _maintain_ask] /
+## [method _maintain_bid]). Order memory stays truthful via the market's status updates.
+func _process_facility_support(resource_type: int, market: MarketProxy, expiration: int) -> void:
 	const PRIMARY_PRODUCT := FacilityBaseAI.FacilityResourceStrategies.PRIMARY_PRODUCT
 	const SECONDARY_PRODUCT := FacilityBaseAI.FacilityResourceStrategies.SECONDARY_PRODUCT
 	const COPRODUCT := FacilityBaseAI.FacilityResourceStrategies.COPRODUCT
@@ -252,39 +282,57 @@ func process_ai_interval(_delta: float) -> void:
 	const CRITICAL_INPUT := FacilityBaseAI.FacilityResourceStrategies.CRITICAL_INPUT
 	const ROUTINE_INPUT := FacilityBaseAI.FacilityResourceStrategies.ROUTINE_INPUT
 	const CONSUMABLE := FacilityBaseAI.FacilityResourceStrategies.CONSUMABLE
-	var market := proxy.market
-	if !market:
+	var fstrat := _facility_ai.facility_resource_strategies[resource_type]
+	var is_producer := (fstrat == PRIMARY_PRODUCT or fstrat == SECONDARY_PRODUCT
+			or fstrat == COPRODUCT or fstrat == BYPRODUCT)
+	var is_consumer := (fstrat == CRITICAL_INPUT or fstrat == ROUTINE_INPUT
+			or fstrat == CONSUMABLE)
+	var reference_price := market.get_spot_unit_price(resource_type)
+	if reference_price <= 0 or (not is_producer and not is_consumer):
+		# Not trading this resource now: drop any standing orders.
+		_cancel_ask(resource_type)
+		_cancel_bid(resource_type)
 		return
-	var time: float = _times[0]
-	var epoch_day := int(time / DAY)
-	var expiration := epoch_day + ORDER_LIFETIME * int(INTERVAL / DAY)
-	var strategies := _facility_ai.facility_resource_strategies
-	for resource_type in strategies.size():
-		var fstrat := strategies[resource_type]
-		var is_producer := (fstrat == PRIMARY_PRODUCT or fstrat == SECONDARY_PRODUCT
-				or fstrat == COPRODUCT or fstrat == BYPRODUCT)
-		var is_consumer := (fstrat == CRITICAL_INPUT or fstrat == ROUTINE_INPUT
-				or fstrat == CONSUMABLE)
-		var reference_price := market.get_spot_unit_price(resource_type)
-		if reference_price <= 0 or (not is_producer and not is_consumer):
-			# Not trading this resource now: drop any standing orders.
-			_cancel_ask(resource_type)
-			_cancel_bid(resource_type)
-			continue
-		var multiplier := _trade_unit_multipliers[resource_type]
-		var target := (_facility.get_resource_ops_reserve(resource_type)
-				+ _facility.get_resource_strategic_reserve(resource_type))
-		if is_producer:
-			_cancel_bid(resource_type)
-			var surplus := _facility.get_resource_stock(resource_type) - target
-			var ask_price := maxi(1, floori(reference_price * (1.0 - SPREAD)))
-			_maintain_ask(resource_type, int(surplus / multiplier), ask_price, expiration)
-		else:
-			_cancel_ask(resource_type)
-			var deficit := (target - _facility.get_resource_stock(resource_type)
-					- _facility.get_resource_in_transit(resource_type))
-			var bid_price := maxi(1, ceili(reference_price * (1.0 + SPREAD)))
-			_maintain_bid(resource_type, int(deficit / multiplier), bid_price, expiration)
+	var multiplier := _trade_unit_multipliers[resource_type]
+	var target := (_facility.get_resource_ops_reserve(resource_type)
+			+ _facility.get_resource_strategic_reserve(resource_type))
+	if is_producer:
+		_cancel_bid(resource_type)
+		var surplus := _facility.get_resource_stock(resource_type) - target
+		var ask_price := maxi(1, floori(reference_price * (1.0 - SPREAD)))
+		_maintain_ask(resource_type, int(surplus / multiplier), ask_price, expiration)
+	else:
+		_cancel_ask(resource_type)
+		var deficit := (target - _facility.get_resource_stock(resource_type)
+				- _facility.get_resource_in_transit(resource_type))
+		var bid_price := maxi(1, ceili(reference_price * (1.0 + SPREAD)))
+		_maintain_bid(resource_type, int(deficit / multiplier), bid_price, expiration)
+
+
+## Quotes both sides for a market-relevant resource: bid below mid, ask above mid, so the
+## maker earns the spread and provides liquidity (the inverse of facility-support, which
+## crosses to transact). Quantities self-balance inventory toward the trade-reserve target
+## as fills occur. Falls back to the resource's start_price when no live spot price exists.
+func _process_market_making(resource_type: int, market: MarketProxy, expiration: int) -> void:
+	var multiplier := _trade_unit_multipliers[resource_type]
+	var reference_price := market.get_spot_unit_price(resource_type)
+	if reference_price <= 0:
+		reference_price = _start_unit_prices[resource_type]
+	if reference_price <= 0:
+		_cancel_ask(resource_type)
+		_cancel_bid(resource_type)
+		return
+	var ask_price := maxi(1, ceili(reference_price * (1.0 + SPREAD)))
+	var bid_price := maxi(1, floori(reference_price * (1.0 - SPREAD)))
+	var ops_reserve := _facility.get_resource_ops_reserve(resource_type)
+	var target := ops_reserve + _facility.get_resource_strategic_reserve(resource_type)
+	var ceiling := target + MM_BAND_LOTS * multiplier
+	var stock := _facility.get_resource_stock(resource_type)
+	var ask_quantity := int((stock - ops_reserve) / multiplier)
+	var bid_quantity := int((ceiling - stock - _facility.get_resource_in_transit(resource_type))
+			/ multiplier)
+	_maintain_ask(resource_type, maxi(0, ask_quantity), ask_price, expiration)
+	_maintain_bid(resource_type, maxi(0, bid_quantity), bid_price, expiration)
 
 
 # ******************************* AI / PROXY API ******************************
