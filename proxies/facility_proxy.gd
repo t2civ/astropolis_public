@@ -219,8 +219,18 @@ func get_flags() -> int:
 @abstract func set_flags(value: int) -> void
 
 
-# Operations (proxy-authoritative; reverse data flow proxy -> server).
-# Implemented on the server-side facility proxy against its operations component.
+# Operations (facility-only). Facility-only reads, plus proxy-authoritative knobs
+# (flags, target utilization) with reverse data flow proxy -> server. Implemented
+# on the server-side facility proxy against its operations component.
+
+## Returns the capacity factor (environmental or historical limit) of operation
+## [param operation_type].
+@abstract func get_operations_capacity_factor(operation_type: int) -> float
+
+
+## Returns the AI-set target utilization of operation [param operation_type].
+@abstract func get_operations_target_utilization(operation_type: int) -> float
+
 
 ## Returns the full bidirectional flag value for operation [param operation_type].
 @abstract func get_operations_flags(operation_type: int) -> int
@@ -237,8 +247,57 @@ func get_flags() -> int:
 @abstract func set_operations_target_utilization(type: int, value: float) -> void
 
 
-# Inventory (proxy-authoritative; reverse data flow proxy -> server).
-# Implemented on the server-side facility proxy against its inventory component.
+# Inventory (facility-only). Facility-only reads, plus proxy-authoritative knobs
+# (flags, strategic reserve) with reverse data flow proxy -> server. Implemented
+# on the server-side facility proxy against its inventory component.
+
+## Returns the stock (current quantity on hand) of [param resource_type].
+@abstract func get_inventory_stock(resource_type: int) -> float
+
+
+## Returns the contracted quantity of [param resource_type] (committed but not
+## yet delivered).
+@abstract func get_inventory_contracted(resource_type: int) -> float
+
+
+## Returns the operational reserve target for [param resource_type] — the stock
+## level the facility aims to keep on hand to sustain its operations.
+@abstract func get_inventory_ops_reserve(resource_type: int) -> float
+
+
+## Returns the strategic reserve target for [param resource_type] — an AI-set
+## buffer held beyond operational need.
+@abstract func get_inventory_strategic_reserve(resource_type: int) -> float
+
+
+## Returns the smoothed expected net rate for [param resource_type] (positive =
+## net production, negative = net consumption).
+@abstract func get_inventory_expected_rate(resource_type: int) -> float
+
+
+## Returns the in-transit quantity for [param resource_type] (en route to this
+## facility; always >= 0.0).
+@abstract func get_inventory_in_transit(resource_type: int) -> float
+
+
+## Returns the most recent measured net rate for [param resource_type] (positive
+## = production, negative = consumption).
+@abstract func get_inventory_rate(resource_type: int) -> float
+
+
+## Returns the storage capacity of storage class [param storage_type].
+@abstract func get_inventory_storage(storage_type: int) -> float
+
+
+## Returns the amount of storage class [param storage_type] currently in use
+## (local stocks plus remote stores).
+@abstract func get_inventory_storage_used(storage_type: int) -> float
+
+
+## Returns the quantity of [param resource_type] this facility owns stored
+## remotely at the given facility.
+@abstract func get_inventory_remote_store(facility_id_: int, resource_type: int) -> float
+
 
 ## Returns the full bidirectional flag value for resource [param resource_type].
 @abstract func get_inventory_flags(resource_type: int) -> int
@@ -253,6 +312,31 @@ func get_flags() -> int:
 ## Sets the strategic reserve for [param type]. Proxy-authoritative:
 ## this change flows proxy -> server.
 @abstract func set_inventory_strategic_reserve(type: int, value: float) -> void
+
+
+# Population (facility-only). Facility-only reads. Implemented on the server-side
+# facility proxy against its population component.
+
+## Returns the intrinsic growth rate for [param population_type].
+@abstract func get_population_intrinsic_growth(population_type: int) -> float
+
+
+## Returns the carrying capacity for [param carrying_capacity_group].
+@abstract func get_population_carrying_capacity(carrying_capacity_group: int) -> float
+
+
+## Returns the summed carrying capacity across the groups [param population_type]
+## can occupy.
+@abstract func get_population_carrying_capacity_for_population(population_type: int) -> float
+
+
+## Returns the total population sharing [param carrying_capacity_group].
+@abstract func get_population_number_for_carrying_capacity_group(carrying_capacity_group: int) -> float
+
+
+## Returns migration pressure for [param population_type] (positive = net
+## immigration, negative = net emigration).
+@abstract func get_population_migration_pressure(population_type: int) -> float
 
 
 ## Returns this facility's spot [MarketProxy], or null if not yet set.

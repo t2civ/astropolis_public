@@ -289,12 +289,6 @@ func get_operations_utilization(_operation_type: int) -> float:
 	return 0.0
 
 
-## Returns the AI-set target utilization of operation [param operation_type]
-## (facility proxies only).
-func get_operations_target_utilization(_operation_type: int) -> float:
-	return 0.0
-
-
 ## Returns the revenue rate of operation [param operation_type], or NAN if this
 ## proxy reports no financials.
 func get_operations_revenue_rate(_operation_type: int) -> float:
@@ -310,12 +304,6 @@ func get_operations_cogs_rate(_operation_type: int) -> float:
 ## Returns the gross margin of operation [param operation_type], or NAN if
 ## undefined (no financials, or a non-facility with zero revenue).
 func get_operations_gross_margin(_operation_type: int) -> float:
-	return 0.0
-
-
-## Returns the capacity factor (environmental/historical limit) of operation
-## [param operation_type] (facility proxies only).
-func get_operations_capacity_factor(_operation_type: int) -> float:
 	return 0.0
 
 
@@ -428,63 +416,6 @@ func is_operations_can_have_module(_module_type: int) -> bool:
 	return false
 
 
-# Inventory data (read-only). Default 0.0; FacilityProxy overrides.
-
-func get_inventory_stock(_resource_type: int) -> float:
-	return 0.0
-
-
-func get_inventory_contracted(_resource_type: int) -> float:
-	return 0.0
-
-
-## Returns the operational reserve target for [param resource_type] — the stock
-## level the facility aims to keep on hand to sustain its operations. Default 0.0.
-func get_inventory_ops_reserve(_resource_type: int) -> float:
-	return 0.0
-
-
-## Returns the strategic reserve target for [param resource_type] — an AI-set
-## buffer held beyond operational need. Default 0.0.
-func get_inventory_strategic_reserve(_resource_type: int) -> float:
-	return 0.0
-
-
-## Returns the smoothed expected net rate for [param resource_type] (positive =
-## net production, negative = net consumption). Default 0.0.
-func get_inventory_expected_rate(_resource_type: int) -> float:
-	return 0.0
-
-
-## Returns the in-transit quantity for [param resource_type] (en route to this
-## facility; always >= 0.0). Default 0.0.
-func get_inventory_in_transit(_resource_type: int) -> float:
-	return 0.0
-
-
-## Returns the most recent measured net rate for [param resource_type] (positive
-## = production, negative = consumption). Default 0.0.
-func get_inventory_rate(_resource_type: int) -> float:
-	return 0.0
-
-
-## Returns the storage capacity of storage class [param storage_type]. Default 0.0.
-func get_inventory_storage(_storage_type: int) -> float:
-	return 0.0
-
-
-## Returns the amount of storage class [param storage_type] currently in use
-## (local stocks plus remote stores). Default 0.0.
-func get_inventory_storage_used(_storage_type: int) -> float:
-	return 0.0
-
-
-## Returns the quantity of [param resource_type] this facility owns stored
-## remotely at facility [param facility_id]. Default 0.0.
-func get_inventory_remote_store(_facility_id: int, _resource_type: int) -> float:
-	return 0.0
-
-
 # Financials data (read-only). Default 0.0/empty; Facility, Player, and
 # player-specific Join proxies override. "lfq" = last four quarters.
 
@@ -534,40 +465,10 @@ func get_financials_cost_of_goods_sold_history() -> PackedFloat64Array:
 
 
 # Population data (read-only). Default 0.0/empty; developed proxies override.
-# Intrinsic growth, carrying capacity, and migration pressure are facility-only.
 
 ## Returns the population count for [param population_type], or the total across
 ## all types if -1.
 func get_population_number(_population_type := -1) -> float:
-	return 0.0
-
-
-## Returns the intrinsic growth rate for [param population_type] (facility proxies only).
-func get_population_intrinsic_growth(_population_type: int) -> float:
-	return 0.0
-
-
-## Returns the carrying capacity for [param carrying_capacity_group]
-## (facility proxies only).
-func get_population_carrying_capacity(_carrying_capacity_group: int) -> float:
-	return 0.0
-
-
-## Returns the summed carrying capacity across the groups [param population_type]
-## can occupy (facility proxies only).
-func get_population_carrying_capacity_for_population(_population_type: int) -> float:
-	return 0.0
-
-
-## Returns the total population sharing [param carrying_capacity_group]
-## (facility proxies only).
-func get_population_number_for_carrying_capacity_group(_carrying_capacity_group: int) -> float:
-	return 0.0
-
-
-## Returns migration pressure for [param population_type] (positive = net
-## immigration, negative = net emigration; facility proxies only).
-func get_population_migration_pressure(_population_type: int) -> float:
 	return 0.0
 
 
