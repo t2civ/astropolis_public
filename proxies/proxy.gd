@@ -31,19 +31,30 @@ enum TradeOrderStatus {
 	REPLACED,
 }
 
-## Indices into the [PackedFloat64Array] rows returned by
-## [method get_module_data] and [method get_operation_data]. Rate fields may
-## be NAN where not applicable (e.g. fuel rate for a non-generator).
-enum OperationDataIndex {
-	UTILIZATION,
-	ELECTRICITY,
-	REVENUE,
-	GROSS_MARGIN,
-	FUEL_RATE,
-	EXTRACTION_RATE,
-	MASS_CONVERSION_RATE,
-	COMPUTATION,
-	N_OPERATION_DATA,
+## Field selectors for [method get_operations_items] (bit flags; OR together).
+## Operation-level bits (0-8) select per-operation fields and treat the type
+## argument as an operation_type; module-level bits (9-16) select per-module
+## aggregates and treat type as a module_type. Don't mix the two groups in one
+## call. Rate fields may be NAN where not applicable; FLAGS returns the
+## operation's bidirectional flag int (facility hosts only).
+enum OperationsItems {
+	UTILIZATION = 1,
+	ELECTRICITY = 1 << 1,
+	REVENUE = 1 << 2,
+	GROSS_MARGIN = 1 << 3,
+	FUEL_RATE = 1 << 4,
+	EXTRACTION_RATE = 1 << 5,
+	MASS_CONVERSION_RATE = 1 << 6,
+	COMPUTATION = 1 << 7,
+	FLAGS = 1 << 8,
+	MODULE_UTILIZATION = 1 << 9,
+	MODULE_ELECTRICITY = 1 << 10,
+	MODULE_REVENUE = 1 << 11,
+	MODULE_GROSS_MARGIN = 1 << 12,
+	MODULE_FUEL_RATE = 1 << 13,
+	MODULE_EXTRACTION_RATE = 1 << 14,
+	MODULE_MASS_CONVERSION_RATE = 1 << 15,
+	MODULE_COMPUTATION = 1 << 16,
 }
 
 
@@ -238,8 +249,8 @@ func get_market(_player_id: int) -> MarketProxy:
 
 
 # Operations data (read-only). Default empty/false; the developed proxies
-# override. [method get_module_data] and [method get_operation_data] return a
-# row indexed by [enum OperationDataIndex].
+# override. [method get_operations_items] returns the selected fields indexed by
+# [enum OperationsItems].
 
 ## True if this proxy reports per-operation financial metrics (revenue, margin).
 func has_financials() -> bool:
@@ -252,16 +263,12 @@ func is_operations_of_interest_module(_module_type: int) -> bool:
 	return false
 
 
-## Returns a display row for [param module_type] indexed by
-## [enum OperationDataIndex], or an empty array if this proxy has no operations.
-func get_module_data(_module_type: int) -> PackedFloat64Array:
-	return PackedFloat64Array()
-
-
-## Returns a display row for operation [param operation_type] indexed by
-## [enum OperationDataIndex], or an empty array if this proxy has no operations.
-func get_operation_data(_operation_type: int) -> PackedFloat64Array:
-	return PackedFloat64Array()
+## Returns the [enum OperationsItems] fields selected by [param _items_mask] for
+## [param _type], as an untyped Array in ascending bit order — or an empty array
+## if this proxy has no operations. See [enum OperationsItems] for the type/mask
+## contract.
+func get_operations_items(_type: int, _items_mask: int) -> Array:
+	return []
 
 
 # Per-operation scalars (read-only). Default 0.0/false; developed proxies
@@ -273,15 +280,33 @@ func get_operations_capacity(_operation_type: int) -> float:
 	return 0.0
 
 
+## Returns the per-operation capacities array, or empty if this proxy has no
+## operations. Read-only reference; do not mutate.
+func get_operations_capacities() -> PackedFloat64Array:
+	return PackedFloat64Array()
+
+
 ## Returns the current run rate of operation [param operation_type].
 func get_operations_run_rate(_operation_type: int) -> float:
 	return 0.0
+
+
+## Returns the per-operation run rates array, or empty if this proxy has no
+## operations. Read-only reference; do not mutate.
+func get_operations_run_rates() -> PackedFloat64Array:
+	return PackedFloat64Array()
 
 
 ## Returns the effective rate of operation [param operation_type] (output actually
 ## realized; may be below the run rate).
 func get_operations_effective_rate(_operation_type: int) -> float:
 	return 0.0
+
+
+## Returns the per-operation effective rates array, or empty if this proxy has no
+## operations. Read-only reference; do not mutate.
+func get_operations_effective_rates() -> PackedFloat64Array:
+	return PackedFloat64Array()
 
 
 ## Returns utilization (run rate / capacity) of operation [param operation_type].
@@ -295,10 +320,22 @@ func get_operations_revenue_rate(_operation_type: int) -> float:
 	return 0.0
 
 
+## Returns the per-operation revenue rates array, or empty if this proxy has no
+## operations or no financials. Read-only reference; do not mutate.
+func get_operations_revenue_rates() -> PackedFloat64Array:
+	return PackedFloat64Array()
+
+
 ## Returns the cost-of-goods-sold rate of operation [param operation_type], or NAN
 ## if this proxy reports no financials.
 func get_operations_cogs_rate(_operation_type: int) -> float:
 	return 0.0
+
+
+## Returns the per-operation cost-of-goods-sold rates array, or empty if this
+## proxy has no operations or no financials. Read-only reference; do not mutate.
+func get_operations_cogs_rates() -> PackedFloat64Array:
+	return PackedFloat64Array()
 
 
 ## Returns the gross margin of operation [param operation_type], or NAN if

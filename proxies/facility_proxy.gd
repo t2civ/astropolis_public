@@ -112,6 +112,21 @@ enum OperationsFlags {
 }
 
 
+## Field selectors for [method get_inventory_items] (bit flags; OR together).
+## All select resource_type-indexed fields, so type is a resource_type. Returned
+## values are in ascending bit order.
+enum InventoryItems {
+	STOCKS = 1,
+	CONTRACTEDS = 1 << 1,
+	OPS_RESERVES = 1 << 2,
+	STRATEGIC_RESERVES = 1 << 3,
+	EXPECTED_RATES = 1 << 4,
+	IN_TRANSITS = 1 << 5,
+	RATES = 1 << 6,
+	FLAGS = 1 << 7,
+}
+
+
 var facility_id := -1  ## Index into [member ProxyBus.facility_proxies].
 var facility_class := -1  ## Facility class index. Not implemented yet.
 var trader_id := -1  ## [member TraderProxy.trader_id] of this facility's paired trader.
@@ -228,12 +243,27 @@ func get_flags() -> int:
 @abstract func get_operations_capacity_factor(operation_type: int) -> float
 
 
+## Returns the per-operation capacity factors array. Return is proxy array
+## reference; read only!
+@abstract func get_operations_capacity_factors() -> PackedFloat64Array
+
+
 ## Returns the AI-set target utilization of operation [param operation_type].
 @abstract func get_operations_target_utilization(operation_type: int) -> float
 
 
+## Returns the per-operation target utilizations array. Return is proxy array
+## reference; read only!
+@abstract func get_operations_target_utilizations() -> PackedFloat64Array
+
+
 ## Returns the full bidirectional flag value for operation [param operation_type].
 @abstract func get_operations_flags(operation_type: int) -> int
+
+
+## Returns the per-operation flags array. Return is proxy array reference;
+## read only!
+@abstract func get_operations_flags_array() -> PackedInt64Array
 
 
 ## Sets the [code]FROM_PROXY_MASK[/code] bits of operations flags for
@@ -251,8 +281,18 @@ func get_flags() -> int:
 # (flags, strategic reserve) with reverse data flow proxy -> server. Implemented
 # on the server-side facility proxy against its inventory component.
 
+## Returns the [enum InventoryItems] fields selected by [param items_mask] for
+## [param resource_type], as an untyped Array in ascending bit order.
+@abstract func get_inventory_items(resource_type: int, items_mask: int) -> Array
+
+
 ## Returns the stock (current quantity on hand) of [param resource_type].
 @abstract func get_inventory_stock(resource_type: int) -> float
+
+
+## Returns the per-resource stocks array. Return is proxy array reference;
+## read only!
+@abstract func get_inventory_stocks() -> PackedFloat64Array
 
 
 ## Returns the contracted quantity of [param resource_type] (committed but not
@@ -260,9 +300,19 @@ func get_flags() -> int:
 @abstract func get_inventory_contracted(resource_type: int) -> float
 
 
+## Returns the per-resource contracted array. Return is proxy array reference;
+## read only!
+@abstract func get_inventory_contracteds() -> PackedFloat64Array
+
+
 ## Returns the operational reserve target for [param resource_type] — the stock
 ## level the facility aims to keep on hand to sustain its operations.
 @abstract func get_inventory_ops_reserve(resource_type: int) -> float
+
+
+## Returns the per-resource ops reserves array. Return is proxy array reference;
+## read only!
+@abstract func get_inventory_ops_reserves() -> PackedFloat64Array
 
 
 ## Returns the strategic reserve target for [param resource_type] — an AI-set
@@ -270,9 +320,19 @@ func get_flags() -> int:
 @abstract func get_inventory_strategic_reserve(resource_type: int) -> float
 
 
+## Returns the per-resource strategic reserves array. Return is proxy array
+## reference; read only!
+@abstract func get_inventory_strategic_reserves() -> PackedFloat64Array
+
+
 ## Returns the smoothed expected net rate for [param resource_type] (positive =
 ## net production, negative = net consumption).
 @abstract func get_inventory_expected_rate(resource_type: int) -> float
+
+
+## Returns the per-resource expected rates array. Return is proxy array
+## reference; read only!
+@abstract func get_inventory_expected_rates() -> PackedFloat64Array
 
 
 ## Returns the in-transit quantity for [param resource_type] (en route to this
@@ -280,13 +340,28 @@ func get_flags() -> int:
 @abstract func get_inventory_in_transit(resource_type: int) -> float
 
 
+## Returns the per-resource in-transit array. Return is proxy array reference;
+## read only!
+@abstract func get_inventory_in_transits() -> PackedFloat64Array
+
+
 ## Returns the most recent measured net rate for [param resource_type] (positive
 ## = production, negative = consumption).
 @abstract func get_inventory_rate(resource_type: int) -> float
 
 
+## Returns the per-resource rates array. Return is proxy array reference;
+## read only!
+@abstract func get_inventory_rates() -> PackedFloat64Array
+
+
 ## Returns the storage capacity of storage class [param storage_type].
 @abstract func get_inventory_storage(storage_type: int) -> float
+
+
+## Returns the per-storage-class capacities array. Return is proxy array
+## reference; read only!
+@abstract func get_inventory_storages() -> PackedFloat64Array
 
 
 ## Returns the amount of storage class [param storage_type] currently in use
@@ -301,6 +376,11 @@ func get_flags() -> int:
 
 ## Returns the full bidirectional flag value for resource [param resource_type].
 @abstract func get_inventory_flags(resource_type: int) -> int
+
+
+## Returns the per-resource flags array. Return is proxy array reference;
+## read only!
+@abstract func get_inventory_flags_array() -> PackedInt64Array
 
 
 ## Sets the [code]FROM_PROXY_MASK[/code] bits of inventory flags for
