@@ -112,8 +112,8 @@ func _get_proxy_data(body_name: StringName, selection_name: StringName) -> void:
 
 		resources_data.append(total_mass)
 		resources_data.append(body_proxy.get_stratum_density(i))
-		resources_data.append(body_proxy.get_compostion_thickness(i))
-		resources_data.append(body_proxy.get_compostion_body_radius(i))
+		resources_data.append(body_proxy.get_stratum_thickness(i))
+		resources_data.append(body_proxy.get_stratum_body_radius(i))
 		resources_data.append(survey_name)
 		resources_data.append(body_proxy.get_stratum_stratum_type(i))
 		resources_data.append(stratum_polity)

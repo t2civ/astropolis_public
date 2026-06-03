@@ -232,7 +232,7 @@ func _get_proxy_data(target_name: StringName) -> void:
 
 	for module_type in modules:
 
-		if not proxy.is_of_interest_module(module_type):
+		if not proxy.is_operations_of_interest_module(module_type):
 			continue
 
 		n_modules += 1

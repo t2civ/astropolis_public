@@ -103,7 +103,7 @@ func get_market(player_id: int) -> MarketProxy:
 
 
 ## Returns the thickness of the stratum at [param index].
-@abstract func get_compostion_thickness(index: int) -> float
+@abstract func get_stratum_thickness(index: int) -> float
 
 
 ## Returns the volume of the stratum at [param index].
@@ -115,7 +115,7 @@ func get_market(player_id: int) -> MarketProxy:
 
 
 ## Returns the body radius cached on the stratum at [param index].
-@abstract func get_compostion_body_radius(index: int) -> float
+@abstract func get_stratum_body_radius(index: int) -> float
 
 
 ## Returns the per-resource mass array for the stratum at [param index].
@@ -133,6 +133,79 @@ func get_market(player_id: int) -> MarketProxy:
 ## Returns survey/discovery data for [param resource_type] in the stratum at
 ## [param index].
 @abstract func get_stratum_resource_data(index: int, resource_type: int) -> PackedFloat64Array
+
+
+## Returns the estimated mass of [param resource_type] in the stratum at
+## [param index] (extraction-subset resources only).
+@abstract func get_stratum_mass(index: int, resource_type: int) -> float
+
+
+## Returns the estimated mass fraction of [param resource_type] in the stratum
+## at [param index].
+@abstract func get_stratum_mass_fraction(index: int, resource_type: int) -> float
+
+
+## Returns the spatial dispersion (log10 units) of [param resource_type] in the
+## stratum at [param index].
+@abstract func get_stratum_dispersion(index: int, resource_type: int) -> float
+
+
+## Returns the coefficient of variation of the estimated mass of
+## [param resource_type] in the stratum at [param index].
+@abstract func get_stratum_mass_cv(index: int, resource_type: int) -> float
+
+
+## Returns the coefficient of variation of the dispersion of
+## [param resource_type] in the stratum at [param index].
+@abstract func get_stratum_dispersion_cv(index: int, resource_type: int) -> float
+
+
+## Returns the base deposit fraction (before survey adjustment) of
+## [param resource_type] in the stratum at [param index].
+@abstract func get_stratum_base_deposit(index: int, resource_type: int) -> float
+
+
+## Returns the discovery fraction of [param resource_type] in the stratum at
+## [param index].
+@abstract func get_stratum_discovered(index: int, resource_type: int) -> float
+
+
+## Returns the maximum discovery fraction across [param resource_types] in the
+## stratum at [param index] (best extraction target).
+@abstract func get_stratum_max_discovered(index: int, resource_types: PackedInt32Array) -> float
+
+
+## Returns the per-resource coefficient-of-variation array for masses in the
+## stratum at [param index].
+@abstract func get_stratum_masses_cv(index: int) -> PackedFloat64Array
+
+
+## Returns the per-resource coefficient-of-variation array for dispersions in
+## the stratum at [param index].
+@abstract func get_stratum_dispersions_cv(index: int) -> PackedFloat64Array
+
+
+## Returns the per-resource discovery-fraction array for the stratum at
+## [param index].
+@abstract func get_stratum_discoveries(index: int) -> PackedFloat64Array
+
+
+## Returns the current survey level of the stratum at [param index].
+@abstract func get_stratum_survey_level(index: int) -> float
+
+
+## Returns the inner radius of the stratum at [param index] (0.0 for an
+## undifferentiated body).
+@abstract func get_stratum_inner_radius(index: int) -> float
+
+
+## Returns the spherical fraction (of a theoretical whole-sphere stratum) of the
+## stratum at [param index].
+@abstract func get_stratum_spherical_fraction(index: int) -> float
+
+
+## Returns true if the stratum at [param index] is the body's atmosphere.
+@abstract func get_stratum_is_atmosphere(index: int) -> bool
 
 
 ## Registers [param satellite] under this body. Updates [member is_satellites].

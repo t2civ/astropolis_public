@@ -294,17 +294,17 @@ func _process_facility_support(resource_type: int, market: MarketProxy, expirati
 		_cancel_bid(resource_type)
 		return
 	var multiplier := _trade_unit_multipliers[resource_type]
-	var target := (_facility.get_resource_ops_reserve(resource_type)
-			+ _facility.get_resource_strategic_reserve(resource_type))
+	var target := (_facility.get_inventory_ops_reserve(resource_type)
+			+ _facility.get_inventory_strategic_reserve(resource_type))
 	if is_producer:
 		_cancel_bid(resource_type)
-		var surplus := _facility.get_resource_stock(resource_type) - target
+		var surplus := _facility.get_inventory_stock(resource_type) - target
 		var ask_price := maxi(1, floori(reference_price * (1.0 - SPREAD)))
 		_maintain_ask(resource_type, int(surplus / multiplier), ask_price, expiration)
 	else:
 		_cancel_ask(resource_type)
-		var deficit := (target - _facility.get_resource_stock(resource_type)
-				- _facility.get_resource_in_transit(resource_type))
+		var deficit := (target - _facility.get_inventory_stock(resource_type)
+				- _facility.get_inventory_in_transit(resource_type))
 		var bid_price := maxi(1, ceili(reference_price * (1.0 + SPREAD)))
 		_maintain_bid(resource_type, int(deficit / multiplier), bid_price, expiration)
 
@@ -324,12 +324,12 @@ func _process_market_making(resource_type: int, market: MarketProxy, expiration:
 		return
 	var ask_price := maxi(1, ceili(reference_price * (1.0 + SPREAD)))
 	var bid_price := maxi(1, floori(reference_price * (1.0 - SPREAD)))
-	var ops_reserve := _facility.get_resource_ops_reserve(resource_type)
-	var target := ops_reserve + _facility.get_resource_strategic_reserve(resource_type)
+	var ops_reserve := _facility.get_inventory_ops_reserve(resource_type)
+	var target := ops_reserve + _facility.get_inventory_strategic_reserve(resource_type)
 	var ceiling := target + MM_BAND_LOTS * multiplier
-	var stock := _facility.get_resource_stock(resource_type)
+	var stock := _facility.get_inventory_stock(resource_type)
 	var ask_quantity := int((stock - ops_reserve) / multiplier)
-	var bid_quantity := int((ceiling - stock - _facility.get_resource_in_transit(resource_type))
+	var bid_quantity := int((ceiling - stock - _facility.get_inventory_in_transit(resource_type))
 			/ multiplier)
 	_maintain_ask(resource_type, maxi(0, ask_quantity), ask_price, expiration)
 	_maintain_bid(resource_type, maxi(0, bid_quantity), bid_price, expiration)

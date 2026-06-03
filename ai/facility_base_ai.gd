@@ -308,7 +308,7 @@ func process_ai_interval(_delta: float) -> void:
 	for resource_type in _is_tradable.size():
 		if !_is_tradable[resource_type]:
 			continue
-		var expected_rate := proxy.get_resource_expected_rate(resource_type)
+		var expected_rate := proxy.get_inventory_expected_rate(resource_type)
 		if expected_rate > RATE_EPSILON:
 			_set_facility_resource_strategy(resource_type, PRIMARY_PRODUCT)
 			proxy.set_inventory_strategic_reserve(resource_type, 0.0)
@@ -363,7 +363,7 @@ func _update_market_maker_reserves() -> void:
 			var inv_flags := proxy.get_inventory_flags(resource_type)
 			if !(inv_flags & CAN_HAVE_INPUT_OUTPUT):
 				continue
-			var throughput := absf(proxy.get_resource_expected_rate(resource_type))
+			var throughput := absf(proxy.get_inventory_expected_rate(resource_type))
 			var reserve := (time_horizon * throughput
 					+ MM_BASE_LOT * _trade_unit_multipliers[resource_type])
 			proxy.set_inventory_strategic_reserve(resource_type, reserve)

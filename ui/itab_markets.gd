@@ -215,8 +215,8 @@ func _get_proxy_data(target_name: StringName, market: MarketProxy, has_inventory
 			ask = market.get_spot_ask_unit_price(resource_type)
 			volume = market.get_spot_unit_volume(resource_type)
 		if is_inventory:
-			in_stock = proxy.get_resource_stock(resource_type)
-			contracted = proxy.get_resource_contracted(resource_type)
+			in_stock = proxy.get_inventory_stock(resource_type)
+			contracted = proxy.get_inventory_contracted(resource_type)
 
 		data.append(resource_type)
 		data.append(price)
