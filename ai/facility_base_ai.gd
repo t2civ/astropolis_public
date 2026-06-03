@@ -352,7 +352,7 @@ func _set_facility_resource_strategy(resource_type: int, strategy_id: int) -> vo
 
 
 func _update_market_maker_reserves() -> void:
-	const MARKET_RELEVANT := FacilityProxy.InventoryFlags.MARKET_RELEVANT
+	const CAN_HAVE_INPUT_OUTPUT := FacilityProxy.InventoryFlags.CAN_HAVE_INPUT_OUTPUT
 	const PROTECT_STRATEGIC_RESERVE := FacilityProxy.InventoryFlags.PROTECT_STRATEGIC_RESERVE
 	const FROM_PROXY_MASK := FacilityProxy.InventoryFlags.FROM_PROXY_MASK
 	if proxy.market_maker:
@@ -361,7 +361,7 @@ func _update_market_maker_reserves() -> void:
 		var time_horizon := proxy.time_horizon
 		for resource_type in _is_tradable.size():
 			var inv_flags := proxy.get_inventory_flags(resource_type)
-			if !(inv_flags & MARKET_RELEVANT):
+			if !(inv_flags & CAN_HAVE_INPUT_OUTPUT):
 				continue
 			var throughput := absf(proxy.get_resource_expected_rate(resource_type))
 			var reserve := (time_horizon * throughput
