@@ -251,7 +251,9 @@ func process_ai_init() -> void:
 func process_ai_interval(_delta: float) -> void:
 	# A market maker quotes both sides for its market-relevant resources; every other
 	# resource is traded one-sided to service facility operations (see the two helpers).
-	const CAN_HAVE_INPUT_OUTPUT := FacilityProxy.InventoryFlags.CAN_HAVE_INPUT_OUTPUT
+	const TRADABLE := FacilityProxy.InventoryFlags.TRADABLE
+	const CAN_HAVE_INPUT := FacilityProxy.InventoryFlags.CAN_HAVE_INPUT
+	const CAN_HAVE_OUTPUT := FacilityProxy.InventoryFlags.CAN_HAVE_OUTPUT
 	const NEUTRAL := ResourceStrategies.NEUTRAL
 	const MARKET_MAKING := ResourceStrategies.MARKET_MAKING
 	var market := proxy.market
@@ -262,7 +264,9 @@ func process_ai_interval(_delta: float) -> void:
 	var expiration := epoch_day + ORDER_LIFETIME * int(INTERVAL / DAY)
 	var market_maker := _facility.market_maker
 	for resource_type in resource_strategies.size():
-		if market_maker and (_facility.get_inventory_flags(resource_type) & CAN_HAVE_INPUT_OUTPUT):
+		var inv_flags := _facility.get_inventory_flags(resource_type)
+		if (market_maker and (inv_flags & TRADABLE)
+				and (inv_flags & (CAN_HAVE_INPUT | CAN_HAVE_OUTPUT))):
 			resource_strategies[resource_type] = MARKET_MAKING
 			_process_market_making(resource_type, market, expiration)
 		else:

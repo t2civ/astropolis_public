@@ -60,11 +60,12 @@ enum InventoryFlags {
 	STORAGE_SURPLUS = 1 << 3,
 	## No market spot price is established for this resource at this location.
 	PRICE_UNKNOWN = 1 << 4,
-	## Set by the server when a can-have operation at this facility inputs or
-	## outputs this resource and the resource is tradable.
-	## FIXME: Tradable logic doesn't belong here (present due to current AI
-	## hook, but that needs to go elsewhere).
-	CAN_HAVE_INPUT_OUTPUT = 1 << 5,
+	## This resource is tradable (a commodity assigned to a storage class).
+	TRADABLE = 1 << 5,
+	## A can-have operation at this facility consumes this resource.
+	CAN_HAVE_INPUT = 1 << 6,
+	## A can-have operation at this facility produces or extracts this resource.
+	CAN_HAVE_OUTPUT = 1 << 7,
 	## Mask of all server-published signal bits.
 	FROM_SERVER_MASK = (1 << 32) - 1,
 
