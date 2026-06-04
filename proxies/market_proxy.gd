@@ -44,35 +44,14 @@ extends Proxy
 ## methods are not threadsafe; non-container properties are safe.
 
 
-const SPOT_ORDER_SIZE := 7
-const FUTURES_ORDER_SIZE := 9
-
-
-static var _is_class_instanced := false
-static var _resource_trade_unit_multipliers: PackedFloat64Array # convert trade -> sim
+const FUTURES_QUARTERS := 20 ## Must match _Market constant!
 
 
 var market_id := -1  ## Index into [member ProxyBus.market_proxies].
 var body: BodyProxy ## Body of the spot market and futures contract delivery.
 
-var _spot_prices: PackedInt64Array
-var _spot_ask_prices: PackedInt64Array
-var _spot_bid_prices: PackedInt64Array
-var _spot_volumes: PackedFloat64Array
-
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
-
-static func _on_class_instanced() -> void:
-	_resource_trade_unit_multipliers = ThreadsafeGlobal.resource_trade_unit_multipliers
-
-
-func _init() -> void:
-	super()
-	if !_is_class_instanced:
-		_is_class_instanced = true
-		_on_class_instanced()
-
 
 func _clear_for_destruction() -> void:
 	body = null
@@ -89,45 +68,74 @@ func get_market(_player_id: int) -> MarketProxy:
 
 
 # ********************************** READ *************************************
-# all threadsafe
+# All threadsafe. Abstract here; the concrete proxy implements.
 
 ## Returns the current trade price for [param type] in sim units, or 0.0 if
 ## no current price.
-func get_spot_price(type: int) -> float:
-	return _spot_prices[type] / _resource_trade_unit_multipliers[type]
+@abstract func get_spot_price(type: int) -> float
 
 
 ## Returns the current ask price for [param type] in sim units, or 0.0 if no
 ## current ask.
-func get_spot_ask_price(type: int) -> float:
-	return _spot_ask_prices[type] / _resource_trade_unit_multipliers[type]
+@abstract func get_spot_ask_price(type: int) -> float
 
 
 ## Returns the current bid price for [param type] in sim units, or 0.0 if no
 ## current bid.
-func get_spot_bid_price(type: int) -> float:
-	return _spot_bid_prices[type] / _resource_trade_unit_multipliers[type]
+@abstract func get_spot_bid_price(type: int) -> float
 
 
 ## Returns the Market-internal unit price for [param type], or 0 if no
 ## current price.
-func get_spot_unit_price(type: int) -> int:
-	return _spot_prices[type]
+@abstract func get_spot_unit_price(type: int) -> int
 
 
 ## Returns the Market-internal ask unit price for [param type], or 0 if no
 ## current ask.
-func get_spot_ask_unit_price(type: int) -> int:
-	return _spot_ask_prices[type]
+@abstract func get_spot_ask_unit_price(type: int) -> int
 
 
 ## Returns the Market-internal bid unit price for [param type], or 0 if no
 ## current bid.
-func get_spot_bid_unit_price(type: int) -> int:
-	return _spot_bid_prices[type]
+@abstract func get_spot_bid_unit_price(type: int) -> int
 
 
 ## Returns the trading volume for [param type] in trade units per day, smoothed
 ## over 7 days.
-func get_spot_unit_volume(type: int) -> float:
-	return _spot_volumes[type]
+@abstract func get_spot_unit_volume(type: int) -> float
+
+
+## Returns the futures trade price for [param type] in sim units at delivery
+## [param delivery_qtr] (an ordinal quarter), or 0.0 if no price or out of the
+## quarter range. Specify [param delivery_qtr] == -1 or -2 for the lowest or
+## highest price, respectively, over the quarter range.
+@abstract func get_futures_price(type: int, delivery_qtr: int) -> float
+
+
+## Returns the futures ask price for [param type] in sim units at delivery
+## [param delivery_qtr], or 0.0 if none (see [method get_futures_price] for the
+## [param delivery_qtr] convention).
+@abstract func get_futures_ask_price(type: int, delivery_qtr: int) -> float
+
+
+## Returns the futures bid price for [param type] in sim units at delivery
+## [param delivery_qtr], or 0.0 if none (see [method get_futures_price] for the
+## [param delivery_qtr] convention).
+@abstract func get_futures_bid_price(type: int, delivery_qtr: int) -> float
+
+
+## Returns the Market-internal futures unit price for [param type] at delivery
+## [param delivery_qtr], or 0 if no price or out of the quarter range. Specify
+## [param delivery_qtr] == -1 or -2 for the lowest or highest unit price,
+## respectively, over the quarter range.
+@abstract func get_futures_unit_price(type: int, delivery_qtr: int) -> int
+
+
+## Returns the Market-internal futures ask unit price for [param type] at
+## delivery [param delivery_qtr], or 0 if none.
+@abstract func get_futures_ask_unit_price(type: int, delivery_qtr: int) -> int
+
+
+## Returns the Market-internal futures bid unit price for [param type] at
+## delivery [param delivery_qtr], or 0 if none.
+@abstract func get_futures_bid_unit_price(type: int, delivery_qtr: int) -> int
