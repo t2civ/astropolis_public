@@ -18,6 +18,12 @@ extends Proxy
 ## publishes FROM_SERVER_MASK runtime signals (margin, shortage, surplus) back
 ## for AI to read.
 ##
+## Indexed methods here are defensive against AI misbehavior: a setter given an
+## out-of-range index, NaN, or negative value is a no-op, and a getter given an
+## out-of-range index returns a safe default (0.0, 0, NAN, or an empty array).
+## This lets a custom AI fail safe. See AI_ARCHITECTURE.md, "Trust the server;
+## guard against AI".
+##
 ## To modify AI, see [BaseAI] and the [code]*_base_ai.gd[/code] files.
 ##
 ## WARNING: Lives on the proxy thread. Containers and many methods are not
@@ -269,12 +275,13 @@ func get_flags() -> int:
 
 ## Sets the [code]FROM_PROXY_MASK[/code] bits of operations flags for
 ## [param operation_type] to [param value]. Proxy-authoritative: this
-## change flows proxy -> server.
+## change flows proxy -> server. No-op on an out-of-range index.
 @abstract func set_operations_flags(operation_type: int, value: int) -> void
 
 
 ## Sets the target utilization for [param type]. Proxy-authoritative:
-## this change flows proxy -> server.
+## this change flows proxy -> server. No-op on an out-of-range index or invalid
+## value.
 @abstract func set_operations_target_utilization(type: int, value: float) -> void
 
 
@@ -386,28 +393,31 @@ func get_flags() -> int:
 
 ## Sets the [code]FROM_PROXY_MASK[/code] bits of inventory flags for
 ## [param resource_type] to [param value]. Proxy-authoritative: this
-## change flows proxy -> server.
+## change flows proxy -> server. No-op on an out-of-range index.
 @abstract func set_inventory_flags(resource_type: int, value: int) -> void
 
 
 ## Sets the strategic reserve for [param type]. Proxy-authoritative:
-## this change flows proxy -> server.
+## this change flows proxy -> server. No-op on an out-of-range index or invalid
+## value.
 @abstract func set_inventory_strategic_reserve(type: int, value: float) -> void
 
 
 # Population (facility-only). Facility-only reads. Implemented on the server-side
 # facility proxy against its population component.
 
-## Returns the intrinsic growth rate for [param population_type].
+## Returns the intrinsic growth rate for [param population_type]. Safe default
+## on an out-of-range index.
 @abstract func get_population_intrinsic_growth(population_type: int) -> float
 
 
-## Returns the carrying capacity for [param carrying_capacity_group].
+## Returns the carrying capacity for [param carrying_capacity_group]. Safe
+## default on an out-of-range index.
 @abstract func get_population_carrying_capacity(carrying_capacity_group: int) -> float
 
 
 ## Returns the summed carrying capacity across the groups [param population_type]
-## can occupy.
+## can occupy. Safe default on an out-of-range index.
 @abstract func get_population_carrying_capacity_for_population(population_type: int) -> float
 
 
@@ -416,7 +426,7 @@ func get_flags() -> int:
 
 
 ## Returns migration pressure for [param population_type] (positive = net
-## immigration, negative = net emigration).
+## immigration, negative = net emigration). Safe default on an out-of-range index.
 @abstract func get_population_migration_pressure(population_type: int) -> float
 
 

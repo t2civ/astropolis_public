@@ -504,13 +504,14 @@ func get_financials_cost_of_goods_sold_history() -> PackedFloat64Array:
 # Population data (read-only). Default 0.0/empty; developed proxies override.
 
 ## Returns the population count for [param population_type], or the total across
-## all types if -1.
+## all types if -1. Safe default on an out-of-range index.
 func get_population_number(_population_type := -1) -> float:
 	return 0.0
 
 
 ## Returns the per-quarter population-number history (oldest first) for
-## [param population_type], or an empty array.
+## [param population_type], or an empty array. Safe default on an out-of-range
+## index.
 func get_population_number_history(_population_type: int) -> PackedFloat64Array:
 	return PackedFloat64Array()
 

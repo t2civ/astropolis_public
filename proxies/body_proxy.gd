@@ -17,6 +17,10 @@ extends Proxy
 ## [BrokerProxy] when at least one facility is present; the broker gains a
 ## spot [MarketProxy] when 2+ facilities are present.
 ##
+## Indexed getters here (notably the per-stratum [code]get_stratum_*[/code]
+## reads) are defensive: an out-of-range index returns a safe default. See
+## AI_ARCHITECTURE.md, "Trust the server; guard against AI".
+##
 ## To get the corresponding scene-tree [code]IVBody[/code] node use
 ## [code]IVBody.bodies[body_name][/code]. Be aware that the SceneTree runs
 ## on the main thread!

@@ -40,6 +40,9 @@ extends Proxy
 ## A stored value of 0 in any internal "price" variable means N/A or no current
 ## price (sim-unit getters return 0.0 in that case).
 ##
+## Indexed getters are defensive: an out-of-range index returns a safe default
+## (0.0 or 0). See AI_ARCHITECTURE.md, "Trust the server; guard against AI".
+##
 ## WARNING: Lives on the proxy thread. Resizable containers and associated
 ## methods are not threadsafe; non-container properties are safe.
 
