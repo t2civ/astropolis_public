@@ -135,21 +135,26 @@ static var trader_strategy_defs: Array[Dictionary] = [
 ]
 
 ## Per-resource strategy definitions; index = [enum ResourceStrategies] value.
+## Boolean switches select the executor branch: [code]two_sided[/code] (maker
+## quotes both sides), [code]sell_above_reserve[/code], [code]buy_to_reserve[/code].
+## Tuning keys ([code]spread[/code], [code]min_lot[/code], [code]band_lots[/code],
+## [code]price_tol[/code], [code]qty_tol[/code], [code]order_lifetime[/code]) may
+## override the class-constant defaults. An empty entry trades nothing.
 static var resource_strategy_defs: Array[Dictionary] = [
-	{}, # NEUTRAL
+	{&"sell_above_reserve": true, &"buy_to_reserve": true}, # NEUTRAL — maintain at reserve
 	{}, # JUST_IN_TIME
-	{}, # STRATEGIC_RESERVE
+	{&"buy_to_reserve": true}, # STRATEGIC_RESERVE
 	{}, # LIQUIDATE
 	{}, # HOARD
 	{}, # DUMP
-	{}, # MARKET_MAKING
+	{&"two_sided": true}, # MARKET_MAKING
 	{}, # SPECULATIVE_LONG
 	{}, # SPECULATIVE_SHORT
 	{}, # AUTARKIC
-	{}, # EXPORT_FOCUS
-	{}, # IMPORT_PRIORITY
+	{&"sell_above_reserve": true}, # EXPORT_FOCUS
+	{&"buy_to_reserve": true}, # IMPORT_PRIORITY
 	{}, # OPPORTUNISTIC
-	{}, # WIND_DOWN
+	{&"sell_above_reserve": true}, # WIND_DOWN
 ]
 
 
@@ -246,78 +251,82 @@ func process_ai_init() -> void:
 	_facility_ai = Proxy.proxy_bus.facility_ais[proxy.facility_id]
 	assert(_facility_ai, "TraderBaseAI expects facility's AI to be FacilityBaseAI")
 	_facility_ai.facility_resource_strategy_changed.connect(_on_facility_resource_strategy_changed)
+	# The facility may have authored its strategies before we connected (init order
+	# across entity types is not guaranteed), so re-sync the full array now.
+	for resource_type in resource_strategies.size():
+		var facility_strategy := _facility_ai.facility_resource_strategies[resource_type]
+		resource_strategies[resource_type] = _trader_strategy_for_facility(facility_strategy)
 
 
+## Acts on live market and inventory state using the sticky per-resource strategy
+## (authored by the facility, translated and stored on change). The strategy's def
+## selects the executor branch: two-sided maker vs. one-sided facility support.
 func process_ai_interval(_delta: float) -> void:
-	# A market maker quotes both sides for its market-relevant resources; every other
-	# resource is traded one-sided to service facility operations (see the two helpers).
-	const TRADABLE := FacilityProxy.InventoryFlags.TRADABLE
-	const CAN_HAVE_INPUT := FacilityProxy.InventoryFlags.CAN_HAVE_INPUT
-	const CAN_HAVE_OUTPUT := FacilityProxy.InventoryFlags.CAN_HAVE_OUTPUT
-	const NEUTRAL := ResourceStrategies.NEUTRAL
-	const MARKET_MAKING := ResourceStrategies.MARKET_MAKING
 	var market := proxy.market
 	if !market:
 		return
 	var time: float = _times[0]
 	var epoch_day := int(time / DAY)
-	var expiration := epoch_day + ORDER_LIFETIME * int(INTERVAL / DAY)
-	var market_maker := _facility.market_maker
 	for resource_type in resource_strategies.size():
-		var inv_flags := _facility.get_inventory_flags(resource_type)
-		if (market_maker and (inv_flags & TRADABLE)
-				and (inv_flags & (CAN_HAVE_INPUT | CAN_HAVE_OUTPUT))):
-			resource_strategies[resource_type] = MARKET_MAKING
-			_process_market_making(resource_type, market, expiration)
+		var def := resource_strategy_defs[resource_strategies[resource_type]]
+		var lifetime: int = def.get(&"order_lifetime", ORDER_LIFETIME)
+		var expiration := epoch_day + lifetime * int(INTERVAL / DAY)
+		if def.get(&"two_sided", false):
+			_process_market_making(resource_type, market, expiration, def)
 		else:
-			resource_strategies[resource_type] = NEUTRAL
-			_process_facility_support(resource_type, market, expiration)
+			_process_facility_support(resource_type, market, expiration, def)
 
 
-## Trades one resource to service facility operations: a producer sells stock held above
-## its reserve target; a consumer buys up toward it. A still-valid standing order is left
-## untouched; we re-quote only on material divergence (see [method _maintain_ask] /
-## [method _maintain_bid]). Order memory stays truthful via the market's status updates.
-func _process_facility_support(resource_type: int, market: MarketProxy, expiration: int) -> void:
-	const PRIMARY_PRODUCT := FacilityBaseAI.FacilityResourceStrategies.PRIMARY_PRODUCT
-	const SECONDARY_PRODUCT := FacilityBaseAI.FacilityResourceStrategies.SECONDARY_PRODUCT
-	const COPRODUCT := FacilityBaseAI.FacilityResourceStrategies.COPRODUCT
-	const BYPRODUCT := FacilityBaseAI.FacilityResourceStrategies.BYPRODUCT
-	const CRITICAL_INPUT := FacilityBaseAI.FacilityResourceStrategies.CRITICAL_INPUT
-	const ROUTINE_INPUT := FacilityBaseAI.FacilityResourceStrategies.ROUTINE_INPUT
-	const CONSUMABLE := FacilityBaseAI.FacilityResourceStrategies.CONSUMABLE
-	var fstrat := _facility_ai.facility_resource_strategies[resource_type]
-	var is_producer := (fstrat == PRIMARY_PRODUCT or fstrat == SECONDARY_PRODUCT
-			or fstrat == COPRODUCT or fstrat == BYPRODUCT)
-	var is_consumer := (fstrat == CRITICAL_INPUT or fstrat == ROUTINE_INPUT
-			or fstrat == CONSUMABLE)
+## Trades one resource to service facility operations: clears stock above the reserve
+## target (sell) and/or replenishes up toward it (buy), per the def switches. With both
+## enabled it self-balances around the reserve — stock can't be both over and under, so
+## at most one side quotes. A still-valid standing order is left untouched; we re-quote
+## only on material divergence. Order memory stays truthful via the market's updates.
+func _process_facility_support(resource_type: int, market: MarketProxy, expiration: int,
+		def: Dictionary) -> void:
+	var sell: bool = def.get(&"sell_above_reserve", false)
+	var buy: bool = def.get(&"buy_to_reserve", false)
 	var reference_price := market.get_spot_unit_price(resource_type)
-	if reference_price <= 0 or (not is_producer and not is_consumer):
+	if reference_price <= 0 or (not sell and not buy):
 		# Not trading this resource now: drop any standing orders.
 		_cancel_ask(resource_type)
 		_cancel_bid(resource_type)
 		return
+	var spread: float = def.get(&"spread", SPREAD)
+	var min_lot: int = def.get(&"min_lot", MIN_LOT)
+	var price_tol: float = def.get(&"price_tol", PRICE_TOLERANCE)
+	var qty_tol: float = def.get(&"qty_tol", QTY_TOLERANCE)
 	var multiplier := _trade_unit_multipliers[resource_type]
 	var target := (_facility.get_inventory_ops_reserve(resource_type)
 			+ _facility.get_inventory_strategic_reserve(resource_type))
-	if is_producer:
-		_cancel_bid(resource_type)
-		var surplus := _facility.get_inventory_stock(resource_type) - target
-		var ask_price := maxi(1, floori(reference_price * (1.0 - SPREAD)))
-		_maintain_ask(resource_type, int(surplus / multiplier), ask_price, expiration)
+	var stock := _facility.get_inventory_stock(resource_type)
+	if sell:
+		var surplus := stock - target
+		var ask_price := maxi(1, floori(reference_price * (1.0 - spread)))
+		_maintain_ask(resource_type, int(surplus / multiplier), ask_price, expiration,
+				min_lot, price_tol, qty_tol)
 	else:
 		_cancel_ask(resource_type)
-		var deficit := (target - _facility.get_inventory_stock(resource_type)
-				- _facility.get_inventory_in_transit(resource_type))
-		var bid_price := maxi(1, ceili(reference_price * (1.0 + SPREAD)))
-		_maintain_bid(resource_type, int(deficit / multiplier), bid_price, expiration)
+	if buy:
+		var deficit := target - stock - _facility.get_inventory_in_transit(resource_type)
+		var bid_price := maxi(1, ceili(reference_price * (1.0 + spread)))
+		_maintain_bid(resource_type, int(deficit / multiplier), bid_price, expiration,
+				min_lot, price_tol, qty_tol)
+	else:
+		_cancel_bid(resource_type)
 
 
 ## Quotes both sides for a market-relevant resource: bid below mid, ask above mid, so the
 ## maker earns the spread and provides liquidity (the inverse of facility-support, which
 ## crosses to transact). Quantities self-balance inventory toward the trade-reserve target
 ## as fills occur. Falls back to the resource's start_price when no live spot price exists.
-func _process_market_making(resource_type: int, market: MarketProxy, expiration: int) -> void:
+func _process_market_making(resource_type: int, market: MarketProxy, expiration: int,
+		def: Dictionary) -> void:
+	var spread: float = def.get(&"spread", SPREAD)
+	var min_lot: int = def.get(&"min_lot", MIN_LOT)
+	var band_lots: int = def.get(&"band_lots", MM_BAND_LOTS)
+	var price_tol: float = def.get(&"price_tol", PRICE_TOLERANCE)
+	var qty_tol: float = def.get(&"qty_tol", QTY_TOLERANCE)
 	var multiplier := _trade_unit_multipliers[resource_type]
 	var reference_price := market.get_spot_unit_price(resource_type)
 	if reference_price <= 0:
@@ -326,17 +335,19 @@ func _process_market_making(resource_type: int, market: MarketProxy, expiration:
 		_cancel_ask(resource_type)
 		_cancel_bid(resource_type)
 		return
-	var ask_price := maxi(1, ceili(reference_price * (1.0 + SPREAD)))
-	var bid_price := maxi(1, floori(reference_price * (1.0 - SPREAD)))
+	var ask_price := maxi(1, ceili(reference_price * (1.0 + spread)))
+	var bid_price := maxi(1, floori(reference_price * (1.0 - spread)))
 	var ops_reserve := _facility.get_inventory_ops_reserve(resource_type)
 	var target := ops_reserve + _facility.get_inventory_strategic_reserve(resource_type)
-	var ceiling := target + MM_BAND_LOTS * multiplier
+	var ceiling := target + band_lots * multiplier
 	var stock := _facility.get_inventory_stock(resource_type)
 	var ask_quantity := int((stock - ops_reserve) / multiplier)
 	var bid_quantity := int((ceiling - stock - _facility.get_inventory_in_transit(resource_type))
 			/ multiplier)
-	_maintain_ask(resource_type, maxi(0, ask_quantity), ask_price, expiration)
-	_maintain_bid(resource_type, maxi(0, bid_quantity), bid_price, expiration)
+	_maintain_ask(resource_type, maxi(0, ask_quantity), ask_price, expiration,
+			min_lot, price_tol, qty_tol)
+	_maintain_bid(resource_type, maxi(0, bid_quantity), bid_price, expiration,
+			min_lot, price_tol, qty_tol)
 
 
 # ******************************* AI / PROXY API ******************************
@@ -400,9 +411,9 @@ func _cancel_bid(resource_type: int) -> void:
 ## quantity and price, re-quoting only on material divergence (see
 ## [method _needs_requote]). A desired quantity below [constant MIN_LOT] drops
 ## any standing ask.
-func _maintain_ask(resource_type: int, want_quantity: int, want_price: int, expiration: int
-		) -> void:
-	if want_quantity < MIN_LOT:
+func _maintain_ask(resource_type: int, want_quantity: int, want_price: int, expiration: int,
+		min_lot: int, price_tol: float, qty_tol: float) -> void:
+	if want_quantity < min_lot:
 		_cancel_ask(resource_type)
 		return
 	if _spot_ask_ids[resource_type] == -1:
@@ -412,14 +423,14 @@ func _maintain_ask(resource_type: int, want_quantity: int, want_price: int, expi
 			_spot_ask(resource_type, want_quantity, want_price, expiration)
 		return
 	if _needs_requote(_spot_ask_totals[resource_type], _spot_ask_prices[resource_type],
-			want_quantity, want_price):
+			want_quantity, want_price, price_tol, qty_tol):
 		_replace_ask(resource_type, want_quantity, want_price, expiration)
 
 
 ## Bid counterpart of [method _maintain_ask].
-func _maintain_bid(resource_type: int, want_quantity: int, want_price: int, expiration: int
-		) -> void:
-	if want_quantity < MIN_LOT:
+func _maintain_bid(resource_type: int, want_quantity: int, want_price: int, expiration: int,
+		min_lot: int, price_tol: float, qty_tol: float) -> void:
+	if want_quantity < min_lot:
 		_cancel_bid(resource_type)
 		return
 	if _spot_bid_ids[resource_type] == -1:
@@ -427,27 +438,58 @@ func _maintain_bid(resource_type: int, want_quantity: int, want_price: int, expi
 			_spot_bid(resource_type, want_quantity, want_price, expiration)
 		return
 	if _needs_requote(_spot_bid_totals[resource_type], _spot_bid_prices[resource_type],
-			want_quantity, want_price):
+			want_quantity, want_price, price_tol, qty_tol):
 		_replace_bid(resource_type, want_quantity, want_price, expiration)
 
 
 ## True when a standing order's price or quantity has drifted from the desired
 ## values by more than [constant PRICE_TOLERANCE] / [constant QTY_TOLERANCE].
-func _needs_requote(have_quantity: int, have_price: int, want_quantity: int, want_price: int
-		) -> bool:
+func _needs_requote(have_quantity: int, have_price: int, want_quantity: int, want_price: int,
+		price_tol: float, qty_tol: float) -> bool:
 	if have_price <= 0 or have_quantity <= 0:
 		return true
-	if absf(float(want_price - have_price) / have_price) > PRICE_TOLERANCE:
+	if absf(float(want_price - have_price) / have_price) > price_tol:
 		return true
-	if absf(float(want_quantity - have_quantity) / have_quantity) > QTY_TOLERANCE:
+	if absf(float(want_quantity - have_quantity) / have_quantity) > qty_tol:
 		return true
 	return false
 
 
 # ********************************* LISTENERS *********************************
 
-func _on_facility_resource_strategy_changed(_resource_type: int, _strategy_id: int) -> void:
-	pass
+## Translates a facility resource strategy into this trader's per-resource strategy.
+## The trader consumes facility intent here (and in the init re-sync) and nowhere
+## else — never facility identity such as market_maker.
+func _trader_strategy_for_facility(facility_strategy: int) -> int:
+	const PRIMARY_PRODUCT := FacilityBaseAI.FacilityResourceStrategies.PRIMARY_PRODUCT
+	const SECONDARY_PRODUCT := FacilityBaseAI.FacilityResourceStrategies.SECONDARY_PRODUCT
+	const COPRODUCT := FacilityBaseAI.FacilityResourceStrategies.COPRODUCT
+	const BYPRODUCT := FacilityBaseAI.FacilityResourceStrategies.BYPRODUCT
+	const CRITICAL_INPUT := FacilityBaseAI.FacilityResourceStrategies.CRITICAL_INPUT
+	const ROUTINE_INPUT := FacilityBaseAI.FacilityResourceStrategies.ROUTINE_INPUT
+	const CONSUMABLE := FacilityBaseAI.FacilityResourceStrategies.CONSUMABLE
+	const CLOSED_LOOP_INTERMEDIATE := FacilityBaseAI.FacilityResourceStrategies.CLOSED_LOOP_INTERMEDIATE
+	const MARKET_MAKE := FacilityBaseAI.FacilityResourceStrategies.MARKET_MAKE
+	const STRATEGIC_RESERVE := FacilityBaseAI.FacilityResourceStrategies.STRATEGIC_RESERVE
+	const PHASE_OUT := FacilityBaseAI.FacilityResourceStrategies.PHASE_OUT
+	match facility_strategy:
+		PRIMARY_PRODUCT, SECONDARY_PRODUCT, COPRODUCT, BYPRODUCT:
+			return ResourceStrategies.EXPORT_FOCUS
+		CRITICAL_INPUT, ROUTINE_INPUT, CONSUMABLE:
+			return ResourceStrategies.IMPORT_PRIORITY
+		MARKET_MAKE:
+			return ResourceStrategies.MARKET_MAKING
+		STRATEGIC_RESERVE:
+			return ResourceStrategies.STRATEGIC_RESERVE
+		PHASE_OUT:
+			return ResourceStrategies.WIND_DOWN
+		CLOSED_LOOP_INTERMEDIATE:
+			return ResourceStrategies.AUTARKIC
+	return ResourceStrategies.NEUTRAL
+
+
+func _on_facility_resource_strategy_changed(resource_type: int, strategy_id: int) -> void:
+	resource_strategies[resource_type] = _trader_strategy_for_facility(strategy_id)
 
 
 func _on_ask_updated(resource_type: int, unit_quantity: int, unit_price: int,
