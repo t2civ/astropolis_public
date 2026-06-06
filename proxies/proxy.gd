@@ -71,6 +71,11 @@ const PERSIST_MODE := IVGlobal.PERSIST_PROCEDURAL
 static var proxy_bus: ProxyBus ## Shared [ProxyBus] for proxy-thread signals and data.
 
 @warning_ignore_start("unused_private_class_variable")
+# Add more as convenience values. Include index guards for public use.
+static var n_resources: int ## Number of resource types.
+static var _base_class_instantiated := false
+
+# FIXME: Change below to public "convenience" values or remove...
 static var _times: Array = IVGlobal.times
 static var _date: Array = IVGlobal.date
 static var _clock: Array = IVGlobal.clock
@@ -102,11 +107,18 @@ static func get_proxy_by_name(proxy_name: StringName) -> Proxy:
 	return proxy_bus.proxies_by_name.get(proxy_name)
 
 
+static func _on_base_class_instantiated() -> void:
+	n_resources = _table_n_rows[&"resources"]
+
+
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
 
 func _init() -> void:
 	IVStateManager.about_to_free_procedural_nodes.connect.call_deferred(_clear_for_destruction)
+	if !_base_class_instantiated:
+		_base_class_instantiated = true
+		_on_base_class_instantiated()
 
 
 ## Runtime mid-game removal entry point. Subclass overrides MUST chain to
