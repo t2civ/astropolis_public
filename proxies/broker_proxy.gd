@@ -9,8 +9,7 @@
 class_name BrokerProxy
 extends Proxy
 
-## Provides appropriate spot [MarketProxy] on request, lists futures
-## contracts, and routes futures orders to an appropriate [MarketProxy].
+## Provides appropriate spot [MarketProxy] on request.
 ##
 ## A [BrokerProxy] is created at a [BodyProxy] when it gains its first
 ## [FacilityProxy]. Server-side Broker pushes changes; data flow is

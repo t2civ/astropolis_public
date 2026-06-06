@@ -9,7 +9,7 @@
 class_name MarketProxy
 extends Proxy
 
-## Provides resource spot prices and a market for spot and futures trading.
+## Provides resource spot prices and a market for spot trading.
 ##
 ## A [BodyProxy] with a [FacilityProxy] always gains a market. At minimum, the
 ## market provides "spot" prices for relevant resources, determined either
@@ -22,11 +22,6 @@ extends Proxy
 ## All trade orders are implemented as "limit orders". Traders can specify a
 ## "market order", in effect, by specifying a permissive price and near-future
 ## expiration.[br][br]
-##
-## Markets also list futures contracts for delivery at the market [member body].
-## Futures contracts specify time of delivery (ordinal quarter) of a specific
-## resource quantity at a specific facility. They can be traded by anyone (a
-## local or remote trader) and are the means for inter-body resource trades.[br][br]
 ##
 ## Times, prices, and order quantities are integer "ticks": time in integer
 ## seconds (assumes [code]IVUnits.SECOND == 1.0[/code]), price in integer USD
@@ -47,11 +42,8 @@ extends Proxy
 ## methods are not threadsafe; non-container properties are safe.
 
 
-const FUTURES_QUARTERS := 20 ## Must match _Market constant!
-
-
 var market_id := -1  ## Index into [member ProxyBus.market_proxies].
-var body: BodyProxy ## Body of the spot market and futures contract delivery.
+var body: BodyProxy ## Body of the spot market.
 
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
@@ -106,39 +98,3 @@ func get_market(_player_id: int) -> MarketProxy:
 ## Returns the trading volume for [param type] in trade units per day, smoothed
 ## over 7 days.
 @abstract func get_spot_unit_volume(type: int) -> float
-
-
-## Returns the futures trade price for [param type] in sim units at delivery
-## [param delivery_qtr] (an ordinal quarter), or 0.0 if no price or out of the
-## quarter range. Specify [param delivery_qtr] == -1 or -2 for the lowest or
-## highest price, respectively, over the quarter range.
-@abstract func get_futures_price(type: int, delivery_qtr: int) -> float
-
-
-## Returns the futures ask price for [param type] in sim units at delivery
-## [param delivery_qtr], or 0.0 if none (see [method get_futures_price] for the
-## [param delivery_qtr] convention).
-@abstract func get_futures_ask_price(type: int, delivery_qtr: int) -> float
-
-
-## Returns the futures bid price for [param type] in sim units at delivery
-## [param delivery_qtr], or 0.0 if none (see [method get_futures_price] for the
-## [param delivery_qtr] convention).
-@abstract func get_futures_bid_price(type: int, delivery_qtr: int) -> float
-
-
-## Returns the Market-internal futures unit price for [param type] at delivery
-## [param delivery_qtr], or 0 if no price or out of the quarter range. Specify
-## [param delivery_qtr] == -1 or -2 for the lowest or highest unit price,
-## respectively, over the quarter range.
-@abstract func get_futures_unit_price(type: int, delivery_qtr: int) -> int
-
-
-## Returns the Market-internal futures ask unit price for [param type] at
-## delivery [param delivery_qtr], or 0 if none.
-@abstract func get_futures_ask_unit_price(type: int, delivery_qtr: int) -> int
-
-
-## Returns the Market-internal futures bid unit price for [param type] at
-## delivery [param delivery_qtr], or 0 if none.
-@abstract func get_futures_bid_unit_price(type: int, delivery_qtr: int) -> int
