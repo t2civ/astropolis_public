@@ -92,3 +92,22 @@ func get_market(_player_id: int) -> MarketProxy:
 ## No effect if the order was already filled or cancelled.
 @abstract func replace_spot_bid(bid_id: int, new_quantity: int, new_unit_price: int,
 		expiration: int) -> void
+
+
+## Sets (adds or replaces) this facility's futures sell (ask) order for the slot
+## specified by [param position_key], or [b]cancels[/b] if [param unit_quantity]
+## is 0. Build the key with [method Proxy.make_position_key]; party_id must be
+## this trader's facility_id. [param unit_quantity] and [param unit_price] are
+## per trade unit. A delivery_id equal to this trader's facility_id opens or
+## replaces a long (inbound) position; any other facility_id offsets an existing
+## short (outbound) position. A past ordinal_quarter (or -1) is moved up to the
+## current quarter server-side.
+@abstract func set_futures_ask(position_key: PackedInt32Array, unit_quantity: int,
+		unit_price: int) -> void
+
+
+## Bid counterpart of [method set_futures_ask]. A delivery_id other than this
+## trader's facility_id opens or grows a short (outbound) position; the trader's
+## facility_id offsets an exsiting long (inbound) position.
+@abstract func set_futures_bid(position_key: PackedInt32Array, unit_quantity: int,
+		unit_price: int) -> void

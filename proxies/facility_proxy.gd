@@ -30,6 +30,18 @@ extends Proxy
 ## threadsafe; accessing non-container properties is safe.
 
 
+## Emitted on the proxy thread when an inbound (long) futures position changes
+## (from the market). [param key] is [resource_type, ordinal_quarter,
+## delivery_id, party_id] (delivery_id == party_id == this facility_id);
+## [param value] is [quantity, total_price] in sim units, or empty if the
+## position was cleared.
+signal inbound_position_changed(key: PackedInt32Array, value: PackedFloat64Array)
+## Emitted on the proxy thread when an outbound (short) futures position
+## changes. Same payload as [signal inbound_position_changed], but with
+## delivery_id != party_id.
+signal outbound_position_changed(key: PackedInt32Array, value: PackedFloat64Array)
+
+
 ## Facility-level bit flags. FROM_SERVER bits (0 - 31) are signals from the
 ## server; FROM_PROXY bits (32 - 63) are AI commands to the server.
 enum FacilityFlags {
@@ -161,6 +173,19 @@ var body: BodyProxy  ## Hosting [BodyProxy].
 var trader: TraderProxy  ## Paired [TraderProxy]; set when TraderProxy registers.
 var joins: Array[JoinProxy] = []  ## [JoinProxy] aggregates this facility belongs to.
 var market: MarketProxy  ## Set after init. Lives on markets thread!
+
+## "Long" (inbound) futures positions keyed by the uniform position key
+## [resource_type, ordinal_quarter, delivery_id, party_id] (delivery_id ==
+## party_id == this facility_id). Values are [quantity, total_price] in sim.
+## units Server-authoritative; updated by the market — listen via [signal
+## inbound_position_changed].
+var inbound_positions: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
+## "Short" (outbound) futures positions keyed by the uniform position key
+## [resource_type, ordinal_quarter, delivery_id, party_id] (party_id == this
+## facility_id, delivery_id another facility). Values are [quantity, total_price]
+## in sim units (quantity positive). Updated by the market — listen via [signal
+## outbound_position_changed].
+var outbound_positions: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
 
 ## Body texture cached for [code]IVSelectionManager[/code] (currently the
 ## hosting body's [code]IVBody.texture_2d[/code]).
