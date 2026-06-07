@@ -94,20 +94,21 @@ func get_market(_player_id: int) -> MarketProxy:
 		expiration: int) -> void
 
 
-## Sets (adds or replaces) this facility's futures sell (ask) order for the slot
-## specified by [param position_key], or [b]cancels[/b] if [param unit_quantity]
-## is 0. Build the key with [method Proxy.make_position_key]; party_id must be
-## this trader's facility_id. [param unit_quantity] and [param unit_price] are
-## per trade unit. A delivery_id equal to this trader's facility_id opens or
-## replaces a long (inbound) position; any other facility_id offsets an existing
-## short (outbound) position. A past ordinal_quarter (or -1) is moved up to the
-## current quarter server-side.
-@abstract func set_futures_ask(position_key: PackedInt32Array, unit_quantity: int,
+## Adds, replaces, or cancels this facility's futures sell (ask) order. [param
+## position_key3 specifies the position by [resource_type, ordinal_quarter,
+## delivery_id]. Cancels if [param unit_quantity] is 0. [param unit_quantity]
+## and [param unit_price] are in trade units. A delivery_id equal to this
+## trader's facility_id opens or replaces a long (inbound) position; any other
+## facility_id offsets an existing short (outbound) position. A past
+## ordinal_quarter (or -1) is moved up to the current quarter server-side.
+@abstract func set_futures_ask(position_key3: PackedInt32Array, unit_quantity: int,
 		unit_price: int) -> void
 
 
-## Bid counterpart of [method set_futures_ask]. A delivery_id other than this
-## trader's facility_id opens or grows a short (outbound) position; the trader's
-## facility_id offsets an exsiting long (inbound) position.
-@abstract func set_futures_bid(position_key: PackedInt32Array, unit_quantity: int,
+## Adds, replaces, or cancels this facility's futures buy (bid) order. See
+## params in ask counterpart [method set_futures_ask]. A delivery_id other than
+## this trader's facility_id opens or grows a short (outbound) position; the
+## trader's facility_id offsets an exsiting long (inbound) position. A past
+## ordinal_quarter (or -1) is moved up to the current quarter server-side.
+@abstract func set_futures_bid(position_key3: PackedInt32Array, unit_quantity: int,
 		unit_price: int) -> void

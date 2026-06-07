@@ -30,16 +30,22 @@ extends Proxy
 ## threadsafe; accessing non-container properties is safe.
 
 
-## Emitted on the proxy thread when an inbound (long) futures position changes
-## (from the market). [param key] is [resource_type, ordinal_quarter,
-## delivery_id, party_id] (delivery_id == party_id == this facility_id);
-## [param value] is [quantity, total_price] in sim units, or empty if the
-## position was cleared.
-signal inbound_position_changed(key: PackedInt32Array, value: PackedFloat64Array)
-## Emitted on the proxy thread when an outbound (short) futures position
-## changes. Same payload as [signal inbound_position_changed], but with
-## delivery_id != party_id.
-signal outbound_position_changed(key: PackedInt32Array, value: PackedFloat64Array)
+## Emitted when an inbound (long) futures position changes. [param key2] is the
+## 2-element position key [resource_type, ordinal_quarter] (delivery_id and
+## party_id are this facility_id). The resuting positon in sim units (or
+## absence of a position) is represented in [member inbound_positions]. [param
+## ask] and [param bid] are the updated outstanding ask and bid [unit_quantity,
+## unit_price] in trade units. Empty array represents a cleared ask or bid.
+signal inbound_position_changed(key2: PackedInt32Array, ask: PackedInt32Array,
+		bid: PackedInt32Array)
+## Emitted when an outbound (short) futures position changes. [param key3] is
+## the 3-element position key [resource_type, ordinal_quarter, delivery_id]
+## (party_id is this facility_id). The resuting positon in sim units (or
+## absence of a position) is represented in [member inbound_positions]. [param
+## ask] and [param bid] are the updated outstanding ask and bid [unit_quantity,
+## unit_price] in trade units. Empty array represents a cleared ask or bid.
+signal outbound_position_changed(key3: PackedInt32Array, ask: PackedInt32Array,
+		bid: PackedInt32Array)
 
 
 ## Facility-level bit flags. FROM_SERVER bits (0 - 31) are signals from the
@@ -174,17 +180,14 @@ var trader: TraderProxy  ## Paired [TraderProxy]; set when TraderProxy registers
 var joins: Array[JoinProxy] = []  ## [JoinProxy] aggregates this facility belongs to.
 var market: MarketProxy  ## Set after init. Lives on markets thread!
 
-## "Long" (inbound) futures positions keyed by the uniform position key
-## [resource_type, ordinal_quarter, delivery_id, party_id] (delivery_id ==
-## party_id == this facility_id). Values are [quantity, total_price] in sim.
-## units Server-authoritative; updated by the market — listen via [signal
-## inbound_position_changed].
+## "Long" (inbound) futures positions indexed by the 2-element position key
+## [resource_type, ordinal_quarter] (delivery location is this facility). Values
+## are [quantity, total_price] in internal sim units.
 var inbound_positions: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
-## "Short" (outbound) futures positions keyed by the uniform position key
-## [resource_type, ordinal_quarter, delivery_id, party_id] (party_id == this
-## facility_id, delivery_id another facility). Values are [quantity, total_price]
-## in sim units (quantity positive). Updated by the market — listen via [signal
-## outbound_position_changed].
+## "Short" (outbound) futures positions indexed by the 3-element position key
+## [resource_type, ordinal_quarter, delivery_id], where delivery_id is
+## facility_id of the delivery destination. Values are [quantity, total_price]
+## in internal sim units.
 var outbound_positions: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
 
 ## Body texture cached for [code]IVSelectionManager[/code] (currently the
