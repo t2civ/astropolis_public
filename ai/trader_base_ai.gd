@@ -170,6 +170,8 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"_spot_bid_prices",
 	&"_spot_ask_ids",
 	&"_spot_bid_ids",
+	&"_futures_asks",
+	&"_futures_bids",
 ]
 
 
@@ -210,10 +212,23 @@ var _spot_ask_ids: PackedInt64Array
 ## resource bid_id if trader AI only has one bid per resource at a time.
 var _spot_bid_ids: PackedInt64Array
 
+## Memory of open futures asks. Indexed by 3-element position key
+## [resource_type, ordinal_quarter, delivery_id] with values [unit_quantity,
+## unit_price] in trade units. delivery_id == _facility_id if opening or
+## growing a long position, != if offsetting a short position.
+var _futures_asks: Dictionary[PackedInt32Array, PackedInt32Array] = {}
+
+## Memory of open futures bids. Indexed by 3-element position key
+## [resource_type, ordinal_quarter, delivery_id] with values [unit_quantity,
+## unit_price] in trade units. delivery_id != _facility_id if opening or
+## growing a short position, == if offsetting a long position.
+var _futures_bids: Dictionary[PackedInt32Array, PackedInt32Array] = {}
+
 # *****************************************************************************
 
 var _facility_ai: FacilityBaseAI
-var _facility: FacilityProxy  ## Paired facility proxy, cached for inventory reads.
+var _facility: FacilityProxy  # paired facility proxy
+var _facility_id: int
 
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
@@ -248,6 +263,9 @@ func bind_proxy(proxy_: Proxy) -> void:
 
 func process_ai_init() -> void:
 	_facility = proxy.facility
+	_facility.inbound_position_changed.connect(_on_facility_inbound_position_changed)
+	_facility.outbound_position_changed.connect(_on_facility_outbound_position_changed)
+	_facility_id = _facility.facility_id
 	_facility_ai = Proxy.proxy_bus.facility_ais[proxy.facility_id]
 	assert(_facility_ai, "TraderBaseAI expects facility's AI to be FacilityBaseAI")
 	_facility_ai.facility_resource_strategy_changed.connect(_on_facility_resource_strategy_changed)
@@ -407,6 +425,46 @@ func _cancel_bid(resource_type: int) -> void:
 	proxy.cancel_spot_bid(bid_id)
 
 
+## Adds, replaces, or cancels a futures sell (ask) order. See [method
+## TraderProxy.set_futures_ask] for details and params. This method updates
+## AI ask memory on the outgoing call.
+func _set_futures_ask(position_key3: PackedInt32Array, unit_quantity: int,
+		unit_price: int) -> void:
+	if unit_quantity:
+		var ask: PackedInt32Array
+		if _futures_asks.has(position_key3):
+			ask = _futures_asks[position_key3]
+		else:
+			ask.resize(2)
+			_futures_asks[position_key3] = ask
+		ask[0] = unit_quantity
+		ask[1] = unit_price
+	else:
+		_futures_asks.erase(position_key3)
+	proxy.set_futures_ask(position_key3, unit_quantity, unit_price)
+
+
+## Adds, replaces, or cancels a futures buy (bid) order. See [method
+## TraderProxy.set_futures_bid] for details and params. This method updates
+## AI bid memory on the outgoing call.
+func _set_futures_bid(position_key3: PackedInt32Array, unit_quantity: int,
+		unit_price: int) -> void:
+	if unit_quantity:
+		var bid: PackedInt32Array
+		if _futures_bids.has(position_key3):
+			bid = _futures_bids[position_key3]
+		else:
+			bid.resize(2)
+			_futures_bids[position_key3] = bid
+		bid[0] = unit_quantity
+		bid[1] = unit_price
+	else:
+		_futures_bids.erase(position_key3)
+	proxy.set_futures_bid(position_key3, unit_quantity, unit_price)
+
+
+# ****************************** INTERNAL LOGIC *******************************
+
 ## Brings our standing ask for [param resource_type] in line with the desired
 ## quantity and price, re-quoting only on material divergence (see
 ## [method _needs_requote]). A desired quantity below [constant MIN_LOT] drops
@@ -530,3 +588,33 @@ func _on_bid_updated(resource_type: int, unit_quantity: int, unit_price: int,
 	if bid_status != PARTIALLY_FILLED and bid_id == _spot_bid_ids[resource_type]:
 		_spot_bid_ids[resource_type] = -1
 		_spot_bid_prices[resource_type] = 0
+
+
+# Market update via facility. Signal has ask/bid refresh for trader memory.
+func _on_facility_inbound_position_changed(key2: PackedInt32Array, ask: PackedInt32Array,
+		bid: PackedInt32Array) -> void:
+	# inbound key is truncated
+	var key3 := key2.duplicate()
+	key3.resize(3)
+	key3[2] = _facility_id
+	if ask:
+		_futures_asks[key3] = ask
+	else:
+		_futures_asks.erase(key3)
+	if bid:
+		_futures_bids[key3] = bid
+	else:
+		_futures_bids.erase(key3)
+
+
+# Market update via facility. Signal has ask/bid refresh for trader memory.
+func _on_facility_outbound_position_changed(key3: PackedInt32Array, ask: PackedInt32Array,
+		bid: PackedInt32Array) -> void:
+	if ask:
+		_futures_asks[key3] = ask
+	else:
+		_futures_asks.erase(key3)
+	if bid:
+		_futures_bids[key3] = bid
+	else:
+		_futures_bids.erase(key3)
