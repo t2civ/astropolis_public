@@ -95,20 +95,21 @@ func get_market(_player_id: int) -> MarketProxy:
 
 
 ## Adds, replaces, or cancels this facility's futures sell (ask) order. [param
-## position_key3 specifies the position by [resource_type, ordinal_quarter,
-## delivery_id]. Cancels if [param unit_quantity] is 0. [param unit_quantity]
-## and [param unit_price] are in trade units. A delivery_id equal to this
-## trader's facility_id opens or replaces a long (inbound) position; any other
-## facility_id offsets an existing short (outbound) position. A past
-## ordinal_quarter (or -1) is moved up to the current quarter server-side.
-@abstract func set_futures_ask(position_key3: PackedInt32Array, unit_quantity: int,
+## instrument] is composed as [resource_type, ordinal_quarter, delivery_id].
+## Cancels if [param unit_quantity] is 0. [param unit_quantity] and [param
+## unit_price] are in trade units. A delivery_id equal to this trader's
+## facility_id opens or replaces a long (inbound) position; any other
+## facility_id offsets an existing short (outbound) position. If ordinal_quarter
+## is current quarter and delivery_id is same body, acts as a spot trade.
+@abstract func set_futures_ask(instrument: PackedInt32Array, unit_quantity: int,
 		unit_price: int) -> void
 
 
 ## Adds, replaces, or cancels this facility's futures buy (bid) order. See
-## params in ask counterpart [method set_futures_ask]. A delivery_id other than
-## this trader's facility_id opens or grows a short (outbound) position; the
-## trader's facility_id offsets an exsiting long (inbound) position. A past
-## ordinal_quarter (or -1) is moved up to the current quarter server-side.
-@abstract func set_futures_bid(position_key3: PackedInt32Array, unit_quantity: int,
+## [param instrument] composition and params in ask counterpart [method
+## set_futures_ask]. A delivery_id other than this trader's facility_id opens
+## or grows a short (outbound) position; the trader's facility_id offsets an
+## exsiting long (inbound) position. If ordinal_quarter is current quarter and
+## delivery_id is same body, acts as a spot trade.
+@abstract func set_futures_bid(instrument: PackedInt32Array, unit_quantity: int,
 		unit_price: int) -> void

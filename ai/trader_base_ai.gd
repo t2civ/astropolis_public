@@ -426,41 +426,49 @@ func _cancel_bid(resource_type: int) -> void:
 
 
 ## Adds, replaces, or cancels a futures sell (ask) order. See [method
-## TraderProxy.set_futures_ask] for details and params. This method updates
-## AI ask memory on the outgoing call.
-func _set_futures_ask(position_key3: PackedInt32Array, unit_quantity: int,
+## TraderProxy.set_futures_ask] for instrument composition and params. This
+## method updates AI ask memory on the outgoing call. Rejects if specified
+## ordinal_quarter < proxy.ordinal_qtr (proxy would reject if it went through
+## here).
+func _set_futures_ask(instrument: PackedInt32Array, unit_quantity: int,
 		unit_price: int) -> void:
+	if instrument[1] < proxy.ordinal_qtr:
+		return
 	if unit_quantity:
 		var ask: PackedInt32Array
-		if _futures_asks.has(position_key3):
-			ask = _futures_asks[position_key3]
+		if _futures_asks.has(instrument):
+			ask = _futures_asks[instrument]
 		else:
 			ask.resize(2)
-			_futures_asks[position_key3] = ask
+			_futures_asks[instrument] = ask
 		ask[0] = unit_quantity
 		ask[1] = unit_price
 	else:
-		_futures_asks.erase(position_key3)
-	proxy.set_futures_ask(position_key3, unit_quantity, unit_price)
+		_futures_asks.erase(instrument)
+	proxy.set_futures_ask(instrument, unit_quantity, unit_price)
 
 
 ## Adds, replaces, or cancels a futures buy (bid) order. See [method
-## TraderProxy.set_futures_bid] for details and params. This method updates
-## AI bid memory on the outgoing call.
-func _set_futures_bid(position_key3: PackedInt32Array, unit_quantity: int,
+## TraderProxy.set_futures_bid] for instrument composition and params. This
+## method updates AI bid memory on the outgoing call. Rejects if specified
+## ordinal_quarter < proxy.ordinal_qtr (proxy would reject if it went through
+## here).
+func _set_futures_bid(instrument: PackedInt32Array, unit_quantity: int,
 		unit_price: int) -> void:
+	if instrument[1] < proxy.ordinal_qtr:
+		return
 	if unit_quantity:
 		var bid: PackedInt32Array
-		if _futures_bids.has(position_key3):
-			bid = _futures_bids[position_key3]
+		if _futures_bids.has(instrument):
+			bid = _futures_bids[instrument]
 		else:
 			bid.resize(2)
-			_futures_bids[position_key3] = bid
+			_futures_bids[instrument] = bid
 		bid[0] = unit_quantity
 		bid[1] = unit_price
 	else:
-		_futures_bids.erase(position_key3)
-	proxy.set_futures_bid(position_key3, unit_quantity, unit_price)
+		_futures_bids.erase(instrument)
+	proxy.set_futures_bid(instrument, unit_quantity, unit_price)
 
 
 # ****************************** INTERNAL LOGIC *******************************
