@@ -101,8 +101,11 @@ func get_market(_player_id: int) -> MarketProxy:
 ## facility_id opens or replaces a long (inbound) position; any other
 ## facility_id offsets an existing short (outbound) position. If ordinal_quarter
 ## is current quarter and delivery_id is same body, acts as a spot trade.
+## [param delivery_market_id] is the market at the delivery facility's body; the caller
+## already holds it, since it must query that market to see available instruments.
+@warning_ignore("shadowed_variable")
 @abstract func set_futures_ask(instrument: PackedInt32Array, unit_quantity: int,
-		unit_price: int) -> void
+		unit_price: int, delivery_market_id: int) -> void
 
 
 ## Adds, replaces, or cancels this facility's futures buy (bid) order. See
@@ -111,5 +114,8 @@ func get_market(_player_id: int) -> MarketProxy:
 ## or grows a short (outbound) position; the trader's facility_id offsets an
 ## exsiting long (inbound) position. If ordinal_quarter is current quarter and
 ## delivery_id is same body, acts as a spot trade.
+## [param delivery_market_id] is the market at the delivery facility's body; the caller
+## already holds it, since it must query that market to see available instruments.
+@warning_ignore("shadowed_variable")
 @abstract func set_futures_bid(instrument: PackedInt32Array, unit_quantity: int,
-		unit_price: int) -> void
+		unit_price: int, delivery_market_id: int) -> void

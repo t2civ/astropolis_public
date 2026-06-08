@@ -426,12 +426,13 @@ func _cancel_bid(resource_type: int) -> void:
 
 
 ## Adds, replaces, or cancels a futures sell (ask) order. See [method
-## TraderProxy.set_futures_ask] for instrument composition and params. This
-## method updates AI ask memory on the outgoing call. Rejects if specified
+## TraderProxy.set_futures_ask] for instrument composition and params, including
+## [param market_id] (the market at the delivery facility's body). This method
+## updates AI ask memory on the outgoing call. Rejects if specified
 ## ordinal_quarter < proxy.ordinal_qtr (proxy would reject if it went through
 ## here).
 func _set_futures_ask(instrument: PackedInt32Array, unit_quantity: int,
-		unit_price: int) -> void:
+		unit_price: int, market_id: int) -> void:
 	if instrument[1] < proxy.ordinal_qtr:
 		return
 	if unit_quantity:
@@ -445,16 +446,17 @@ func _set_futures_ask(instrument: PackedInt32Array, unit_quantity: int,
 		ask[1] = unit_price
 	else:
 		_futures_asks.erase(instrument)
-	proxy.set_futures_ask(instrument, unit_quantity, unit_price)
+	proxy.set_futures_ask(instrument, unit_quantity, unit_price, market_id)
 
 
 ## Adds, replaces, or cancels a futures buy (bid) order. See [method
-## TraderProxy.set_futures_bid] for instrument composition and params. This
-## method updates AI bid memory on the outgoing call. Rejects if specified
+## TraderProxy.set_futures_bid] for instrument composition and params, including
+## [param market_id] (the market at the delivery facility's body). This method
+## updates AI bid memory on the outgoing call. Rejects if specified
 ## ordinal_quarter < proxy.ordinal_qtr (proxy would reject if it went through
 ## here).
 func _set_futures_bid(instrument: PackedInt32Array, unit_quantity: int,
-		unit_price: int) -> void:
+		unit_price: int, market_id: int) -> void:
 	if instrument[1] < proxy.ordinal_qtr:
 		return
 	if unit_quantity:
@@ -468,7 +470,7 @@ func _set_futures_bid(instrument: PackedInt32Array, unit_quantity: int,
 		bid[1] = unit_price
 	else:
 		_futures_bids.erase(instrument)
-	proxy.set_futures_bid(instrument, unit_quantity, unit_price)
+	proxy.set_futures_bid(instrument, unit_quantity, unit_price, market_id)
 
 
 # ****************************** INTERNAL LOGIC *******************************
