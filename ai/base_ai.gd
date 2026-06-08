@@ -61,7 +61,7 @@ func _clear_for_destruction() -> void:
 ## resolve cross-AI refs (via the [ProxyBus] AI registries) and to
 ## perform one-time AI setup. Runs again on the fresh post-load instance
 ## after a game load. Idempotent overrides required.
-@abstract func process_ai_init() -> void
+@abstract func ai_init() -> void
 
 
 ## Required override. Called once per [constant INTERVAL] during AI

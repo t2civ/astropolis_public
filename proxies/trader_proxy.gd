@@ -27,12 +27,18 @@ signal bid_updated(resource_type: int, unit_quantity: int, unit_price: int,
 
 
 var trader_id := -1  ## Index in [member ProxyBus.trader_proxies].
-var facility: FacilityProxy  ## Owning [FacilityProxy]. Immutable after init.
 var facility_id := -1  ## [member FacilityProxy.facility_id] of [member facility].
-var broker: BrokerProxy  ## Immutable after init. Lives on markets thread!
 var broker_id := -1  ## [member BrokerProxy.broker_id] of [member broker].
-var market: MarketProxy  ## May change at runtime. Lives on markets thread!
 var market_id := -1  ## [member MarketProxy.market_id] of [member market].
+
+# *****************************************************************************
+# persisted
+
+var facility: FacilityProxy  ## Owning [FacilityProxy]. Immutable after init.
+var broker: BrokerProxy  ## Immutable after init. Lives on markets thread!
+var market: MarketProxy  ## May change at runtime. Lives on markets thread!
+
+# *****************************************************************************
 
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************

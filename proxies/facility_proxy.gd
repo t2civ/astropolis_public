@@ -154,7 +154,6 @@ enum InventoryItems {
 
 var facility_id := -1  ## Index into [member ProxyBus.facility_proxies].
 var facility_class := -1  ## Facility class index. Not implemented yet.
-var trader_id := -1  ## [member TraderProxy.trader_id] of this facility's paired trader.
 ## Public-sector share of this facility, often 0.0 or 1.0, sometimes mixed.
 var public_sector: float
 ## True if this is a small focused activity (affects stats and tax treatment).
@@ -173,12 +172,18 @@ var time_horizon: float
 ## [method set_flags] to modify the proxy half.
 var flags := 0
 
+# *****************************************************************************
+# persisted
+
 var player: PlayerProxy  ## Owning [PlayerProxy].
 var polity: PlayerProxy  ## The polity of [member player].
 var body: BodyProxy  ## Hosting [BodyProxy].
 var trader: TraderProxy  ## Paired [TraderProxy]; set when TraderProxy registers.
+var trader_id := -1  ## [member TraderProxy.trader_id] of [member trader].
 var joins: Array[JoinProxy] = []  ## [JoinProxy] aggregates this facility belongs to.
 var market: MarketProxy  ## Set after init. Lives on markets thread!
+
+# *****************************************************************************
 
 ## "Long" (inbound) futures positions indexed by the 2-element position key
 ## [resource_type, ordinal_quarter] (delivery location is this facility). Values

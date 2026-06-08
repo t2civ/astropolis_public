@@ -43,7 +43,13 @@ extends Proxy
 
 
 var market_id := -1  ## Index into [member ProxyBus.market_proxies].
+
+# *****************************************************************************
+# persisted
+
 var body: BodyProxy ## Body of the spot market.
+
+# *****************************************************************************
 
 ## Top-of-book snapshot for each available futures instrument. Keys are composed as
 ## [resource_type, ordinal_quarter, delivery_id]; values are [lowest_ask_price,

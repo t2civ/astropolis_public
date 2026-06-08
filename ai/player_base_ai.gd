@@ -321,7 +321,7 @@ func bind_proxy(proxy_: Proxy) -> void:
 	proxy = proxy_ as PlayerProxy
 
 
-func process_ai_init() -> void:
+func ai_init() -> void:
 	pass
 
 

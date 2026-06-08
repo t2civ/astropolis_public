@@ -60,11 +60,12 @@ enum OperationsItems {
 
 const INTERVAL := 7.0 * IVUnits.DAY ## AI tick interval. See [constant BaseAI.INTERVAL].
 
-## ivoyager save/load category. A Proxy is rebuilt blank on load and persists
-## NONE of its own state: all "truth" re-flows from the server entity via
-## set_network_init() + dirty-sync, and resolve_proxy_refs() side effects (e.g.
-## player.add_facility(self), the assert(!joins.has(join))) stay idempotent only
-## because the rebuilt proxy is blank. Do NOT add PERSIST_PROPERTIES to a Proxy.
+## ivoyager save/load category. A Proxy persists NONE of its server data — Net
+## components and scalar fields all re-flow from the server entity via
+## set_network_init() + dirty-sync. A subclass DOES persist its cross-proxy
+## references (and the few relationship scalars a peer sets), so save/load relinks
+## the proxy graph directly instead of re-resolving it; list those in the
+## subclass's PERSIST_PROPERTIES. Never persist a Net component or entity data.
 const PERSIST_MODE := IVGlobal.PERSIST_PROCEDURAL
 
 
@@ -91,11 +92,15 @@ var gui_name := ""  ## Display name; mutable. Empty player gui_name hides from G
 ## Quarterly clock as [code]year * 4 + (quarter - 1)[/code]. Never set for a
 ## [BodyProxy] without a facility.
 var ordinal_qtr := -1
+## True once this proxy's cross-proxy refs are wired and one-time setup has run;
+## the server ticks AI only after. Proxy-thread state.
+var proxy_ready := false
 
 
 @warning_ignore_start("unused_private_class_variable") # used by subclasses
 var _dirty := 0
-var _refs_resolved := false
+# Refs in place (resolved on new game/runtime; pre-set on load — save relinked them).
+var _refs_wired := false
 @warning_ignore_restore("unused_private_class_variable")
 
 
@@ -144,6 +149,14 @@ func remove() -> void:
 ## Override to null every outgoing Proxy/Resource ref. Both sides of a
 ## 2-cycle should clear — redundant on success, robust under refactoring.
 func _clear_for_destruction() -> void:
+	pass
+
+
+## Called once by ProxyServer when this proxy becomes ready (cross-proxy refs
+## wired). Override to derive non-ref state from those refs (e.g. a cached
+## texture from the hosting body). Runs again on the fresh post-load instance;
+## idempotent overrides required.
+func _on_ready() -> void:
 	pass
 
 

@@ -261,7 +261,7 @@ func bind_proxy(proxy_: Proxy) -> void:
 	proxy.bid_updated.connect(_on_bid_updated)
 
 
-func process_ai_init() -> void:
+func ai_init() -> void:
 	_facility = proxy.facility
 	_facility.inbound_position_changed.connect(_on_facility_inbound_position_changed)
 	_facility.outbound_position_changed.connect(_on_facility_outbound_position_changed)

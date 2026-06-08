@@ -34,9 +34,12 @@ extends Proxy
 var body_id := -1  ## Index into [member ProxyBus.body_proxies].
 var body_flags := 0  ## Body flags from [enum IVBody.BodyFlags].
 var solar_occlusion: float  ## Average solar irradiance occlusion at this body.
+
+# *****************************************************************************
+# persisted
+
 var is_satellites := false  ## True while this body has at least one satellite.
 var is_facilities := false  ## True while this body hosts at least one facility.
-
 ## Parent body, or null for the top body only.
 var parent: BodyProxy
 ## Direct satellite bodies, keyed by name. Resizable container — not threadsafe!
@@ -45,6 +48,8 @@ var satellites: Dictionary[StringName, BodyProxy]
 var facilities: Array[Proxy] = []
 ## Null until first facility added.
 var broker: BrokerProxy
+
+# *****************************************************************************
 
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************

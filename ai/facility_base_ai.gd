@@ -290,7 +290,7 @@ func bind_proxy(proxy_: Proxy) -> void:
 	proxy = proxy_ as FacilityProxy
 
 
-func process_ai_init() -> void:
+func ai_init() -> void:
 	_player_ai = Proxy.proxy_bus.player_ais[proxy.player.player_id]
 	assert(_player_ai, "FacilityBaseAI expects player's AI to be PlayerBaseAI")
 	_player_ai.global_strategy_changed.connect(_on_player_global_strategy_changed)

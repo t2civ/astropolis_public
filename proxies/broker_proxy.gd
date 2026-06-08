@@ -21,10 +21,16 @@ extends Proxy
 const MAX_MARKETS_PER_BODY := 5
 
 var broker_id := -1  ## Index into [member ProxyBus.broker_proxies].
+
+# *****************************************************************************
+# persisted
+
 var body: BodyProxy  ## Hosting [BodyProxy]. Immutable post-init.
 ## Spot [MarketProxy]s at this Broker's body, indexed by routing slot;
 ## slot 0 is the default.
 var markets: Array[MarketProxy]
+
+# *****************************************************************************
 
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
