@@ -45,10 +45,12 @@ extends Proxy
 var market_id := -1  ## Index into [member ProxyBus.market_proxies].
 var body: BodyProxy ## Body of the spot market.
 
-## TODO: Futures instruments available here. Instrument keys are composed as
-## [resource_type, ordinal_quarter, delivery_id]. Values are [lowest_ask_price,
-## lowest_ask_quantity, highest_bid_price, highest_bid_quantity].
-var futures_instruments: Dictionary[PackedInt32Array, PackedFloat64Array]
+## Top-of-book snapshot for each available futures instrument. Keys are composed as
+## [resource_type, ordinal_quarter, delivery_id]; values are [lowest_ask_price,
+## lowest_ask_quantity, highest_bid_price, highest_bid_quantity], all in trade units.
+## An instrument is present iff it currently has at least one ask or bid; a side with
+## no orders has price and quantity 0. Server-maintained and read-only here.
+var futures_instruments: Dictionary[PackedInt32Array, PackedInt32Array]
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
 
