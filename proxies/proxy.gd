@@ -13,7 +13,7 @@ extends RefCounted
 ##
 ## All GUI and in-game AI interaction with game internals goes through a
 ## [Proxy]. Subclasses ([FacilityProxy], [PlayerProxy], [BodyProxy],
-## [JoinProxy], [TraderProxy], [MarketProxy], [BrokerProxy]) declare the
+## [JoinProxy], [TraderProxy], [MarketProxy]) declare the
 ## API. Sync plumbing and concrete instantiation live on server-side entities.
 ##
 ## WARNING: Lives on the proxy thread. Containers and many methods are not

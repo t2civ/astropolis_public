@@ -13,9 +13,8 @@ extends Proxy
 ## facilities and aggregating their stats.
 ##
 ## Server-side Body aggregates component data from its facilities and exposes
-## stratum composition (atmosphere, surface, subsurface). It gains a
-## [BrokerProxy] when at least one facility is present; the broker gains a
-## spot [MarketProxy] when 2+ facilities are present.
+## stratum composition (atmosphere, surface, subsurface). It gains a spot
+## [MarketProxy] when it has a facility.
 ##
 ## Indexed getters here (notably the per-stratum [code]get_stratum_*[/code]
 ## reads) are defensive: an out-of-range index returns a safe default. See
@@ -30,6 +29,8 @@ extends Proxy
 ## WARNING: Lives on the proxy thread. Containers and many methods are not
 ## threadsafe; accessing non-container properties is safe.
 
+
+const MAX_MARKETS_PER_BODY := 5 ## Must match the server-side Body constant.
 
 var body_id := -1  ## Index into [member ProxyBus.body_proxies].
 var body_flags := 0  ## Body flags from [enum IVBody.BodyFlags].
@@ -46,8 +47,8 @@ var parent: BodyProxy
 var satellites: Dictionary[StringName, BodyProxy]
 ## Facilities at this body. Resizable container — not threadsafe!
 var facilities: Array[Proxy] = []
-## Null until first facility added.
-var broker: BrokerProxy
+## Spot markets at this body, indexed by routing slot; slot 0 is the default.
+var markets: Array[MarketProxy]
 
 # *****************************************************************************
 
@@ -58,7 +59,8 @@ func _clear_for_destruction() -> void:
 	parent = null
 	satellites.clear()
 	facilities.clear()
-	broker = null
+	for i in MAX_MARKETS_PER_BODY:
+		markets[i] = null
 
 
 # ********************************* PROXY API *********************************
@@ -80,8 +82,8 @@ func get_facilities() -> Array[Proxy]:
 	return facilities
 
 
-func get_market(player_id: int) -> MarketProxy:
-	return broker.get_market(player_id) if broker else null
+func get_market(_player_id: int) -> MarketProxy:
+	return markets[0] if markets else null
 
 
 # Strata. The composition layers live on the server.

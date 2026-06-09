@@ -277,7 +277,7 @@ func ai_init() -> void:
 ## (authored by the facility, translated and stored on change). The strategy's def
 ## selects the executor branch: two-sided maker vs. one-sided facility support.
 func process_ai_interval(_delta: float) -> void:
-	var market := proxy.market
+	var market := proxy.primary_market
 	if !market:
 		return
 	var time: float = _times[0]

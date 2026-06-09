@@ -12,7 +12,7 @@ extends Proxy
 ## [TraderProxy] buys and sells resources for a specific [FacilityProxy].
 ##
 ## A trader is paired 1-to-1 with a facility and trades on its behalf via the
-## [BrokerProxy] at the facility's body.
+## spot [MarketProxy] at the facility's body.
 ##
 ## To modify AI, see [BaseAI] and the [code]*_base_ai.gd[/code] files.
 ##
@@ -35,16 +35,15 @@ signal futures_positions_changed(position_key: PackedInt32Array, ask: PackedInt3
 
 
 var trader_id := -1  ## Index in [member ProxyBus.trader_proxies].
+var player_id := -1  ## [member PlayerProxy.player_id] of the owning facility's player.
 var facility_id := -1  ## [member FacilityProxy.facility_id] of [member facility].
-var broker_id := -1  ## [member BrokerProxy.broker_id] of [member broker].
-var market_id := -1  ## [member MarketProxy.market_id] of [member market].
+var primary_market_id := -1  ## [member MarketProxy.market_id] of [member primary_market].
 
 # *****************************************************************************
 # persisted
 
 var facility: FacilityProxy  ## Owning [FacilityProxy]. Immutable after init.
-var broker: BrokerProxy  ## Immutable after init. Lives on markets thread!
-var market: MarketProxy  ## May change at runtime. Lives on markets thread!
+var primary_market: MarketProxy  ## May change at runtime. Lives on markets thread!
 
 # *****************************************************************************
 
@@ -64,15 +63,14 @@ func _init() -> void:
 func _clear_for_destruction() -> void:
 	# Breaks the FacilityProxy.trader ↔ TraderProxy.facility 2-cycle.
 	facility = null
-	broker = null
-	market = null
+	primary_market = null
 
 
 # ***************************** THREAD-SAFE READ ******************************
 
-## Returns this trader's [MarketProxy]. Mutable but always exists after init.
+## Returns this trader's primary [MarketProxy]. Mutable but always exists after init.
 func get_market(_player_id: int) -> MarketProxy:
-	return market
+	return primary_market
 
 
 # ******************************** AI METHODS *********************************

@@ -163,7 +163,7 @@ var body: BodyProxy  ## Hosting [BodyProxy].
 var trader: TraderProxy  ## Paired [TraderProxy]; set when TraderProxy registers.
 var trader_id := -1  ## [member TraderProxy.trader_id] of [member trader].
 var joins: Array[JoinProxy] = []  ## [JoinProxy] aggregates this facility belongs to.
-var market: MarketProxy  ## Set after init. Lives on markets thread!
+var primary_market: MarketProxy  ## Set after init. Lives on markets thread!
 
 # *****************************************************************************
 
@@ -180,7 +180,7 @@ func _clear_for_destruction() -> void:
 	polity = null
 	trader = null
 	joins.clear()
-	market = null
+	primary_market = null
 	texture_2d = null
 
 
@@ -435,8 +435,8 @@ func get_flags() -> int:
 @abstract func get_population_migration_pressure(population_type: int) -> float
 
 
-## Returns this facility's spot [MarketProxy], or null if not yet set.
-## [param _player_id] is unused for direct-routed facilities; the per-player
-## sanctions routing happens at the Broker layer.
+## Returns this facility's primary spot [MarketProxy], or null if not yet set.
+## [param _player_id] is unused for now; per-player embargo routing will use it
+## later.
 func get_market(_player_id: int) -> MarketProxy:
-	return market
+	return primary_market

@@ -35,7 +35,6 @@ var player_proxies: Array[PlayerProxy] ## [PlayerProxy]s indexed by player_id; n
 var join_proxies: Array[JoinProxy] ## [JoinProxy]s indexed by join_id; nulls possible.
 var trader_proxies: Array[TraderProxy] ## [TraderProxy]s indexed by trader_id; nulls possible.
 var market_proxies: Array[MarketProxy] ## [MarketProxy]s indexed by market_id; nulls possible.
-var broker_proxies: Array[BrokerProxy] ## [BrokerProxy]s indexed by broker_id; nulls possible.
 
 # ProxyServer maintains these AI registries too (proxies never touch them; an AI
 # finds a related AI here by entity id).
