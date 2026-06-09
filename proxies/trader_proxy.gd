@@ -24,17 +24,13 @@ signal ask_updated(resource_type: int, unit_quantity: int, unit_price: int,
 		ask_id: int, ask_status: TradeOrderStatus)
 signal bid_updated(resource_type: int, unit_quantity: int, unit_price: int,
 		bid_id: int, bid_status: TradeOrderStatus)
-## Emitted when an inbound (long) futures position changes. [param position_key]
-## is the 3-element key [resource_type, ordinal_quarter, body_id] (the delivery
-## body). The resulting position in sim units (or its absence) is in [member
-## inbound_positions]. [param ask] and [param bid] are the updated outstanding ask
-## and bid [unit_quantity, unit_price] in trade units; an empty array is a cleared
-## ask or bid.
-signal inbound_position_changed(position_key: PackedInt32Array, ask: PackedInt32Array,
-		bid: PackedInt32Array)
-## Emitted when an outbound (short) futures position changes. Params as in
-## [signal inbound_position_changed], but the position is in [member outbound_positions].
-signal outbound_position_changed(position_key: PackedInt32Array, ask: PackedInt32Array,
+## Emitted when a futures position changes. [param position_key] is the 3-element
+## key [resource_type, ordinal_quarter, body_id] (the delivery body). The resulting
+## position in sim units (or its absence) is in [member futures_positions]; the
+## quantity sign gives the side (+ long, − short). [param ask] and [param bid] are
+## the updated outstanding ask and bid [unit_quantity, unit_price] in trade units;
+## an empty array is a cleared ask or bid.
+signal futures_positions_changed(position_key: PackedInt32Array, ask: PackedInt32Array,
 		bid: PackedInt32Array)
 
 
@@ -52,14 +48,11 @@ var market: MarketProxy  ## May change at runtime. Lives on markets thread!
 
 # *****************************************************************************
 
-## "Long" (inbound) futures positions indexed by the 3-element position key
-## [resource_type, ordinal_quarter, body_id] (the delivery body). Values are
-## [signed_quantity, total_price] in internal sim units (quantity > 0).
-var inbound_positions: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
-## "Short" (outbound) futures positions, same key shape as [member
-## inbound_positions]. Values are [signed_quantity, total_price] in internal sim
-## units (quantity < 0).
-var outbound_positions: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
+## Futures positions indexed by the 3-element position key [resource_type,
+## ordinal_quarter, body_id] (the delivery body). Values are [signed_quantity,
+## total_price] in internal sim units; the quantity sign gives the side (+ long /
+## pick up at the body, − short / drop off).
+var futures_positions: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
 
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************

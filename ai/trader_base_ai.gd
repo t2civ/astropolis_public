@@ -262,8 +262,7 @@ func bind_proxy(proxy_: Proxy) -> void:
 
 func ai_init() -> void:
 	_facility = proxy.facility
-	proxy.inbound_position_changed.connect(_on_position_changed)
-	proxy.outbound_position_changed.connect(_on_position_changed)
+	proxy.futures_positions_changed.connect(_on_futures_positions_changed)
 	_facility_ai = Proxy.proxy_bus.facility_ais[proxy.facility_id]
 	assert(_facility_ai, "TraderBaseAI expects facility's AI to be FacilityBaseAI")
 	_facility_ai.facility_resource_strategy_changed.connect(_on_facility_resource_strategy_changed)
@@ -611,9 +610,8 @@ func _on_bid_updated(resource_type: int, unit_quantity: int, unit_price: int,
 
 
 # Mirrors the trader's current ask/bid (carried in every position notification) into
-# futures order memory, keyed by [resource_type, ordinal_quarter, body_id]. Inbound and
-# outbound share this; the memory is side-agnostic.
-func _on_position_changed(position_key: PackedInt32Array, ask: PackedInt32Array,
+# futures order memory, keyed by [resource_type, ordinal_quarter, body_id].
+func _on_futures_positions_changed(position_key: PackedInt32Array, ask: PackedInt32Array,
 		bid: PackedInt32Array) -> void:
 	if ask:
 		_futures_asks[position_key] = ask
