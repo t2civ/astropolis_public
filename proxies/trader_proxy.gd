@@ -24,6 +24,18 @@ signal ask_updated(resource_type: int, unit_quantity: int, unit_price: int,
 		ask_id: int, ask_status: TradeOrderStatus)
 signal bid_updated(resource_type: int, unit_quantity: int, unit_price: int,
 		bid_id: int, bid_status: TradeOrderStatus)
+## Emitted when an inbound (long) futures position changes. [param position_key]
+## is the 3-element key [resource_type, ordinal_quarter, body_id] (the delivery
+## body). The resulting position in sim units (or its absence) is in [member
+## inbound_positions]. [param ask] and [param bid] are the updated outstanding ask
+## and bid [unit_quantity, unit_price] in trade units; an empty array is a cleared
+## ask or bid.
+signal inbound_position_changed(position_key: PackedInt32Array, ask: PackedInt32Array,
+		bid: PackedInt32Array)
+## Emitted when an outbound (short) futures position changes. Params as in
+## [signal inbound_position_changed], but the position is in [member outbound_positions].
+signal outbound_position_changed(position_key: PackedInt32Array, ask: PackedInt32Array,
+		bid: PackedInt32Array)
 
 
 var trader_id := -1  ## Index in [member ProxyBus.trader_proxies].
@@ -39,6 +51,15 @@ var broker: BrokerProxy  ## Immutable after init. Lives on markets thread!
 var market: MarketProxy  ## May change at runtime. Lives on markets thread!
 
 # *****************************************************************************
+
+## "Long" (inbound) futures positions indexed by the 3-element position key
+## [resource_type, ordinal_quarter, body_id] (the delivery body). Values are
+## [signed_quantity, total_price] in internal sim units (quantity > 0).
+var inbound_positions: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
+## "Short" (outbound) futures positions, same key shape as [member
+## inbound_positions]. Values are [signed_quantity, total_price] in internal sim
+## units (quantity < 0).
+var outbound_positions: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
 
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
@@ -100,28 +121,24 @@ func get_market(_player_id: int) -> MarketProxy:
 		expiration: int) -> void
 
 
-## Adds, replaces, or cancels this facility's futures sell (ask) order. [param
-## instrument] is composed as [resource_type, ordinal_quarter, delivery_id].
-## Cancels if [param unit_quantity] is 0. [param unit_quantity] and [param
-## unit_price] are in trade units. A delivery_id equal to this trader's
-## facility_id opens or replaces a long (inbound) position; any other
-## facility_id offsets an existing short (outbound) position. If ordinal_quarter
-## is current quarter and delivery_id is same body, acts as a spot trade.
-## [param delivery_market_id] is the market at the delivery facility's body; the caller
-## already holds it, since it must query that market to see available instruments.
+## Adds, replaces, or cancels this trader's futures sell (ask) order. [param
+## instrument] is composed as [resource_type, ordinal_quarter]; the delivery body
+## is the body of [param delivery_market_id]. Cancels if [param unit_quantity] is
+## 0. [param unit_quantity] and [param unit_price] are in trade units. The
+## resulting position side (long/short) follows from matching; a trader may hold
+## either side at any delivery body and may flip. If ordinal_quarter is the
+## current quarter, acts as a spot trade. [param delivery_market_id] is the market
+## at the delivery body; the caller already holds it, since it must query that
+## market to see available instruments.
 @warning_ignore("shadowed_variable")
 @abstract func set_futures_ask(instrument: PackedInt32Array, unit_quantity: int,
 		unit_price: int, delivery_market_id: int) -> void
 
 
-## Adds, replaces, or cancels this facility's futures buy (bid) order. See
-## [param instrument] composition and params in ask counterpart [method
-## set_futures_ask]. A delivery_id other than this trader's facility_id opens
-## or grows a short (outbound) position; the trader's facility_id offsets an
-## exsiting long (inbound) position. If ordinal_quarter is current quarter and
-## delivery_id is same body, acts as a spot trade.
-## [param delivery_market_id] is the market at the delivery facility's body; the caller
-## already holds it, since it must query that market to see available instruments.
+## Adds, replaces, or cancels this trader's futures buy (bid) order. See [param
+## instrument] composition and params in the ask counterpart [method
+## set_futures_ask]. The resulting position side (long/short) follows from
+## matching; a trader may hold either side at any delivery body and may flip.
 @warning_ignore("shadowed_variable")
 @abstract func set_futures_bid(instrument: PackedInt32Array, unit_quantity: int,
 		unit_price: int, delivery_market_id: int) -> void

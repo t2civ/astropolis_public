@@ -212,23 +212,22 @@ var _spot_ask_ids: PackedInt64Array
 ## resource bid_id if trader AI only has one bid per resource at a time.
 var _spot_bid_ids: PackedInt64Array
 
-## Memory of open futures asks. Indexed by 3-element position key
-## [resource_type, ordinal_quarter, delivery_id] with values [unit_quantity,
-## unit_price] in trade units. delivery_id == _facility_id if opening or
-## growing a long position, != if offsetting a short position.
+## Memory of open futures asks. Indexed by 3-element key [resource_type,
+## ordinal_quarter, body_id] (the delivery body) with values [unit_quantity,
+## unit_price] in trade units. Mirrors the market's per-instrument ask, refreshed
+## via position notifications.
 var _futures_asks: Dictionary[PackedInt32Array, PackedInt32Array] = {}
 
-## Memory of open futures bids. Indexed by 3-element position key
-## [resource_type, ordinal_quarter, delivery_id] with values [unit_quantity,
-## unit_price] in trade units. delivery_id != _facility_id if opening or
-## growing a short position, == if offsetting a long position.
+## Memory of open futures bids. Indexed by 3-element key [resource_type,
+## ordinal_quarter, body_id] (the delivery body) with values [unit_quantity,
+## unit_price] in trade units. Mirrors the market's per-instrument bid, refreshed
+## via position notifications.
 var _futures_bids: Dictionary[PackedInt32Array, PackedInt32Array] = {}
 
 # *****************************************************************************
 
 var _facility_ai: FacilityBaseAI
 var _facility: FacilityProxy  # paired facility proxy
-var _facility_id: int
 
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
@@ -263,9 +262,8 @@ func bind_proxy(proxy_: Proxy) -> void:
 
 func ai_init() -> void:
 	_facility = proxy.facility
-	_facility.inbound_position_changed.connect(_on_facility_inbound_position_changed)
-	_facility.outbound_position_changed.connect(_on_facility_outbound_position_changed)
-	_facility_id = _facility.facility_id
+	proxy.inbound_position_changed.connect(_on_position_changed)
+	proxy.outbound_position_changed.connect(_on_position_changed)
 	_facility_ai = Proxy.proxy_bus.facility_ais[proxy.facility_id]
 	assert(_facility_ai, "TraderBaseAI expects facility's AI to be FacilityBaseAI")
 	_facility_ai.facility_resource_strategy_changed.connect(_on_facility_resource_strategy_changed)
@@ -427,7 +425,7 @@ func _cancel_bid(resource_type: int) -> void:
 
 ## Adds, replaces, or cancels a futures sell (ask) order. See [method
 ## TraderProxy.set_futures_ask] for instrument composition and params, including
-## [param market_id] (the market at the delivery facility's body). This method
+## [param market_id] (the market at the delivery body). This method
 ## updates AI ask memory on the outgoing call. Rejects if specified
 ## ordinal_quarter < proxy.ordinal_qtr (proxy would reject if it went through
 ## here).
@@ -435,23 +433,24 @@ func _set_futures_ask(instrument: PackedInt32Array, unit_quantity: int,
 		unit_price: int, market_id: int) -> void:
 	if instrument[1] < proxy.ordinal_qtr:
 		return
+	var mem_key := _futures_memory_key(instrument, market_id)
 	if unit_quantity:
 		var ask: PackedInt32Array
-		if _futures_asks.has(instrument):
-			ask = _futures_asks[instrument]
+		if _futures_asks.has(mem_key):
+			ask = _futures_asks[mem_key]
 		else:
 			ask.resize(2)
-			_futures_asks[instrument] = ask
+			_futures_asks[mem_key] = ask
 		ask[0] = unit_quantity
 		ask[1] = unit_price
 	else:
-		_futures_asks.erase(instrument)
+		_futures_asks.erase(mem_key)
 	proxy.set_futures_ask(instrument, unit_quantity, unit_price, market_id)
 
 
 ## Adds, replaces, or cancels a futures buy (bid) order. See [method
 ## TraderProxy.set_futures_bid] for instrument composition and params, including
-## [param market_id] (the market at the delivery facility's body). This method
+## [param market_id] (the market at the delivery body). This method
 ## updates AI bid memory on the outgoing call. Rejects if specified
 ## ordinal_quarter < proxy.ordinal_qtr (proxy would reject if it went through
 ## here).
@@ -459,18 +458,29 @@ func _set_futures_bid(instrument: PackedInt32Array, unit_quantity: int,
 		unit_price: int, market_id: int) -> void:
 	if instrument[1] < proxy.ordinal_qtr:
 		return
+	var mem_key := _futures_memory_key(instrument, market_id)
 	if unit_quantity:
 		var bid: PackedInt32Array
-		if _futures_bids.has(instrument):
-			bid = _futures_bids[instrument]
+		if _futures_bids.has(mem_key):
+			bid = _futures_bids[mem_key]
 		else:
 			bid.resize(2)
-			_futures_bids[instrument] = bid
+			_futures_bids[mem_key] = bid
 		bid[0] = unit_quantity
 		bid[1] = unit_price
 	else:
-		_futures_bids.erase(instrument)
+		_futures_bids.erase(mem_key)
 	proxy.set_futures_bid(instrument, unit_quantity, unit_price, market_id)
+
+
+# Futures order memory is keyed by the delivery body; resolve it from the delivery market.
+func _futures_memory_key(instrument: PackedInt32Array, market_id: int) -> PackedInt32Array:
+	var market_proxy: MarketProxy = Proxy.proxy_bus.market_proxies[market_id]
+	assert(market_proxy and market_proxy.body, "delivery market/body not resolved")
+	var key := instrument.duplicate()
+	key.resize(3)
+	key[2] = market_proxy.body.body_id
+	return key
 
 
 # ****************************** INTERNAL LOGIC *******************************
@@ -600,31 +610,16 @@ func _on_bid_updated(resource_type: int, unit_quantity: int, unit_price: int,
 		_spot_bid_prices[resource_type] = 0
 
 
-# Market update via facility. Signal has ask/bid refresh for trader memory.
-func _on_facility_inbound_position_changed(key2: PackedInt32Array, ask: PackedInt32Array,
-		bid: PackedInt32Array) -> void:
-	# inbound key is truncated
-	var key3 := key2.duplicate()
-	key3.resize(3)
-	key3[2] = _facility_id
-	if ask:
-		_futures_asks[key3] = ask
-	else:
-		_futures_asks.erase(key3)
-	if bid:
-		_futures_bids[key3] = bid
-	else:
-		_futures_bids.erase(key3)
-
-
-# Market update via facility. Signal has ask/bid refresh for trader memory.
-func _on_facility_outbound_position_changed(key3: PackedInt32Array, ask: PackedInt32Array,
+# Mirrors the trader's current ask/bid (carried in every position notification) into
+# futures order memory, keyed by [resource_type, ordinal_quarter, body_id]. Inbound and
+# outbound share this; the memory is side-agnostic.
+func _on_position_changed(position_key: PackedInt32Array, ask: PackedInt32Array,
 		bid: PackedInt32Array) -> void:
 	if ask:
-		_futures_asks[key3] = ask
+		_futures_asks[position_key] = ask
 	else:
-		_futures_asks.erase(key3)
+		_futures_asks.erase(position_key)
 	if bid:
-		_futures_bids[key3] = bid
+		_futures_bids[position_key] = bid
 	else:
-		_futures_bids.erase(key3)
+		_futures_bids.erase(position_key)

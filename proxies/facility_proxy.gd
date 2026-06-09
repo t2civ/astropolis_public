@@ -30,24 +30,6 @@ extends Proxy
 ## threadsafe; accessing non-container properties is safe.
 
 
-## Emitted when an inbound (long) futures position changes. [param key2] is the
-## 2-element position key [resource_type, ordinal_quarter] (delivery_id and
-## party_id are this facility_id). The resuting positon in sim units (or
-## absence of a position) is represented in [member inbound_positions]. [param
-## ask] and [param bid] are the updated outstanding ask and bid [unit_quantity,
-## unit_price] in trade units. Empty array represents a cleared ask or bid.
-signal inbound_position_changed(key2: PackedInt32Array, ask: PackedInt32Array,
-		bid: PackedInt32Array)
-## Emitted when an outbound (short) futures position changes. [param key3] is
-## the 3-element position key [resource_type, ordinal_quarter, delivery_id]
-## (party_id is this facility_id). The resuting positon in sim units (or
-## absence of a position) is represented in [member inbound_positions]. [param
-## ask] and [param bid] are the updated outstanding ask and bid [unit_quantity,
-## unit_price] in trade units. Empty array represents a cleared ask or bid.
-signal outbound_position_changed(key3: PackedInt32Array, ask: PackedInt32Array,
-		bid: PackedInt32Array)
-
-
 ## Facility-level bit flags. FROM_SERVER bits (0 - 31) are signals from the
 ## server; FROM_PROXY bits (32 - 63) are AI commands to the server.
 enum FacilityFlags {
@@ -184,16 +166,6 @@ var joins: Array[JoinProxy] = []  ## [JoinProxy] aggregates this facility belong
 var market: MarketProxy  ## Set after init. Lives on markets thread!
 
 # *****************************************************************************
-
-## "Long" (inbound) futures positions indexed by the 2-element position key
-## [resource_type, ordinal_quarter] (delivery location is this facility). Values
-## are [quantity, total_price] in internal sim units.
-var inbound_positions: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
-## "Short" (outbound) futures positions indexed by the 3-element position key
-## [resource_type, ordinal_quarter, delivery_id], where delivery_id is
-## facility_id of the delivery destination. Values are [quantity, total_price]
-## in internal sim units.
-var outbound_positions: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
 
 ## Body texture cached for [code]IVSelectionManager[/code] (currently the
 ## hosting body's [code]IVBody.texture_2d[/code]).

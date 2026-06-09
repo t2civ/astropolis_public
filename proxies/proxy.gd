@@ -112,20 +112,6 @@ static func get_proxy_by_name(proxy_name: StringName) -> Proxy:
 	return proxy_bus.proxies_by_name.get(proxy_name)
 
 
-## Builds a futures position key [resource_type, ordinal_quarter, delivery_id,
-## party_id]. delivery_id == party_id denotes a long (inbound) position; !=
-## denotes a short (outbound) position.
-static func make_position_key(resource_type: int, ordinal_quarter: int, delivery_id: int,
-		party_id: int) -> PackedInt32Array:
-	var key := PackedInt32Array()
-	key.resize(4)
-	key[0] = resource_type
-	key[1] = ordinal_quarter
-	key[2] = delivery_id
-	key[3] = party_id
-	return key
-
-
 static func _on_base_class_instantiated() -> void:
 	n_resources = _table_n_rows[&"resources"]
 
