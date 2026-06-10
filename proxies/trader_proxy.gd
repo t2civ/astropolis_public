@@ -20,10 +20,6 @@ extends Proxy
 ## threadsafe; accessing non-container properties is safe.
 
 
-signal ask_updated(resource_type: int, unit_quantity: int, unit_price: int,
-		ask_id: int, ask_status: TradeOrderStatus)
-signal bid_updated(resource_type: int, unit_quantity: int, unit_price: int,
-		bid_id: int, bid_status: TradeOrderStatus)
 ## Emitted when a futures position changes. [param position_key] is the 3-element
 ## key [resource_type, ordinal_quarter, body_id] (the delivery body). [param value] is
 ## the resulting position [signed_unit_quantity, unit_price] in trade units (empty if
@@ -75,42 +71,6 @@ func get_market() -> MarketProxy:
 
 # ******************************** AI METHODS *********************************
 # Call on proxy thread.
-
-## Adds a spot sell order. [param unit_quantity] and [param unit_price] are
-## with respect to trade unit. [param expiration] is epoch day.
-@abstract func spot_ask(resource_type: int, unit_quantity: int, unit_price: int,
-		expiration: int) -> void
-
-
-## Removes a spot sell order if not processed already.
-@abstract func cancel_spot_ask(ask_id: int) -> void
-
-
-## Reprices and resizes a resting spot sell order in place, keeping its id.
-## [param new_quantity] becomes the new unfilled quantity and [param new_unit_price]
-## the new price (both with respect to trade unit); [param expiration] is epoch day.
-## No effect if the order was already filled or cancelled.
-@abstract func replace_spot_ask(ask_id: int, new_quantity: int, new_unit_price: int,
-		expiration: int) -> void
-
-
-## Adds a spot buy order. [param unit_quantity] and [param unit_price] are
-## with respect to trade unit. [param expiration] is epoch day.
-@abstract func spot_bid(resource_type: int, unit_quantity: int, unit_price: int,
-		expiration: int) -> void
-
-
-## Removes a spot buy order if not processed already.
-@abstract func cancel_spot_bid(bid_id: int) -> void
-
-
-## Reprices and resizes a resting spot buy order in place, keeping its id.
-## [param new_quantity] becomes the new unfilled quantity and [param new_unit_price]
-## the new price (both with respect to trade unit); [param expiration] is epoch day.
-## No effect if the order was already filled or cancelled.
-@abstract func replace_spot_bid(bid_id: int, new_quantity: int, new_unit_price: int,
-		expiration: int) -> void
-
 
 ## Adds, replaces, or cancels this trader's futures sell (ask) order. [param
 ## instrument] is composed as [resource_type, ordinal_quarter]; the delivery body

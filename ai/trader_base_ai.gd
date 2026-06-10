@@ -104,8 +104,6 @@ enum ResourceStrategies {
 }
 
 
-## Epoch-day conversion: market order expirations are in integer days.
-const DAY := IVUnits.DAY
 ## Quote offset from the reference price: asks are placed this fraction below it
 ## and bids this fraction above, so a producer's ask and a consumer's bid cross.
 const SPREAD := 0.02
@@ -114,10 +112,6 @@ const MIN_LOT := 1
 ## Market-maker bid ceiling above the trade-reserve target, in trade units; the maker
 ## buys up toward target + this band and sells down to its operational reserve.
 const MM_BAND_LOTS := 2
-## Standing-order lifetime in AI intervals. A backstop only: the AI re-evaluates
-## each interval and re-quotes on material divergence, and the market reports
-## CANCELLED on expiry so memory stays correct.
-const ORDER_LIFETIME := 4
 ## Re-quote a standing order when its price drifts beyond this fraction of its price.
 const PRICE_TOLERANCE := 0.05
 ## Re-quote a standing order when its desired quantity drifts beyond this fraction.
@@ -138,8 +132,8 @@ static var trader_strategy_defs: Array[Dictionary] = [
 ## Boolean switches select the executor branch: [code]two_sided[/code] (maker
 ## quotes both sides), [code]sell_above_reserve[/code], [code]buy_to_reserve[/code].
 ## Tuning keys ([code]spread[/code], [code]min_lot[/code], [code]band_lots[/code],
-## [code]price_tol[/code], [code]qty_tol[/code], [code]order_lifetime[/code]) may
-## override the class-constant defaults. An empty entry trades nothing.
+## [code]price_tol[/code], [code]qty_tol[/code]) may override the class-constant
+## defaults. An empty entry trades nothing.
 static var resource_strategy_defs: Array[Dictionary] = [
 	{&"sell_above_reserve": true, &"buy_to_reserve": true}, # NEUTRAL — maintain at reserve
 	{}, # JUST_IN_TIME
@@ -164,12 +158,6 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"_next_interval",
 	&"trader_strategy",
 	&"resource_strategies",
-	&"_spot_ask_totals",
-	&"_spot_bid_totals",
-	&"_spot_ask_prices",
-	&"_spot_bid_prices",
-	&"_spot_ask_ids",
-	&"_spot_bid_ids",
 	&"_futures_asks",
 	&"_futures_bids",
 ]
@@ -193,23 +181,6 @@ var trader_strategy := 0
 ## Per-resource strategies. See [enum ResourceStrategies].
 var resource_strategies: PackedInt32Array
 
-
-## Memory of spot ask totals (unit quantity per resource).
-var _spot_ask_totals: PackedInt64Array
-## Memory of spot bid totals (unit quantity per resource).
-var _spot_bid_totals: PackedInt64Array
-## Memory of last known spot ask price for each resource. This will be THE
-## resource ask price if trader AI only has one ask per resource at a time.
-var _spot_ask_prices: PackedInt64Array
-## Memory of last known spot bid price for each resource. This will be THE
-## resource bid price if trader AI only has one bid per resource at a time.
-var _spot_bid_prices: PackedInt64Array
-## Memory of last known spot ask_id for each resource. This will be THE
-## resource ask_id if trader AI only has one ask per resource at a time.
-var _spot_ask_ids: PackedInt64Array
-## Memory of last known spot bid_id for each resource. This will be THE
-## resource bid_id if trader AI only has one bid per resource at a time.
-var _spot_bid_ids: PackedInt64Array
 
 ## Memory of open futures asks. Indexed by 3-element key [resource_type,
 ## ordinal_quarter, body_id] (the delivery body) with values [unit_quantity,
@@ -244,14 +215,6 @@ var _expired_keys: Array[PackedInt32Array] = []
 func _init() -> void:
 	var n_resources: int = _table_n_rows[&"resources"]
 	resource_strategies.resize(n_resources)
-	_spot_ask_totals.resize(n_resources)
-	_spot_bid_totals.resize(n_resources)
-	_spot_ask_prices.resize(n_resources)
-	_spot_bid_prices.resize(n_resources)
-	_spot_ask_ids.resize(n_resources)
-	_spot_bid_ids.resize(n_resources)
-	_spot_ask_ids.fill(-1)
-	_spot_bid_ids.fill(-1)
 	_net_long_units.resize(n_resources)
 	_net_short_units.resize(n_resources)
 	_instrument_scratch.resize(2)
@@ -268,8 +231,6 @@ func _clear_for_destruction() -> void:
 
 func bind_proxy(proxy_: Proxy) -> void:
 	proxy = proxy_ as TraderProxy
-	proxy.ask_updated.connect(_on_ask_updated)
-	proxy.bid_updated.connect(_on_bid_updated)
 
 
 func ai_init() -> void:
@@ -390,60 +351,6 @@ func _process_market_making(resource_type: int, market: MarketProxy,
 
 # ******************************* AI / PROXY API ******************************
 # Call on proxy thread.
-
-## Submit ask orders here so we can track our own ask totals. Resulting BOOKED
-## ask_id and/or subsequent trades come back via _on_ask_updated().
-func _spot_ask(resource_type: int, unit_quantity: int, unit_price: int, expiration: int) -> void:
-	_spot_ask_totals[resource_type] += unit_quantity
-	_spot_ask_prices[resource_type] = unit_price
-	proxy.spot_ask(resource_type, unit_quantity, unit_price, expiration)
-
-
-## Submit bid orders here so we can track our own bid totals. Resulting BOOKED
-## bid_id and/or subsequent trades come back via _on_bid_updated().
-func _spot_bid(resource_type: int, unit_quantity: int, unit_price: int, expiration: int) -> void:
-	_spot_bid_totals[resource_type] += unit_quantity
-	_spot_bid_prices[resource_type] = unit_price
-	proxy.spot_bid(resource_type, unit_quantity, unit_price, expiration)
-
-
-## Reprices/resizes our standing ask for [param resource_type] in place to
-## [param new_quantity] / [param new_price], keeping its id. No-op if we have no
-## known resting ask id. We assume nothing at submit time (the order may already be
-## gone); local memory is updated when the REPLACED echo (or a fill) arrives via
-## [method _on_ask_updated].
-func _replace_ask(resource_type: int, new_quantity: int, new_price: int, expiration: int) -> void:
-	var ask_id := _spot_ask_ids[resource_type]
-	if ask_id == -1:
-		return
-	proxy.replace_spot_ask(ask_id, new_quantity, new_price, expiration)
-
-
-## Bid counterpart of [method _replace_ask].
-func _replace_bid(resource_type: int, new_quantity: int, new_price: int, expiration: int) -> void:
-	var bid_id := _spot_bid_ids[resource_type]
-	if bid_id == -1:
-		return
-	proxy.replace_spot_bid(bid_id, new_quantity, new_price, expiration)
-
-
-## Cancels our standing ask for [param resource_type] (if any). Local memory is
-## cleared when the market's CANCELLED update arrives (see [method _on_ask_updated]),
-## not here, so fills already in flight are still counted correctly.
-func _cancel_ask(resource_type: int) -> void:
-	var ask_id := _spot_ask_ids[resource_type]
-	if ask_id == -1:
-		return
-	proxy.cancel_spot_ask(ask_id)
-
-
-## Bid counterpart of [method _cancel_ask].
-func _cancel_bid(resource_type: int) -> void:
-	var bid_id := _spot_bid_ids[resource_type]
-	if bid_id == -1:
-		return
-	proxy.cancel_spot_bid(bid_id)
-
 
 ## Adds, replaces, or cancels a futures sell (ask) order. See [method
 ## TraderProxy.set_futures_ask] for instrument composition and params, including
@@ -582,41 +489,6 @@ func _tally_net_positions() -> void:
 			_net_short_units[key[0]] += int(-signed_qty)
 
 
-## Brings our standing ask for [param resource_type] in line with the desired
-## quantity and price, re-quoting only on material divergence (see
-## [method _needs_requote]). A desired quantity below [constant MIN_LOT] drops
-## any standing ask.
-func _maintain_ask(resource_type: int, want_quantity: int, want_price: int, expiration: int,
-		min_lot: int, price_tol: float, qty_tol: float) -> void:
-	if want_quantity < min_lot:
-		_cancel_ask(resource_type)
-		return
-	if _spot_ask_ids[resource_type] == -1:
-		# No resting order known: post only if nothing is still outstanding (a
-		# posted-but-unacknowledged order keeps totals > 0 — wait for its update).
-		if _spot_ask_totals[resource_type] == 0:
-			_spot_ask(resource_type, want_quantity, want_price, expiration)
-		return
-	if _needs_requote(_spot_ask_totals[resource_type], _spot_ask_prices[resource_type],
-			want_quantity, want_price, price_tol, qty_tol):
-		_replace_ask(resource_type, want_quantity, want_price, expiration)
-
-
-## Bid counterpart of [method _maintain_ask].
-func _maintain_bid(resource_type: int, want_quantity: int, want_price: int, expiration: int,
-		min_lot: int, price_tol: float, qty_tol: float) -> void:
-	if want_quantity < min_lot:
-		_cancel_bid(resource_type)
-		return
-	if _spot_bid_ids[resource_type] == -1:
-		if _spot_bid_totals[resource_type] == 0:
-			_spot_bid(resource_type, want_quantity, want_price, expiration)
-		return
-	if _needs_requote(_spot_bid_totals[resource_type], _spot_bid_prices[resource_type],
-			want_quantity, want_price, price_tol, qty_tol):
-		_replace_bid(resource_type, want_quantity, want_price, expiration)
-
-
 ## True when a standing order's price or quantity has drifted from the desired
 ## values by more than [constant PRICE_TOLERANCE] / [constant QTY_TOLERANCE].
 func _needs_requote(have_quantity: int, have_price: int, want_quantity: int, want_price: int,
@@ -628,6 +500,24 @@ func _needs_requote(have_quantity: int, have_price: int, want_quantity: int, wan
 	if absf(float(want_quantity - have_quantity) / have_quantity) > qty_tol:
 		return true
 	return false
+
+
+# Cancels this trader's resting ask and bid (if any) on the front-quarter instrument
+# for [param resource_type]. Called on an executor-branch change: the facility-support
+# and market-making branches share price formulas (a sell ask at ref*(1-spread) equals
+# the maker's bid; a buy bid at ref*(1+spread) equals the maker's ask), and those prices
+# sit within [constant PRICE_TOLERANCE] of each other, so a lingering old-branch order
+# would not be re-quoted and could cross the new branch's opposite quote (a self-trade).
+func _clear_front_orders(resource_type: int) -> void:
+	if !proxy.market:
+		return
+	var delivery_market_id := proxy.market_id
+	var instrument := PackedInt32Array([resource_type, proxy.ordinal_qtr])
+	var mem_key := _futures_memory_key(instrument, delivery_market_id)
+	if _futures_asks.has(mem_key):
+		_set_futures_ask(instrument, 0, 1, delivery_market_id)
+	if _futures_bids.has(mem_key):
+		_set_futures_bid(instrument, 0, 1, delivery_market_id)
 
 
 # ********************************* LISTENERS *********************************
@@ -664,47 +554,13 @@ func _trader_strategy_for_facility(facility_strategy: int) -> int:
 
 
 func _on_facility_resource_strategy_changed(resource_type: int, strategy_id: int) -> void:
-	resource_strategies[resource_type] = _trader_strategy_for_facility(strategy_id)
-
-
-func _on_ask_updated(resource_type: int, unit_quantity: int, unit_price: int,
-		ask_id: int, ask_status: Proxy.TradeOrderStatus) -> void:
-	const BOOKED := Proxy.TradeOrderStatus.BOOKED
-	const PARTIALLY_FILLED := Proxy.TradeOrderStatus.PARTIALLY_FILLED
-	const REPLACED := Proxy.TradeOrderStatus.REPLACED
-	if ask_status == BOOKED:
-		_spot_ask_ids[resource_type] = ask_id
+	var new_strategy := _trader_strategy_for_facility(strategy_id)
+	if new_strategy == resource_strategies[resource_type]:
 		return
-	if ask_status == REPLACED:
-		# unit_quantity is a signed unfilled delta here; the order keeps its id.
-		if ask_id == _spot_ask_ids[resource_type]:
-			_spot_ask_totals[resource_type] += unit_quantity
-			_spot_ask_prices[resource_type] = unit_price
-		return
-	_spot_ask_totals[resource_type] -= unit_quantity
-	if ask_status != PARTIALLY_FILLED and ask_id == _spot_ask_ids[resource_type]:
-		_spot_ask_ids[resource_type] = -1
-		_spot_ask_prices[resource_type] = 0
-
-
-func _on_bid_updated(resource_type: int, unit_quantity: int, unit_price: int,
-		bid_id: int, bid_status: Proxy.TradeOrderStatus) -> void:
-	const BOOKED := Proxy.TradeOrderStatus.BOOKED
-	const PARTIALLY_FILLED := Proxy.TradeOrderStatus.PARTIALLY_FILLED
-	const REPLACED := Proxy.TradeOrderStatus.REPLACED
-	if bid_status == BOOKED:
-		_spot_bid_ids[resource_type] = bid_id
-		return
-	if bid_status == REPLACED:
-		# unit_quantity is a signed unfilled delta here; the order keeps its id.
-		if bid_id == _spot_bid_ids[resource_type]:
-			_spot_bid_totals[resource_type] += unit_quantity
-			_spot_bid_prices[resource_type] = unit_price
-		return
-	_spot_bid_totals[resource_type] -= unit_quantity
-	if bid_status != PARTIALLY_FILLED and bid_id == _spot_bid_ids[resource_type]:
-		_spot_bid_ids[resource_type] = -1
-		_spot_bid_prices[resource_type] = 0
+	resource_strategies[resource_type] = new_strategy
+	# A new strategy may switch the executor branch; clear the front instrument so a
+	# lingering old-branch order cannot cross the new branch's quote (see _clear_front_orders).
+	_clear_front_orders(resource_type)
 
 
 # Mirrors the trader's current ask/bid (carried in every position notification) into

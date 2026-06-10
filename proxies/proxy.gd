@@ -20,17 +20,6 @@ extends RefCounted
 ## threadsafe; accessing non-container properties is safe.
 
 
-## Market order status.
-enum TradeOrderStatus {
-	BOOKED,
-	FILLED,
-	PARTIALLY_FILLED,
-	CANCELLED,
-	## Resting order repriced/resized in place. The order keeps its id; the
-	## update's quantity field carries a SIGNED unfilled delta (new − old).
-	REPLACED,
-}
-
 ## Field selectors for [method get_operations_items] (bit flags; OR together).
 ## Operation-level bits (0-8) select per-operation fields and treat the type
 ## argument as an operation_type; module-level bits (9-16) select per-module
