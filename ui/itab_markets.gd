@@ -169,7 +169,7 @@ func _update_tab(_suppress_camera_move := false) -> void:
 		_update_no_markets()
 		return
 
-	var market := proxy.get_market(-1)
+	var market := proxy.get_market()
 	var has_inventory := proxy.has_inventory()
 
 	if market or has_inventory:

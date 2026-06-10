@@ -37,13 +37,13 @@ signal futures_positions_changed(position_key: PackedInt32Array, ask: PackedInt3
 var trader_id := -1  ## Index in [member ProxyBus.trader_proxies].
 var player_id := -1  ## [member PlayerProxy.player_id] of the owning facility's player.
 var facility_id := -1  ## [member FacilityProxy.facility_id] of [member facility].
-var primary_market_id := -1  ## [member MarketProxy.market_id] of [member primary_market].
+var market_id := -1  ## [member MarketProxy.market_id] of [member market].
 
 # *****************************************************************************
 # persisted
 
 var facility: FacilityProxy  ## Owning [FacilityProxy]. Immutable after init.
-var primary_market: MarketProxy  ## May change at runtime. Lives on markets thread!
+var market: MarketProxy  ## May change at runtime. Lives on markets thread!
 
 # *****************************************************************************
 
@@ -63,14 +63,14 @@ func _init() -> void:
 func _clear_for_destruction() -> void:
 	# Breaks the FacilityProxy.trader ↔ TraderProxy.facility 2-cycle.
 	facility = null
-	primary_market = null
+	market = null
 
 
 # ***************************** THREAD-SAFE READ ******************************
 
-## Returns this trader's primary [MarketProxy]. Mutable but always exists after init.
-func get_market(_player_id: int) -> MarketProxy:
-	return primary_market
+## Returns this trader's [MarketProxy]. Mutable but always exists after init.
+func get_market() -> MarketProxy:
+	return market
 
 
 # ******************************** AI METHODS *********************************
@@ -121,7 +121,6 @@ func get_market(_player_id: int) -> MarketProxy:
 ## current quarter, acts as a spot trade. [param delivery_market_id] is the market
 ## at the delivery body; the caller already holds it, since it must query that
 ## market to see available instruments.
-@warning_ignore("shadowed_variable")
 @abstract func set_futures_ask(instrument: PackedInt32Array, unit_quantity: int,
 		unit_price: int, delivery_market_id: int) -> void
 
@@ -130,6 +129,5 @@ func get_market(_player_id: int) -> MarketProxy:
 ## instrument] composition and params in the ask counterpart [method
 ## set_futures_ask]. The resulting position side (long/short) follows from
 ## matching; a trader may hold either side at any delivery body and may flip.
-@warning_ignore("shadowed_variable")
 @abstract func set_futures_bid(instrument: PackedInt32Array, unit_quantity: int,
 		unit_price: int, delivery_market_id: int) -> void

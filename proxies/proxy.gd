@@ -267,9 +267,8 @@ func get_facilities() -> Array[Proxy]:
 	return []
 
 
-## Returns the spot [MarketProxy] for [param _player_id], or null if not
-## applicable.
-func get_market(_player_id: int) -> MarketProxy:
+## Returns the spot [MarketProxy], or null if not applicable.
+func get_market() -> MarketProxy:
 	return null
 
 

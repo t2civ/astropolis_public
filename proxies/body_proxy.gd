@@ -30,8 +30,6 @@ extends Proxy
 ## threadsafe; accessing non-container properties is safe.
 
 
-const MAX_MARKETS_PER_BODY := 5 ## Must match the server-side Body constant.
-
 var body_id := -1  ## Index into [member ProxyBus.body_proxies].
 var body_flags := 0  ## Body flags from [enum IVBody.BodyFlags].
 var solar_occlusion: float  ## Average solar irradiance occlusion at this body.
@@ -47,8 +45,8 @@ var parent: BodyProxy
 var satellites: Dictionary[StringName, BodyProxy]
 ## Facilities at this body. Resizable container — not threadsafe!
 var facilities: Array[Proxy] = []
-## Spot markets at this body, indexed by routing slot; slot 0 is the default.
-var markets: Array[MarketProxy]
+## The spot market at this body, or null if it has no facility yet.
+var market: MarketProxy
 
 # *****************************************************************************
 
@@ -59,8 +57,7 @@ func _clear_for_destruction() -> void:
 	parent = null
 	satellites.clear()
 	facilities.clear()
-	for i in MAX_MARKETS_PER_BODY:
-		markets[i] = null
+	market = null
 
 
 # ********************************* PROXY API *********************************
@@ -82,8 +79,8 @@ func get_facilities() -> Array[Proxy]:
 	return facilities
 
 
-func get_market(_player_id: int) -> MarketProxy:
-	return markets[0] if markets else null
+func get_market() -> MarketProxy:
+	return market
 
 
 # Strata. The composition layers live on the server.

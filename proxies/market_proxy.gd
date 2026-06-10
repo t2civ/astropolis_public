@@ -42,8 +42,6 @@ extends Proxy
 ## methods are not threadsafe; non-container properties are safe.
 
 
-const MAX_EMBARGOES := 10 ## Max embargoed players. Must match the server-side _Market constant.
-
 var market_id := -1  ## Index into [member ProxyBus.market_proxies].
 
 # *****************************************************************************
@@ -61,10 +59,6 @@ var body: BodyProxy ## Body of the spot market.
 ## quantity 0. Server-maintained and read-only here.
 var futures_instruments: Dictionary[PackedInt32Array, PackedInt32Array]
 
-## Player_ids currently embargoed at this market, packed and -1-terminated (the
-## list ends at the first -1). Server-maintained, read-only here.
-var embargoed_player_ids: PackedInt32Array
-
 # ************************* VIRTUAL & IMPLEMENTATION **************************
 
 func _clear_for_destruction() -> void:
@@ -77,19 +71,8 @@ func has_markets() -> bool:
 	return true
 
 
-func get_market(_player_id: int) -> MarketProxy:
+func get_market() -> MarketProxy:
 	return self
-
-
-## Returns true if [param player_id] is currently embargoed at this market.
-## Thread-safe: fixed-size array, list ends at the first -1.
-func is_embargoed(player_id: int) -> bool:
-	for embargoed_id in embargoed_player_ids:
-		if embargoed_id == -1:
-			return false
-		if embargoed_id == player_id:
-			return true
-	return false
 
 
 # ********************************** READ *************************************

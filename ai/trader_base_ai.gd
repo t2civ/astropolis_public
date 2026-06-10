@@ -277,7 +277,7 @@ func ai_init() -> void:
 ## (authored by the facility, translated and stored on change). The strategy's def
 ## selects the executor branch: two-sided maker vs. one-sided facility support.
 func process_ai_interval(_delta: float) -> void:
-	var market := proxy.primary_market
+	var market := proxy.market
 	if !market:
 		return
 	var time: float = _times[0]
@@ -429,10 +429,10 @@ func _cancel_bid(resource_type: int) -> void:
 ## ordinal_quarter < proxy.ordinal_qtr (proxy would reject if it went through
 ## here).
 func _set_futures_ask(instrument: PackedInt32Array, unit_quantity: int,
-		unit_price: int, market_id: int) -> void:
+		unit_price: int, delivery_market_id: int) -> void:
 	if instrument[1] < proxy.ordinal_qtr:
 		return
-	var mem_key := _futures_memory_key(instrument, market_id)
+	var mem_key := _futures_memory_key(instrument, delivery_market_id)
 	if unit_quantity:
 		var ask: PackedInt32Array
 		if _futures_asks.has(mem_key):
@@ -444,7 +444,7 @@ func _set_futures_ask(instrument: PackedInt32Array, unit_quantity: int,
 		ask[1] = unit_price
 	else:
 		_futures_asks.erase(mem_key)
-	proxy.set_futures_ask(instrument, unit_quantity, unit_price, market_id)
+	proxy.set_futures_ask(instrument, unit_quantity, unit_price, delivery_market_id)
 
 
 ## Adds, replaces, or cancels a futures buy (bid) order. See [method
@@ -454,10 +454,10 @@ func _set_futures_ask(instrument: PackedInt32Array, unit_quantity: int,
 ## ordinal_quarter < proxy.ordinal_qtr (proxy would reject if it went through
 ## here).
 func _set_futures_bid(instrument: PackedInt32Array, unit_quantity: int,
-		unit_price: int, market_id: int) -> void:
+		unit_price: int, delivery_market_id: int) -> void:
 	if instrument[1] < proxy.ordinal_qtr:
 		return
-	var mem_key := _futures_memory_key(instrument, market_id)
+	var mem_key := _futures_memory_key(instrument, delivery_market_id)
 	if unit_quantity:
 		var bid: PackedInt32Array
 		if _futures_bids.has(mem_key):
@@ -469,7 +469,7 @@ func _set_futures_bid(instrument: PackedInt32Array, unit_quantity: int,
 		bid[1] = unit_price
 	else:
 		_futures_bids.erase(mem_key)
-	proxy.set_futures_bid(instrument, unit_quantity, unit_price, market_id)
+	proxy.set_futures_bid(instrument, unit_quantity, unit_price, delivery_market_id)
 
 
 # Futures order memory is keyed by the delivery body; resolve it from the delivery market.
