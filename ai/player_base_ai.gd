@@ -8,16 +8,13 @@
 class_name PlayerBaseAI
 extends BaseAI
 
-## Default AI for the local player. Subclass to write custom player AI by
-## extending this class and adding [code]const OVERRIDE_AI := true[/code];
-## see [PlayerCustomAI].
+## Default AI for the local player.
 ##
-## Strategies are declarative. Each [code]select_*_strategy()[/code] returns
-## an [int] enum id (see [enum GlobalStrategies], [enum PlayerResourceStrategies],
-## etc.) cached in a [code]<name>_strategy[/code] field or per-item container;
-## child AIs ([FacilityBaseAI], [TraderBaseAI]) read these declarations
-## during their own selection. Cached selections persist via
-## [member BaseAI.persist] and are re-derived on each quarter tick.
+## To implement a custom player AI, extend this class and add
+## [code]const OVERRIDE_AI := true[/code].[br][br]
+##
+## Strategy selections are in part declarative. Note that FacilityBaseAI is
+## aware of all of its PlayerBaseAI strategies.
 
 
 ## Emitted when [member global_strategy] changes.
@@ -271,6 +268,18 @@ static var counterparty_strategy_defs: Array[Dictionary] = [
 ]
 
 
+## Member names persisted by save/load (interval timing inherited from BaseAI).
+const PERSIST_PROPERTIES: Array[StringName] = [
+	&"_last_interval",
+	&"_next_interval",
+	&"global_strategy",
+	&"player_resource_strategies",
+	&"player_facility_strategies",
+	&"body_strategies",
+	&"counterparty_strategies",
+]
+
+
 static var _table_n_rows := IVTableData.table_n_rows
 
 
@@ -300,11 +309,6 @@ var counterparty_strategies: Dictionary[int, int]
 # ************************* VIRTUAL & IMPLEMENTATION **************************
 
 func _init() -> void:
-	persist.append(&"global_strategy")
-	persist.append(&"player_resource_strategies")
-	persist.append(&"player_facility_strategies")
-	persist.append(&"body_strategies")
-	persist.append(&"counterparty_strategies")
 	var n_resources: int = _table_n_rows[&"resources"]
 	player_resource_strategies.resize(n_resources)
 
@@ -317,7 +321,7 @@ func bind_proxy(proxy_: Proxy) -> void:
 	proxy = proxy_ as PlayerProxy
 
 
-func process_ai_init() -> void:
+func ai_init() -> void:
 	pass
 
 

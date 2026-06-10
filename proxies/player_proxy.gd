@@ -25,12 +25,17 @@ extends Proxy
 # public read-only
 var player_id := -1 ## Index into [member ProxyBus.player_proxies].
 var player_class := -1 ## Player class index ([code]PlayerClasses[/code] enum).
-var polity: PlayerProxy ## Self if [member player_class] == [code]PLAYER_CLASS_POLITY[/code].
 var homeworld := "" ## Name of this player's homeworld body.
-var is_facilities := true ## True while this player owns at least one facility ("alive" test).
 
+# *****************************************************************************
+# persisted
+
+var polity: PlayerProxy ## Self if [member player_class] == [code]PLAYER_CLASS_POLITY[/code].
+var is_facilities := true ## True while this player owns at least one facility ("alive" test).
 ## Facilities owned by this player. Resizable container — not threadsafe!
 var facilities: Array[Proxy] = []
+
+# *****************************************************************************
 
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
@@ -38,7 +43,6 @@ var facilities: Array[Proxy] = []
 func _clear_for_destruction() -> void:
 	polity = null
 	facilities.clear()
-	ai = null
 
 
 # ********************************* PROXY API *********************************

@@ -169,7 +169,7 @@ func _update_tab(_suppress_camera_move := false) -> void:
 		_update_no_markets()
 		return
 
-	var market := proxy.get_market(-1)
+	var market := proxy.get_market()
 	var has_inventory := proxy.has_inventory()
 
 	if market or has_inventory:
@@ -193,6 +193,7 @@ func _get_proxy_data(target_name: StringName, market: MarketProxy, has_inventory
 
 	var is_market := true if market else false
 	var is_inventory := has_inventory
+	var facility_proxy := proxy as FacilityProxy # non-null whenever is_inventory
 
 	var tab := current_tab
 	var resource_class_resources: PackedInt32Array = _resource_classes_resources[tab]
@@ -210,13 +211,13 @@ func _get_proxy_data(target_name: StringName, market: MarketProxy, has_inventory
 		var contracted := 0.0
 
 		if is_market:
-			price = market.get_spot_unit_price(resource_type)
-			bid = market.get_spot_bid_unit_price(resource_type)
-			ask = market.get_spot_ask_unit_price(resource_type)
-			volume = market.get_spot_unit_volume(resource_type)
+			price = market.get_unit_price(resource_type)
+			bid = market.get_bid_unit_price(resource_type)
+			ask = market.get_ask_unit_price(resource_type)
+			volume = market.get_unit_volume(resource_type)
 		if is_inventory:
-			in_stock = proxy.get_resource_stock(resource_type)
-			contracted = proxy.get_resource_contracted(resource_type)
+			in_stock = facility_proxy.get_inventory_stock(resource_type)
+			contracted = facility_proxy.get_inventory_contracted(resource_type)
 
 		data.append(resource_type)
 		data.append(price)

@@ -9,70 +9,70 @@
 class_name MarketProxy
 extends Proxy
 
-## Provides resource spot prices and a market for spot and futures trading.
+## A centrally cleared, physically-settled forward market for one body.
 ##
-## A [BodyProxy] with a [FacilityProxy] always gains a market. At minimum, the
-## market provides "spot" prices for relevant resources, determined either
-## via spot market trades or by fiat using a market maker functionality.[br][br]
+## An instrument is a [resource_type, ordinal_quarter] pair; the delivery body is
+## implicit (always this market's body). The current quarter is the near-immediate
+## ("spot") case, later quarters forward delivery. Each trader holds at most one
+## resting ask and one resting bid per instrument. Orders use SET semantics — a new
+## order replaces the resting one, quantity 0 cancels — and never expire, though an
+## order for a past quarter is dropped at quarter rollover. Crossing asks and bids
+## match at the midpoint price.[br][br]
 ##
-## If a body has >1 facilities, the market provides a resource spot market.
-## The spot market processes spot orders for within-body, immediate-delivery
-## trades only. These orders originate from local [TraderProxy]s only.[br][br]
+## A match moves no goods; it opens or adjusts a [b]position[/b]: the ask side goes
+## (more) short (owes delivery at the body), the bid side (more) long (awaits
+## pickup). The quantity sign is the side (+ long, − short); a trader may hold
+## either side per instrument and may flip. Read positions on [TraderProxy] and
+## [BodyProxy].[br][br]
 ##
-## All trade orders are implemented as "limit orders". Traders can specify a
-## "market order", in effect, by specifying a permissive price and near-future
-## expiration.[br][br]
+## Physical settlement is bilateral, performed by the [b]short side[/b] over one or
+## more intervals: it delivers stock above its reserves to matched longs, and a
+## past-due short force-delivers from raw stock and may default on any shortfall.
+## The market is the central counterparty; only the cash leg would be centrally
+## novated, and cash is not implemented yet (TODO).[br][br]
 ##
-## Markets also list futures contracts for delivery at the market [member body].
-## Futures contracts specify time of delivery (ordinal quarter) of a specific
-## resource quantity at a specific facility. They can be traded by anyone (a
-## local or remote trader) and are the means for inter-body resource trades.[br][br]
+## Published per-resource values: [b]price[/b] — the last current-quarter trade, or
+## the best current-quarter ask until one trades, else 0; [b]ask[/b] / [b]bid[/b] —
+## the current-quarter top-of-book, 0 for an empty side; [b]volume[/b] — physically
+## settled trade units per day, smoothed over ~7 days. [member instruments] also
+## carries per-instrument top-of-book for every quarter.[br][br]
 ##
-## Times, prices, and order quantities are integer "ticks": time in integer
-## seconds (assumes [code]IVUnits.SECOND == 1.0[/code]), price in integer USD
-## (assumes [code]IVUnits.USD == 1.0[/code]), and order quantity in integer
-## "trade units" (specified by [code]trade_unit[/code] in
-## [code]resources.tsv[/code]). The API convention provides regular sim
-## units in [method get_spot_price] and uses "unit" in the name for
-## Market-internal values ([method get_spot_unit_price]).[br][br]
+## Prices and order quantities are integer "ticks": price in integer USD per trade
+## unit (assumes [code]IVUnits.USD == 1.0[/code]), quantity in integer "trade units"
+## ([code]trade_unit[/code] in [code]resources.tsv[/code]) — not the "sim units"
+## used elsewhere ([IVUnits]). A [code]get_*_price[/code] getter returns sim units;
+## "unit" in the name ([method get_unit_price]) returns the market-internal
+## trade-unit value. Volume is float sim units. A stored 0 price means no current
+## price.[br][br]
 ##
-## Arrays are indexed by [code]resource_type[/code] unless indicated otherwise.
-## A stored value of 0 in any internal "price" variable means N/A or no current
-## price (sim-unit getters return 0.0 in that case).
+## The read side: AI and GUI read prices, volume, and [member instruments] here, and
+## place or change orders via [method TraderProxy.set_ask] /
+## [method TraderProxy.set_bid]. Indexed getters are defensive — an out-of-range
+## index returns a safe default (see AI_ARCHITECTURE.md, "Trust the server; guard
+## against AI").[br][br]
 ##
-## WARNING: Lives on the proxy thread. Resizable containers and associated
-## methods are not threadsafe; non-container properties are safe.
-
-
-const SPOT_ORDER_SIZE := 7
-const FUTURES_ORDER_SIZE := 9
-
-
-static var _is_class_instanced := false
-static var _resource_trade_unit_multipliers: PackedFloat64Array # convert trade -> sim
+## WARNING: lives on the proxy thread; resizable containers and their methods are
+## not threadsafe, non-container properties are safe.
 
 
 var market_id := -1  ## Index into [member ProxyBus.market_proxies].
-var body: BodyProxy ## Body of the spot market and futures contract delivery.
+var body_id := -1  ## [member BodyProxy.body_id] of [member body].
 
-var _spot_prices: PackedInt64Array
-var _spot_ask_prices: PackedInt64Array
-var _spot_bid_prices: PackedInt64Array
-var _spot_volumes: PackedFloat64Array
+# *****************************************************************************
+# persisted
 
+var body: BodyProxy ## Body this market serves.
+
+# *****************************************************************************
+
+## Top-of-book per instrument, keyed by [resource_type, ordinal_quarter] (delivery
+## at this market's body). Value is [lowest_ask_price, lowest_ask_quantity,
+## highest_bid_price, highest_bid_quantity] in trade units; an empty side reads 0.
+## An instrument is present only while it has at least one resting order. Server-set;
+## read-only here.
+var instruments: Dictionary[PackedInt32Array, PackedInt32Array]
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
-
-static func _on_class_instanced() -> void:
-	_resource_trade_unit_multipliers = ThreadsafeGlobal.resource_trade_unit_multipliers
-
-
-func _init() -> void:
-	super()
-	if !_is_class_instanced:
-		_is_class_instanced = true
-		_on_class_instanced()
-
 
 func _clear_for_destruction() -> void:
 	body = null
@@ -84,50 +84,43 @@ func has_markets() -> bool:
 	return true
 
 
-func get_market(_player_id: int) -> MarketProxy:
+func get_market() -> MarketProxy:
 	return self
 
 
 # ********************************** READ *************************************
-# all threadsafe
+# All threadsafe. Abstract here; the concrete proxy implements.
 
 ## Returns the current trade price for [param type] in sim units, or 0.0 if
 ## no current price.
-func get_spot_price(type: int) -> float:
-	return _spot_prices[type] / _resource_trade_unit_multipliers[type]
+@abstract func get_price(type: int) -> float
 
 
 ## Returns the current ask price for [param type] in sim units, or 0.0 if no
 ## current ask.
-func get_spot_ask_price(type: int) -> float:
-	return _spot_ask_prices[type] / _resource_trade_unit_multipliers[type]
+@abstract func get_ask_price(type: int) -> float
 
 
 ## Returns the current bid price for [param type] in sim units, or 0.0 if no
 ## current bid.
-func get_spot_bid_price(type: int) -> float:
-	return _spot_bid_prices[type] / _resource_trade_unit_multipliers[type]
+@abstract func get_bid_price(type: int) -> float
 
 
 ## Returns the Market-internal unit price for [param type], or 0 if no
 ## current price.
-func get_spot_unit_price(type: int) -> int:
-	return _spot_prices[type]
+@abstract func get_unit_price(type: int) -> int
 
 
 ## Returns the Market-internal ask unit price for [param type], or 0 if no
 ## current ask.
-func get_spot_ask_unit_price(type: int) -> int:
-	return _spot_ask_prices[type]
+@abstract func get_ask_unit_price(type: int) -> int
 
 
 ## Returns the Market-internal bid unit price for [param type], or 0 if no
 ## current bid.
-func get_spot_bid_unit_price(type: int) -> int:
-	return _spot_bid_prices[type]
+@abstract func get_bid_unit_price(type: int) -> int
 
 
-## Returns the trading volume for [param type] in trade units per day, smoothed
-## over 7 days.
-func get_spot_unit_volume(type: int) -> float:
-	return _spot_volumes[type]
+## Returns the physically settled trade volume for [param type] in trade units
+## per day, smoothed over 7 days.
+@abstract func get_unit_volume(type: int) -> float

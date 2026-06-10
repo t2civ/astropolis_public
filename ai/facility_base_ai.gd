@@ -8,18 +8,13 @@
 class_name FacilityBaseAI
 extends BaseAI
 
-## Default AI for facilities the local player owns. Subclass to write custom
-## facility AI by extending this class and adding
-## [code]const OVERRIDE_AI := true[/code].
+## Default AI for facilities the local player owns.
 ##
-## Strategies are declarative. Each [code]select_*_strategy()[/code] returns
-## an [int] enum id (see [enum FacilityStrategies],
-## [enum FacilityResourceStrategies], [enum OperationStrategies]) cached in a
-## [code]<name>_strategy[/code] field; children read parent declarations
-## during their own selection. Cached selections persist via
-## [member BaseAI.persist] so player intent survives save/load, and are
-## re-derived on each quarter tick. Execution (operation throttling, etc.)
-## lives in [method process_ai_interval].
+## To implement a custom facility AI, extend this class and add
+## [code]const OVERRIDE_AI := true[/code].[br][br]
+##
+## Strategy selections are in part declarative. Note that the paired
+## TraderBaseAI is aware of this AI's resource strategies.
 
 
 ## Emitted when [member facility_strategy] changes.
@@ -119,6 +114,10 @@ enum FacilityResourceStrategies {
 	## produce or consume it and run inventory down. Analog: a multi-product
 	## plant exiting a product line; a utility's coal phase-down.
 	PHASE_OUT,
+	## The facility acts as a two-sided market maker for this tradable resource it
+	## can produce and/or consume; the paired trader quotes both bid and ask. Folds
+	## the facility's market-maker identity into the per-resource strategy channel.
+	MARKET_MAKE,
 	N_BASE_FACILITY_RESOURCE_STRATEGIES,
 }
 
@@ -173,6 +172,10 @@ enum OperationStrategies {
 }
 
 
+## Short alias for the per-resource strategy enum, used by the authoring helpers.
+const _RS := FacilityResourceStrategies
+
+
 ## Facility-posture strategy definitions; index = [enum FacilityStrategies]
 ## value.
 static var facility_strategy_defs: Array[Dictionary] = [
@@ -189,7 +192,12 @@ static var facility_strategy_defs: Array[Dictionary] = [
 ]
 
 ## Per-resource facility-level strategy definitions; index =
-## [enum FacilityResourceStrategies] value.
+## [enum FacilityResourceStrategies] value. Keys are facility-side knob params
+## read by [method _apply_strategy_knobs]: [code]strategic_reserve_factor[/code]
+## (reserve = factor × throughput × time_horizon), [code]mm_base_lot[/code]
+## (trade-unit reserve floor), [code]protect_reserve[/code],
+## [code]prohibit_production[/code], [code]prohibit_consumption[/code]. Empty
+## entries take all defaults (no reserve, no flags).
 static var facility_resource_strategy_defs: Array[Dictionary] = [
 	{}, # NEUTRAL
 	{}, # PRIMARY_PRODUCT
@@ -197,13 +205,14 @@ static var facility_resource_strategy_defs: Array[Dictionary] = [
 	{}, # COPRODUCT
 	{}, # BYPRODUCT
 	{}, # WASTE
-	{}, # CRITICAL_INPUT
+	{&"strategic_reserve_factor": 1.0}, # CRITICAL_INPUT
 	{}, # ROUTINE_INPUT
 	{}, # CONSUMABLE
 	{}, # CLOSED_LOOP_INTERMEDIATE
-	{}, # STRATEGIC_RESERVE
+	{&"strategic_reserve_factor": 2.0, &"protect_reserve": true}, # STRATEGIC_RESERVE
 	{}, # SPECULATIVE_POSITION
-	{}, # PHASE_OUT
+	{&"prohibit_production": true}, # PHASE_OUT
+	{&"strategic_reserve_factor": 1.0, &"mm_base_lot": 4, &"protect_reserve": true}, # MARKET_MAKE
 ]
 
 ## Per-operation strategy definitions; index = [enum OperationStrategies]
@@ -225,7 +234,22 @@ static var operation_strategy_defs: Array[Dictionary] = [
 ]
 
 
+## Member names persisted by save/load (interval timing inherited from BaseAI).
+const PERSIST_PROPERTIES: Array[StringName] = [
+	&"_last_interval",
+	&"_next_interval",
+	&"facility_strategy",
+	&"facility_resource_strategies",
+	&"operation_strategies",
+]
+
+
 static var _table_n_rows := IVTableData.table_n_rows
+static var _trade_unit_multipliers := ThreadsafeGlobal.resource_trade_unit_multipliers
+
+## Per-resource tradability mask (1 = tradable), indexed by resource_type.
+## Built once; a resource is tradable if it is a commodity with a storage class.
+static var _is_tradable: PackedByteArray
 
 
 var proxy: FacilityProxy
@@ -249,13 +273,12 @@ var _player_ai: PlayerBaseAI
 # ************************* VIRTUAL & IMPLEMENTATION **************************
 
 func _init() -> void:
-	persist.append(&"facility_strategy")
-	persist.append(&"facility_resource_strategies")
-	persist.append(&"operation_strategies")
 	var n_resources: int = _table_n_rows[&"resources"]
 	facility_resource_strategies.resize(n_resources)
 	var n_operations: int = _table_n_rows[&"operations"]
 	operation_strategies.resize(n_operations)
+	if _is_tradable.is_empty():
+		_build_tradable_mask(n_resources)
 
 
 func _clear_for_destruction() -> void:
@@ -267,32 +290,174 @@ func bind_proxy(proxy_: Proxy) -> void:
 	proxy = proxy_ as FacilityProxy
 
 
-func process_ai_init() -> void:
-	_player_ai = proxy.player.ai as PlayerBaseAI
+func ai_init() -> void:
+	_player_ai = Proxy.proxy_bus.player_ais[proxy.player.player_id]
 	assert(_player_ai, "FacilityBaseAI expects player's AI to be PlayerBaseAI")
 	_player_ai.global_strategy_changed.connect(_on_player_global_strategy_changed)
 	_player_ai.player_resource_strategy_changed.connect(_on_player_resource_strategy_changed)
 	_player_ai.player_facility_strategy_changed.connect(_on_player_facility_strategy_changed)
 	_player_ai.body_strategy_changed.connect(_on_player_body_strategy_changed)
+	# new_quarter does not fire on load or the first adopted quarter, so author once
+	# here to bootstrap (and re-author idempotently after load).
+	_author_resource_strategies()
 
 
+## Re-author each interval (the prior cadence): identity from sticky capability is
+## cheap and change-guarded, so this stays responsive to capability changes and
+## keeps reserves tracking live throughput, without the rate-based / write-only smell.
 func process_ai_interval(_delta: float) -> void:
-	pass
+	_author_resource_strategies()
+
+
+## Strategic, forward-looking reassessment of sticky policy. Same authoring pass;
+## the change guard makes the quarter-boundary call a no-op when nothing changed.
+func process_ai_new_quarter() -> void:
+	_author_resource_strategies()
 
 
 # **************************** STRATEGY LISTENERS *****************************
 
 func _on_player_global_strategy_changed(_strategy_id: int) -> void:
-	pass
+	_author_resource_strategies()
 
 
 func _on_player_resource_strategy_changed(_resource_type: int, _strategy_id: int) -> void:
-	pass
+	_author_resource_strategies()
 
 
-func _on_player_facility_strategy_changed(_facility_id: int, _strategy_id: int) -> void:
-	pass
+func _on_player_facility_strategy_changed(facility_id: int, _strategy_id: int) -> void:
+	if facility_id == proxy.facility_id:
+		_author_resource_strategies()
 
 
 func _on_player_body_strategy_changed(_target_body_id: int, _strategy_id: int) -> void:
-	pass
+	pass # body strategies are not folded into per-resource policy in the base AI
+
+
+# **************************** INTERNAL PRIVATE *******************************
+
+## Sets [member facility_resource_strategies] for [param resource_type],
+## emitting [signal facility_resource_strategy_changed] only on change.
+func _set_facility_resource_strategy(resource_type: int, strategy_id: int) -> void:
+	if facility_resource_strategies[resource_type] == strategy_id:
+		return
+	facility_resource_strategies[resource_type] = strategy_id
+	facility_resource_strategy_changed.emit(resource_type, strategy_id)
+
+
+## Authors sticky per-resource policy for every tradable resource and applies the
+## resulting server knobs. The single authoring path for init, interval, quarter,
+## and player-strategy changes.
+func _author_resource_strategies() -> void:
+	for resource_type in _is_tradable.size():
+		if !_is_tradable[resource_type]:
+			continue
+		var capability := _capability_strategy(resource_type)
+		var strategy := _reconcile_resource_strategy(resource_type, capability)
+		_set_facility_resource_strategy(resource_type, strategy)
+		_apply_strategy_knobs(resource_type, strategy)
+
+
+## Sticky producer/consumer identity from server capability bits, never from rate.
+## Returns NEUTRAL until the server has published capability for this resource.
+func _capability_strategy(resource_type: int) -> int:
+	const TRADABLE := FacilityProxy.InventoryFlags.TRADABLE
+	const CAN_HAVE_INPUT := FacilityProxy.InventoryFlags.CAN_HAVE_INPUT
+	const CAN_HAVE_OUTPUT := FacilityProxy.InventoryFlags.CAN_HAVE_OUTPUT
+	var flags := proxy.get_inventory_flags(resource_type)
+	if !(flags & TRADABLE):
+		return _RS.NEUTRAL
+	var can_produce := bool(flags & CAN_HAVE_OUTPUT)
+	var can_consume := bool(flags & CAN_HAVE_INPUT)
+	if !can_produce and !can_consume:
+		return _RS.NEUTRAL
+	if proxy.market_maker:
+		return _RS.MARKET_MAKE
+	if can_produce and can_consume:
+		# Produced and consumed here: take no special stance and let the trader
+		# balance inventory around the reserve. A true closed loop (no external
+		# trade) needs production/consumption magnitude to identify — deferred.
+		return _RS.NEUTRAL
+	if can_produce:
+		return _RS.PRIMARY_PRODUCT
+	return _RS.CRITICAL_INPUT
+
+
+## Folds own crisis and player influence onto the capability identity by fixed
+## precedence: own crisis > player structural directive > player influence >
+## capability default. A custom AI overrides this to change reconciliation.
+func _reconcile_resource_strategy(resource_type: int, capability: int) -> int:
+	const CAN_HAVE_INPUT := FacilityProxy.InventoryFlags.CAN_HAVE_INPUT
+	const INPUT_CRISIS := FacilityProxy.FacilityFlags.INPUT_CRISIS
+	const OPS_RESERVE_BREACHED := FacilityProxy.InventoryFlags.OPS_RESERVE_BREACHED
+	const STRATEGIC_RESERVE_BREACHED := FacilityProxy.InventoryFlags.STRATEGIC_RESERVE_BREACHED
+	const PR := PlayerBaseAI.PlayerResourceStrategies
+	const PF := PlayerBaseAI.PlayerFacilityStrategies
+
+	# (1) Own crisis: a consumed resource (not a maker) in shortage prioritizes supply
+	# continuity — escalate to CRITICAL_INPUT for a protected import buffer.
+	if capability != _RS.MARKET_MAKE:
+		var inv_flags := proxy.get_inventory_flags(resource_type)
+		if (inv_flags & CAN_HAVE_INPUT) and ((proxy.get_flags() & INPUT_CRISIS) \
+				or (inv_flags & (OPS_RESERVE_BREACHED | STRATEGIC_RESERVE_BREACHED))):
+			return _RS.CRITICAL_INPUT
+
+	# (2) Player structural directive overrides influence and capability.
+	if _player_ai.player_facility_strategies.get(proxy.facility_id, 0) == PF.DIVEST:
+		return _RS.PHASE_OUT
+	var player_resource := _player_ai.player_resource_strategies[resource_type]
+	if player_resource == PR.DIVEST or player_resource == PR.EMBARGO:
+		return _RS.PHASE_OUT
+
+	# (3) Player influence: stockpile / lock-in supply accumulates a reserve.
+	if player_resource == PR.STRATEGIC_STOCKPILE or player_resource == PR.DOMINATE_DEMAND:
+		return _RS.STRATEGIC_RESERVE
+
+	# (4) Capability default.
+	return capability
+
+
+## Translates the resource's strategy def into server knobs: the strategic-reserve
+## flow variable and the PROTECT / PROHIBIT inventory flag bits (flags written only
+## on change; preserves any other FROM_PROXY bits).
+func _apply_strategy_knobs(resource_type: int, strategy: int) -> void:
+	const PROTECT_STRATEGIC_RESERVE := FacilityProxy.InventoryFlags.PROTECT_STRATEGIC_RESERVE
+	const PROHIBIT_CONSUMPTION := FacilityProxy.InventoryFlags.PROHIBIT_CONSUMPTION
+	const PROHIBIT_PRODUCTION := FacilityProxy.InventoryFlags.PROHIBIT_PRODUCTION
+	const FROM_PROXY_MASK := FacilityProxy.InventoryFlags.FROM_PROXY_MASK
+	const EMBARGO := PlayerBaseAI.PlayerResourceStrategies.EMBARGO
+	var def := facility_resource_strategy_defs[strategy]
+
+	var reserve_factor: float = def.get(&"strategic_reserve_factor", 0.0)
+	var mm_base_lot: int = def.get(&"mm_base_lot", 0)
+	var reserve := 0.0
+	if reserve_factor > 0.0 or mm_base_lot > 0:
+		var throughput := absf(proxy.get_inventory_expected_rate(resource_type))
+		reserve = (reserve_factor * throughput * proxy.time_horizon
+				+ mm_base_lot * _trade_unit_multipliers[resource_type])
+	proxy.set_inventory_strategic_reserve(resource_type, reserve)
+
+	var current := proxy.get_inventory_flags(resource_type) & FROM_PROXY_MASK
+	var desired := current & ~(PROTECT_STRATEGIC_RESERVE | PROHIBIT_CONSUMPTION | PROHIBIT_PRODUCTION)
+	if def.get(&"protect_reserve", false):
+		desired |= PROTECT_STRATEGIC_RESERVE
+	if def.get(&"prohibit_production", false):
+		desired |= PROHIBIT_PRODUCTION
+	if def.get(&"prohibit_consumption", false):
+		desired |= PROHIBIT_CONSUMPTION
+	if strategy == _RS.PHASE_OUT \
+			and _player_ai.player_resource_strategies[resource_type] == EMBARGO:
+		desired |= PROHIBIT_CONSUMPTION
+	if desired != current:
+		proxy.set_inventory_flags(resource_type, desired)
+
+
+static func _build_tradable_mask(n_resources: int) -> void:
+	_is_tradable.resize(n_resources)
+	var resource_table: Dictionary[StringName, Array] = IVTableData.db_tables[&"resources"]
+	var commodities: Array = resource_table[&"commodity"]
+	var storage_classes := PackedInt32Array(resource_table[&"storage_class"])
+	for resource_type in n_resources:
+		var is_commodity: bool = commodities[resource_type]
+		var tradable := is_commodity and storage_classes[resource_type] != -1
+		_is_tradable[resource_type] = 1 if tradable else 0

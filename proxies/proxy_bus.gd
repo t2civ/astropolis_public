@@ -8,11 +8,9 @@
 class_name ProxyBus
 extends RefCounted
 
-## Public registry bus for the proxy thread. Holds the proxy lookup arrays
-## and the registry signal.
+## Public registry bus for the proxy thread.
 ##
-## Sync signals and outgoing queues are on [code]SvrProxyBus[/code]
-## (nonpublic).
+## Holds the proxy lookup arrays and the registry signal.
 
 
 ## Emitted on the proxy thread when a new [Proxy] joins the registry.
@@ -37,4 +35,9 @@ var player_proxies: Array[PlayerProxy] ## [PlayerProxy]s indexed by player_id; n
 var join_proxies: Array[JoinProxy] ## [JoinProxy]s indexed by join_id; nulls possible.
 var trader_proxies: Array[TraderProxy] ## [TraderProxy]s indexed by trader_id; nulls possible.
 var market_proxies: Array[MarketProxy] ## [MarketProxy]s indexed by market_id; nulls possible.
-var broker_proxies: Array[BrokerProxy] ## [BrokerProxy]s indexed by broker_id; nulls possible.
+
+# ProxyServer maintains these AI registries too (proxies never touch them; an AI
+# finds a related AI here by entity id).
+var player_ais: Array[PlayerBaseAI] ## [PlayerBaseAI]s indexed by player_id; no nulls.
+var facility_ais: Array[FacilityBaseAI] ## [FacilityBaseAI]s indexed by facility_id; nulls possible.
+var trader_ais: Array[TraderBaseAI] ## [TraderBaseAI]s indexed by trader_id; nulls possible.

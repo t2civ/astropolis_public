@@ -12,88 +12,82 @@ extends Proxy
 ## [TraderProxy] buys and sells resources for a specific [FacilityProxy].
 ##
 ## A trader is paired 1-to-1 with a facility and trades on its behalf via the
-## [BrokerProxy] at the facility's body.
+## [MarketProxy] at the facility's body.
 ##
 ## To modify AI, see [BaseAI] and the [code]*_base_ai.gd[/code] files.
 ##
 ## WARNING: Lives on the proxy thread. Containers and many methods are not
 ## threadsafe; accessing non-container properties is safe.
 
+
+## Emitted when a position changes. [param position_key] is the 3-element
+## key [resource_type, ordinal_quarter, body_id] (the delivery body). [param value] is
+## the resulting position [signed_unit_quantity, unit_price] in trade units (empty if
+## the position cleared); the quantity sign gives the side (+ long, − short). [param
+## ask] and [param bid] are the trader's outstanding ask and bid [unit_quantity,
+## unit_price] in trade units for this instrument; an empty array is a cleared ask or bid.
+signal positions_changed(position_key: PackedInt32Array, value: PackedFloat64Array,
+		ask: PackedInt32Array, bid: PackedInt32Array)
+
+
 var trader_id := -1  ## Index in [member ProxyBus.trader_proxies].
-var facility: FacilityProxy  ## Owning [FacilityProxy]. Immutable after init.
+var player_id := -1  ## [member PlayerProxy.player_id] of the owning facility's player.
 var facility_id := -1  ## [member FacilityProxy.facility_id] of [member facility].
-var broker: BrokerProxy  ## Immutable after init. Lives on markets thread!
-var broker_id := -1  ## [member BrokerProxy.broker_id] of [member broker].
-var market: MarketProxy  ## May change at runtime. Lives on markets thread!
 var market_id := -1  ## [member MarketProxy.market_id] of [member market].
 
-## Memory of spot ask totals (unit quantity per resource).
-var _spot_ask_totals: PackedInt64Array
-## Memory of spot bid totals (unit quantity per resource).
-var _spot_bid_totals: PackedInt64Array
-## Memory of last known spot ask price for each resource. This will be THE
-## resource ask price if trader AI only has one ask per resource at a time.
-var _spot_ask_prices: PackedInt64Array
-## Memory of last known spot bid price for each resource. This will be THE
-## resource bid price if trader AI only has one bid per resource at a time.
-var _spot_bid_prices: PackedInt64Array
-## Memory of last known spot ask_id for each resource. This will be THE
-## resource ask_id if trader AI only has one ask per resource at a time.
-var _spot_ask_ids: PackedInt64Array
-## Memory of last known spot bid_id for each resource. This will be THE
-## resource bid_id if trader AI only has one bid per resource at a time.
-var _spot_bid_ids: PackedInt64Array
+# *****************************************************************************
+# persisted
+
+var facility: FacilityProxy  ## Owning [FacilityProxy]. Immutable after init.
+var market: MarketProxy  ## May change at runtime. Lives on markets thread!
+
+# *****************************************************************************
+
+## Positions indexed by the 3-element position key [resource_type,
+## ordinal_quarter, body_id] (the delivery body). Values are [signed_unit_quantity,
+## unit_price] in trade units; the quantity sign gives the side (+ long / pick up at
+## the body, − short / drop off).
+var positions: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
 
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
 
 func _init() -> void:
 	super()
-	persist.append(&"_spot_ask_totals")
-	persist.append(&"_spot_bid_totals")
-	var n_resources: int = _table_n_rows[&"resources"]
-	_spot_ask_totals.resize(n_resources)
-	_spot_bid_totals.resize(n_resources)
-	_spot_ask_prices.resize(n_resources)
-	_spot_bid_prices.resize(n_resources)
-	_spot_ask_ids.resize(n_resources)
-	_spot_bid_ids.resize(n_resources)
-	_spot_ask_ids.fill(-1)
-	_spot_bid_ids.fill(-1)
 
 
 func _clear_for_destruction() -> void:
 	# Breaks the FacilityProxy.trader ↔ TraderProxy.facility 2-cycle.
 	facility = null
-	broker = null
 	market = null
-	ai = null
 
 
 # ***************************** THREAD-SAFE READ ******************************
 
 ## Returns this trader's [MarketProxy]. Mutable but always exists after init.
-@warning_ignore("shadowed_variable")
-func get_market(_player_id: int) -> MarketProxy:
+func get_market() -> MarketProxy:
 	return market
 
 
 # ******************************** AI METHODS *********************************
-# Call on proxy thread. Concrete implementations live on TraderSvrProxy.
+# Call on proxy thread.
 
-## Adds a spot sell order. [param unit_quantity] and [param unit_price] are
-## with respect to trade unit. [param expiration] is epoch day.
-@abstract func _spot_ask(resource_type: int, unit_quantity: int, unit_price: int, expiration: int) -> void
+## Adds, replaces, or cancels this trader's sell (ask) order. [param
+## instrument] is composed as [resource_type, ordinal_quarter]; the delivery body
+## is the body of [param delivery_market_id]. Cancels if [param unit_quantity] is
+## 0. [param unit_quantity] and [param unit_price] are in trade units. The
+## resulting position side (long/short) follows from matching; a trader may hold
+## either side at any delivery body and may flip. The current quarter is the
+## near-immediate ("spot") case; later quarters are forward delivery. [param
+## delivery_market_id] is the market at the delivery body; the caller already
+## holds it, since it must query that market to see available instruments.
+@abstract func set_ask(instrument: PackedInt32Array, unit_quantity: int,
+		unit_price: int, delivery_market_id: int) -> void
 
 
-## Removes a spot sell order if not processed already.
-@abstract func _cancel_spot_ask(ask_id: int) -> void
-
-
-## Adds a spot buy order. [param unit_quantity] and [param unit_price] are
-## with respect to trade unit. [param expiration] is epoch day.
-@abstract func _spot_bid(resource_type: int, unit_quantity: int, unit_price: int, expiration: int) -> void
-
-
-## Removes a spot buy order if not processed already.
-@abstract func _cancel_spot_bid(bid_id: int) -> void
+## Adds, replaces, or cancels this trader's buy (bid) order. See [param
+## instrument] composition and params in the ask counterpart [method
+## set_ask]. The resulting position side (long/short) follows from
+## matching; a trader may hold either side at any delivery body and may flip.
+@abstract func set_bid(instrument: PackedInt32Array, unit_quantity: int,
+		unit_price: int, delivery_market_id: int) -> void

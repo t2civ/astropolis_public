@@ -18,6 +18,12 @@ extends Proxy
 ## publishes FROM_SERVER_MASK runtime signals (margin, shortage, surplus) back
 ## for AI to read.
 ##
+## Indexed methods here are defensive against AI misbehavior: a setter given an
+## out-of-range index, NaN, or negative value is a no-op, and a getter given an
+## out-of-range index returns a safe default (0.0, 0, NAN, or an empty array).
+## This lets a custom AI fail safe. See AI_ARCHITECTURE.md, "Trust the server;
+## guard against AI".
+##
 ## To modify AI, see [BaseAI] and the [code]*_base_ai.gd[/code] files.
 ##
 ## WARNING: Lives on the proxy thread. Containers and many methods are not
@@ -58,8 +64,14 @@ enum InventoryFlags {
 	## The storage class holding this resource is at or above the first
 	## throttling threshold.
 	STORAGE_SURPLUS = 1 << 3,
-	## No market spot price is established for this resource at this location.
+	## No market price is established for this resource at this location.
 	PRICE_UNKNOWN = 1 << 4,
+	## This resource is tradable (a commodity assigned to a storage class).
+	TRADABLE = 1 << 5,
+	## A can-have operation at this facility consumes this resource.
+	CAN_HAVE_INPUT = 1 << 6,
+	## A can-have operation at this facility produces or extracts this resource.
+	CAN_HAVE_OUTPUT = 1 << 7,
 	## Mask of all server-published signal bits.
 	FROM_SERVER_MASK = (1 << 32) - 1,
 
@@ -107,13 +119,29 @@ enum OperationsFlags {
 }
 
 
+## Field selectors for [method get_inventory_items] (bit flags; OR together).
+## All select resource_type-indexed fields, so type is a resource_type. Returned
+## values are in ascending bit order.
+enum InventoryItems {
+	STOCKS = 1,
+	CONTRACTEDS = 1 << 1,
+	OPS_RESERVES = 1 << 2,
+	STRATEGIC_RESERVES = 1 << 3,
+	EXPECTED_RATES = 1 << 4,
+	IN_TRANSITS = 1 << 5,
+	RATES = 1 << 6,
+	FLAGS = 1 << 7,
+}
+
+
 var facility_id := -1  ## Index into [member ProxyBus.facility_proxies].
 var facility_class := -1  ## Facility class index. Not implemented yet.
-var trader_id := -1  ## [member TraderProxy.trader_id] of this facility's paired trader.
 ## Public-sector share of this facility, often 0.0 or 1.0, sometimes mixed.
 var public_sector: float
 ## True if this is a small focused activity (affects stats and tax treatment).
 var is_unitary: bool
+## Large and/or port facilities act as market makers.
+var market_maker: bool
 ## True if all resource streams flow from/to inventory (no atmosphere/surface
 ## market).
 var closed_cycle_ops: bool
@@ -126,12 +154,18 @@ var time_horizon: float
 ## [method set_flags] to modify the proxy half.
 var flags := 0
 
+# *****************************************************************************
+# persisted
+
 var player: PlayerProxy  ## Owning [PlayerProxy].
 var polity: PlayerProxy  ## The polity of [member player].
 var body: BodyProxy  ## Hosting [BodyProxy].
 var trader: TraderProxy  ## Paired [TraderProxy]; set when TraderProxy registers.
+var trader_id := -1  ## [member TraderProxy.trader_id] of [member trader].
 var joins: Array[JoinProxy] = []  ## [JoinProxy] aggregates this facility belongs to.
 var market: MarketProxy  ## Set after init. Lives on markets thread!
+
+# *****************************************************************************
 
 ## Body texture cached for [code]IVSelectionManager[/code] (currently the
 ## hosting body's [code]IVBody.texture_2d[/code]).
@@ -148,7 +182,6 @@ func _clear_for_destruction() -> void:
 	joins.clear()
 	market = null
 	texture_2d = null
-	ai = null
 
 
 # ********************************* PROXY API *********************************
@@ -213,44 +246,195 @@ func get_flags() -> int:
 @abstract func set_flags(value: int) -> void
 
 
-# Operations (proxy-authoritative; reverse data flow proxy -> server).
-# Implemented on the server-side facility proxy against its operations component.
+# Operations (facility-only). Facility-only reads, plus proxy-authoritative knobs
+# (flags, target utilization) with reverse data flow proxy -> server. Implemented
+# on the server-side facility proxy against its operations component.
+
+## Returns the capacity factor (environmental or historical limit) of operation
+## [param operation_type].
+@abstract func get_operations_capacity_factor(operation_type: int) -> float
+
+
+## Returns the per-operation capacity factors array. Return is proxy array
+## reference; read only!
+@abstract func get_operations_capacity_factors() -> PackedFloat64Array
+
+
+## Returns the AI-set target utilization of operation [param operation_type].
+@abstract func get_operations_target_utilization(operation_type: int) -> float
+
+
+## Returns the per-operation target utilizations array. Return is proxy array
+## reference; read only!
+@abstract func get_operations_target_utilizations() -> PackedFloat64Array
+
 
 ## Returns the full bidirectional flag value for operation [param operation_type].
 @abstract func get_operations_flags(operation_type: int) -> int
 
 
+## Returns the per-operation flags array. Return is proxy array reference;
+## read only!
+@abstract func get_operations_flags_array() -> PackedInt64Array
+
+
 ## Sets the [code]FROM_PROXY_MASK[/code] bits of operations flags for
 ## [param operation_type] to [param value]. Proxy-authoritative: this
-## change flows proxy -> server.
+## change flows proxy -> server. No-op on an out-of-range index.
 @abstract func set_operations_flags(operation_type: int, value: int) -> void
 
 
 ## Sets the target utilization for [param type]. Proxy-authoritative:
-## this change flows proxy -> server.
+## this change flows proxy -> server. No-op on an out-of-range index or invalid
+## value.
 @abstract func set_operations_target_utilization(type: int, value: float) -> void
 
 
-# Inventory (proxy-authoritative; reverse data flow proxy -> server).
-# Implemented on the server-side facility proxy against its inventory component.
+# Inventory (facility-only). Facility-only reads, plus proxy-authoritative knobs
+# (flags, strategic reserve) with reverse data flow proxy -> server. Implemented
+# on the server-side facility proxy against its inventory component.
+
+## Returns the [enum InventoryItems] fields selected by [param items_mask] for
+## [param resource_type], as an untyped Array in ascending bit order.
+@abstract func get_inventory_items(resource_type: int, items_mask: int) -> Array
+
+
+## Returns the stock (current quantity on hand) of [param resource_type].
+@abstract func get_inventory_stock(resource_type: int) -> float
+
+
+## Returns the per-resource stocks array. Return is proxy array reference;
+## read only!
+@abstract func get_inventory_stocks() -> PackedFloat64Array
+
+
+## Returns the contracted quantity of [param resource_type] (committed but not
+## yet delivered).
+@abstract func get_inventory_contracted(resource_type: int) -> float
+
+
+## Returns the per-resource contracted array. Return is proxy array reference;
+## read only!
+@abstract func get_inventory_contracteds() -> PackedFloat64Array
+
+
+## Returns the operational reserve target for [param resource_type] — the stock
+## level the facility aims to keep on hand to sustain its operations.
+@abstract func get_inventory_ops_reserve(resource_type: int) -> float
+
+
+## Returns the per-resource ops reserves array. Return is proxy array reference;
+## read only!
+@abstract func get_inventory_ops_reserves() -> PackedFloat64Array
+
+
+## Returns the strategic reserve target for [param resource_type] — an AI-set
+## buffer held beyond operational need.
+@abstract func get_inventory_strategic_reserve(resource_type: int) -> float
+
+
+## Returns the per-resource strategic reserves array. Return is proxy array
+## reference; read only!
+@abstract func get_inventory_strategic_reserves() -> PackedFloat64Array
+
+
+## Returns the smoothed expected net rate for [param resource_type] (positive =
+## net production, negative = net consumption).
+@abstract func get_inventory_expected_rate(resource_type: int) -> float
+
+
+## Returns the per-resource expected rates array. Return is proxy array
+## reference; read only!
+@abstract func get_inventory_expected_rates() -> PackedFloat64Array
+
+
+## Returns the in-transit quantity for [param resource_type] (en route to this
+## facility; always >= 0.0).
+@abstract func get_inventory_in_transit(resource_type: int) -> float
+
+
+## Returns the per-resource in-transit array. Return is proxy array reference;
+## read only!
+@abstract func get_inventory_in_transits() -> PackedFloat64Array
+
+
+## Returns the most recent measured net rate for [param resource_type] (positive
+## = production, negative = consumption).
+@abstract func get_inventory_rate(resource_type: int) -> float
+
+
+## Returns the per-resource rates array. Return is proxy array reference;
+## read only!
+@abstract func get_inventory_rates() -> PackedFloat64Array
+
+
+## Returns the storage capacity of storage class [param storage_type].
+@abstract func get_inventory_storage(storage_type: int) -> float
+
+
+## Returns the per-storage-class capacities array. Return is proxy array
+## reference; read only!
+@abstract func get_inventory_storages() -> PackedFloat64Array
+
+
+## Returns the amount of storage class [param storage_type] currently in use
+## (local stocks plus remote stores).
+@abstract func get_inventory_storage_used(storage_type: int) -> float
+
+
+## Returns the quantity of [param resource_type] this facility owns stored
+## remotely at the given facility.
+@abstract func get_inventory_remote_store(facility_id_: int, resource_type: int) -> float
+
 
 ## Returns the full bidirectional flag value for resource [param resource_type].
 @abstract func get_inventory_flags(resource_type: int) -> int
 
 
+## Returns the per-resource flags array. Return is proxy array reference;
+## read only!
+@abstract func get_inventory_flags_array() -> PackedInt64Array
+
+
 ## Sets the [code]FROM_PROXY_MASK[/code] bits of inventory flags for
 ## [param resource_type] to [param value]. Proxy-authoritative: this
-## change flows proxy -> server.
+## change flows proxy -> server. No-op on an out-of-range index.
 @abstract func set_inventory_flags(resource_type: int, value: int) -> void
 
 
 ## Sets the strategic reserve for [param type]. Proxy-authoritative:
-## this change flows proxy -> server.
+## this change flows proxy -> server. No-op on an out-of-range index or invalid
+## value.
 @abstract func set_inventory_strategic_reserve(type: int, value: float) -> void
 
 
-## Returns this facility's spot [MarketProxy], or null if not yet set.
-## [param _player_id] is unused for direct-routed facilities; the per-player
-## sanctions routing happens at the Broker layer.
-func get_market(_player_id: int) -> MarketProxy:
+# Population (facility-only). Facility-only reads. Implemented on the server-side
+# facility proxy against its population component.
+
+## Returns the intrinsic growth rate for [param population_type]. Safe default
+## on an out-of-range index.
+@abstract func get_population_intrinsic_growth(population_type: int) -> float
+
+
+## Returns the carrying capacity for [param carrying_capacity_group]. Safe
+## default on an out-of-range index.
+@abstract func get_population_carrying_capacity(carrying_capacity_group: int) -> float
+
+
+## Returns the summed carrying capacity across the groups [param population_type]
+## can occupy. Safe default on an out-of-range index.
+@abstract func get_population_carrying_capacity_for_population(population_type: int) -> float
+
+
+## Returns the total population sharing [param carrying_capacity_group].
+@abstract func get_population_number_for_carrying_capacity_group(carrying_capacity_group: int) -> float
+
+
+## Returns migration pressure for [param population_type] (positive = net
+## immigration, negative = net emigration). Safe default on an out-of-range index.
+@abstract func get_population_migration_pressure(population_type: int) -> float
+
+
+## Returns this facility's [MarketProxy], or null if not yet set.
+func get_market() -> MarketProxy:
 	return market
