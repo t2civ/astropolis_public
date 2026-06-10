@@ -28,8 +28,8 @@ extends Proxy
 ## (assumes [code]IVUnits.USD == 1.0[/code]), and order quantity in integer
 ## "trade units" (specified by [code]trade_unit[/code] in
 ## [code]resources.tsv[/code]). The API convention provides regular sim
-## units in [method get_spot_price] and uses "unit" in the name for
-## Market-internal values ([method get_spot_unit_price]).[br][br]
+## units in [method get_price] and uses "unit" in the name for
+## Market-internal values ([method get_unit_price]).[br][br]
 ##
 ## Arrays are indexed by [code]resource_type[/code] unless indicated otherwise.
 ## A stored value of 0 in any internal "price" variable means N/A or no current
@@ -81,34 +81,34 @@ func get_market() -> MarketProxy:
 
 ## Returns the current trade price for [param type] in sim units, or 0.0 if
 ## no current price.
-@abstract func get_spot_price(type: int) -> float
+@abstract func get_price(type: int) -> float
 
 
 ## Returns the current ask price for [param type] in sim units, or 0.0 if no
 ## current ask.
-@abstract func get_spot_ask_price(type: int) -> float
+@abstract func get_ask_price(type: int) -> float
 
 
 ## Returns the current bid price for [param type] in sim units, or 0.0 if no
 ## current bid.
-@abstract func get_spot_bid_price(type: int) -> float
+@abstract func get_bid_price(type: int) -> float
 
 
 ## Returns the Market-internal unit price for [param type], or 0 if no
 ## current price.
-@abstract func get_spot_unit_price(type: int) -> int
+@abstract func get_unit_price(type: int) -> int
 
 
 ## Returns the Market-internal ask unit price for [param type], or 0 if no
 ## current ask.
-@abstract func get_spot_ask_unit_price(type: int) -> int
+@abstract func get_ask_unit_price(type: int) -> int
 
 
 ## Returns the Market-internal bid unit price for [param type], or 0 if no
 ## current bid.
-@abstract func get_spot_bid_unit_price(type: int) -> int
+@abstract func get_bid_unit_price(type: int) -> int
 
 
-## Returns the trading volume for [param type] in trade units per day, smoothed
-## over 7 days.
-@abstract func get_spot_unit_volume(type: int) -> float
+## Returns the physically settled trade volume for [param type] in trade units
+## per day, smoothed over 7 days.
+@abstract func get_unit_volume(type: int) -> float
