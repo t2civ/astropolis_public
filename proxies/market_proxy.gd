@@ -43,6 +43,7 @@ extends Proxy
 
 
 var market_id := -1  ## Index into [member ProxyBus.market_proxies].
+var body_id := -1  ## [member BodyProxy.body_id] of [member body].
 
 # *****************************************************************************
 # persisted

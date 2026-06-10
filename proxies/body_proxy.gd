@@ -30,6 +30,16 @@ extends Proxy
 ## threadsafe; accessing non-container properties is safe.
 
 
+## Emitted when a futures position at this body changes. [param position_key] is the
+## 3-element key [resource_type, ordinal_quarter, trader_id]. [param value] is the
+## resulting position [signed_unit_quantity, unit_price] in trade units (empty if the
+## position cleared); the quantity sign gives the side (+ long, − short). [param ask]
+## and [param bid] are the trader's outstanding ask and bid [unit_quantity, unit_price]
+## in trade units for this instrument; an empty array is a cleared ask or bid.
+signal futures_positions_changed(position_key: PackedInt32Array, value: PackedFloat64Array,
+		ask: PackedInt32Array, bid: PackedInt32Array)
+
+
 var body_id := -1  ## Index into [member ProxyBus.body_proxies].
 var body_flags := 0  ## Body flags from [enum IVBody.BodyFlags].
 var solar_occlusion: float  ## Average solar irradiance occlusion at this body.
@@ -49,6 +59,12 @@ var facilities: Array[Proxy] = []
 var market: MarketProxy
 
 # *****************************************************************************
+
+## Futures positions at this body, keyed by the 3-element position key
+## [resource_type, ordinal_quarter, trader_id] (the delivery body is this body).
+## Values are [signed_unit_quantity, unit_price] in trade units; the quantity sign
+## gives the side (+ long, − short). Server-maintained; read-only here.
+var futures_positions: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
 
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************

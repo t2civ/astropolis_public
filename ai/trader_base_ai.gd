@@ -610,9 +610,10 @@ func _on_bid_updated(resource_type: int, unit_quantity: int, unit_price: int,
 
 
 # Mirrors the trader's current ask/bid (carried in every position notification) into
-# futures order memory, keyed by [resource_type, ordinal_quarter, body_id].
-func _on_futures_positions_changed(position_key: PackedInt32Array, ask: PackedInt32Array,
-		bid: PackedInt32Array) -> void:
+# futures order memory, keyed by [resource_type, ordinal_quarter, body_id]. The position
+# value itself is read from proxy.futures_positions; this handler only needs ask/bid.
+func _on_futures_positions_changed(position_key: PackedInt32Array, _value: PackedFloat64Array,
+		ask: PackedInt32Array, bid: PackedInt32Array) -> void:
 	if ask:
 		_futures_asks[position_key] = ask
 	else:

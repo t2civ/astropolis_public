@@ -25,13 +25,13 @@ signal ask_updated(resource_type: int, unit_quantity: int, unit_price: int,
 signal bid_updated(resource_type: int, unit_quantity: int, unit_price: int,
 		bid_id: int, bid_status: TradeOrderStatus)
 ## Emitted when a futures position changes. [param position_key] is the 3-element
-## key [resource_type, ordinal_quarter, body_id] (the delivery body). The resulting
-## position in sim units (or its absence) is in [member futures_positions]; the
-## quantity sign gives the side (+ long, − short). [param ask] and [param bid] are
-## the updated outstanding ask and bid [unit_quantity, unit_price] in trade units;
-## an empty array is a cleared ask or bid.
-signal futures_positions_changed(position_key: PackedInt32Array, ask: PackedInt32Array,
-		bid: PackedInt32Array)
+## key [resource_type, ordinal_quarter, body_id] (the delivery body). [param value] is
+## the resulting position [signed_unit_quantity, unit_price] in trade units (empty if
+## the position cleared); the quantity sign gives the side (+ long, − short). [param
+## ask] and [param bid] are the trader's outstanding ask and bid [unit_quantity,
+## unit_price] in trade units for this instrument; an empty array is a cleared ask or bid.
+signal futures_positions_changed(position_key: PackedInt32Array, value: PackedFloat64Array,
+		ask: PackedInt32Array, bid: PackedInt32Array)
 
 
 var trader_id := -1  ## Index in [member ProxyBus.trader_proxies].
@@ -48,9 +48,9 @@ var market: MarketProxy  ## May change at runtime. Lives on markets thread!
 # *****************************************************************************
 
 ## Futures positions indexed by the 3-element position key [resource_type,
-## ordinal_quarter, body_id] (the delivery body). Values are [signed_quantity,
-## total_price] in internal sim units; the quantity sign gives the side (+ long /
-## pick up at the body, − short / drop off).
+## ordinal_quarter, body_id] (the delivery body). Values are [signed_unit_quantity,
+## unit_price] in trade units; the quantity sign gives the side (+ long / pick up at
+## the body, − short / drop off).
 var futures_positions: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
 
 
