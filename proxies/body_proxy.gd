@@ -13,7 +13,7 @@ extends Proxy
 ## facilities and aggregating their stats.
 ##
 ## Server-side Body aggregates component data from its facilities and exposes
-## stratum composition (atmosphere, surface, subsurface). It gains a spot
+## stratum composition (atmosphere, surface, subsurface). It gains a
 ## [MarketProxy] when it has a facility.
 ##
 ## Indexed getters here (notably the per-stratum [code]get_stratum_*[/code]
@@ -30,13 +30,13 @@ extends Proxy
 ## threadsafe; accessing non-container properties is safe.
 
 
-## Emitted when a futures position at this body changes. [param position_key] is the
+## Emitted when a position at this body changes. [param position_key] is the
 ## 3-element key [resource_type, ordinal_quarter, trader_id]. [param value] is the
 ## resulting position [signed_unit_quantity, unit_price] in trade units (empty if the
 ## position cleared); the quantity sign gives the side (+ long, − short). [param ask]
 ## and [param bid] are the trader's outstanding ask and bid [unit_quantity, unit_price]
 ## in trade units for this instrument; an empty array is a cleared ask or bid.
-signal futures_positions_changed(position_key: PackedInt32Array, value: PackedFloat64Array,
+signal positions_changed(position_key: PackedInt32Array, value: PackedFloat64Array,
 		ask: PackedInt32Array, bid: PackedInt32Array)
 
 
@@ -55,16 +55,16 @@ var parent: BodyProxy
 var satellites: Dictionary[StringName, BodyProxy]
 ## Facilities at this body. Resizable container — not threadsafe!
 var facilities: Array[Proxy] = []
-## The spot market at this body, or null if it has no facility yet.
+## The market at this body, or null if it has no facility yet.
 var market: MarketProxy
 
 # *****************************************************************************
 
-## Futures positions at this body, keyed by the 3-element position key
+## Positions at this body, keyed by the 3-element position key
 ## [resource_type, ordinal_quarter, trader_id] (the delivery body is this body).
 ## Values are [signed_unit_quantity, unit_price] in trade units; the quantity sign
 ## gives the side (+ long, − short). Server-maintained; read-only here.
-var futures_positions: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
+var positions: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
 
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************

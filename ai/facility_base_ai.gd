@@ -247,7 +247,7 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 static var _table_n_rows := IVTableData.table_n_rows
 static var _trade_unit_multipliers := ThreadsafeGlobal.resource_trade_unit_multipliers
 
-## Per-resource spot-tradability mask (1 = tradable), indexed by resource_type.
+## Per-resource tradability mask (1 = tradable), indexed by resource_type.
 ## Built once; a resource is tradable if it is a commodity with a storage class.
 static var _is_tradable: PackedByteArray
 

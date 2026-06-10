@@ -12,7 +12,7 @@ extends Proxy
 ## [TraderProxy] buys and sells resources for a specific [FacilityProxy].
 ##
 ## A trader is paired 1-to-1 with a facility and trades on its behalf via the
-## spot [MarketProxy] at the facility's body.
+## [MarketProxy] at the facility's body.
 ##
 ## To modify AI, see [BaseAI] and the [code]*_base_ai.gd[/code] files.
 ##
@@ -20,13 +20,13 @@ extends Proxy
 ## threadsafe; accessing non-container properties is safe.
 
 
-## Emitted when a futures position changes. [param position_key] is the 3-element
+## Emitted when a position changes. [param position_key] is the 3-element
 ## key [resource_type, ordinal_quarter, body_id] (the delivery body). [param value] is
 ## the resulting position [signed_unit_quantity, unit_price] in trade units (empty if
 ## the position cleared); the quantity sign gives the side (+ long, − short). [param
 ## ask] and [param bid] are the trader's outstanding ask and bid [unit_quantity,
 ## unit_price] in trade units for this instrument; an empty array is a cleared ask or bid.
-signal futures_positions_changed(position_key: PackedInt32Array, value: PackedFloat64Array,
+signal positions_changed(position_key: PackedInt32Array, value: PackedFloat64Array,
 		ask: PackedInt32Array, bid: PackedInt32Array)
 
 
@@ -43,11 +43,11 @@ var market: MarketProxy  ## May change at runtime. Lives on markets thread!
 
 # *****************************************************************************
 
-## Futures positions indexed by the 3-element position key [resource_type,
+## Positions indexed by the 3-element position key [resource_type,
 ## ordinal_quarter, body_id] (the delivery body). Values are [signed_unit_quantity,
 ## unit_price] in trade units; the quantity sign gives the side (+ long / pick up at
 ## the body, − short / drop off).
-var futures_positions: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
+var positions: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
 
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
@@ -72,22 +72,22 @@ func get_market() -> MarketProxy:
 # ******************************** AI METHODS *********************************
 # Call on proxy thread.
 
-## Adds, replaces, or cancels this trader's futures sell (ask) order. [param
+## Adds, replaces, or cancels this trader's sell (ask) order. [param
 ## instrument] is composed as [resource_type, ordinal_quarter]; the delivery body
 ## is the body of [param delivery_market_id]. Cancels if [param unit_quantity] is
 ## 0. [param unit_quantity] and [param unit_price] are in trade units. The
 ## resulting position side (long/short) follows from matching; a trader may hold
-## either side at any delivery body and may flip. If ordinal_quarter is the
-## current quarter, acts as a spot trade. [param delivery_market_id] is the market
-## at the delivery body; the caller already holds it, since it must query that
-## market to see available instruments.
-@abstract func set_futures_ask(instrument: PackedInt32Array, unit_quantity: int,
+## either side at any delivery body and may flip. The current quarter is the
+## near-immediate ("spot") case; later quarters are forward delivery. [param
+## delivery_market_id] is the market at the delivery body; the caller already
+## holds it, since it must query that market to see available instruments.
+@abstract func set_ask(instrument: PackedInt32Array, unit_quantity: int,
 		unit_price: int, delivery_market_id: int) -> void
 
 
-## Adds, replaces, or cancels this trader's futures buy (bid) order. See [param
+## Adds, replaces, or cancels this trader's buy (bid) order. See [param
 ## instrument] composition and params in the ask counterpart [method
-## set_futures_ask]. The resulting position side (long/short) follows from
+## set_ask]. The resulting position side (long/short) follows from
 ## matching; a trader may hold either side at any delivery body and may flip.
-@abstract func set_futures_bid(instrument: PackedInt32Array, unit_quantity: int,
+@abstract func set_bid(instrument: PackedInt32Array, unit_quantity: int,
 		unit_price: int, delivery_market_id: int) -> void

@@ -64,7 +64,7 @@ enum InventoryFlags {
 	## The storage class holding this resource is at or above the first
 	## throttling threshold.
 	STORAGE_SURPLUS = 1 << 3,
-	## No market spot price is established for this resource at this location.
+	## No market price is established for this resource at this location.
 	PRICE_UNKNOWN = 1 << 4,
 	## This resource is tradable (a commodity assigned to a storage class).
 	TRADABLE = 1 << 5,
@@ -435,6 +435,6 @@ func get_flags() -> int:
 @abstract func get_population_migration_pressure(population_type: int) -> float
 
 
-## Returns this facility's spot [MarketProxy], or null if not yet set.
+## Returns this facility's [MarketProxy], or null if not yet set.
 func get_market() -> MarketProxy:
 	return market
