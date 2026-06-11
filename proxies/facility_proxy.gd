@@ -338,8 +338,12 @@ func get_flags() -> int:
 @abstract func get_inventory_strategic_reserves() -> PackedFloat64Array
 
 
-## Returns the smoothed expected net rate for [param resource_type] (positive =
-## net production, negative = net consumption).
+## Returns the expected net flow rate for [param resource_type] (positive =
+## net production, negative = net consumption), projected from operating
+## intent — consumption at target utilization × capacity, production at
+## capacity factor × capacity (a time-horizon moving average of realized
+## utilization, which smooths the production side). Not degraded by transient
+## input shortages.
 @abstract func get_inventory_expected_rate(resource_type: int) -> float
 
 

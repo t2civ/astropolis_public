@@ -69,7 +69,9 @@ var body: BodyProxy ## Body this market serves.
 ## at this market's body). Value is [lowest_ask_price, lowest_ask_quantity,
 ## highest_bid_price, highest_bid_quantity] in trade units; an empty side reads 0.
 ## An instrument is present only while it has at least one resting order. Server-set;
-## read-only here.
+## read-only here. WARNING: resizable container maintained on the proxy thread —
+## access on the proxy thread only (directly or via the
+## [code]get_instrument_*[/code] getters).
 var instruments: Dictionary[PackedInt32Array, PackedInt32Array]
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
@@ -124,3 +126,28 @@ func get_market() -> MarketProxy:
 ## Returns the physically settled trade volume for [param type] in trade units
 ## per day, smoothed over 7 days.
 @abstract func get_unit_volume(type: int) -> float
+
+
+# ******************************** AI METHODS *********************************
+# Call on proxy thread. Per-instrument top-of-book reads onto [member instruments];
+# any quarter >= the current one is a legitimate query (an absent instrument
+# reads 0).
+
+## Returns the lowest resting ask price in trade units for the instrument
+## [param type] at [param ordinal_quarter], or 0 if no resting ask.
+@abstract func get_instrument_ask_unit_price(type: int, ordinal_quarter: int) -> int
+
+
+## Returns the quantity in trade units at the lowest resting ask for the
+## instrument [param type] at [param ordinal_quarter], or 0 if no resting ask.
+@abstract func get_instrument_ask_unit_quantity(type: int, ordinal_quarter: int) -> int
+
+
+## Returns the highest resting bid price in trade units for the instrument
+## [param type] at [param ordinal_quarter], or 0 if no resting bid.
+@abstract func get_instrument_bid_unit_price(type: int, ordinal_quarter: int) -> int
+
+
+## Returns the quantity in trade units at the highest resting bid for the
+## instrument [param type] at [param ordinal_quarter], or 0 if no resting bid.
+@abstract func get_instrument_bid_unit_quantity(type: int, ordinal_quarter: int) -> int

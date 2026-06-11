@@ -8,8 +8,9 @@
 class_name Utils
 extends Object
 
-## Astropolis-wide static utilities for bit manipulation, packed-array
-## conversion, weighted-average computation, and float-array math.
+## Astropolis-wide static utilities for bit manipulation, quarter-calendar
+## time math, packed-array conversion, weighted-average computation, and
+## float-array math.
 ##
 ## See [IVArrays] (in [code]ivoyager_core[/code]) for general-purpose array
 ## utilities; this class adds Astropolis-specific helpers.
@@ -54,6 +55,38 @@ static func get_n_bits(n: int) -> int:
 		return ((1 << 63)) - 1 | (1 << 63)
 	assert(false, "n must be in range 0 to 64")
 	return 0
+
+
+# quarter calendar
+
+## Returns the sim time (J2000 TT seconds) at the calendar start of
+## [param ordinal_quarter], where ordinal quarter counts as
+## [code]year * 4 + (quarter - 1)[/code] (Gregorian; see
+## [member IVGlobal.date_aux]). Uses the same day mapping as
+## [method IVTimekeeper.get_jdn_at_time], so the boundary aligns with the
+## simulator's quarter rollover. Returns 0.0 for negative input.
+static func get_time_at_ordinal_quarter(ordinal_quarter: int) -> float:
+	const DAY := IVUnits.DAY
+	assert(ordinal_quarter >= 0, "ordinal_quarter must be >= 0")
+	if ordinal_quarter < 0:
+		return 0.0 # guard against AI: safe default (debug assert above)
+	@warning_ignore("integer_division")
+	var year := ordinal_quarter / 4
+	var month := (ordinal_quarter % 4) * 3 + 1
+	var jdn := IVTimekeeper.get_jdn_at_gregorian_date(year, month, 1)
+	return (jdn - IVTimekeeper.JULIAN_DAY_NUMBER_AT_J2000) * DAY
+
+
+## Returns the duration of [param ordinal_quarter] in sim time (90-92 days,
+## Gregorian). Returns 0.0 for negative input. Time remaining in a current
+## quarter is a derivation:
+## [code]get_time_at_ordinal_quarter(ordinal_quarter + 1) - time[/code].
+static func get_ordinal_quarter_duration(ordinal_quarter: int) -> float:
+	assert(ordinal_quarter >= 0, "ordinal_quarter must be >= 0")
+	if ordinal_quarter < 0:
+		return 0.0 # guard against AI: safe default (debug assert above)
+	return (get_time_at_ordinal_quarter(ordinal_quarter + 1)
+			- get_time_at_ordinal_quarter(ordinal_quarter))
 
 
 # array & dict utils
