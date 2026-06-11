@@ -22,10 +22,11 @@ extends BaseAI
 ## market to [member TraderProxy.market_id] internally. The front
 ## (current-quarter) executors trade the facility's [i]stock[/i] imbalance
 ## against its reserve target; the forward executor trades projected [i]flow[/i]
-## on later-quarter instruments (see [method _process_forward_flow]). The future
-## transport trader will be this same class running different strategies,
-## discriminated by [member TraderProxy.facility_id] == -1 — all facility-paired
-## behavior is gated on that pairing.[br][br]
+## on later-quarter instruments — or, for a maker, quotes both sides
+## band-limited across the curve (see [method _process_forward_flow]). The
+## future transport trader will be this same class running different
+## strategies, discriminated by [member TraderProxy.facility_id] == -1 — all
+## facility-paired behavior is gated on that pairing.[br][br]
 ##
 ## Order memory ([member _asks] / [member _bids]) is [b]optimistic on every
 ## order[/b]: SET semantics are absolute (a new order replaces the resting one,
@@ -156,15 +157,17 @@ static var trader_strategy_defs: Array[Dictionary] = [
 ## [code]price_tol[/code], [code]qty_tol[/code]) may override the class-constant
 ## defaults. An empty entry trades nothing.[br][br]
 ##
-## [code]forward_quarters[/code] (int) gates and floors forward-flow trading on
+## [code]forward_quarters[/code] (int) gates and floors forward trading on
 ## later-quarter instruments — effective depth grows with the facility's
-## planning horizon (see [method _process_forward_flow]) — and
-## [code]forward_hedge[/code] scales the hedged fraction of projected flow. The
-## forward branch reuses the sell/buy switches as side gates. NEUTRAL stays
-## deliberately front-only: with both switches set, early forward deliveries
-## can push stock above target and be re-sold at a loss (bought at
-## ref×(1+spread), dumped at ref×(1−spread)) — bounded churn that one-sided
-## strategies can't suffer.
+## planning horizon (see [method _process_forward_flow]). One-sided defs hedge
+## projected flow ([code]forward_hedge[/code] scales the hedged fraction; the
+## sell/buy switches gate the side); a [code]two_sided[/code] def instead
+## quotes maker liquidity band-limited ([code]band_lots[/code] per side per
+## quarter) across the curve — the standing counterparty forward hedges trade
+## against. NEUTRAL stays deliberately front-only: with both switches set,
+## early forward deliveries can push stock above target and be re-sold at a
+## loss (bought at ref×(1+spread), dumped at ref×(1−spread)) — bounded churn
+## that one-sided strategies and makers (inverted prices) can't suffer.
 static var resource_strategy_defs: Array[Dictionary] = [
 	{&"sell_above_reserve": true, &"buy_to_reserve": true}, # NEUTRAL — maintain at reserve
 	{}, # JUST_IN_TIME
@@ -172,7 +175,7 @@ static var resource_strategy_defs: Array[Dictionary] = [
 	{}, # LIQUIDATE
 	{}, # HOARD
 	{}, # DUMP
-	{&"two_sided": true}, # MARKET_MAKING
+	{&"two_sided": true, &"forward_quarters": 2}, # MARKET_MAKING
 	{}, # SPECULATIVE_LONG
 	{}, # SPECULATIVE_SHORT
 	{}, # AUTARKIC
@@ -237,7 +240,7 @@ var _net_short_units: PackedInt64Array
 # Front-quarter instrument scratch [resource_type, ordinal_qtr]; safe for lookups
 # and outgoing calls (downstream duplicates), never stored as a key.
 var _instrument_scratch: PackedInt32Array
-# Collect-then-erase scratch for _drop_expired_memory().
+# Collect-then-act key scratch for _drop_expired_memory() and _clear_resource_orders().
 var _expired_keys: Array[PackedInt32Array] = []
 # Per-resource quarter-offset of the farthest forward order in memory at the
 # local body (0 = none); rebuilt by _drop_expired_memory() each interval. Lets
@@ -399,18 +402,21 @@ func _process_market_making(resource_type: int, market: MarketProxy,
 			price_tol, qty_tol)
 
 
-## Maintains forward-flow orders on later-quarter instruments at the local
-## market: hedges the facility's projected per-quarter flow (expected rate ×
-## quarter duration), netting each instrument's open position. The front
-## executors trade [i]stock[/i] imbalance; this one trades [i]flow[/i] — no
-## double-commitment, because filled forwards roll into the front position sums
-## at quarter rollover and net out of front wants there. The def's
-## [code]forward_quarters[/code] gates participation and floors the depth; the
-## facility's [member FacilityProxy.time_horizon] deepens it, so a remote
-## facility planning years ahead quotes proportionally farther out. Runs for
-## every resource (even maker/front-only defs) and maintains out to the
-## farthest remembered forward order past the def horizon, so a strategy
-## change, def shrink, or lost reference price want-0-clears stale orders.
+## Maintains forward orders on later-quarter instruments at the local market.
+## A one-sided def hedges the facility's projected per-quarter flow (expected
+## rate × quarter duration), side-gated by the sell/buy switches and netted
+## against each instrument's open position; a two-sided (maker) def instead
+## quotes both sides band-limited, extending front market-making across the
+## curve. The front executors trade [i]stock[/i] imbalance; the flow hedge
+## trades [i]flow[/i] — no double-commitment, because filled forwards roll into
+## the front position sums at quarter rollover and net out of front wants
+## there. The def's [code]forward_quarters[/code] gates participation and
+## floors the depth; the facility's [member FacilityProxy.time_horizon]
+## deepens it, so a remote facility planning years ahead quotes proportionally
+## farther out. Runs for every resource (even front-only defs) and maintains
+## out to the farthest remembered forward order past the def horizon, so a
+## strategy change, def shrink, or lost reference price want-0-clears stale
+## orders.
 func _process_forward_flow(resource_type: int, market: MarketProxy, def: Dictionary) -> void:
 	var def_forward_quarters: int = def.get(&"forward_quarters", 0)
 	var forward_quarters := 0
@@ -421,49 +427,75 @@ func _process_forward_flow(resource_type: int, market: MarketProxy, def: Diction
 	var n_quarters := maxi(forward_quarters, _forward_mem_horizons[resource_type])
 	if n_quarters == 0:
 		return # nothing wanted, nothing resting (the common case)
-	var reference_price := market.get_unit_price(resource_type)
 	var expected_rate := _facility.get_inventory_expected_rate(resource_type)
+	var two_sided: bool = def.get(&"two_sided", false)
 	var sell: bool = def.get(&"sell_above_reserve", false)
 	var buy: bool = def.get(&"buy_to_reserve", false)
+	var reference_price := market.get_unit_price(resource_type)
+	if two_sided and reference_price <= 0:
+		reference_price = _start_unit_prices[resource_type] # mirror the front maker fallback
+	var make := two_sided and reference_price > 0
 	var want_ask := sell and expected_rate > 0.0 and reference_price > 0
 	var want_bid := buy and expected_rate < 0.0 and reference_price > 0
-	if !want_ask and !want_bid and _forward_mem_horizons[resource_type] == 0:
-		return # no flow to hedge and nothing resting forward
+	if !make and !want_ask and !want_bid and _forward_mem_horizons[resource_type] == 0:
+		return # nothing to quote and nothing resting forward
 	var spread: float = def.get(&"spread", SPREAD)
 	var min_lot: int = def.get(&"min_lot", MIN_LOT)
+	var band_lots: int = def.get(&"band_lots", MM_BAND_LOTS)
 	var price_tol: float = def.get(&"price_tol", PRICE_TOLERANCE)
 	var qty_tol: float = def.get(&"qty_tol", QTY_TOLERANCE)
 	var forward_hedge: float = def.get(&"forward_hedge", FORWARD_HEDGE)
 	var multiplier := _trade_unit_multipliers[resource_type]
 	var local_body_id := market.body_id
-	# Crossing-friendly prices like facility support: ask below the reference,
-	# bid above, so producer and consumer forwards cross (placeholder 1 on
-	# cancel-only paths — the proxy rejects price <= 0 even for a cancel).
-	var ask_price := maxi(1, floori(reference_price * (1.0 - spread)))
-	var bid_price := maxi(1, ceili(reference_price * (1.0 + spread)))
+	# Flow hedging crosses like facility support (ask below the reference, bid
+	# above); making earns the spread like front market-making (ask above, bid
+	# below). Placeholder 1 on cancel-only paths — the proxy rejects price <= 0
+	# even for a cancel.
+	var ask_price: int
+	var bid_price: int
+	if make:
+		ask_price = maxi(1, ceili(reference_price * (1.0 + spread)))
+		bid_price = maxi(1, floori(reference_price * (1.0 - spread)))
+	else:
+		ask_price = maxi(1, floori(reference_price * (1.0 - spread)))
+		bid_price = maxi(1, ceili(reference_price * (1.0 + spread)))
 	var current_qtr := proxy.ordinal_qtr
 	for k in range(1, n_quarters + 1):
 		var ordinal_quarter := current_qtr + k
 		_forward_instrument_scratch[0] = resource_type
 		_forward_instrument_scratch[1] = ordinal_quarter
 		var mem_key := _order_memory_key(_forward_instrument_scratch, proxy.market_id)
-		var flow_units := 0
-		if k <= forward_quarters and (want_ask or want_bid):
-			flow_units = int(forward_hedge * absf(expected_rate)
-					* Utils.get_ordinal_quarter_duration(ordinal_quarter) / multiplier)
 		# An open position on this instrument is already-committed flow, netted
-		# out of the want like the front executors net the front position sums.
+		# out of the wants like the front executors net the front position sums.
 		_position_scratch[0] = resource_type
 		_position_scratch[1] = ordinal_quarter
 		_position_scratch[2] = local_body_id
 		var position: PackedFloat64Array = proxy.positions.get(_position_scratch, NULL_PF64ARRAY)
 		var net_units := int(position[0]) if position else 0
-		var ask_units := (flow_units - maxi(0, -net_units)) if want_ask else 0
-		var bid_units := (flow_units - maxi(0, net_units)) if want_bid else 0
-		# Cancel side first: the markets thread may drain the channel between
-		# these two calls, and crossing-friendly prices would let a stale
-		# opposite-side order self-cross a fresh post; a cancel can never cross.
-		if want_ask:
+		var ask_units := 0
+		var bid_units := 0
+		if k <= forward_quarters:
+			if make: # band-limited both sides; fills mean-revert toward flat
+				ask_units = band_lots - maxi(0, -net_units)
+				bid_units = band_lots - maxi(0, net_units)
+			elif want_ask or want_bid:
+				var flow_units := int(forward_hedge * absf(expected_rate)
+						* Utils.get_ordinal_quarter_duration(ordinal_quarter) / multiplier)
+				if want_ask:
+					ask_units = flow_units - maxi(0, -net_units)
+				else:
+					bid_units = flow_units - maxi(0, net_units)
+		if make:
+			# Maker sides can't cross each other; SET replaces same-side leftovers
+			# (a branch change clears all quarters — see _clear_resource_orders).
+			_maintain_ask(_forward_instrument_scratch, mem_key, ask_units, ask_price,
+					min_lot, price_tol, qty_tol)
+			_maintain_bid(_forward_instrument_scratch, mem_key, bid_units, bid_price,
+					min_lot, price_tol, qty_tol)
+		elif want_ask:
+			# Cancel side first: the markets thread may drain the channel between
+			# these two calls, and crossing-friendly prices would let a stale
+			# opposite-side order self-cross a fresh post; a cancel can never cross.
 			_maintain_bid(_forward_instrument_scratch, mem_key, 0, 1, min_lot, 0.0, 0.0)
 			_maintain_ask(_forward_instrument_scratch, mem_key, ask_units, ask_price,
 					min_lot, price_tol, qty_tol)
@@ -640,21 +672,31 @@ func _needs_requote(have_quantity: int, have_price: int, want_quantity: int, wan
 	return false
 
 
-# Cancels this trader's resting ask and bid (if any) on the front-quarter instrument
-# for [param resource_type]. Called on an executor-branch change: the facility-support
-# and market-making branches share price formulas (a sell ask at ref*(1-spread) equals
-# the maker's bid; a buy bid at ref*(1+spread) equals the maker's ask), and those prices
-# sit within [constant PRICE_TOLERANCE] of each other, so a lingering old-branch order
-# would not be re-quoted and could cross the new branch's opposite quote (a self-trade).
-func _clear_front_orders(resource_type: int) -> void:
+# Cancels this trader's resting ask and bid (if any) on every quarter's instrument
+# for [param resource_type] at the local body. Called on an executor-branch change:
+# the support/flow and market-making branches share price formulas (a sell ask at
+# ref*(1-spread) equals the maker's bid; a buy bid at ref*(1+spread) equals the
+# maker's ask), and those prices sit within [constant PRICE_TOLERANCE] of each
+# other, so a lingering old-branch order would not be re-quoted and could cross
+# the new branch's opposite quote (a self-trade) — on the front or any forward
+# quarter both branches quote.
+func _clear_resource_orders(resource_type: int) -> void:
 	if !proxy.market:
 		return
-	var instrument := PackedInt32Array([resource_type, proxy.ordinal_qtr])
-	var mem_key := _order_memory_key(instrument, proxy.market_id)
-	if _asks.has(mem_key):
-		_set_ask(instrument, 0, 1, proxy.market_id)
-	if _bids.has(mem_key):
-		_set_bid(instrument, 0, 1, proxy.market_id)
+	var local_body_id := proxy.market.body_id
+	for key in _asks: # collect-then-act; _set_* mutates the dicts
+		if key[0] == resource_type and key[2] == local_body_id:
+			_expired_keys.append(key)
+	for key in _bids:
+		if key[0] == resource_type and key[2] == local_body_id:
+			_expired_keys.append(key)
+	for key in _expired_keys: # duplicates fine; the has() checks make this idempotent
+		var instrument := key.slice(0, 2)
+		if _asks.has(key):
+			_set_ask(instrument, 0, 1, proxy.market_id)
+		if _bids.has(key):
+			_set_bid(instrument, 0, 1, proxy.market_id)
+	_expired_keys.clear()
 
 
 # ********************************* LISTENERS *********************************
@@ -695,9 +737,10 @@ func _on_facility_resource_strategy_changed(resource_type: int, strategy_id: int
 	if new_strategy == resource_strategies[resource_type]:
 		return
 	resource_strategies[resource_type] = new_strategy
-	# A new strategy may switch the executor branch; clear the front instrument so a
-	# lingering old-branch order cannot cross the new branch's quote (see _clear_front_orders).
-	_clear_front_orders(resource_type)
+	# A new strategy may switch the executor branch; clear the resource's instruments
+	# (every quarter) so a lingering old-branch order cannot cross the new branch's
+	# quote (see _clear_resource_orders).
+	_clear_resource_orders(resource_type)
 
 
 # Mirrors the trader's current ask/bid (carried in every position notification) into
