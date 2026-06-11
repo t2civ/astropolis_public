@@ -514,6 +514,21 @@ func get_financials_cost_of_goods_sold_history() -> PackedFloat64Array:
 	return PackedFloat64Array()
 
 
+## Returns the derived subtotals array (indexed by financial_subtotals), or empty.
+func get_financials_subtotals() -> PackedFloat64Array:
+	return PackedFloat64Array()
+
+
+## Returns the sparse line-item dict (financial_items index -> value), or empty.
+func get_financials_accountings() -> Dictionary[int, float]:
+	return {}
+
+
+## Returns the per-quarter history of line item [param _item] (oldest first), or empty.
+func get_financials_accounting_history(_item: int) -> PackedFloat64Array:
+	return PackedFloat64Array()
+
+
 # Population data (read-only). Default 0.0/empty; developed proxies override.
 
 ## Returns the population count for [param population_type], or the total across
