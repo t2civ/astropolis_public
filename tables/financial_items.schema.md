@@ -6,8 +6,10 @@ and aggregate facility → player. Subtotals are derived from these leaves, not 
 
 ## Fields
 
-- name (1st column) — Item name, prefixed `FINANCIAL_ITEM_`. v1 convention: `<OP_CLASS>_REVENUE` /
-  `<OP_CLASS>_COGS` for the per-activity income lines, keyed off `op_classes.tsv`.
+- name (1st column) — Item name, prefixed `FINANCIAL_ITEM_`. Line items are referenced by
+  `operations.tsv` (`revenue_type` / `cogs_type`, per operation) and `facility_classes.tsv`
+  (`revenue_type` / `cogs_type`, per unitary facility); the line item itself is unaware of operations or
+  facility classes, and either source may produce the same item.
 - statement — `financial_statements.tsv` row. Drives quarter behavior: `INCOME` and `CASH_FLOW` are flows
   (reset at quarter rollover); `BALANCE` is a stock (runs).
 - subtotal_group — `financial_subtotals.tsv` base subtotal this item sums into (`REVENUE` or

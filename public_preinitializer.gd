@@ -104,6 +104,7 @@ func _on_table_initializer_instantiated(_table_initializer: IVTableInitializer) 
 	tables.financial_statements = path_format % "financial_statements"
 	tables.financial_subtotals = path_format % "financial_subtotals"
 	tables.financial_items = path_format % "financial_items"
+	tables.facility_classes = path_format % "facility_classes"
 	tables.op_classes = path_format % "op_classes"
 	tables.operations = path_format % "operations"
 	tables.players = path_format % "players"
