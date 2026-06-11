@@ -347,13 +347,20 @@ func _process_facility_support(resource_type: int, market: MarketProxy,
 	if sell: # open shorts are committed outbound stock
 		ask_units = int((stock - target) / multiplier) - _net_short_units[resource_type]
 	var ask_price := maxi(1, floori(reference_price * (1.0 - spread)))
-	_maintain_ask(instrument, mem_key, ask_units, ask_price, min_lot, price_tol, qty_tol)
 	var bid_units := 0
 	if buy: # open longs are committed inbound goods, like in-transit stock
 		bid_units = (int((target - stock - _facility.get_inventory_in_transit(resource_type))
 				/ multiplier) - _net_long_units[resource_type])
 	var bid_price := maxi(1, ceili(reference_price * (1.0 + spread)))
-	_maintain_bid(instrument, mem_key, bid_units, bid_price, min_lot, price_tol, qty_tol)
+	# Cancel side first (see _process_forward_flow): at most one side wants — post
+	# it only after the opposite side's clear is queued, so a stale opposite-side
+	# order can't cross the fresh post if the markets thread drains mid-pass.
+	if ask_units >= min_lot:
+		_maintain_bid(instrument, mem_key, bid_units, bid_price, min_lot, price_tol, qty_tol)
+		_maintain_ask(instrument, mem_key, ask_units, ask_price, min_lot, price_tol, qty_tol)
+	else:
+		_maintain_ask(instrument, mem_key, ask_units, ask_price, min_lot, price_tol, qty_tol)
+		_maintain_bid(instrument, mem_key, bid_units, bid_price, min_lot, price_tol, qty_tol)
 
 
 ## Quotes both sides for a market-relevant resource: bid below the reference price, ask
