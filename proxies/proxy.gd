@@ -515,7 +515,7 @@ func get_financials_cost_of_goods_sold_history() -> PackedFloat64Array:
 
 
 ## Returns the derived subtotals array (revenue, cost-of-goods, gross-output,
-## gross-profit), or empty.
+## gross-profit, net-cash-flow), or empty.
 func get_financials_subtotals() -> PackedFloat64Array:
 	return PackedFloat64Array()
 
