@@ -11,9 +11,11 @@ extends MarginContainer
 ## "Budget" tab subpanel for [InfoPanel]. Shows the selected entity's chart of
 ## accounts as one subtab per financial statement (income, cash flow, balance).
 ##
-## In v1 only the income statement carries line items: revenue and cost-of-goods
-## groups (each expandable to its per-activity leaves) plus a derived gross-profit
-## line. The other statements light up in later development steps.
+## The income statement shows revenue and cost-of-goods groups (each expandable
+## to its per-activity leaves) plus a derived gross-profit line. The cash-flow
+## statement shows inflow and outflow groups (by per-leaf direction) plus a
+## derived net-cash-flow line. The balance statement lights up in a later
+## development step.
 ##
 ## Each statement is a grid of recent quarters, newest at right. A header row
 ## labels the quarters ("2025Q1", ...) and its leftmost cell names the USD
@@ -62,6 +64,7 @@ var _item_names: Array[StringName] = _db_tables[&"line_items"][&"name"]
 var _item_statements: Array[int] = _db_tables[&"line_items"][&"statement"]
 var _statement_keys := Enums.StatementTypes.keys()
 var _income_statement := Enums.StatementTypes.STATEMENT_INCOME
+var _cash_flow_statement := Enums.StatementTypes.STATEMENT_CASH_FLOW
 var _usd_inv: float = 1.0 / IVUnits.unit_multipliers[&"$"]
 
 # line_items entity-name keys for leaf rows, rendered via Label auto-translation
@@ -241,7 +244,7 @@ func _get_proxy_data(target_name: StringName) -> void:
 	var groups := []
 	var footer := []
 
-	# v1: only the income statement is populated.
+	# The balance statement is not yet populated (a later development step).
 	if tab == _income_statement:
 		var subtotals := proxy.get_financials_subtotals()
 		var accountings := proxy.get_financials_accountings().duplicate()
@@ -254,6 +257,19 @@ func _get_proxy_data(target_name: StringName) -> void:
 		var revenue_series := _make_series(revenue_history, subtotals[SUBTOTAL_REVENUE])
 		var cogs_series := _make_series(cogs_history, subtotals[SUBTOTAL_COST_OF_GOODS])
 		footer = ["SUBTOTAL_GROSS_PROFIT", _subtract_series(revenue_series, cogs_series)]
+	elif tab == _cash_flow_statement:
+		# Inflow/outflow group series are summed from their leaf series (cash-flow
+		# direction is per-leaf; only the net is a tracked subtotal).
+		var accountings := proxy.get_financials_accountings().duplicate()
+		var inflow_group := _collect_summed_group(proxy, accountings, _cash_flow_statement,
+				SUBTOTAL_REVENUE, "CASH_INFLOWS")
+		var outflow_group := _collect_summed_group(proxy, accountings, _cash_flow_statement,
+				SUBTOTAL_COST_OF_GOODS, "CASH_OUTFLOWS")
+		groups.append(inflow_group)
+		groups.append(outflow_group)
+		var inflow_series: PackedFloat64Array = inflow_group[1]
+		var outflow_series: PackedFloat64Array = outflow_group[1]
+		footer = ["SUBTOTAL_NET_CASH_FLOW", _subtract_series(inflow_series, outflow_series)]
 
 	_update_tab_display.call_deferred(target_name, tab, ordinal_qtr, groups, footer)
 
@@ -274,6 +290,35 @@ func _collect_group(proxy: Proxy, accountings: Dictionary[int, float], subtotal:
 			continue
 		rows.append([_item_keys[item], leaf_series])
 	return [title, _make_series(subtotal_history, subtotal_value), rows]
+
+
+func _collect_summed_group(proxy: Proxy, accountings: Dictionary[int, float], statement: int,
+		subtotal: int, title: String) -> Array:
+	# Like _collect_group, but the group series is summed from its leaf series
+	# rather than read from a tracked subtotal (used for cash-flow direction
+	# groups, where only the net is a subtotal). Leaves in table order, matching
+	# this statement and direction, with any nonzero quarter.
+	var rows := []
+	var group_series := PackedFloat64Array()
+	for item in _n_line_items:
+		if _item_statements[item] != statement:
+			continue
+		if _item_subtotals[item] != subtotal:
+			continue
+		var current_value: float = accountings.get(item, 0.0)
+		var leaf_series := _make_series(proxy.get_financials_accounting_history(item), current_value)
+		_add_series(group_series, leaf_series)
+		if !_has_nonzero(leaf_series):
+			continue
+		rows.append([_item_keys[item], leaf_series])
+	return [title, group_series, rows]
+
+
+func _add_series(into: PackedFloat64Array, add: PackedFloat64Array) -> void:
+	if into.size() < add.size():
+		into.resize(add.size())
+	for q in add.size():
+		into[q] += add[q]
 
 
 func _has_nonzero(series: PackedFloat64Array) -> bool:
