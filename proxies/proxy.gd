@@ -514,12 +514,13 @@ func get_financials_cost_of_goods_sold_history() -> PackedFloat64Array:
 	return PackedFloat64Array()
 
 
-## Returns the derived subtotals array (indexed by financial_subtotals), or empty.
+## Returns the derived subtotals array (revenue, cost-of-goods, gross-output,
+## gross-profit), or empty.
 func get_financials_subtotals() -> PackedFloat64Array:
 	return PackedFloat64Array()
 
 
-## Returns the sparse line-item dict (financial_items index -> value), or empty.
+## Returns the sparse line-item dict (line_items index -> value), or empty.
 func get_financials_accountings() -> Dictionary[int, float]:
 	return {}
 

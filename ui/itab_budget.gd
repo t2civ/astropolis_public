@@ -16,11 +16,16 @@ extends MarginContainer
 ## line. The other statements light up in later development steps. Hovering a
 ## dollar value shows its per-quarter history.
 ##
-## Subtab indices follow row enumerations in [code]financial_statements.tsv[/code].
+## Subtab indices follow [code]Enums.StatementTypes[/code].
 
 const SCENE := "res://public/ui/itab_budget.tscn"  ## Scene file for instancing.
 
 const SUBGROUP_INDENT := 25
+
+# Subtotal indices into the proxy's dense subtotals array; MUST match the
+# SUBTOTAL_* order in the financials components (server/proxy).
+const SUBTOTAL_REVENUE := 0
+const SUBTOTAL_COST_OF_GOODS := 1
 
 
 const PERSIST_MODE := IVGlobal.PERSIST_PROCEDURAL  ## Save/load mode (procedural node).
@@ -39,21 +44,19 @@ var base_column_width := 95.0
 
 # table indexing
 var _db_tables := IVTableData.db_tables
-var _n_financial_items: int = IVTableData.table_n_rows[&"financial_items"]
-var _item_names: Array[StringName] = _db_tables[&"financial_items"][&"name"]
-var _item_subtotals: Array[int] = _db_tables[&"financial_items"][&"subtotal_group"]
-var _item_statements: Array[int] = _db_tables[&"financial_items"][&"statement"]
-var _statement_names: Array[StringName] = IVTableData.get_enumeration_array(&"financial_statements")
-var _subtotal_names: Array[StringName] = IVTableData.get_enumeration_array(&"financial_subtotals")
-var _subtotal_revenue := IVTableData.get_row(&"FINANCIAL_SUBTOTAL_REVENUE")
-var _subtotal_cost_of_goods := IVTableData.get_row(&"FINANCIAL_SUBTOTAL_COST_OF_GOODS")
-var _subtotal_gross_profit := IVTableData.get_row(&"FINANCIAL_SUBTOTAL_GROSS_PROFIT")
-var _income_statement := IVTableData.get_row(&"FINANCIAL_STATEMENT_INCOME")
+var _n_line_items: int = IVTableData.table_n_rows[&"line_items"]
+var _item_names: Array[StringName] = _db_tables[&"line_items"][&"name"]
+var _item_statements: Array[int] = _db_tables[&"line_items"][&"statement"]
+var _statement_keys := Enums.StatementTypes.keys()
+var _income_statement := Enums.StatementTypes.STATEMENT_INCOME
 var _usd_inv: float = 1.0 / IVUnits.unit_multipliers[&"$"]
 
-# financial_items entity-name keys for leaf rows; rendered via Label
-# auto-translation (entities.csv). Cached so proxy-thread reads stay safe.
+# line_items entity-name keys for leaf rows, rendered via Label auto-translation
+# (entities.csv). _item_subtotals maps each leaf to its base subtotal index
+# (SUBTOTAL_REVENUE or SUBTOTAL_COST_OF_GOODS). Both cached so proxy-thread reads
+# stay safe.
 var _item_keys: Array[String] = []
+var _item_subtotals := PackedInt32Array()
 
 var _selection_manager: AstroSelectionManager
 var _suppress_tab_listener := true
@@ -96,9 +99,12 @@ func timer_update() -> void:
 
 
 func _precompute_display_names() -> void:
-	_item_keys.resize(_n_financial_items)
-	for item in _n_financial_items:
+	var item_is_revenue: Array[bool] = _db_tables[&"line_items"][&"is_revenue"]
+	_item_keys.resize(_n_line_items)
+	_item_subtotals.resize(_n_line_items)
+	for item in _n_line_items:
 		_item_keys[item] = String(_item_names[item])
+		_item_subtotals[item] = SUBTOTAL_REVENUE if item_is_revenue[item] else SUBTOTAL_COST_OF_GOODS
 
 
 func _build_ui() -> void:
@@ -114,14 +120,15 @@ func _build_ui() -> void:
 	_no_budget_label.hide()
 	add_child(_no_budget_label)
 
-	var n_statements := _statement_names.size()
+	var n_statements := _statement_keys.size()
 	_content_vboxes.resize(n_statements)
 	_scrolls.resize(n_statements)
 	_footers.resize(n_statements)
 	_empty_labels.resize(n_statements)
 	for statement in n_statements:
 		var tab := VBoxContainer.new()
-		tab.name = String(_statement_names[statement])  # node name auto-translates as tab title
+		var statement_key: String = _statement_keys[statement]
+		tab.name = statement_key  # node name auto-translates as tab title (entities.csv)
 		_tab_container.add_child(tab)
 
 		var scroll := ScrollContainer.new()
@@ -191,15 +198,13 @@ func _get_proxy_data(target_name: StringName) -> void:
 		var accountings := proxy.get_financials_accountings().duplicate()
 		var revenue_history := proxy.get_financials_revenue_history()
 		var cogs_history := proxy.get_financials_cost_of_goods_sold_history()
-		groups.append(_collect_group(proxy, accountings, _subtotal_revenue,
-				String(_subtotal_names[_subtotal_revenue]), subtotals[_subtotal_revenue],
-				revenue_history))
-		groups.append(_collect_group(proxy, accountings, _subtotal_cost_of_goods,
-				String(_subtotal_names[_subtotal_cost_of_goods]), subtotals[_subtotal_cost_of_goods],
-				cogs_history))
-		var gross_profit: float = subtotals[_subtotal_revenue] - subtotals[_subtotal_cost_of_goods]
+		groups.append(_collect_group(proxy, accountings, SUBTOTAL_REVENUE,
+				"SUBTOTAL_REVENUE", subtotals[SUBTOTAL_REVENUE], revenue_history))
+		groups.append(_collect_group(proxy, accountings, SUBTOTAL_COST_OF_GOODS,
+				"SUBTOTAL_COST_OF_GOODS", subtotals[SUBTOTAL_COST_OF_GOODS], cogs_history))
+		var gross_profit: float = subtotals[SUBTOTAL_REVENUE] - subtotals[SUBTOTAL_COST_OF_GOODS]
 		var gross_profit_history := _subtract_histories(revenue_history, cogs_history)
-		footer = [String(_subtotal_names[_subtotal_gross_profit]), gross_profit, gross_profit_history]
+		footer = ["SUBTOTAL_GROSS_PROFIT", gross_profit, gross_profit_history]
 
 	_update_tab_display.call_deferred(target_name, tab, groups, footer)
 
@@ -208,7 +213,7 @@ func _collect_group(proxy: Proxy, accountings: Dictionary[int, float], subtotal:
 		subtotal_value: float, subtotal_history: PackedFloat64Array) -> Array:
 	# Leaves in table order, only those present (sparse) and matching this group.
 	var rows := []
-	for item in _n_financial_items:
+	for item in _n_line_items:
 		if _item_statements[item] != _income_statement:
 			continue
 		if _item_subtotals[item] != subtotal:

@@ -15,8 +15,8 @@ Operations are described in `operations.descriptive.md`.
 - target_products — All groups except Energy. Target product(s) of the operation, which is sometimes a judgment call. For conversion operations where the valued outputs may be unclear or context dependent, include all output resources excluding only explicit waste products such as INDUST_WASTE. For most synthesis, manufacturing, and biological operations, include only the obvious target product. Example: for OIL_REFINING, we consider as value products LIQ_HYDROCARBONS, METHANE, CARBON, and SULFUR (only excluding INDUST_WASTE).
 - open_cycle_storage — Array of integer-valued floats (`-1`, `0`, or `1`) giving the net storage-class direction of this operation when run in open cycle (atmospheric inputs drawn from atmosphere, gaseous/liquid waste vented to atmosphere or surface). Values are indexed by `storage_classes.tsv` rows. `1` means the op is a net producer into that storage class, `-1` means it draws from it, `0` means no effect. May be left empty for operations with no storage effects at all.
 - closed_cycle_storage — Same format as `open_cycle_storage`, but for closed-cycle operation: atmospheric inputs come from inventory (cryogenic reserves, etc.), gaseous/liquid outputs route back to inventory rather than venting, and electricity is scaled by `closed_cycle_factor`. Used when the facility or module forces closed-cycle processing.
-- revenue_type — `financial_items.tsv` line item this operation's (imputed) revenue books into for non-unitary facilities. A financial concept independent of `op_class` (a GUI-only grouping); leave empty for none.
-- cogs_type — `financial_items.tsv` line item this operation's (imputed) cost of goods books into for non-unitary facilities. Leave empty for none.
+- revenue_type — `line_items.tsv` line item this operation's (imputed) revenue books into for non-unitary facilities. A financial concept independent of `op_class` (a GUI-only grouping); leave empty for none.
+- cogs_type — `line_items.tsv` line item this operation's (imputed) cost of goods books into for non-unitary facilities. Leave empty for none.
 
 
 ## Extraction Fields
