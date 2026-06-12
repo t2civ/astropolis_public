@@ -13,8 +13,12 @@ extends MarginContainer
 ##
 ## In v1 only the income statement carries line items: revenue and cost-of-goods
 ## groups (each expandable to its per-activity leaves) plus a derived gross-profit
-## line. The other statements light up in later development steps. Hovering a
-## dollar value shows its per-quarter history.
+## line. The other statements light up in later development steps.
+##
+## Each statement is a grid of recent quarters, newest at right. A header row
+## labels the quarters ("2025Q1", ...) and its leftmost cell names the USD
+## display unit; the "<" / ">" buttons shift the visible quarter window. Display
+## values are scaled on the fly so most land in the 1–999 range.
 ##
 ## Subtab indices follow [code]Enums.StatementTypes[/code].
 
@@ -26,6 +30,10 @@ const SUBGROUP_INDENT := 25
 # SUBTOTAL_* order in the financials components (server/proxy).
 const SUBTOTAL_REVENUE := 0
 const SUBTOTAL_COST_OF_GOODS := 1
+
+# Bounds of the available LABEL_USD_* magnitude units (thousands..quintillions).
+const USD_MIN_EXPONENT := 1
+const USD_MAX_EXPONENT := 6
 
 
 const PERSIST_MODE := IVGlobal.PERSIST_PROCEDURAL  ## Save/load mode (procedural node).
@@ -40,7 +48,12 @@ var current_tab := 0
 var _on_ready_tab := 0
 
 # not persisted
-var base_column_width := 95.0
+var label_width := 110.0  ## Min width of the leftmost name/label region.
+var column_width := 58.0  ## Min width of each quarter column.
+var n_visible_quarters := 6  ## Number of quarter columns shown at once.
+var arrow_width := 24.0  ## Min width of the "<" / ">" shift buttons and matching row gutters.
+var foldable_indent := 20.0  ## Foldable title left-lead (fold-icon + style-box margin); aligns header/footer names with group titles.
+var scroll_correction := 7.0  ## Trailing spacer on the out-of-scroll header/footer; offsets their columns to match the in-scroll content past the vertical scrollbar.
 
 # table indexing
 var _db_tables := IVTableData.db_tables
@@ -61,12 +74,29 @@ var _item_subtotals := PackedInt32Array()
 var _selection_manager: AstroSelectionManager
 var _suppress_tab_listener := true
 
+# Last data pushed to the main thread, retained so window shifts re-render
+# without another proxy-thread round trip. Series are per-quarter, oldest first,
+# with the current (incomplete) quarter last.
+var _display_name := &""
+var _display_tab := -1
+var _display_ordinal_qtr := -1
+var _display_groups: Array = []  # [[title, subtotal_series, [[leaf_key, leaf_series], ...]], ...]
+var _display_footer: Array = []  # [name, series] or []
+var _display_unit := ""  # localized USD magnitude-unit label
+var _display_scale := 1.0  # internal-value -> display multiplier (USD inverse / 1000^exponent)
+var _window_offset := 0  # quarters scrolled back from newest; 0 shows the current quarter
+
+# Blank icon used as the fold-arrow override for a group with no leaves; keeps
+# the title's left lead while hiding the (non-functional) arrow.
+var _fold_icon_substitute := MeshTexture.new()
+
 # built in code (see _build_ui)
 var _tab_container: TabContainer
 var _no_budget_label: Label
 var _content_vboxes: Array[VBoxContainer] = []
 var _scrolls: Array[ScrollContainer] = []
-var _footers: Array[Control] = []
+var _headers: Array[BudgetHeaderRow] = []
+var _footers: Array[BudgetGroup] = []  # gross-profit line, a leafless foldable
 var _empty_labels: Array[Label] = []
 
 @warning_ignore("unsafe_property_access")
@@ -79,6 +109,7 @@ func _ready() -> void:
 	visibility_changed.connect(_update_tab)
 	_selection_manager = IVSelectionManager.get_selection_manager(self)
 	_selection_manager.selection_changed.connect(_update_tab)
+	_fold_icon_substitute.image_size.x = 16  # match the fold-arrow width
 	_build_ui()
 	_tab_container.set_current_tab(_on_ready_tab)
 	_suppress_tab_listener = false
@@ -123,6 +154,7 @@ func _build_ui() -> void:
 	var n_statements := _statement_keys.size()
 	_content_vboxes.resize(n_statements)
 	_scrolls.resize(n_statements)
+	_headers.resize(n_statements)
 	_footers.resize(n_statements)
 	_empty_labels.resize(n_statements)
 	for statement in n_statements:
@@ -131,18 +163,33 @@ func _build_ui() -> void:
 		tab.name = statement_key  # node name auto-translates as tab title (entities.csv)
 		_tab_container.add_child(tab)
 
+		var header := BudgetHeaderRow.new(label_width, column_width, arrow_width,
+				foldable_indent, scroll_correction, n_visible_quarters)
+		header.shift_requested.connect(_shift_window)
+		header.hide()
+		tab.add_child(header)
+
 		var scroll := ScrollContainer.new()
 		scroll.size_flags_horizontal = SIZE_EXPAND_FILL
 		scroll.size_flags_vertical = SIZE_EXPAND_FILL
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		tab.add_child(scroll)
 		var content := VBoxContainer.new()
 		content.size_flags_horizontal = SIZE_EXPAND_FILL
 		content.size_flags_vertical = SIZE_EXPAND_FILL
 		scroll.add_child(content)
 
-		var footer := BudgetRow.new(base_column_width, false)
+		# Groups and the gross-profit footer live inside the scroll — the whole
+		# statement is one scrollable unit; only the header stays pinned outside.
+		# The footer is itself a leafless foldable so it shares the groups' styling.
+		var groups_vbox := VBoxContainer.new()
+		groups_vbox.size_flags_horizontal = SIZE_EXPAND_FILL
+		content.add_child(groups_vbox)
+
+		var footer := BudgetGroup.new(_memory, label_width, column_width, arrow_width,
+				n_visible_quarters, _fold_icon_substitute)
 		footer.hide()
-		tab.add_child(footer)
+		content.add_child(footer)
 
 		var empty_label := Label.new()
 		empty_label.text = "No line items."
@@ -150,8 +197,9 @@ func _build_ui() -> void:
 		empty_label.hide()
 		tab.add_child(empty_label)
 
-		_content_vboxes[statement] = content
+		_content_vboxes[statement] = groups_vbox
 		_scrolls[statement] = scroll
+		_headers[statement] = header
 		_footers[statement] = footer
 		_empty_labels[statement] = empty_label
 
@@ -189,6 +237,7 @@ func _get_proxy_data(target_name: StringName) -> void:
 		return
 
 	var tab := current_tab
+	var ordinal_qtr := proxy.ordinal_qtr
 	var groups := []
 	var footer := []
 
@@ -202,31 +251,45 @@ func _get_proxy_data(target_name: StringName) -> void:
 				"SUBTOTAL_REVENUE", subtotals[SUBTOTAL_REVENUE], revenue_history))
 		groups.append(_collect_group(proxy, accountings, SUBTOTAL_COST_OF_GOODS,
 				"SUBTOTAL_COST_OF_GOODS", subtotals[SUBTOTAL_COST_OF_GOODS], cogs_history))
-		var gross_profit: float = subtotals[SUBTOTAL_REVENUE] - subtotals[SUBTOTAL_COST_OF_GOODS]
-		var gross_profit_history := _subtract_histories(revenue_history, cogs_history)
-		footer = ["SUBTOTAL_GROSS_PROFIT", gross_profit, gross_profit_history]
+		var revenue_series := _make_series(revenue_history, subtotals[SUBTOTAL_REVENUE])
+		var cogs_series := _make_series(cogs_history, subtotals[SUBTOTAL_COST_OF_GOODS])
+		footer = ["SUBTOTAL_GROSS_PROFIT", _subtract_series(revenue_series, cogs_series)]
 
-	_update_tab_display.call_deferred(target_name, tab, groups, footer)
+	_update_tab_display.call_deferred(target_name, tab, ordinal_qtr, groups, footer)
 
 
 func _collect_group(proxy: Proxy, accountings: Dictionary[int, float], subtotal: int, title: String,
 		subtotal_value: float, subtotal_history: PackedFloat64Array) -> Array:
-	# Leaves in table order, only those present (sparse) and matching this group.
+	# Leaves in table order, matching this group, with any nonzero quarter (the
+	# current value drops to 0 right after rollover, so history must count too).
 	var rows := []
 	for item in _n_line_items:
 		if _item_statements[item] != _income_statement:
 			continue
 		if _item_subtotals[item] != subtotal:
 			continue
-		if !accountings.has(item):
+		var current_value: float = accountings.get(item, 0.0)
+		var leaf_series := _make_series(proxy.get_financials_accounting_history(item), current_value)
+		if !_has_nonzero(leaf_series):
 			continue
-		var value: float = accountings[item]
-		var history := proxy.get_financials_accounting_history(item)
-		rows.append([_item_keys[item], value, history])
-	return [title, subtotal_value, subtotal_history, rows]
+		rows.append([_item_keys[item], leaf_series])
+	return [title, _make_series(subtotal_history, subtotal_value), rows]
 
 
-func _subtract_histories(a: PackedFloat64Array, b: PackedFloat64Array) -> PackedFloat64Array:
+func _has_nonzero(series: PackedFloat64Array) -> bool:
+	for value in series:
+		if value != 0.0:
+			return true
+	return false
+
+
+func _make_series(history: PackedFloat64Array, current_value: float) -> PackedFloat64Array:
+	var series := history.duplicate()
+	series.append(current_value)
+	return series
+
+
+func _subtract_series(a: PackedFloat64Array, b: PackedFloat64Array) -> PackedFloat64Array:
 	var n := maxi(a.size(), b.size())
 	var result := PackedFloat64Array()
 	result.resize(n)
@@ -239,39 +302,81 @@ func _subtract_histories(a: PackedFloat64Array, b: PackedFloat64Array) -> Packed
 
 # ******************************** MAIN THREAD ********************************
 
-func _update_tab_display(_target_name: StringName, tab: int, groups: Array, footer: Array) -> void:
+func _update_tab_display(target_name: StringName, tab: int, ordinal_qtr: int,
+		groups: Array, footer: Array) -> void:
 	_no_budget_label.hide()
 	_tab_container.show()
 
+	if target_name != _display_name or tab != _display_tab:
+		_window_offset = 0
+	_display_name = target_name
+	_display_tab = tab
+	_display_ordinal_qtr = ordinal_qtr
+	_display_groups = groups
+	_display_footer = footer
+
+	# Pick the USD display unit so most values land in the 1–999 range.
+	var dollar_values := PackedFloat64Array()
+	for group_data: Array in groups:
+		var subtotal_series: PackedFloat64Array = group_data[1]
+		_gather_dollar_values(subtotal_series, dollar_values)
+		for leaf_row: Array in group_data[2]:
+			var leaf_series: PackedFloat64Array = leaf_row[1]
+			_gather_dollar_values(leaf_series, dollar_values)
+	if !footer.is_empty():
+		var footer_series: PackedFloat64Array = footer[1]
+		_gather_dollar_values(footer_series, dollar_values)
+	var exponent := clampi(Utils.get_modal_base1000_exponent(dollar_values),
+			USD_MIN_EXPONENT, USD_MAX_EXPONENT)
+	_display_scale = _usd_inv * pow(1000.0, -float(exponent))
+	_display_unit = Utils.get_usd_unit_string(exponent)
+
+	_render_current()
+
+
+func _render_current() -> void:
+	var tab := _display_tab
 	var content: VBoxContainer = _content_vboxes[tab]
 	var scroll: ScrollContainer = _scrolls[tab]
-	var footer_row: BudgetRow = _footers[tab]
+	var header: BudgetHeaderRow = _headers[tab]
+	var footer_group: BudgetGroup = _footers[tab]
 	var empty_label: Label = _empty_labels[tab]
 
-	if groups.is_empty() and footer.is_empty():
+	if _display_groups.is_empty() and _display_footer.is_empty():
+		header.hide()
 		scroll.hide()
-		footer_row.hide()
+		footer_group.hide()
 		empty_label.show()
 		return
 	empty_label.hide()
 	scroll.show()
+	header.show()
+
+	var total_quarters := _get_total_quarters()
+	var max_offset := maxi(0, total_quarters - n_visible_quarters)
+	_window_offset = clampi(_window_offset, 0, max_offset)
+	header.set_header(_display_unit, _quarter_labels(total_quarters),
+			_window_offset > 0, _window_offset < max_offset)
 
 	# reuse-or-create BudgetGroups
-	var n_groups := groups.size()
+	var n_groups := _display_groups.size()
 	var n_children := content.get_child_count()
 	while n_children < n_groups:
-		content.add_child(BudgetGroup.new(_memory, base_column_width))
+		content.add_child(BudgetGroup.new(_memory, label_width, column_width, arrow_width,
+				n_visible_quarters, _fold_icon_substitute))
 		n_children += 1
 	var i := 0
 	while i < n_groups:
-		var group_data: Array = groups[i]
+		var group_data: Array = _display_groups[i]
 		var title: String = group_data[0]
-		var subtotal_value: float = group_data[1]
-		var subtotal_history: PackedFloat64Array = group_data[2]
-		var leaf_rows: Array = group_data[3]
+		var subtotal_series: PackedFloat64Array = group_data[1]
+		var leaf_rows: Array = group_data[2]
+		var formatted_leaves := []
+		for leaf_row: Array in leaf_rows:
+			var leaf_series: PackedFloat64Array = leaf_row[1]
+			formatted_leaves.append([leaf_row[0], _format_cells(leaf_series)])
 		var budget_group: BudgetGroup = content.get_child(i)
-		budget_group.set_group(tr(title), _format_money(subtotal_value),
-				_history_tooltip(subtotal_history), _format_rows(leaf_rows))
+		budget_group.set_group(tr(title), _format_cells(subtotal_series), formatted_leaves)
 		budget_group.show()
 		i += 1
 	while i < n_children:
@@ -279,61 +384,218 @@ func _update_tab_display(_target_name: StringName, tab: int, groups: Array, foot
 		unused_group.hide()
 		i += 1
 
-	if footer.is_empty():
-		footer_row.hide()
+	if _display_footer.is_empty():
+		footer_group.hide()
 	else:
-		var footer_name: String = footer[0]
-		var footer_value: float = footer[1]
-		var footer_history: PackedFloat64Array = footer[2]
-		footer_row.set_row(footer_name, _format_money(footer_value), _history_tooltip(footer_history))
-		footer_row.show()
+		var footer_name: String = _display_footer[0]
+		var footer_series: PackedFloat64Array = _display_footer[1]
+		footer_group.set_group(tr(footer_name), _format_cells(footer_series), [])
+		footer_group.show()
 
 
-func _format_rows(rows_data: Array) -> Array:
-	var formatted := []
-	for row_data: Array in rows_data:
-		var value: float = row_data[1]
-		var history: PackedFloat64Array = row_data[2]
-		formatted.append([row_data[0], _format_money(value), _history_tooltip(history)])
-	return formatted
+func _shift_window(direction: int) -> void:
+	_window_offset += direction
+	_render_current()
 
 
-func _format_money(value: float) -> String:
-	return IVQFormat.modified_named_number(value, 3, IVQFormat.TextFormat.SHORT_MIXED_CASE,
-			false, 999999.5, "$", "", _usd_inv)
+func _gather_dollar_values(series: PackedFloat64Array, into: PackedFloat64Array) -> void:
+	for value in series:
+		into.append(value * _usd_inv)
 
 
-func _history_tooltip(history: PackedFloat64Array) -> String:
-	var n := history.size()
-	if n == 0:
-		return "No completed quarters yet."
-	var lines := PackedStringArray()
-	var start := maxi(0, n - 8)
-	for q in range(start, n):
-		lines.append(_format_money(history[q]))
-	return "Completed quarters (oldest → newest):\n" + "\n".join(lines)
+func _get_total_quarters() -> int:
+	if !_display_groups.is_empty():
+		var group_data: Array = _display_groups[0]
+		var series: PackedFloat64Array = group_data[1]
+		return series.size()
+	if !_display_footer.is_empty():
+		var series: PackedFloat64Array = _display_footer[1]
+		return series.size()
+	return 0
+
+
+# Maps left-to-right column index to its series index, given the visible window
+# (newest at right, scrolled back by _window_offset). Returns -1 for a column
+# with no quarter (when fewer quarters exist than columns).
+func _column_series_index(column: int, total_quarters: int) -> int:
+	var newest_visible := total_quarters - 1 - _window_offset
+	var index := newest_visible - (n_visible_quarters - 1 - column)
+	return index if index >= 0 and index < total_quarters else -1
+
+
+func _format_cells(series: PackedFloat64Array) -> PackedStringArray:
+	var total_quarters := series.size()
+	var cells := PackedStringArray()
+	cells.resize(n_visible_quarters)
+	for column in n_visible_quarters:
+		var index := _column_series_index(column, total_quarters)
+		cells[column] = IVQFormat.number(series[index] * _display_scale) if index != -1 else ""
+	return cells
+
+
+func _quarter_labels(total_quarters: int) -> PackedStringArray:
+	var labels := PackedStringArray()
+	labels.resize(n_visible_quarters)
+	for column in n_visible_quarters:
+		var index := _column_series_index(column, total_quarters)
+		if index == -1:
+			labels[column] = ""
+			continue
+		var ordinal := _display_ordinal_qtr - (total_quarters - 1 - index)
+		labels[column] = _format_quarter(ordinal)
+	return labels
+
+
+func _format_quarter(ordinal_qtr: int) -> String:
+	# Year shown only on Q1 to keep the header uncluttered (e.g. "2025Q1", "Q2").
+	var quarter := ordinal_qtr % 4 + 1
+	if quarter == 1:
+		@warning_ignore("integer_division")
+		var year := ordinal_qtr / 4
+		return "%dQ1" % year
+	return "Q%d" % quarter
 
 
 # ****************************** INNER CLASSES ********************************
+# Columns are right-anchored. Foldable groups are full width, with the name on
+# the native title and only the value cells in a right-aligned title control, so
+# column position is independent of the title text. Leaf rows (in the foldable
+# body) and the title cells share the in-scroll right edge. The header and footer
+# sit outside the scroll, so a trailing scroll_correction spacer pushes their
+# columns in to match the content past the vertical scrollbar. (Pattern mirrors
+# itab_operations.gd.)
+
+class BudgetHeaderRow extends HBoxContainer:
+	# Grid header (outside the scroll): the USD unit label fills the left; the
+	# "<" / ">" shift buttons flank the per-quarter labels; a trailing spacer
+	# offsets the columns to clear the scrollbar.
+
+	signal shift_requested(direction: int)  # +1 toward newer, -1 toward older
+
+	var _indent_spacer := Control.new()
+	var _unit_label := Label.new()
+	var _older_button := Button.new()
+	var _newer_button := Button.new()
+	var _trailing_spacer := Control.new()
+	var _cells: Array[Label] = []
+	var _label_width: float
+	var _column_width: float
+	var _arrow_width: float
+	var _foldable_indent: float
+	var _scroll_correction: float
+
+
+	func _init(label_width: float, column_width: float, arrow_width: float, foldable_indent: float,
+			scroll_correction: float, n_columns: int) -> void:
+		_label_width = label_width
+		_column_width = column_width
+		_arrow_width = arrow_width
+		_foldable_indent = foldable_indent
+		_scroll_correction = scroll_correction
+		size_flags_horizontal = SIZE_FILL
+		add_theme_constant_override(&"separation", 0)  # explicit gutters/widths only
+		add_child(_indent_spacer)
+		_unit_label.clip_text = true
+		_unit_label.size_flags_horizontal = SIZE_EXPAND_FILL
+		add_child(_unit_label)
+		_older_button.text = "<"
+		_older_button.pressed.connect(_on_older_pressed)
+		add_child(_older_button)
+		_cells.resize(n_columns)
+		for c in n_columns:
+			var cell := Label.new()
+			cell.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			cell.clip_text = true
+			add_child(cell)
+			_cells[c] = cell
+		_newer_button.text = ">"
+		_newer_button.pressed.connect(_on_newer_pressed)
+		add_child(_newer_button)
+		add_child(_trailing_spacer)
+		var gui_size: int = IVSettingsManager.get_setting(&"gui_size")
+		_resize(gui_size)
+		IVSettingsManager.changed.connect(_settings_listener)
+
+
+	func set_header(unit_text: String, quarter_labels: PackedStringArray,
+			can_go_newer: bool, can_go_older: bool) -> void:
+		_unit_label.text = unit_text
+		for c in _cells.size():
+			_cells[c].text = quarter_labels[c]
+		_newer_button.disabled = !can_go_newer
+		_older_button.disabled = !can_go_older
+
+
+	func _on_older_pressed() -> void:
+		shift_requested.emit(1)
+
+
+	func _on_newer_pressed() -> void:
+		shift_requested.emit(-1)
+
+
+	func _resize(gui_size: int) -> void:
+		var multiplier := IVCoreSettings.gui_size_multipliers[gui_size]
+		_indent_spacer.custom_minimum_size.x = _foldable_indent * multiplier
+		_older_button.custom_minimum_size.x = _arrow_width * multiplier
+		_newer_button.custom_minimum_size.x = _arrow_width * multiplier
+		_trailing_spacer.custom_minimum_size.x = _scroll_correction * multiplier
+		var cell_width := _column_width * multiplier
+		for cell in _cells:
+			cell.custom_minimum_size.x = cell_width
+
+
+	func _settings_listener(setting: StringName, value: Variant) -> void:
+		if setting == &"gui_size":
+			var gui_size: int = value
+			_resize(gui_size)
+
 
 class BudgetGroup extends FoldableContainer:
-	# Foldable subtotal group: title bar shows the subtotal value; expands to its
-	# per-activity leaf rows.
+	# Foldable subtotal group: the native title shows the group name; a right-aligned
+	# title control shows the per-quarter subtotal cells; it expands to its per-activity
+	# leaf rows. Full width, so the right-aligned cells sit at the content's right edge
+	# regardless of title length — keeping columns aligned across groups. A group with
+	# no leaves gets a blank fold-icon substitute (preserving the title's left lead) and
+	# can't be unfolded.
 
 	var _rows_vbox := VBoxContainer.new()
-	var _value_label := Label.new()
+	var _cells: Array[Label] = []
+	var _left_gutter := Control.new()
+	var _right_gutter := Control.new()
 	var _memory: Dictionary
-	var _base_column_width: float
+	var _fold_icon_substitute: Texture2D
+	var _label_width: float
+	var _column_width: float
+	var _arrow_width: float
+	var _n_columns: int
 	var _memory_key: String
+	var _is_singular: bool
 
 
-	func _init(memory: Dictionary, base_column_width: float) -> void:
+	func _init(memory: Dictionary, label_width: float, column_width: float, arrow_width: float,
+			n_columns: int, fold_icon_substitute: Texture2D) -> void:
 		_memory = memory
-		_base_column_width = base_column_width
-		size_flags_horizontal = SIZE_FILL
-		_value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		_value_label.size_flags_horizontal = SIZE_EXPAND_FILL
-		add_title_bar_control(_value_label)
+		_label_width = label_width
+		_column_width = column_width
+		_arrow_width = arrow_width
+		_n_columns = n_columns
+		_fold_icon_substitute = fold_icon_substitute
+		size_flags_horizontal = SIZE_FILL  # full width; cells right-align to the content edge
+		# Value cells go in a right-aligned title control (FoldableContainer's
+		# native arrangement); the name uses the native title (see set_group).
+		var block := HBoxContainer.new()
+		block.add_theme_constant_override(&"separation", 0)  # explicit gutters/widths only
+		block.add_child(_left_gutter)
+		_cells.resize(n_columns)
+		for c in n_columns:
+			var cell := Label.new()
+			cell.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			cell.clip_text = true
+			block.add_child(cell)
+			_cells[c] = cell
+		block.add_child(_right_gutter)
+		add_title_bar_control(block)
 		add_child(_rows_vbox)
 		folding_changed.connect(_on_folding_changed)
 		var gui_size: int = IVSettingsManager.get_setting(&"gui_size")
@@ -341,26 +603,33 @@ class BudgetGroup extends FoldableContainer:
 		IVSettingsManager.changed.connect(_settings_listener)
 
 
-	func set_group(title_text: String, value_text: String, tooltip: String, rows: Array) -> void:
-		title = title_text
-		_value_label.text = value_text
-		_value_label.tooltip_text = tooltip
+	func set_group(title_text: String, cells: PackedStringArray, leaf_rows: Array) -> void:
+		title = title_text  # native title, left-aligned after the fold-icon
+		for c in _cells.size():
+			_cells[c].text = cells[c]
 		_memory_key = title_text
-		folded = _memory.get(_memory_key, false)
+		if leaf_rows.is_empty():
+			add_theme_icon_override(&"folded_arrow", _fold_icon_substitute)
+			_is_singular = true
+			folded = true
+		else:
+			remove_theme_icon_override(&"folded_arrow")
+			_is_singular = false
+			folded = _memory.get(_memory_key, true)  # start closed
 
-		var n_rows := rows.size()
+		var n_rows := leaf_rows.size()
 		var n_children := _rows_vbox.get_child_count()
 		while n_children < n_rows:
-			_rows_vbox.add_child(BudgetRow.new(_base_column_width, true))
+			_rows_vbox.add_child(BudgetRow.new(_label_width, _column_width, _arrow_width,
+					_n_columns, SUBGROUP_INDENT, 0.0))
 			n_children += 1
 		var i := 0
 		while i < n_rows:
-			var row_data: Array = rows[i]
+			var row_data: Array = leaf_rows[i]
 			var row_name: String = row_data[0]
-			var row_value: String = row_data[1]
-			var row_tooltip: String = row_data[2]
+			var row_cells: PackedStringArray = row_data[1]
 			var row: BudgetRow = _rows_vbox.get_child(i)
-			row.set_row(row_name, row_value, row_tooltip)
+			row.set_row(row_name, row_cells)
 			row.show()
 			i += 1
 		while i < n_children:
@@ -370,12 +639,20 @@ class BudgetGroup extends FoldableContainer:
 
 
 	func _on_folding_changed(is_folded_: bool) -> void:
-		_memory[_memory_key] = is_folded_
+		if !_is_singular:
+			_memory[_memory_key] = is_folded_
+			return
+		if !is_folded_:  # a no-leaf group can't be unfolded
+			fold()
 
 
 	func _resize(gui_size: int) -> void:
-		var column_width := _base_column_width * IVCoreSettings.gui_size_multipliers[gui_size]
-		_value_label.custom_minimum_size.x = column_width
+		var multiplier := IVCoreSettings.gui_size_multipliers[gui_size]
+		_left_gutter.custom_minimum_size.x = _arrow_width * multiplier
+		_right_gutter.custom_minimum_size.x = _arrow_width * multiplier
+		var cell_width := _column_width * multiplier
+		for cell in _cells:
+			cell.custom_minimum_size.x = cell_width
 
 
 	func _settings_listener(setting: StringName, value: Variant) -> void:
@@ -385,40 +662,68 @@ class BudgetGroup extends FoldableContainer:
 
 
 class BudgetRow extends HBoxContainer:
-	# One account line: name (indented for leaves) + right-aligned dollar value.
-	# History tooltip lives on the value label.
+	# One account line (leaf or footer). The name fills the left; the gutter-flanked
+	# value cells hug the right so they line up with the foldable's right-aligned
+	# subtotal cells. A leaf passes trailing == 0; the out-of-scroll footer passes the
+	# scroll correction so its columns clear the scrollbar like the header.
 
+	var _indent_spacer := Control.new()
 	var _name_label := Label.new()
-	var _value_label := Label.new()
-	var _base_column_width: float
+	var _left_gutter := Control.new()
+	var _right_gutter := Control.new()
+	var _trailing_spacer := Control.new()
+	var _cells: Array[Label] = []
+	var _label_width: float
+	var _column_width: float
+	var _arrow_width: float
+	var _indent: float
+	var _trailing: float
 
 
-	func _init(base_column_width: float, indented: bool) -> void:
-		_base_column_width = base_column_width
+	func _init(label_width: float, column_width: float, arrow_width: float, n_columns: int,
+			indent: float, trailing: float) -> void:
+		_label_width = label_width
+		_column_width = column_width
+		_arrow_width = arrow_width
+		_indent = indent
+		_trailing = trailing
 		size_flags_horizontal = SIZE_FILL
-		if indented:
-			var spacer := Control.new()
-			spacer.size_flags_horizontal = SIZE_SHRINK_BEGIN
-			spacer.custom_minimum_size.x = SUBGROUP_INDENT
-			add_child(spacer)
+		add_theme_constant_override(&"separation", 0)  # explicit gutters/widths only
+		add_child(_indent_spacer)
+		_name_label.clip_text = true
 		_name_label.size_flags_horizontal = SIZE_EXPAND_FILL
 		add_child(_name_label)
-		_value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		add_child(_value_label)
+		add_child(_left_gutter)
+		_cells.resize(n_columns)
+		for c in n_columns:
+			var cell := Label.new()
+			cell.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			cell.clip_text = true
+			add_child(cell)
+			_cells[c] = cell
+		add_child(_right_gutter)
+		add_child(_trailing_spacer)
 		var gui_size: int = IVSettingsManager.get_setting(&"gui_size")
 		_resize(gui_size)
 		IVSettingsManager.changed.connect(_settings_listener)
 
 
-	func set_row(name_text: String, value_text: String, tooltip: String) -> void:
+	func set_row(name_text: String, cells: PackedStringArray) -> void:
 		_name_label.text = name_text
-		_value_label.text = value_text
-		_value_label.tooltip_text = tooltip
+		for c in _cells.size():
+			_cells[c].text = cells[c]
 
 
 	func _resize(gui_size: int) -> void:
-		var column_width := _base_column_width * IVCoreSettings.gui_size_multipliers[gui_size]
-		_value_label.custom_minimum_size.x = column_width
+		var multiplier := IVCoreSettings.gui_size_multipliers[gui_size]
+		_indent_spacer.custom_minimum_size.x = _indent * multiplier
+		_name_label.custom_minimum_size.x = (_label_width - _indent) * multiplier
+		_left_gutter.custom_minimum_size.x = _arrow_width * multiplier
+		_right_gutter.custom_minimum_size.x = _arrow_width * multiplier
+		_trailing_spacer.custom_minimum_size.x = _trailing * multiplier
+		var cell_width := _column_width * multiplier
+		for cell in _cells:
+			cell.custom_minimum_size.x = cell_width
 
 
 	func _settings_listener(setting: StringName, value: Variant) -> void:

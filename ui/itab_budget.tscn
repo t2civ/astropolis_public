@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://fwbd14ssdko7"]
+[gd_scene format=3 uid="uid://fwbd14ssdko7"]
 
 [ext_resource type="Script" uid="uid://vla5w6kysok1" path="res://public/ui/itab_budget.gd" id="1_g8qsv"]
 
-[node name="Budget" type="MarginContainer"]
+[node name="Budget" type="MarginContainer" unique_id=191963743]
 offset_left = 7.0
 offset_top = 7.0
 offset_right = 568.0
