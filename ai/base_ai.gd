@@ -15,7 +15,9 @@ extends RefCounted
 ## declare a typed [code]proxy[/code] field and drive AI logic on the proxy
 ## thread. To write custom AI, extend a [code]*BaseAI[/code] class and add
 ## [code]const OVERRIDE_AI := true[/code]; see [PlayerCustomAI] for the
-## template.[br][br]
+## template. A custom AI that does heavy per-interval work should poll
+## [code]_stop[/code] and return promptly when it is true, so it never holds
+## the proxy thread past a stop request.[br][br]
 ##
 ## WARNING: Lives on the proxy thread. AI instances exist only on peers that
 ## run the AI for their entity (typically the owning player); peers that don't
@@ -31,6 +33,14 @@ const INTERVAL := Proxy.INTERVAL
 ## [code]PERSIST_PROPERTIES2[/code] free for a [code]*CustomAI[/code] subclass to
 ## persist its own added state.
 const PERSIST_MODE := IVGlobal.PERSIST_PROCEDURAL
+
+
+## Mirrors the proxy thread's stop state, set by the proxy server from the engine's
+## thread-stop signals. A long-running AI override (e.g. a heavy per-resource loop) should
+## poll this and return promptly when true, so it never holds the proxy thread past a stop
+## request. Read-only for AI subclasses.
+@warning_ignore("unused_private_class_variable") # used by subclasses and set by the proxy server
+static var _stop := true
 
 
 var _last_interval := -INF

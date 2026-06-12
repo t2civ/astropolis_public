@@ -81,6 +81,8 @@ func _update_selection(_dummy := false) -> void:
 		return
 	if not _selection_manager.has_selection():
 		return
+	if IVStateManager.is_threads_stopped():
+		return # would drop in call_proxy_thread, leaving _is_busy stuck; see that method
 	_is_busy = true
 	var body_name := _selection_manager.get_body_name()
 	MainThreadGlobal.call_proxy_thread(_set_selections_on_proxy_thread.bind(body_name))

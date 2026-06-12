@@ -307,6 +307,8 @@ func process_ai_interval(_delta: float) -> void:
 	_tally_net_positions()
 	_instrument_scratch[1] = proxy.ordinal_qtr
 	for resource_type in resource_strategies.size():
+		if _stop:
+			return # cooperative bail; remaining resources re-quote next interval (idempotent)
 		_instrument_scratch[0] = resource_type
 		var def := resource_strategy_defs[resource_strategies[resource_type]]
 		if def.get(&"two_sided", false):

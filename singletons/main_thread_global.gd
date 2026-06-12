@@ -69,8 +69,16 @@ func _clear_procedural() -> void:
 # ******************************** MAIN THREAD ********************************
 
 ## Dispatches [param callable] to the proxy thread via [signal proxy_thread_called].
-## Use this from main-thread code that needs to run logic on a [Proxy].
+## Use this from main-thread code that needs to run logic on a [Proxy].[br][br]
+##
+## No-op while sim threads are stopped (menu pause, save/load) — the proxy thread isn't
+## draining, so a dispatch would only pile into channel overflow; GUI refreshes resume
+## when threads do. WARNING: a caller gating re-entry on the dispatched work completing
+## (e.g. a busy flag) must also check [code]IVStateManager.is_threads_stopped()[/code],
+## since a dropped dispatch fires no completion callback.
 func call_proxy_thread(callable: Callable) -> void:
+	if IVStateManager.is_threads_stopped():
+		return
 	proxy_thread_called.emit(callable)
 
 
