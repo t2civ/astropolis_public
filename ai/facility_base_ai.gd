@@ -176,6 +176,16 @@ enum OperationStrategies {
 const _RS := FacilityResourceStrategies
 
 
+## Member names persisted by save/load (interval timing inherited from BaseAI).
+const PERSIST_PROPERTIES: Array[StringName] = [
+	&"_last_interval",
+	&"_next_interval",
+	&"facility_strategy",
+	&"facility_resource_strategies",
+	&"operation_strategies",
+]
+
+
 ## Facility-posture strategy definitions; index = [enum FacilityStrategies]
 ## value.
 static var facility_strategy_defs: Array[Dictionary] = [
@@ -233,24 +243,9 @@ static var operation_strategy_defs: Array[Dictionary] = [
 	{}, # CLEARANCE_LIMITED
 ]
 
-
-## Member names persisted by save/load (interval timing inherited from BaseAI).
-const PERSIST_PROPERTIES: Array[StringName] = [
-	&"_last_interval",
-	&"_next_interval",
-	&"facility_strategy",
-	&"facility_resource_strategies",
-	&"operation_strategies",
-]
-
-
 static var _table_n_rows := IVTableData.table_n_rows
 static var _trade_unit_multipliers := ThreadsafeGlobal.resource_trade_unit_multipliers
-
-## Per-resource tradability mask (1 = tradable), indexed by resource_type.
-## Built once; a resource is tradable if it is a commodity with a storage class.
-static var _is_tradable: PackedByteArray
-
+static var _tradable_resources: PackedInt32Array
 
 var proxy: FacilityProxy
 
@@ -277,8 +272,11 @@ func _init() -> void:
 	facility_resource_strategies.resize(n_resources)
 	var n_operations: int = _table_n_rows[&"operations"]
 	operation_strategies.resize(n_operations)
-	if _is_tradable.is_empty():
-		_build_tradable_mask(n_resources)
+	if !_tradable_resources:
+		var trade_classes: Array[int] = IVTableData.db_tables[&"resources"][&"trade_class"]
+		for resource_type in n_resources:
+			if trade_classes[resource_type] != -1:
+				_tradable_resources.append(resource_type)
 
 
 func _clear_for_destruction() -> void:
@@ -349,9 +347,7 @@ func _set_facility_resource_strategy(resource_type: int, strategy_id: int) -> vo
 ## resulting server knobs. The single authoring path for init, interval, quarter,
 ## and player-strategy changes.
 func _author_resource_strategies() -> void:
-	for resource_type in _is_tradable.size():
-		if !_is_tradable[resource_type]:
-			continue
+	for resource_type in _tradable_resources:
 		var capability := _capability_strategy(resource_type)
 		var strategy := _reconcile_resource_strategy(resource_type, capability)
 		_set_facility_resource_strategy(resource_type, strategy)
@@ -450,14 +446,3 @@ func _apply_strategy_knobs(resource_type: int, strategy: int) -> void:
 		desired |= PROHIBIT_CONSUMPTION
 	if desired != current:
 		proxy.set_inventory_flags(resource_type, desired)
-
-
-static func _build_tradable_mask(n_resources: int) -> void:
-	_is_tradable.resize(n_resources)
-	var resource_table: Dictionary[StringName, Array] = IVTableData.db_tables[&"resources"]
-	var commodities: Array = resource_table[&"commodity"]
-	var storage_classes := PackedInt32Array(resource_table[&"storage_class"])
-	for resource_type in n_resources:
-		var is_commodity: bool = commodities[resource_type]
-		var tradable := is_commodity and storage_classes[resource_type] != -1
-		_is_tradable[resource_type] = 1 if tradable else 0

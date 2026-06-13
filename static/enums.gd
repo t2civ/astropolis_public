@@ -30,8 +30,8 @@ enum TradeClasses {
 	TRADE_CLASS_ICE,
 	TRADE_CLASS_LIQUID,
 	TRADE_CLASS_CRYOGENIC,
-	TRADE_CLASS_PRECIOUS,
-	TRADE_CLASS_SERVICES,
+	TRADE_CLASS_PRECIOUS, ## Special handling is required.
+	TRADE_CLASS_CYBER, ## Tradable in the universal cyber market.
 }
 
 ## Top-level kind of a [PlayerProxy] (state polity, space agency, or
