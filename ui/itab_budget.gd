@@ -217,7 +217,7 @@ func _select_tab(tab: int) -> void:
 
 
 func _update_tab(_dummy := false) -> void:
-	if !visible or !IVStateManager.running:
+	if !visible or !IVStateManager.is_threads_allowed():
 		return
 	var target_name := _selection_manager.get_name()
 	if MainThreadGlobal.has_development(target_name):

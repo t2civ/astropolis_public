@@ -40,6 +40,11 @@ func _init() -> void:
 	IVCoreSettings.use_threads = USE_THREADS
 	IVCoreSettings.start_time_date_clock = [2025, 1, 1, 12, 0, 0]
 	IVCoreSettings.start_time_is_terrestrial_time = false
+	# Keep Engine.time_scale at 1.0 (core default would slave it to game speed).
+	# We might change this in the future for graphics. If so, fix all GUI timers
+	# to prevent update storm. Also check all `_process(delta: float)` for usage
+	# of `delta`, but I don't think there is any.
+	IVCoreSettings.manage_engine_time_scale = false
 	
 	# changed classes
 	IVCoreInitializer.program_refcounteds[&"InfoCloner"] = InfoCloner

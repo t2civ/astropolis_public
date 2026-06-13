@@ -24,10 +24,18 @@ func _ready() -> void:
 	#var style_box := StyleBoxFlat.new()
 	#style_box.bg_color = Color(1.0, 1.0, 1.0, 0.05) # almost transparent
 	#set("theme_override_styles/panel", style_box)
-	($Timer as Timer).timeout.connect(($DevStats as DevStats).update)
+	($Timer as Timer).wait_time = InfoTabContainer.TIMER_INTERVAL
+	($Timer as Timer).timeout.connect(_refresh)
+	visibility_changed.connect(_refresh)
 	IVStateManager.system_tree_ready.connect(_delayed_timer_start)
 	IVStateManager.simulator_started.connect(_delayed_1st_update)
 	IVStateManager.about_to_free_procedural_nodes.connect(($Timer as Timer).stop)
+
+
+func _refresh() -> void:
+	if !visible or !IVStateManager.is_threads_allowed():
+		return
+	($DevStats as DevStats).update()
 
 
 func _delayed_timer_start(_is_new_game: bool) -> void:
@@ -42,4 +50,4 @@ func _delayed_1st_update() -> void:
 	while i < 8: # add more if needed
 		await get_tree().process_frame
 		i += 1
-	($DevStats as DevStats).update()
+	_refresh()

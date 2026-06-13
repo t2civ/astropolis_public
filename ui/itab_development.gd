@@ -28,7 +28,6 @@ func _ready() -> void:
 	
 	# FIXME: SelectionManager handling & UI refresh
 	
-	IVGlobal.ui_dirty.connect(_update_selection)
 	visibility_changed.connect(_update_selection)
 	_dev_stats.has_stats_changed.connect(_update_no_development)
 	_selection_manager = IVSelectionManager.get_selection_manager(self)
@@ -39,7 +38,7 @@ func _ready() -> void:
 
 ## Refreshes development stats. Wired to [InfoTabContainer]'s shared 1 s timer.
 func timer_update() -> void:
-	if !IVStateManager.running:
+	if !visible or !IVStateManager.is_threads_allowed():
 		return
 	_dev_stats.update()
 
@@ -51,7 +50,7 @@ func _update_no_development(has_stats: bool) -> void:
 func _update_selection(_dummy := false) -> void:
 	const BodyFlags := IVBody.BodyFlags
 	const BodyFlags2 := Enums.BodyFlags2
-	if !visible or !IVStateManager.running:
+	if !visible or !IVStateManager.is_threads_allowed():
 		return
 	var selection_name := _selection_manager.get_name()
 	if !selection_name:
