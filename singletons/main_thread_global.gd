@@ -71,14 +71,18 @@ func _clear_procedural() -> void:
 ## Dispatches [param callable] to the proxy thread via [signal proxy_thread_called].
 ## Use this from main-thread code that needs to run logic on a [Proxy].[br][br]
 ##
-## No-op while sim threads are stopped (menu pause, save/load) — the proxy thread isn't
-## draining, so a dispatch would only pile into channel overflow; GUI refreshes resume
-## when threads do. WARNING: a caller gating re-entry on the dispatched work completing
-## (e.g. a busy flag) must also check [code]IVStateManager.is_threads_stopped()[/code],
-## since a dropped dispatch fires no completion callback.
+## Callers should gate on [code]IVStateManager.is_threads_allowed()[/code] before
+## calling: while sim threads are stopped or required to stop (main menu, save/load,
+## etc.) the proxy thread isn't draining, so the dispatch only sits in the callable
+## channel until threads resume. Dispatching anyway is not a correctness bug — the
+## callable is delivered, never silently dropped — but it pushes a warning to flag
+## the ungated caller. Because the dispatch is never dropped, a caller that gates
+## re-entry on a busy flag is safe: its completion callback always runs and clears
+## the flag.
 func call_proxy_thread(callable: Callable) -> void:
-	if IVStateManager.is_threads_stopped():
-		return
+	if !IVStateManager.is_threads_allowed():
+		push_warning("call_proxy_thread() dispatched while sim threads not allowed; "
+				+ "caller should gate on IVStateManager.is_threads_allowed()")
 	proxy_thread_called.emit(callable)
 
 
