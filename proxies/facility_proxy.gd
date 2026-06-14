@@ -184,8 +184,6 @@ func _clear_for_destruction() -> void:
 	texture_2d = null
 
 
-# ********************************* PROXY API *********************************
-
 ## Detaches this facility from its body and player, then breaks its outgoing
 ## refs via [method super.remove]. Called by the server side at runtime when a
 ## facility is removed mid-game.
@@ -195,10 +193,7 @@ func remove() -> void:
 	super.remove()
 
 
-## Sets [member gui_name] and marks the proxy dirty. Reverse-flow:
-## proxy -> server.
-@abstract func set_gui_name(new_gui_name: String) -> void
-
+# ***************************** THREAD-SAFE READ ******************************
 
 func has_development() -> bool:
 	return true
@@ -239,13 +234,6 @@ func get_flags() -> int:
 	return flags
 
 
-## Sets the [code]FROM_PROXY_MASK[/code] bits of [member flags] to
-## [param value], preserving the server-authoritative
-## [code]FROM_SERVER_MASK[/code] bits. Proxy-authoritative: this change
-## flows proxy -> server.
-@abstract func set_flags(value: int) -> void
-
-
 # Operations (facility-only). Facility-only reads, plus proxy-authoritative knobs
 # (flags, target utilization) with reverse data flow proxy -> server. Implemented
 # on the server-side facility proxy against its operations component.
@@ -276,18 +264,6 @@ func get_flags() -> int:
 ## Returns the per-operation flags array. Return is proxy array reference;
 ## read only!
 @abstract func get_operations_flags_array() -> PackedInt64Array
-
-
-## Sets the [code]FROM_PROXY_MASK[/code] bits of operations flags for
-## [param operation_type] to [param value]. Proxy-authoritative: this
-## change flows proxy -> server. No-op on an out-of-range index.
-@abstract func set_operations_flags(operation_type: int, value: int) -> void
-
-
-## Sets the target utilization for [param type]. Proxy-authoritative:
-## this change flows proxy -> server. No-op on an out-of-range index or invalid
-## value.
-@abstract func set_operations_target_utilization(type: int, value: float) -> void
 
 
 # Inventory (facility-only). Facility-only reads, plus proxy-authoritative knobs
@@ -400,18 +376,6 @@ func get_flags() -> int:
 @abstract func get_inventory_flags_array() -> PackedInt64Array
 
 
-## Sets the [code]FROM_PROXY_MASK[/code] bits of inventory flags for
-## [param resource_type] to [param value]. Proxy-authoritative: this
-## change flows proxy -> server. No-op on an out-of-range index.
-@abstract func set_inventory_flags(resource_type: int, value: int) -> void
-
-
-## Sets the strategic reserve for [param type]. Proxy-authoritative:
-## this change flows proxy -> server. No-op on an out-of-range index or invalid
-## value.
-@abstract func set_inventory_strategic_reserve(type: int, value: float) -> void
-
-
 # Population (facility-only). Facility-only reads. Implemented on the server-side
 # facility proxy against its population component.
 
@@ -442,3 +406,41 @@ func get_flags() -> int:
 ## Returns this facility's [MarketProxy], or null if not yet set.
 func get_market() -> MarketProxy:
 	return market
+
+
+# ******************************** AI METHODS *********************************
+
+## Sets [member gui_name] and marks the proxy dirty. Reverse-flow:
+## proxy -> server.
+@abstract func set_gui_name(new_gui_name: String) -> void
+
+
+## Sets the [code]FROM_PROXY_MASK[/code] bits of [member flags] to
+## [param value], preserving the server-authoritative
+## [code]FROM_SERVER_MASK[/code] bits. Proxy-authoritative: this change
+## flows proxy -> server.
+@abstract func set_flags(value: int) -> void
+
+
+## Sets the [code]FROM_PROXY_MASK[/code] bits of operations flags for
+## [param operation_type] to [param value]. Proxy-authoritative: this
+## change flows proxy -> server. No-op on an out-of-range index.
+@abstract func set_operations_flags(operation_type: int, value: int) -> void
+
+
+## Sets the target utilization for [param type]. Proxy-authoritative:
+## this change flows proxy -> server. No-op on an out-of-range index or invalid
+## value.
+@abstract func set_operations_target_utilization(type: int, value: float) -> void
+
+
+## Sets the [code]FROM_PROXY_MASK[/code] bits of inventory flags for
+## [param resource_type] to [param value]. Proxy-authoritative: this
+## change flows proxy -> server. No-op on an out-of-range index.
+@abstract func set_inventory_flags(resource_type: int, value: int) -> void
+
+
+## Sets the strategic reserve for [param type]. Proxy-authoritative:
+## this change flows proxy -> server. No-op on an out-of-range index or invalid
+## value.
+@abstract func set_inventory_strategic_reserve(type: int, value: float) -> void

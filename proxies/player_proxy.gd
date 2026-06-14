@@ -45,7 +45,7 @@ func _clear_for_destruction() -> void:
 	facilities.clear()
 
 
-# ********************************* PROXY API *********************************
+# ***************************** THREAD-SAFE READ ******************************
 
 func has_development() -> bool:
 	return true
@@ -67,6 +67,8 @@ func get_polity_name() -> StringName:
 func get_facilities() -> Array[Proxy]:
 	return facilities
 
+
+# ******************************** AI METHODS *********************************
 
 ## Registers [param facility] under this player. Marks the player "alive".
 @abstract func add_facility(facility: Proxy) -> void

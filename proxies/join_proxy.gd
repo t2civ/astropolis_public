@@ -57,7 +57,7 @@ var join_id := -1  ## Index into [member ProxyBus.join_proxies].
 var join_depth := 0
 
 
-# ********************************* PROXY API *********************************
+# ***************************** THREAD-SAFE READ ******************************
 
 func has_development() -> bool:
 	return true

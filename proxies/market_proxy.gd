@@ -83,7 +83,7 @@ func _clear_for_destruction() -> void:
 	cyber_market = null # may be self (the cyber market self-references)
 
 
-# ********************************* PROXY API *********************************
+# ***************************** THREAD-SAFE READ ******************************
 
 func has_markets() -> bool:
 	return true
@@ -92,8 +92,6 @@ func has_markets() -> bool:
 func get_market() -> MarketProxy:
 	return self
 
-
-# ********************************** READ *************************************
 # All threadsafe. Abstract here; the concrete proxy implements.
 
 ## Returns the current trade price for [param type] in sim units, or 0.0 if
@@ -130,8 +128,6 @@ func get_market() -> MarketProxy:
 ## per day, smoothed over 7 days.
 @abstract func get_unit_volume(type: int) -> float
 
-
-# ******************************** AI METHODS *********************************
 # Call on proxy thread. Per-instrument top-of-book reads onto [member instruments];
 # any quarter >= the current one is a legitimate query (an absent instrument
 # reads 0).

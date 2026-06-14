@@ -76,7 +76,7 @@ func _clear_for_destruction() -> void:
 	market = null
 
 
-# ********************************* PROXY API *********************************
+# ***************************** THREAD-SAFE READ ******************************
 
 func has_development() -> bool:
 	return is_facilities
@@ -231,6 +231,8 @@ func get_market() -> MarketProxy:
 ## Returns true if the stratum at [param index] is the body's atmosphere.
 @abstract func get_stratum_is_atmosphere(index: int) -> bool
 
+
+# ******************************** AI METHODS *********************************
 
 ## Registers [param satellite] under this body. Updates [member is_satellites].
 @abstract func add_satellite(satellite: BodyProxy) -> void
