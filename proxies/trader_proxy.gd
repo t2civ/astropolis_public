@@ -45,7 +45,7 @@ var market_id := -1  ## [member MarketProxy.market_id] of [member market].
 # persisted
 
 var facility: FacilityProxy  ## Owning [FacilityProxy]. Immutable after init.
-var market: MarketProxy  ## May change at runtime. Lives on markets thread!
+var market: MarketProxy  ## Lives on markets thread!
 
 # *****************************************************************************
 

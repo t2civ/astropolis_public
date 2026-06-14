@@ -57,11 +57,13 @@ extends Proxy
 
 var market_id := -1  ## Index into [member ProxyBus.market_proxies].
 var body_id := -1  ## [member BodyProxy.body_id] of [member body].
+var cyber_market_id := -1  ## [member market_id] of the system cyber market (self if this is it).
 
 # *****************************************************************************
 # persisted
 
 var body: BodyProxy ## Body this market serves.
+var cyber_market: MarketProxy ## The one system-wide cyber market (self if this is it).
 
 # *****************************************************************************
 
@@ -78,6 +80,7 @@ var instruments: Dictionary[PackedInt32Array, PackedInt32Array]
 
 func _clear_for_destruction() -> void:
 	body = null
+	cyber_market = null # may be self (the cyber market self-references)
 
 
 # ********************************* PROXY API *********************************

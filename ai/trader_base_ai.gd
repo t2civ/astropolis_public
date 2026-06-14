@@ -200,6 +200,8 @@ static var _trade_unit_multipliers := ThreadsafeGlobal.resource_trade_unit_multi
 ## Per-resource fiat price anchor (USD per trade unit) from resources.tsv start_price,
 ## used when no live market price exists yet. Built once.
 static var _start_unit_prices: PackedInt32Array
+## Per-resource 0/1; trade_class == CYBER (orders route to the cyber market). Built once.
+static var _is_cyber_resource: PackedByteArray
 
 
 var proxy: TraderProxy
@@ -214,16 +216,16 @@ var trader_strategy := 0
 var resource_strategies: PackedInt32Array
 
 
-## Memory of open asks. Indexed by 3-element key [resource_type,
-## ordinal_quarter, body_id] (the delivery body) with values [unit_quantity,
-## unit_price] in trade units. Mirrors the market's per-instrument ask, refreshed
-## via position notifications.
+## Memory of open asks. Indexed by the 2-element instrument [resource_type,
+## ordinal_quarter] with values [unit_quantity, unit_price] in trade units; the
+## delivery market is resolved per resource (home body or cyber — see
+## [method _delivery_market_id]). Unique per instrument for a facility trader. Mirrors
+## the market's resting ask, refreshed via position notifications.
 var _asks: Dictionary[PackedInt32Array, PackedInt32Array] = {}
 
-## Memory of open bids. Indexed by 3-element key [resource_type,
-## ordinal_quarter, body_id] (the delivery body) with values [unit_quantity,
-## unit_price] in trade units. Mirrors the market's per-instrument bid, refreshed
-## via position notifications.
+## Memory of open bids. Indexed by the 2-element instrument [resource_type,
+## ordinal_quarter] with values [unit_quantity, unit_price] in trade units. See
+## [member _asks].
 var _bids: Dictionary[PackedInt32Array, PackedInt32Array] = {}
 
 # *****************************************************************************
@@ -231,8 +233,18 @@ var _bids: Dictionary[PackedInt32Array, PackedInt32Array] = {}
 var _facility_ai: FacilityBaseAI
 var _facility: FacilityProxy  # paired facility proxy
 
-# Per-resource open-position sums at the local body in trade units (quarters up
-# to and including the current one), rebuilt each interval by _tally_net_positions().
+# Facility-trader auxiliary: this trader's positions keyed by the 2-element instrument
+# [resource_type, ordinal_quarter], body projected out (unique per instrument because a
+# facility trades each resource in exactly one market — home or cyber). Maintained in
+# _on_positions_changed, seeded in ai_init. Stays empty for a transport trader, which is
+# inherently multi-body and works off proxy.positions directly.
+var _positions_by_instrument: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
+# This trader's cyber market id, resolved once in ai_init; the routing target for cyber
+# resources (see _delivery_market_id). -1 for a transport trader.
+var _cyber_market_id := -1
+
+# Per-resource open-position sums in trade units (quarters up to and including the
+# current one), rebuilt each interval by _tally_net_positions().
 var _net_long_units: PackedInt64Array
 var _net_short_units: PackedInt64Array
 # Front-quarter instrument scratch [resource_type, ordinal_qtr]; safe for lookups
@@ -240,16 +252,14 @@ var _net_short_units: PackedInt64Array
 var _instrument_scratch: PackedInt32Array
 # Collect-then-act key scratch for _drop_expired_memory() and _clear_resource_orders().
 var _expired_keys: Array[PackedInt32Array] = []
-# Per-resource quarter-offset of the farthest forward order in memory at the
-# local body (0 = none); rebuilt by _drop_expired_memory() each interval. Lets
-# the forward pass keep maintaining — and so want-0-clearing — orders beyond
-# the def's current horizon (strategy change, def shrink, lost reference price).
+# Per-resource quarter-offset of the farthest forward order in memory (0 = none);
+# rebuilt by _drop_expired_memory() each interval. Lets the forward pass keep
+# maintaining — and so want-0-clearing — orders beyond the def's current horizon
+# (strategy change, def shrink, lost reference price).
 var _forward_mem_horizons: PackedInt32Array
-# Forward instrument scratch [resource_type, ordinal_quarter]; safe for lookups
-# and outgoing calls (downstream duplicates), never stored as a key.
+# Forward instrument scratch [resource_type, ordinal_quarter]; safe for lookups, the aux
+# position lookup, and outgoing calls (downstream duplicates), never stored as a key.
 var _forward_instrument_scratch: PackedInt32Array
-# Position-lookup scratch [resource_type, ordinal_quarter, body_id]; never stored.
-var _position_scratch: PackedInt32Array
 
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
@@ -262,10 +272,14 @@ func _init() -> void:
 	_instrument_scratch.resize(2)
 	_forward_mem_horizons.resize(n_resources)
 	_forward_instrument_scratch.resize(2)
-	_position_scratch.resize(3)
 	if _start_unit_prices.is_empty():
+		const TRADE_CLASS_CYBER := Enums.TradeClasses.TRADE_CLASS_CYBER
 		var resources_table: Dictionary[StringName, Array] = IVTableData.db_tables[&"resources"]
 		_start_unit_prices = PackedInt32Array(resources_table[&"start_price"])
+		var trade_classes := PackedInt32Array(resources_table[&"trade_class"])
+		_is_cyber_resource.resize(trade_classes.size())
+		for resource_type in trade_classes.size():
+			_is_cyber_resource[resource_type] = 1 if trade_classes[resource_type] == TRADE_CLASS_CYBER else 0
 
 
 func _clear_for_destruction() -> void:
@@ -283,6 +297,11 @@ func ai_init() -> void:
 	if proxy.facility_id == -1:
 		return # transport trader: not facility-paired; transport strategies TBD
 	_facility = proxy.facility
+	_cyber_market_id = proxy.market.cyber_market_id
+	# Seed the instrument-keyed view from any positions predating this connection (e.g.
+	# on load); _on_positions_changed keeps it current thereafter.
+	for position_key in proxy.positions:
+		_positions_by_instrument[position_key.slice(0, 2)] = proxy.positions[position_key]
 	_facility_ai = Proxy.proxy_bus.facility_ais[proxy.facility_id]
 	assert(_facility_ai, "TraderBaseAI expects facility's AI to be FacilityBaseAI")
 	_facility_ai.facility_resource_strategy_changed.connect(_on_facility_resource_strategy_changed)
@@ -330,13 +349,12 @@ func _process_facility_support(resource_type: int, market: MarketProxy,
 		instrument: PackedInt32Array, def: Dictionary) -> void:
 	var sell: bool = def.get(&"sell_above_reserve", false)
 	var buy: bool = def.get(&"buy_to_reserve", false)
-	var mem_key := _order_memory_key(instrument, proxy.market_id)
 	var reference_price := market.get_unit_price(resource_type)
 	if reference_price <= 0 or (not sell and not buy):
 		# Not trading this resource now: drop any resting orders (placeholder
 		# price 1 — the proxy rejects price <= 0 even for a cancel).
-		_maintain_ask(instrument, mem_key, 0, 1, MIN_LOT, 0.0, 0.0)
-		_maintain_bid(instrument, mem_key, 0, 1, MIN_LOT, 0.0, 0.0)
+		_maintain_ask(instrument, 0, 1, MIN_LOT, 0.0, 0.0)
+		_maintain_bid(instrument, 0, 1, MIN_LOT, 0.0, 0.0)
 		return
 	var spread: float = def.get(&"spread", SPREAD)
 	var min_lot: int = def.get(&"min_lot", MIN_LOT)
@@ -350,13 +368,13 @@ func _process_facility_support(resource_type: int, market: MarketProxy,
 	if sell: # open shorts are committed outbound stock
 		ask_units = int((stock - target) / multiplier) - _net_short_units[resource_type]
 	var ask_price := maxi(1, floori(reference_price * (1.0 - spread)))
-	_maintain_ask(instrument, mem_key, ask_units, ask_price, min_lot, price_tol, qty_tol)
+	_maintain_ask(instrument, ask_units, ask_price, min_lot, price_tol, qty_tol)
 	var bid_units := 0
 	if buy: # open longs are committed inbound goods, like in-transit stock
 		bid_units = (int((target - stock - _facility.get_inventory_in_transit(resource_type))
 				/ multiplier) - _net_long_units[resource_type])
 	var bid_price := maxi(1, ceili(reference_price * (1.0 + spread)))
-	_maintain_bid(instrument, mem_key, bid_units, bid_price, min_lot, price_tol, qty_tol)
+	_maintain_bid(instrument, bid_units, bid_price, min_lot, price_tol, qty_tol)
 
 
 ## Quotes both sides for a market-relevant resource: bid below the reference price, ask
@@ -371,14 +389,13 @@ func _process_market_making(resource_type: int, market: MarketProxy,
 	var band_lots: int = def.get(&"band_lots", MM_BAND_LOTS)
 	var price_tol: float = def.get(&"price_tol", PRICE_TOLERANCE)
 	var qty_tol: float = def.get(&"qty_tol", QTY_TOLERANCE)
-	var mem_key := _order_memory_key(instrument, proxy.market_id)
 	var multiplier := _trade_unit_multipliers[resource_type]
 	var reference_price := market.get_unit_price(resource_type)
 	if reference_price <= 0:
 		reference_price = _start_unit_prices[resource_type]
 	if reference_price <= 0:
-		_maintain_ask(instrument, mem_key, 0, 1, min_lot, 0.0, 0.0)
-		_maintain_bid(instrument, mem_key, 0, 1, min_lot, 0.0, 0.0)
+		_maintain_ask(instrument, 0, 1, min_lot, 0.0, 0.0)
+		_maintain_bid(instrument, 0, 1, min_lot, 0.0, 0.0)
 		return
 	var ask_price := maxi(1, ceili(reference_price * (1.0 + spread)))
 	var bid_price := maxi(1, floori(reference_price * (1.0 - spread)))
@@ -389,9 +406,9 @@ func _process_market_making(resource_type: int, market: MarketProxy,
 	var ask_units := int((stock - ops_reserve) / multiplier) - _net_short_units[resource_type]
 	var bid_units := (int((ceiling - stock - _facility.get_inventory_in_transit(resource_type))
 			/ multiplier) - _net_long_units[resource_type])
-	_maintain_ask(instrument, mem_key, maxi(0, ask_units), ask_price, min_lot,
+	_maintain_ask(instrument, maxi(0, ask_units), ask_price, min_lot,
 			price_tol, qty_tol)
-	_maintain_bid(instrument, mem_key, maxi(0, bid_units), bid_price, min_lot,
+	_maintain_bid(instrument, maxi(0, bid_units), bid_price, min_lot,
 			price_tol, qty_tol)
 
 
@@ -438,7 +455,6 @@ func _process_forward_flow(resource_type: int, market: MarketProxy, def: Diction
 	var qty_tol: float = def.get(&"qty_tol", QTY_TOLERANCE)
 	var forward_hedge: float = def.get(&"forward_hedge", FORWARD_HEDGE)
 	var multiplier := _trade_unit_multipliers[resource_type]
-	var local_body_id := market.body_id
 	# Crossing-friendly like facility support: a producer's ask sits below the
 	# reference, a consumer's bid above, so a net producer and net consumer of the
 	# same resource cross. Placeholder 1 on cancel-only paths — the proxy rejects
@@ -450,13 +466,10 @@ func _process_forward_flow(resource_type: int, market: MarketProxy, def: Diction
 		var ordinal_quarter := current_qtr + k
 		_forward_instrument_scratch[0] = resource_type
 		_forward_instrument_scratch[1] = ordinal_quarter
-		var mem_key := _order_memory_key(_forward_instrument_scratch, proxy.market_id)
 		# An open position on this instrument is already-committed flow, netted
 		# out of the want like the front executors net the front position sums.
-		_position_scratch[0] = resource_type
-		_position_scratch[1] = ordinal_quarter
-		_position_scratch[2] = local_body_id
-		var position: PackedFloat64Array = proxy.positions.get(_position_scratch, NULL_PF64ARRAY)
+		var position: PackedFloat64Array = _positions_by_instrument.get(
+				_forward_instrument_scratch, NULL_PF64ARRAY)
 		var net_units := int(position[0]) if position else 0
 		var ask_units := 0
 		var bid_units := 0
@@ -471,9 +484,9 @@ func _process_forward_flow(resource_type: int, market: MarketProxy, def: Diction
 		# before any match (see _ProxyServer/_MarketsServer run loops), so the call
 		# order here is immaterial: at most one side is wanted, the other 0-clears
 		# any stale resting order via SET.
-		_maintain_ask(_forward_instrument_scratch, mem_key, ask_units, ask_price,
+		_maintain_ask(_forward_instrument_scratch, ask_units, ask_price,
 				min_lot, price_tol, qty_tol)
-		_maintain_bid(_forward_instrument_scratch, mem_key, bid_units, bid_price,
+		_maintain_bid(_forward_instrument_scratch, bid_units, bid_price,
 				min_lot, price_tol, qty_tol)
 
 
@@ -490,7 +503,7 @@ func _set_ask(instrument: PackedInt32Array, unit_quantity: int,
 		unit_price: int, delivery_market_id: int) -> void:
 	if instrument[1] < proxy.ordinal_qtr:
 		return
-	var mem_key := _order_memory_key(instrument, delivery_market_id)
+	var mem_key := instrument.duplicate() # 2-element instrument key (body projected out)
 	if unit_quantity:
 		var ask: PackedInt32Array
 		if _asks.has(mem_key):
@@ -515,7 +528,7 @@ func _set_bid(instrument: PackedInt32Array, unit_quantity: int,
 		unit_price: int, delivery_market_id: int) -> void:
 	if instrument[1] < proxy.ordinal_qtr:
 		return
-	var mem_key := _order_memory_key(instrument, delivery_market_id)
+	var mem_key := instrument.duplicate() # 2-element instrument key (body projected out)
 	if unit_quantity:
 		var bid: PackedInt32Array
 		if _bids.has(mem_key):
@@ -530,76 +543,68 @@ func _set_bid(instrument: PackedInt32Array, unit_quantity: int,
 	proxy.set_bid(instrument, unit_quantity, unit_price, delivery_market_id)
 
 
-# Order memory is keyed by the delivery body; resolve it from the delivery market.
-func _order_memory_key(instrument: PackedInt32Array, market_id: int) -> PackedInt32Array:
-	var market_proxy: MarketProxy = Proxy.proxy_bus.market_proxies[market_id]
-	assert(market_proxy and market_proxy.body, "delivery market/body not resolved")
-	var key := instrument.duplicate()
-	key.resize(3)
-	key[2] = market_proxy.body.body_id
-	return key
-
-
 # ****************************** INTERNAL LOGIC *******************************
 
 ## Brings our resting ask for [param instrument] in line with the desired quantity
 ## and price under SET semantics: a want below [param min_lot] clears any resting
 ## ask (the 0-set is sent only when memory holds one); otherwise posts if absent,
-## or re-quotes on material divergence (see [method _needs_requote]).
-## [param mem_key] is the order-memory key for [param instrument] at the delivery
-## body (see [method _order_memory_key]). Facility-paired helper: the delivery
-## market is always the trader's own ([member TraderProxy.market_id]).
-func _maintain_ask(instrument: PackedInt32Array, mem_key: PackedInt32Array,
+## or re-quotes on material divergence (see [method _needs_requote]). The delivery
+## market is resolved per resource (see [method _delivery_market_id]).
+func _maintain_ask(instrument: PackedInt32Array,
 		want_quantity: int, want_price: int, min_lot: int, price_tol: float, qty_tol: float
 		) -> void:
+	var market_id := _delivery_market_id(instrument[0])
 	if want_quantity < min_lot:
-		if _asks.has(mem_key):
-			_set_ask(instrument, 0, want_price, proxy.market_id)
+		if _asks.has(instrument):
+			_set_ask(instrument, 0, want_price, market_id)
 		return
-	if !_asks.has(mem_key):
-		_set_ask(instrument, want_quantity, want_price, proxy.market_id)
+	if !_asks.has(instrument):
+		_set_ask(instrument, want_quantity, want_price, market_id)
 		return
-	var have := _asks[mem_key]
+	var have := _asks[instrument]
 	if _needs_requote(have[0], have[1], want_quantity, want_price, price_tol, qty_tol):
-		_set_ask(instrument, want_quantity, want_price, proxy.market_id)
+		_set_ask(instrument, want_quantity, want_price, market_id)
 
 
 ## Bid counterpart of [method _maintain_ask].
-func _maintain_bid(instrument: PackedInt32Array, mem_key: PackedInt32Array,
+func _maintain_bid(instrument: PackedInt32Array,
 		want_quantity: int, want_price: int, min_lot: int, price_tol: float, qty_tol: float
 		) -> void:
+	var market_id := _delivery_market_id(instrument[0])
 	if want_quantity < min_lot:
-		if _bids.has(mem_key):
-			_set_bid(instrument, 0, want_price, proxy.market_id)
+		if _bids.has(instrument):
+			_set_bid(instrument, 0, want_price, market_id)
 		return
-	if !_bids.has(mem_key):
-		_set_bid(instrument, want_quantity, want_price, proxy.market_id)
+	if !_bids.has(instrument):
+		_set_bid(instrument, want_quantity, want_price, market_id)
 		return
-	var have := _bids[mem_key]
+	var have := _bids[instrument]
 	if _needs_requote(have[0], have[1], want_quantity, want_price, price_tol, qty_tol):
-		_set_bid(instrument, want_quantity, want_price, proxy.market_id)
+		_set_bid(instrument, want_quantity, want_price, market_id)
+
+
+# Resolves which market an order for [param resource_type] routes to: the cyber market
+# for a cyber resource, else this facility trader's home body market.
+func _delivery_market_id(resource_type: int) -> int:
+	return _cyber_market_id if _is_cyber_resource[resource_type] else proxy.market_id
 
 
 # The market purges old-quarter resting orders at rollover without echoes; drop
 # matching memory by the same rule so stale entries can't satisfy _maintain_*
 # lookups (which would suppress fresh front-quarter quotes). Piggybacks the same
-# iteration to rebuild _forward_mem_horizons (the farthest forward order per
-# resource at the local body).
+# iteration to rebuild _forward_mem_horizons (the farthest forward order per resource).
 func _drop_expired_memory() -> void:
 	var current_qtr := proxy.ordinal_qtr
-	var local_body_id := proxy.market.body_id
 	_forward_mem_horizons.fill(0)
 	for key in _asks:
 		if key[1] < current_qtr:
 			_expired_keys.append(key)
-		elif key[1] > current_qtr and key[2] == local_body_id \
-				and _forward_mem_horizons[key[0]] < key[1] - current_qtr:
+		elif key[1] > current_qtr and _forward_mem_horizons[key[0]] < key[1] - current_qtr:
 			_forward_mem_horizons[key[0]] = key[1] - current_qtr
 	for key in _bids:
 		if key[1] < current_qtr:
 			_expired_keys.append(key)
-		elif key[1] > current_qtr and key[2] == local_body_id \
-				and _forward_mem_horizons[key[0]] < key[1] - current_qtr:
+		elif key[1] > current_qtr and _forward_mem_horizons[key[0]] < key[1] - current_qtr:
 			_forward_mem_horizons[key[0]] = key[1] - current_qtr
 	for key in _expired_keys: # duplicates fine; erase is idempotent
 		_asks.erase(key)
@@ -607,21 +612,19 @@ func _drop_expired_memory() -> void:
 	_expired_keys.clear()
 
 
-# Sums open long / short position units per resource for delivery at the local
-# body, quarters up to and including the current one. Physical settlement lags
-# fills by up to ~a trader interval, so executors net these out of want
-# quantities (else they re-order already-filled demand every interval).
-# proxy.positions is proxy-thread-owned like this AI; direct read is safe.
+# Sums open long / short position units per resource, quarters up to and including the
+# current one. Physical settlement lags fills by up to ~a trader interval, so executors
+# net these out of want quantities (else they re-order already-filled demand every
+# interval). Reads the instrument-keyed aux view; the delivery body is irrelevant to a
+# facility trader (each resource trades in exactly one market). Proxy-thread-owned, safe.
 func _tally_net_positions() -> void:
 	_net_long_units.fill(0)
 	_net_short_units.fill(0)
 	var current_qtr := proxy.ordinal_qtr
-	var local_body_id := proxy.market.body_id
-	var positions := proxy.positions
-	for key in positions:
-		if key[2] != local_body_id or key[1] > current_qtr:
+	for key in _positions_by_instrument:
+		if key[1] > current_qtr:
 			continue
-		var signed_qty := positions[key][0]
+		var signed_qty := _positions_by_instrument[key][0]
 		if signed_qty > 0.0:
 			_net_long_units[key[0]] += int(signed_qty)
 		else:
@@ -642,29 +645,27 @@ func _needs_requote(have_quantity: int, have_price: int, want_quantity: int, wan
 
 
 # Cancels this trader's resting ask and bid (if any) on every quarter's instrument
-# for [param resource_type] at the local body. Called on an executor-branch change:
-# the support/flow and market-making branches share price formulas (a sell ask at
-# ref*(1-spread) equals the maker's bid; a buy bid at ref*(1+spread) equals the
-# maker's ask), and those prices sit within [constant PRICE_TOLERANCE] of each
-# other, so a lingering old-branch order would not be re-quoted and could cross
-# the new branch's opposite quote (a self-trade) — on the front or any forward
-# quarter both branches quote.
+# for [param resource_type]. Called on an executor-branch change: the support/flow and
+# market-making branches share price formulas (a sell ask at ref*(1-spread) equals the
+# maker's bid; a buy bid at ref*(1+spread) equals the maker's ask), and those prices sit
+# within [constant PRICE_TOLERANCE] of each other, so a lingering old-branch order would
+# not be re-quoted and could cross the new branch's opposite quote (a self-trade) — on
+# the front or any forward quarter both branches quote.
 func _clear_resource_orders(resource_type: int) -> void:
 	if !proxy.market:
 		return
-	var local_body_id := proxy.market.body_id
+	var market_id := _delivery_market_id(resource_type)
 	for key in _asks: # collect-then-act; _set_* mutates the dicts
-		if key[0] == resource_type and key[2] == local_body_id:
+		if key[0] == resource_type:
 			_expired_keys.append(key)
 	for key in _bids:
-		if key[0] == resource_type and key[2] == local_body_id:
+		if key[0] == resource_type:
 			_expired_keys.append(key)
 	for key in _expired_keys: # duplicates fine; the has() checks make this idempotent
-		var instrument := key.slice(0, 2)
 		if _asks.has(key):
-			_set_ask(instrument, 0, 1, proxy.market_id)
+			_set_ask(key, 0, 1, market_id)
 		if _bids.has(key):
-			_set_bid(instrument, 0, 1, proxy.market_id)
+			_set_bid(key, 0, 1, market_id)
 	_expired_keys.clear()
 
 
@@ -712,16 +713,24 @@ func _on_facility_resource_strategy_changed(resource_type: int, strategy_id: int
 	_clear_resource_orders(resource_type)
 
 
-# Mirrors the trader's current ask/bid (carried in every position notification) into
-# order memory, keyed by [resource_type, ordinal_quarter, body_id]. The position
-# value itself is read from proxy.positions; this handler only needs ask/bid.
-func _on_positions_changed(position_key: PackedInt32Array, _value: PackedFloat64Array,
+# Mirrors the trader's position and resting ask/bid (carried in every notification) into
+# the facility-trader working set, keyed by the 2-element instrument (body projected
+# out). Gated on [member _facility]: a transport trader keeps its own body-keyed
+# bookkeeping (TBD) and leaves these empty.
+func _on_positions_changed(position_key: PackedInt32Array, value: PackedFloat64Array,
 		ask: PackedInt32Array, bid: PackedInt32Array) -> void:
+	if !_facility:
+		return
+	var instrument := position_key.slice(0, 2)
+	if value:
+		_positions_by_instrument[instrument] = value
+	else:
+		_positions_by_instrument.erase(instrument)
 	if ask:
-		_asks[position_key] = ask
+		_asks[instrument] = ask
 	else:
-		_asks.erase(position_key)
+		_asks.erase(instrument)
 	if bid:
-		_bids[position_key] = bid
+		_bids[instrument] = bid
 	else:
-		_bids.erase(position_key)
+		_bids.erase(instrument)
