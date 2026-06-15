@@ -50,6 +50,8 @@ These fields are used only if `process_group` is `CONVERSION`. All lists are sem
 - mass_flow — Equals the sum of input_rates equals the sum of output_rates, within rounding precision. Note: the column header in `operations.tsv` is currently `mass_conversion`; the name discrepancy will be resolved in a future update.
 - fuel_rate — Energy group operations only. Total input rate excluding OXYGEN.
 
+Rate units: the `*_rates` columns carry a default unit of `t/h`, which is correct for mass resources. For a non-mass resource (e.g., compute in `Zflop`, or a service whose `trade_unit` is `1`) write each rate element with an explicit unit suffix so it overrides the column default — for example `3.6 Zflop/h` for compute output, or `1/h` for one service unit per hour. A bare number on a non-mass resource is silently converted as `t/h` and will be wrong by the resource's unit multiplier. The engine multiplies a rate by the resource's sim-unit price (`start_price ÷ trade_unit multiplier`), so revenue/cost equals `quantity × start_price` regardless of unit; only the explicit suffix keeps the quantity coherent.
+
 
 ## Normalization
 
