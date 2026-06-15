@@ -14,6 +14,8 @@ Modules are described in `modules.descriptive.md`.
 - carrying_capacity — The module can support a "population" (as opposed to crew only) of this size. Populations are more permanent than crews and have intrinsic growth dynamics.
 - carrying_capacity_group — Leave as HUMAN.
 - operations — Operations that the module provides capacity for. Each operation belongs to exactly one module (one-to-many relationship from modules to operations).
+- maintenance — Resources consumed as presence-based maintenance, scaling with installed module capacity regardless of utilization. Parallel to `maintenance_rates`. Deferrable like operation maintenance (a shortfall accrues to the facility's deferred maintenance rather than halting anything) and books to the `MAINTENANCE` line item.
+- maintenance_rates — Maintenance resource rates (per unit of installed module capacity), parallel to `maintenance`.
 
 
 ## Notes

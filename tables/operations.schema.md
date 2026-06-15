@@ -17,6 +17,8 @@ Operations are described in `operations.descriptive.md`.
 - closed_cycle_storage — Same format as `open_cycle_storage`, but for closed-cycle operation: atmospheric inputs come from inventory (cryogenic reserves, etc.), gaseous/liquid outputs route back to inventory rather than venting, and electricity is scaled by `closed_cycle_factor`. Used when the facility or module forces closed-cycle processing.
 - revenue_type — `line_items.tsv` line item this operation's (imputed) revenue books into for non-unitary facilities. A financial concept independent of `op_class` (a GUI-only grouping); leave empty for none.
 - cogs_type — `line_items.tsv` line item this operation's (imputed) cost of goods books into for non-unitary facilities. Leave empty for none.
+- maintenance — Resources consumed as rate-based maintenance, scaling with the operation's run (capacity × utilization). Parallel to `maintenance_rates`. Unlike stoichiometric inputs, maintenance is deferrable: a shortfall accrues to the facility's deferred maintenance rather than halting the operation. Applies across all process groups (including renewable/extraction) and books to the `MAINTENANCE` line item, not `cogs_type`.
+- maintenance_rates — Maintenance resource rates (per unit of capacity × utilization), parallel to `maintenance`.
 
 
 ## Extraction Fields
