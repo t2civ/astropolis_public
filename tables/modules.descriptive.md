@@ -119,3 +119,21 @@ Notes:
 - **Pharmaceutical Plants** — Chemical synthesis, fermentation, purification, and formulation facilities for drugs, vaccines, biologics, and medical compounds.
 - **Soil Conditioning Facilities** — Composting, amendment blending, pH adjustment, nutrient loading, and regolith remediation operations for preparing agricultural growth media. Critical ISRU step for establishing agriculture on extraterrestrial surfaces.
 - **Wastewater Treatment Plants** — Biological, chemical, and membrane processing facilities for sewage, greywater, and mixed organic waste, with water reclamation and nutrient recovery. Critical water- and mass-closure infrastructure for off-Earth habitats.
+
+
+## Services
+
+- **Scalar Compute Nodes** — Installations of general-purpose (CPU-class) processors, memory, storage, and networking with their power and cooling, from server rooms and data centers to, in time, orbiting compute platforms. The substrate for everyday business, control, and transaction computing. Off-Earth, sited where power is plentiful and waste heat is readily rejected.
+- **Tensor Compute Nodes** — Installations of accelerated (GPU/tensor-class) hardware optimized for machine-learning and large-scale numerical workloads, with the dense power delivery and cooling such accelerators demand. Power- and heat-intensive; favor sites with abundant energy and strong heat rejection.
+- **Neuromorphic Nodes** — Installations of brain-inspired, event-driven processors for highly efficient cognitive computing. Compact and frugal in power relative to their throughput; a frontier facility type that matures as the hardware does.
+- **Professional & Business Offices** — Office establishments housing professional and business firms — advisory, legal, accounting, marketing, administrative, security, design, and facilities-management practices. Generic commercial floorspace adaptable to many white-collar uses.
+- **Communications & Media Networks** — Transmission and broadcast infrastructure: network nodes, relays, antennas, ground stations, and exchanges, together with the studios and distribution systems that produce and deliver content. The connective tissue linking settlements, vehicles, and worlds.
+- **Financial Centers** — Banking, investment, and insurance establishments: institutions that take deposits, extend credit, allocate capital, and underwrite risk.
+- **Research Laboratories** — Scientific and engineering research establishments: laboratories, test beds, prototyping shops, observatories, and experimental facilities across the physical, biological, and computational sciences.
+- **Exchanges** — Organized marketplaces and clearing houses where commodities and contracts are traded, settlement is guaranteed, and deliveries are coordinated for dispatch.
+- **Transport & Logistics Hubs** — Freight and passenger infrastructure: warehouses, depots, freight terminals, transit stations, ports, and spaceport surface operations that move goods and people within a body.
+- **Retail & Commercial Centers** — Consumer-facing establishments: shops and markets, hotels and restaurants, entertainment venues, and personal-service businesses. The commercial fabric of a settlement.
+- **Hospitals & Clinics** — Medical establishments: hospitals, clinics, surgeries, diagnostic centers, and pharmacies, equipped for diagnosis, treatment, and care.
+- **Schools & Universities** — Educational establishments: schools, colleges, universities, and vocational and training institutions.
+- **Civic & Government Buildings** — Public administration and service buildings: government offices, courts, security and emergency services, and other civic institutions.
+- **Utility & Sanitation Networks** — Distribution and collection infrastructure: water mains and pumping, power and gas distribution grids, sewerage, and waste-collection and recycling systems serving premises and settlements.

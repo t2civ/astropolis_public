@@ -13,7 +13,6 @@ Notes:
    - Infrastructure and manufactured items that go out of service become Industrial Waste.
    - Populations consume food and goods and generate Biowaste and Municipal Waste.
    - Natural systems convert resources outside of "operations". This includes Earth's water cycle and limited processing of waste streams.
-5. Service operations are listed in a separate file; these handle conversions among non-physical (intangible) resources.
 
 
 ## Energy
@@ -164,3 +163,34 @@ Notes:
 - **Industrial Fermentation** — Aerobic and anaerobic bioreactor fermentation (bacterial, yeast, fungal) and enzymatic processing to produce biochemicals: industrial enzymes, amino acids, organic acids, biopolymers, and pharmaceutical intermediates. Consumes organic carbon substrates, water, nitrogen, and trace nutrients. Core pathway for industrial biotechnology distinct from fuel-producing fermentation.
 - **Biogas Production** — Anaerobic digestion of organic waste: biowaste, crop residues, and sewage sludge decomposed by microbial consortia to produce methane-rich biogas and nutrient-dense digestate. Biogas is upgraded to pipeline-grade methane or used directly for power generation; digestate is recoverable as fertilizer. Critical waste-processing and energy-recovery pathway for closed-loop off-Earth habitats.
 - **Biowaste Treatment** — Collection and processing of sewage, greywater, food waste, and mixed organic waste from population centers and habitats. Primary treatment via screening and settling; secondary treatment via aerobic or anaerobic biological processes; tertiary treatment via membrane filtration, UV disinfection, and chemical polishing. Nutrient recovery extracts nitrogen and phosphorus compounds for fertilizer production. Produces reclaimed water and concentrated biosolids; biosolids serve as feedstock for downstream biogas production, soil conditioning, or biomass conversion. Critical water- and mass-closure operation for space habitats and off-Earth settlements; major municipal and industrial infrastructure on Earth.
+
+
+## Services
+
+- **Scalar Processing** — Execution of general-purpose computation on CPU-class hardware: business systems, databases, transaction and control workloads, and modeling. Draws large, steady electrical loads; output measured in floating-point operations.
+- **Tensor Processing** — Execution of massively parallel accelerated computation for machine-learning training and inference, large-scale simulation, and signal processing. Extremely power- and cooling-intensive per unit of work.
+- **Neuromorphic Processing** — Execution of brain-inspired, event-driven computation for cognitive workloads at very high energy efficiency. A frontier activity, immaterial until the underlying hardware matures.
+- **Facilities Management** — Planning and execution of maintenance, repair, and operation of physical assets, including digital and IT systems and property management. Consumes spare parts and equipment; keeps installed capital in service.
+- **Telecommunications** — Switching, routing, and relaying of voice and data between endpoints. Consumes computing and network capacity and electrical power; produces transmission independent of the content carried.
+- **Cybersecurity** — Defense of information systems: monitoring, threat detection, cryptographic protection, and incident response. Draws heavily on computing, including accelerated compute for threat analysis.
+- **Broadcast & Streaming** — Production, encoding, and distribution of audiovisual content to audiences. Rides on telecommunications for delivery and draws on computing for production and serving.
+- **Marketing & Advertising** — Market research and the creation and placement of advertising. Draws on broadcast and streaming channels to reach audiences and on accelerated compute for targeting.
+- **Business Services** — Provision of outsourced administrative and back-office operations: contact centers, transaction processing, and remote support. Compute- and communications-intensive.
+- **Accounting Services** — Provision of bookkeeping, audit, tax, and financial-reporting work.
+- **Consulting** — Provision of expert advisory work to enterprises and institutions. Compute- and information-intensive; light in physical inputs.
+- **Legal Services** — Provision of legal counsel, representation, contracting, and compliance work.
+- **Financial Services** — Banking, lending, payments, and investment and asset management. Compute- and information-intensive.
+- **Insurance & Risk** — Underwriting of risk and provision of coverage against loss, including actuarial assessment and reinsurance. Accelerated-compute-intensive for risk modeling.
+- **Architecture & Engineering** — Design and technical specification of structures, vehicles, and systems. Compute- and simulation-intensive; its design output is taken up by construction and fabrication.
+- **Research & Development** — Scientific and engineering investigation: experimentation, modeling, design, and prototyping. Intensive in computing — increasingly accelerated and AI compute — and in instruments and specialized materials; yields new knowledge and designs.
+- **Exchange Operations** — Operation of trading venues and central clearing: order matching, settlement guarantee, and coordination of delivery load-out for traded goods. Compute- and communications-intensive.
+- **Wholesale & Logistics** — Bulk distribution and freight movement of goods within a body. Consumes transport vehicles and energy.
+- **Passenger Services** — Movement of people within a body via transit and carriers. Consumes transport vehicles and energy.
+- **Retail Services** — Sale and last-mile distribution of goods to consumers, moving consumer goods to end users.
+- **Hospitality** — Provision of lodging, food service, and travel accommodation. Consumes prepared food and consumer goods.
+- **Entertainment** — Provision of in-person leisure and recreation at venues and events.
+- **Personal Services** — Provision of direct services to individuals: grooming, fitness, childcare, domestic help, and personal-goods repair.
+- **Healthcare** — Delivery of medical and health services: diagnosis, treatment, surgery, and care. Consumes pharmaceuticals and medical equipment; increasingly draws on accelerated compute for diagnostics.
+- **Education** — Delivery of in-person teaching and training across primary, tertiary, and vocational levels.
+- **Public/Gov Services** — Provision of administration, security, justice, defense, and civic services.
+- **Utilities/Env Services** — Distribution of water, power, and gas to premises and the collection and processing of waste. Consumes water and electricity for delivery and handles waste streams from settlements.
