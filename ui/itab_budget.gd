@@ -32,6 +32,7 @@ const SUBGROUP_INDENT := 25
 # SUBTOTAL_* order in the financials components (server/proxy).
 const SUBTOTAL_REVENUE := 0
 const SUBTOTAL_COST_OF_GOODS := 1
+const SUBTOTAL_OPERATING_EXPENSE := 8
 
 # Bounds of the available LABEL_USD_* magnitude units (thousands..quintillions).
 const USD_MIN_EXPONENT := 1
@@ -136,13 +137,17 @@ func timer_update() -> void:
 
 func _precompute_display_names() -> void:
 	var item_is_revenue: Array[bool] = _db_tables[&"line_items"][&"is_revenue"]
+	var item_is_operating_expense: Array[bool] = _db_tables[&"line_items"][&"is_operating_expense"]
 	var item_balance_classes: Array[int] = _db_tables[&"line_items"][&"balance_class"]
 	_item_keys.resize(_n_line_items)
 	_item_subtotals.resize(_n_line_items)
 	_item_balance_classes.resize(_n_line_items)
 	for item in _n_line_items:
 		_item_keys[item] = String(_item_names[item])
-		_item_subtotals[item] = SUBTOTAL_REVENUE if item_is_revenue[item] else SUBTOTAL_COST_OF_GOODS
+		if item_is_operating_expense[item]:
+			_item_subtotals[item] = SUBTOTAL_OPERATING_EXPENSE
+		else:
+			_item_subtotals[item] = SUBTOTAL_REVENUE if item_is_revenue[item] else SUBTOTAL_COST_OF_GOODS
 		_item_balance_classes[item] = item_balance_classes[item]
 
 
@@ -250,6 +255,10 @@ func _get_proxy_data(target_name: StringName) -> void:
 	var footer := []
 
 	if tab == _income_statement:
+		# Income waterfall: gross profit renders as a leafless subtotal line (between
+		# cost-of-goods and the operating-expense group); operating income is the
+		# bottom-line footer. The opex group is summed from its leaves (no tracked-
+		# subtotal history getter), like the cash-flow groups.
 		var subtotals := proxy.get_financials_subtotals()
 		var accountings := proxy.get_financials_accountings().duplicate()
 		var revenue_history := proxy.get_financials_revenue_history()
@@ -260,7 +269,13 @@ func _get_proxy_data(target_name: StringName) -> void:
 				"SUBTOTAL_COST_OF_GOODS", subtotals[SUBTOTAL_COST_OF_GOODS], cogs_history))
 		var revenue_series := _make_series(revenue_history, subtotals[SUBTOTAL_REVENUE])
 		var cogs_series := _make_series(cogs_history, subtotals[SUBTOTAL_COST_OF_GOODS])
-		footer = ["SUBTOTAL_GROSS_PROFIT", _subtract_series(revenue_series, cogs_series)]
+		var gross_profit_series := _subtract_series(revenue_series, cogs_series)
+		groups.append(["SUBTOTAL_GROSS_PROFIT", gross_profit_series, []])
+		var opex_group := _collect_summed_group(proxy, accountings, _income_statement,
+				_item_subtotals, SUBTOTAL_OPERATING_EXPENSE, "SUBTOTAL_OPERATING_EXPENSE")
+		groups.append(opex_group)
+		var opex_series: PackedFloat64Array = opex_group[1]
+		footer = ["SUBTOTAL_OPERATING_INCOME", _subtract_series(gross_profit_series, opex_series)]
 	elif tab == _cash_flow_statement:
 		# Inflow/outflow group series are summed from their leaf series (cash-flow
 		# direction is per-leaf; only the net is a tracked subtotal).
