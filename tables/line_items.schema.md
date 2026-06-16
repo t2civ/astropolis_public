@@ -1,9 +1,10 @@
 # Line Items (Schema)
 
 Line items (leaves) of the chart of accounts. Each row is one account; values accumulate per facility
-and aggregate facility → player. Subtotals (revenue, cost-of-goods, gross-output, gross-profit) are
-derived from these leaves in code (hard-coded `SUBTOTAL_*` constants in the financials components), not
-stored as rows. See `FINANCIAL_MODEL.md` for the model.
+and aggregate facility → player. Subtotals (revenue, cost-of-goods, gross-output, gross-profit,
+net-cash-flow, and the balance-sheet assets, liabilities, equity) are derived from these leaves in code
+(hard-coded `SUBTOTAL_*` constants in the financials components), not stored as rows. See
+`FINANCIAL_MODEL.md` for the model.
 
 ## Fields
 
@@ -21,3 +22,6 @@ stored as rows. See `FINANCIAL_MODEL.md` for the model.
 - is_gross_output — TRUE if this (producer) revenue counts toward the `GROSS_OUTPUT` economic measure;
   FALSE for resale/transfer/tax/trading lines (e.g. `TRADING_GAINS` is real revenue but not
   production).
+- balance_class — for a `BALANCE` leaf, its `Enums.BalanceClasses` member (prefix `BALANCE_CLASS_`):
+  `ASSET`, `LIABILITY`, or `EQUITY`. Routes the leaf into the assets, liabilities, or equity subtotal.
+  Unused for `INCOME`/`CASH_FLOW` leaves (leave blank).

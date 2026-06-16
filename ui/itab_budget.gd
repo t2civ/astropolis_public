@@ -65,14 +65,16 @@ var _item_statements: Array[int] = _db_tables[&"line_items"][&"statement"]
 var _statement_keys := Enums.StatementTypes.keys()
 var _income_statement := Enums.StatementTypes.STATEMENT_INCOME
 var _cash_flow_statement := Enums.StatementTypes.STATEMENT_CASH_FLOW
+var _balance_statement := Enums.StatementTypes.STATEMENT_BALANCE
 var _usd_inv: float = 1.0 / IVUnits.unit_multipliers[&"$"]
 
 # line_items entity-name keys for leaf rows, rendered via Label auto-translation
-# (entities.csv). _item_subtotals maps each leaf to its base subtotal index
-# (SUBTOTAL_REVENUE or SUBTOTAL_COST_OF_GOODS). Both cached so proxy-thread reads
-# stay safe.
+# (entities.csv). _item_subtotals maps each leaf to its base income subtotal index
+# (SUBTOTAL_REVENUE or SUBTOTAL_COST_OF_GOODS); _item_balance_classes maps each
+# balance leaf to its Enums.BalanceClasses. All cached so proxy-thread reads stay safe.
 var _item_keys: Array[String] = []
 var _item_subtotals := PackedInt32Array()
+var _item_balance_classes := PackedInt32Array()
 
 var _selection_manager: AstroSelectionManager
 var _suppress_tab_listener := true
@@ -134,11 +136,14 @@ func timer_update() -> void:
 
 func _precompute_display_names() -> void:
 	var item_is_revenue: Array[bool] = _db_tables[&"line_items"][&"is_revenue"]
+	var item_balance_classes: Array[int] = _db_tables[&"line_items"][&"balance_class"]
 	_item_keys.resize(_n_line_items)
 	_item_subtotals.resize(_n_line_items)
+	_item_balance_classes.resize(_n_line_items)
 	for item in _n_line_items:
 		_item_keys[item] = String(_item_names[item])
 		_item_subtotals[item] = SUBTOTAL_REVENUE if item_is_revenue[item] else SUBTOTAL_COST_OF_GOODS
+		_item_balance_classes[item] = item_balance_classes[item]
 
 
 func _build_ui() -> void:
@@ -244,7 +249,6 @@ func _get_proxy_data(target_name: StringName) -> void:
 	var groups := []
 	var footer := []
 
-	# The balance statement is not yet populated (a later development step).
 	if tab == _income_statement:
 		var subtotals := proxy.get_financials_subtotals()
 		var accountings := proxy.get_financials_accountings().duplicate()
@@ -262,14 +266,25 @@ func _get_proxy_data(target_name: StringName) -> void:
 		# direction is per-leaf; only the net is a tracked subtotal).
 		var accountings := proxy.get_financials_accountings().duplicate()
 		var inflow_group := _collect_summed_group(proxy, accountings, _cash_flow_statement,
-				SUBTOTAL_REVENUE, "CASH_INFLOWS")
+				_item_subtotals, SUBTOTAL_REVENUE, "CASH_INFLOWS")
 		var outflow_group := _collect_summed_group(proxy, accountings, _cash_flow_statement,
-				SUBTOTAL_COST_OF_GOODS, "CASH_OUTFLOWS")
+				_item_subtotals, SUBTOTAL_COST_OF_GOODS, "CASH_OUTFLOWS")
 		groups.append(inflow_group)
 		groups.append(outflow_group)
 		var inflow_series: PackedFloat64Array = inflow_group[1]
 		var outflow_series: PackedFloat64Array = outflow_group[1]
 		footer = ["SUBTOTAL_NET_CASH_FLOW", _subtract_series(inflow_series, outflow_series)]
+	elif tab == _balance_statement:
+		var accountings := proxy.get_financials_accountings().duplicate()
+		# Asset / liability / equity groups (by per-leaf balance_class); a group with
+		# no nonzero leaf is dropped so unused sections stay hidden. No footer (the
+		# balancing identity is a later step).
+		_append_balance_group(groups, proxy, accountings,
+				Enums.BalanceClasses.BALANCE_CLASS_ASSET, "SUBTOTAL_ASSETS")
+		_append_balance_group(groups, proxy, accountings,
+				Enums.BalanceClasses.BALANCE_CLASS_LIABILITY, "SUBTOTAL_LIABILITIES")
+		_append_balance_group(groups, proxy, accountings,
+				Enums.BalanceClasses.BALANCE_CLASS_EQUITY, "SUBTOTAL_EQUITY")
 
 	_update_tab_display.call_deferred(target_name, tab, ordinal_qtr, groups, footer)
 
@@ -293,17 +308,18 @@ func _collect_group(proxy: Proxy, accountings: Dictionary[int, float], subtotal:
 
 
 func _collect_summed_group(proxy: Proxy, accountings: Dictionary[int, float], statement: int,
-		subtotal: int, title: String) -> Array:
+		classifier: PackedInt32Array, class_value: int, title: String) -> Array:
 	# Like _collect_group, but the group series is summed from its leaf series
-	# rather than read from a tracked subtotal (used for cash-flow direction
-	# groups, where only the net is a subtotal). Leaves in table order, matching
-	# this statement and direction, with any nonzero quarter.
+	# rather than read from a tracked subtotal. Used for cash-flow direction groups
+	# (classifier _item_subtotals, where only the net is a tracked subtotal) and
+	# balance-sheet groups (classifier _item_balance_classes). Leaves in table order,
+	# matching this statement and classifier value, with any nonzero quarter.
 	var rows := []
 	var group_series := PackedFloat64Array()
 	for item in _n_line_items:
 		if _item_statements[item] != statement:
 			continue
-		if _item_subtotals[item] != subtotal:
+		if classifier[item] != class_value:
 			continue
 		var current_value: float = accountings.get(item, 0.0)
 		var leaf_series := _make_series(proxy.get_financials_accounting_history(item), current_value)
@@ -312,6 +328,17 @@ func _collect_summed_group(proxy: Proxy, accountings: Dictionary[int, float], st
 			continue
 		rows.append([_item_keys[item], leaf_series])
 	return [title, group_series, rows]
+
+
+func _append_balance_group(groups: Array, proxy: Proxy, accountings: Dictionary[int, float],
+		balance_class: int, title: String) -> void:
+	# Appends the balance-class group unless it has no nonzero leaf (keeps empty
+	# Liabilities / Equity sections hidden).
+	var group := _collect_summed_group(proxy, accountings, _balance_statement,
+			_item_balance_classes, balance_class, title)
+	var rows: Array = group[2]
+	if !rows.is_empty():
+		groups.append(group)
 
 
 func _add_series(into: PackedFloat64Array, add: PackedFloat64Array) -> void:

@@ -60,6 +60,15 @@ enum StatementTypes {
 	STATEMENT_BALANCE,
 }
 
+## Balance-sheet classification of a [code]line_items.tsv[/code] balance leaf, routing
+## it into the assets, liabilities, or equity subtotal. Unused for flow (income and
+## cash-flow) leaves.
+enum BalanceClasses {
+	BALANCE_CLASS_ASSET,
+	BALANCE_CLASS_LIABILITY,
+	BALANCE_CLASS_EQUITY,
+}
+
 ## Random-player selection options for game start.
 enum RandomPlayer {
 	RANDOM,
