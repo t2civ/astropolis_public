@@ -43,11 +43,13 @@ enum PlayerClasses {
 }
 
 ## Process category that determines how an operation runs (renewable,
-## conversion, extraction, or dev/debug).
+## conversion, extraction, buildout, decommissioning, or dev/debug).
 enum ProcessGroup {
 	PROCESS_GROUP_RENEWABLE,
 	PROCESS_GROUP_CONVERSION,
 	PROCESS_GROUP_EXTRACTION,
+	PROCESS_GROUP_BUILDOUT,
+	PROCESS_GROUP_DECOMMISSIONING,
 	PROCESS_GROUP_DONT_PROCESS, # dev/debug
 }
 

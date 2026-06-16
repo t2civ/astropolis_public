@@ -47,8 +47,9 @@ enum FacilityFlags {
 	MODE_EMERGENCY = 1 << 32,
 	## Laid-up state: no operations run; capacity is preserved for later restart.
 	MODE_MOTHBALL = 1 << 33,
-	## Winding down: only operations that net-consume inventory continue.
-	MODE_DECOMMISSIONING = 1 << 34,
+	## Inventory drawdown: only operations that net-consume inventory continue
+	## (distinct from the DECOMMISSIONING operation, which tears down modules).
+	MODE_DRAWDOWN = 1 << 34,
 	## Mask of all AI-command bits.
 	FROM_PROXY_MASK = ~((1 << 32) - 1),
 }
@@ -257,8 +258,13 @@ func get_flags() -> int:
 @abstract func get_operations_target_utilizations() -> PackedFloat64Array
 
 
-## Returns the AI-set module buildout of [param module_type].
+## Returns the build/decommission lever for [param module_type]; see
+## [method set_operations_module_buildout] for what the value means.
 @abstract func get_operations_module_buildout(module_type: int) -> float
+
+
+## Returns the capitalized book value (historical cost) of [param module_type].
+@abstract func get_operations_module_book_value(module_type: int) -> float
 
 
 ## Returns the full bidirectional flag value for operation [param operation_type].
@@ -438,9 +444,18 @@ func get_market() -> MarketProxy:
 @abstract func set_operations_target_utilization(type: int, value: float) -> void
 
 
-## Sets the module buildout for [param module_type] (positive constructs,
-## negative decommissions). Proxy-authoritative: this change flows proxy ->
-## server. No-op on an out-of-range index or invalid value.
+## Sets the per-module build/decommission lever for [param module_type]: the
+## request to expand (positive [param value]) or decommission (negative) that
+## module, rate-limited by the facility's construction yards. The value is read
+## relative to the other modules' levers:[br]
+## - 1.0 (default): expand in proportion to the module's current size;
+##   an all-1.0 fill grows the whole facility while preserving its mix.[br]
+## - 0.0: leave this module alone — its share of construction goes to others.[br]
+## - 0.0 to 1.0 (exclusive): expand at reduced emphasis, letting the mix drift
+##   away from current.[br]
+## - >1.0: prioritize this module — grow faster than proportional. *This is the
+##   only way to bootstrap build a module that has 0.0 current quantity.*[br]
+## - <0.0 (<-1.0 to prioritize): decommission instead, reclaiming materials.
 @abstract func set_operations_module_buildout(module_type: int, value: float) -> void
 
 
