@@ -50,9 +50,10 @@ enum FacilityFlags {
 	## Inventory drawdown: only operations that net-consume inventory continue
 	## (distinct from the DECOMMISSIONING operation, which tears down modules).
 	MODE_DRAWDOWN = 1 << 34,
-	## Allocate autonomous buildout by economic return — grow capacity-bound,
-	## profitable modules preferentially — instead of the default proportional
-	## growth across the existing module mix. Shortfall-driven bootstrap of a
+	## Allocate by economic return at both granularities: grow capacity-bound,
+	## profitable modules preferentially (vs proportional growth across the existing
+	## mix), AND reweight each module's capacity toward its capacity-bound, profitable
+	## operations (net-zero, no construction cost). Shortfall-driven bootstrap of a
 	## needed module happens either way.
 	BUILDOUT_BY_RETURN = 1 << 35,
 	## With [constant BUILDOUT_BY_RETURN], also decommission chronically idle or

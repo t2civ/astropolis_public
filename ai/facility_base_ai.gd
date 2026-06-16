@@ -235,22 +235,28 @@ static var facility_resource_strategy_defs: Array[Dictionary] = [
 	{&"strategic_reserve_factor": 1.0, &"mm_base_lot": 4, &"protect_reserve": true}, # MARKET_MAKE
 ]
 
-## Per-operation strategy definitions; index = [enum OperationStrategies]
-## value.
+## Per-operation strategy definitions; index = [enum OperationStrategies] value.
+## Keys are operation-side knob params read by [method _apply_operation_knobs]:
+## [code]target_utilization[/code] (run-rate fraction of capacity, default 1.0) and
+## the operation gate switches [code]margin_gated[/code], [code]shortage_priority[/code],
+## [code]strategic_floor[/code], [code]clearance_limited[/code]. Empty entries take
+## full target utilization with no gate (AUTO — server reactive gating only, today's
+## behavior). Several entries are deliberately AUTO-equivalent for now (their
+## distinguishing run-rate shaping is future tuning).
 static var operation_strategy_defs: Array[Dictionary] = [
-	{}, # AUTO
-	{}, # PROFIT_MAXIMIZE
-	{}, # VOLUME_MAXIMIZE
-	{}, # BASELOAD
-	{}, # PEAKER
-	{}, # MOTHBALL
-	{}, # DECOMMISSION
-	{}, # DEMAND_FOLLOWING
-	{}, # SHORTAGE_RELIEF
-	{}, # LEARNING
-	{}, # HARVEST
-	{}, # STRATEGIC_HOLD
-	{}, # CLEARANCE_LIMITED
+	{}, # AUTO — full target, server reactive gating only
+	{&"margin_gated": true}, # PROFIT_MAXIMIZE
+	{}, # VOLUME_MAXIMIZE — run full regardless of margin
+	{}, # BASELOAD — steady rate (tuning TBD)
+	{}, # PEAKER — idle until spike (tuning TBD)
+	{&"target_utilization": 0.0}, # MOTHBALL — idle, capacity preserved
+	{}, # DECOMMISSION — capacity wind-down is Tier 1/2; run as AUTO here
+	{}, # DEMAND_FOLLOWING — server storage cap already follows offtake
+	{&"shortage_priority": true}, # SHORTAGE_RELIEF
+	{}, # LEARNING — run regardless to accumulate experience
+	{}, # HARVEST — run for max output
+	{&"strategic_floor": true}, # STRATEGIC_HOLD
+	{&"clearance_limited": true}, # CLEARANCE_LIMITED
 ]
 
 static var _table_n_rows := IVTableData.table_n_rows
@@ -309,6 +315,7 @@ func ai_init() -> void:
 	# here to bootstrap (and re-author idempotently after load).
 	_author_resource_strategies()
 	_author_facility_strategy()
+	_author_operation_strategies()
 
 
 ## Re-author each interval (the prior cadence): identity from sticky capability is
@@ -323,6 +330,7 @@ func process_ai_interval(_delta: float) -> void:
 func process_ai_new_quarter() -> void:
 	_author_resource_strategies()
 	_author_facility_strategy()
+	_author_operation_strategies()
 
 
 # **************************** STRATEGY LISTENERS *****************************
@@ -339,6 +347,7 @@ func _on_player_facility_strategy_changed(facility_id: int, _strategy_id: int) -
 	if facility_id == proxy.facility_id:
 		_author_resource_strategies()
 		_author_facility_strategy()
+		_author_operation_strategies()
 
 
 func _on_player_body_strategy_changed(_target_body_id: int, _strategy_id: int) -> void:
@@ -521,3 +530,63 @@ func _apply_facility_knobs(strategy: int) -> void:
 		desired |= BUILDOUT_ALLOW_TRIM
 	if desired != current:
 		proxy.set_flags(desired)
+
+
+## Sets [member operation_strategies] for [param operation_type], emitting
+## [signal operation_strategy_changed] only on change.
+func _set_operation_strategy(operation_type: int, strategy_id: int) -> void:
+	if operation_strategies[operation_type] == strategy_id:
+		return
+	operation_strategies[operation_type] = strategy_id
+	operation_strategy_changed.emit(operation_type, strategy_id)
+
+
+## Authors per-operation run-rate policy (Tier 3) and applies its server knobs — the
+## operation analog of [method _author_resource_strategies]. v1 derives one
+## posture-driven strategy for all of the facility's operations; the server's
+## per-interval gating then acts on it. Called wherever the facility posture is
+## (re)authored.
+func _author_operation_strategies() -> void:
+	const CAN_HAVE := FacilityProxy.OperationsFlags.CAN_HAVE
+	var strategy := _reconcile_operation_strategy()
+	for operation_type in operation_strategies.size():
+		if !(proxy.get_operations_flags(operation_type) & CAN_HAVE):
+			continue
+		_set_operation_strategy(operation_type, strategy)
+		_apply_operation_knobs(operation_type, strategy)
+
+
+## Maps the facility posture to a per-operation run-rate strategy. v1: a
+## profit-optimizing posture margin-gates operations; every other posture runs AUTO
+## (server-gated full run, today's behavior). A custom AI overrides this for richer
+## per-operation policy (e.g. from each op's resource strategies).
+func _reconcile_operation_strategy() -> int:
+	if facility_strategy == FacilityStrategies.PROFITABILITY:
+		return OperationStrategies.PROFIT_MAXIMIZE
+	return OperationStrategies.AUTO
+
+
+## Translates the operation's strategy def into server knobs: the target-utilization
+## flow variable and the operation gate-flag bits (flags written only on change;
+## preserves any other FROM_PROXY bits).
+func _apply_operation_knobs(operation_type: int, strategy: int) -> void:
+	const MARGIN_GATED := FacilityProxy.OperationsFlags.MARGIN_GATED
+	const SHORTAGE_PRIORITY := FacilityProxy.OperationsFlags.SHORTAGE_PRIORITY
+	const STRATEGIC_FLOOR := FacilityProxy.OperationsFlags.STRATEGIC_FLOOR
+	const CLEARANCE_LIMITED := FacilityProxy.OperationsFlags.CLEARANCE_LIMITED
+	const FROM_PROXY_MASK := FacilityProxy.OperationsFlags.FROM_PROXY_MASK
+	var def := operation_strategy_defs[strategy]
+	var target_utilization: float = def.get(&"target_utilization", 1.0)
+	proxy.set_operations_target_utilization(operation_type, target_utilization)
+	var current := proxy.get_operations_flags(operation_type) & FROM_PROXY_MASK
+	var desired := current & ~(MARGIN_GATED | SHORTAGE_PRIORITY | STRATEGIC_FLOOR | CLEARANCE_LIMITED)
+	if def.get(&"margin_gated", false):
+		desired |= MARGIN_GATED
+	if def.get(&"shortage_priority", false):
+		desired |= SHORTAGE_PRIORITY
+	if def.get(&"strategic_floor", false):
+		desired |= STRATEGIC_FLOOR
+	if def.get(&"clearance_limited", false):
+		desired |= CLEARANCE_LIMITED
+	if desired != current:
+		proxy.set_operations_flags(operation_type, desired)
