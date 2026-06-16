@@ -257,6 +257,10 @@ func get_flags() -> int:
 @abstract func get_operations_target_utilizations() -> PackedFloat64Array
 
 
+## Returns the AI-set module buildout of [param module_type].
+@abstract func get_operations_module_buildout(module_type: int) -> float
+
+
 ## Returns the full bidirectional flag value for operation [param operation_type].
 @abstract func get_operations_flags(operation_type: int) -> int
 
@@ -432,6 +436,12 @@ func get_market() -> MarketProxy:
 ## this change flows proxy -> server. No-op on an out-of-range index or invalid
 ## value.
 @abstract func set_operations_target_utilization(type: int, value: float) -> void
+
+
+## Sets the module buildout for [param module_type] (positive constructs,
+## negative decommissions). Proxy-authoritative: this change flows proxy ->
+## server. No-op on an out-of-range index or invalid value.
+@abstract func set_operations_module_buildout(module_type: int, value: float) -> void
 
 
 ## Sets the [code]FROM_PROXY_MASK[/code] bits of inventory flags for
