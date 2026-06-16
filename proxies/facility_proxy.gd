@@ -50,6 +50,14 @@ enum FacilityFlags {
 	## Inventory drawdown: only operations that net-consume inventory continue
 	## (distinct from the DECOMMISSIONING operation, which tears down modules).
 	MODE_DRAWDOWN = 1 << 34,
+	## Allocate autonomous buildout by economic return — grow capacity-bound,
+	## profitable modules preferentially — instead of the default proportional
+	## growth across the existing module mix. Shortfall-driven bootstrap of a
+	## needed module happens either way.
+	BUILDOUT_BY_RETURN = 1 << 35,
+	## With [constant BUILDOUT_BY_RETURN], also decommission chronically idle or
+	## loss-making modules (selective trim). Has no effect on its own.
+	BUILDOUT_ALLOW_TRIM = 1 << 36,
 	## Mask of all AI-command bits.
 	FROM_PROXY_MASK = ~((1 << 32) - 1),
 }
@@ -154,6 +162,9 @@ var time_horizon: float
 ## server-authoritative; FROM_PROXY bits are proxy-authoritative. Use
 ## [method set_flags] to modify the proxy half.
 var flags := 0
+## Autonomous growth intensity (proxy-authoritative knob). See
+## [method set_buildout_intensity].
+var buildout_intensity := 0.3
 
 # *****************************************************************************
 # persisted
@@ -233,6 +244,12 @@ func get_polity_name() -> StringName:
 ## Returns the full bidirectional flag value (see [enum FacilityFlags]).
 func get_flags() -> int:
 	return flags
+
+
+## Returns the facility's autonomous growth intensity; see
+## [method set_buildout_intensity].
+func get_buildout_intensity() -> float:
+	return buildout_intensity
 
 
 # Operations (facility-only). Facility-only reads, plus proxy-authoritative knobs
@@ -432,6 +449,16 @@ func get_market() -> MarketProxy:
 @abstract func set_flags(value: int) -> void
 
 
+## Sets the facility's autonomous growth intensity — how aggressively the server
+## grows (or, when negative, winds down) module capacity each interval, scaling
+## its per-module allocation. Proxy-authoritative: this change flows
+## proxy -> server. No-op on a NaN value.[br]
+## - > 0.0: grow at this aggressiveness (~0.3 is steady; ~1.0 compounds fast).[br]
+## - 0.0: hold — run no buildout or decommission.[br]
+## - < 0.0: wind down — decommission capacity proportionally at this magnitude.
+@abstract func set_buildout_intensity(value: float) -> void
+
+
 ## Sets the [code]FROM_PROXY_MASK[/code] bits of operations flags for
 ## [param operation_type] to [param value]. Proxy-authoritative: this
 ## change flows proxy -> server. No-op on an out-of-range index.
@@ -444,12 +471,15 @@ func get_market() -> MarketProxy:
 @abstract func set_operations_target_utilization(type: int, value: float) -> void
 
 
-## Sets the per-module build/decommission lever for [param module_type]: the
-## request to expand (positive [param value]) or decommission (negative) that
-## module, rate-limited by the facility's construction yards. The value is read
-## relative to the other modules' levers:[br]
-## - 1.0 (default): expand in proportion to the module's current size;
-##   an all-1.0 fill grows the whole facility while preserving its mix.[br]
+## Overrides the server's autonomous build/decommission decision for
+## [param module_type]. Pass [code]NAN[/code] (the default) to leave the module
+## on auto — the facility allocates its build/decommission from demand and
+## economics (see [method set_buildout_intensity]). Pass a number to override
+## just this module; it is read relative to the other modules' effective levers,
+## rate-limited by the facility's construction yards:[br]
+## - NAN (default): auto — let the server decide this module.[br]
+## - 1.0: expand in proportion to the module's current size; an all-1.0 fill
+##   grows the whole facility while preserving its mix.[br]
 ## - 0.0: leave this module alone — its share of construction goes to others.[br]
 ## - 0.0 to 1.0 (exclusive): expand at reduced emphasis, letting the mix drift
 ##   away from current.[br]
@@ -457,6 +487,14 @@ func get_market() -> MarketProxy:
 ##   only way to bootstrap build a module that has 0.0 current quantity.*[br]
 ## - <0.0 (<-1.0 to prioritize): decommission instead, reclaiming materials.
 @abstract func set_operations_module_buildout(module_type: int, value: float) -> void
+
+
+## Fills the entire per-module build/decommission override array with
+## [param value] — the array-wide form of [method set_operations_module_buildout].
+## Pass [code]NAN[/code] to return every module to auto (server-decided)
+## allocation, or e.g. 1.0 to override all modules to proportional growth.
+## Proxy-authoritative: this change flows proxy -> server.
+@abstract func set_operations_module_buildouts_fill(value: float) -> void
 
 
 ## Sets the [code]FROM_PROXY_MASK[/code] bits of inventory flags for

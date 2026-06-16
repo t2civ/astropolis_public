@@ -175,6 +175,10 @@ enum OperationStrategies {
 ## Short alias for the per-resource strategy enum, used by the authoring helpers.
 const _RS := FacilityResourceStrategies
 
+## Fallback growth rate for a facility posture whose def omits
+## [code]buildout_intensity[/code] (matches the server-side default).
+const DEFAULT_BUILDOUT_INTENSITY := 0.3
+
 
 ## Member names persisted by save/load (interval timing inherited from BaseAI).
 const PERSIST_PROPERTIES: Array[StringName] = [
@@ -187,17 +191,23 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 
 
 ## Facility-posture strategy definitions; index = [enum FacilityStrategies]
-## value.
+## value. Keys are facility-wide knob params read by [method _apply_facility_knobs]:
+## [code]buildout_intensity[/code] (signed autonomous growth rate — positive grows,
+## 0 holds, negative winds down), [code]buildout_by_return[/code] (let the server
+## allocate buildout by economic return rather than proportionally to the existing
+## mix), and [code]buildout_allow_trim[/code] (let return-based buildout decommission
+## chronically idle / loss-making modules). Empty entries take
+## [constant DEFAULT_BUILDOUT_INTENSITY] with proportional, no-trim growth.
 static var facility_strategy_defs: Array[Dictionary] = [
 	{}, # NEUTRAL
-	{}, # GROWTH
-	{}, # PROFITABILITY
+	{&"buildout_intensity": 0.5}, # GROWTH
+	{&"buildout_intensity": 0.3, &"buildout_by_return": true}, # PROFITABILITY
 	{}, # DIVERSIFICATION
 	{}, # SPECIALIZATION
-	{}, # STRATEGIC_OUTPOST
+	{&"buildout_intensity": 0.1}, # STRATEGIC_OUTPOST
 	{}, # DEVELOPMENT
-	{}, # STEADY_STATE
-	{}, # DECOMMISSIONING
+	{&"buildout_intensity": 0.15, &"buildout_by_return": true}, # STEADY_STATE
+	{&"buildout_intensity": -0.5}, # DECOMMISSIONING
 	{}, # EMERGENCY
 ]
 
@@ -298,6 +308,7 @@ func ai_init() -> void:
 	# new_quarter does not fire on load or the first adopted quarter, so author once
 	# here to bootstrap (and re-author idempotently after load).
 	_author_resource_strategies()
+	_author_facility_strategy()
 
 
 ## Re-author each interval (the prior cadence): identity from sticky capability is
@@ -311,6 +322,7 @@ func process_ai_interval(_delta: float) -> void:
 ## the change guard makes the quarter-boundary call a no-op when nothing changed.
 func process_ai_new_quarter() -> void:
 	_author_resource_strategies()
+	_author_facility_strategy()
 
 
 # **************************** STRATEGY LISTENERS *****************************
@@ -326,6 +338,7 @@ func _on_player_resource_strategy_changed(_resource_type: int, _strategy_id: int
 func _on_player_facility_strategy_changed(facility_id: int, _strategy_id: int) -> void:
 	if facility_id == proxy.facility_id:
 		_author_resource_strategies()
+		_author_facility_strategy()
 
 
 func _on_player_body_strategy_changed(_target_body_id: int, _strategy_id: int) -> void:
@@ -446,3 +459,65 @@ func _apply_strategy_knobs(resource_type: int, strategy: int) -> void:
 		desired |= PROHIBIT_CONSUMPTION
 	if desired != current:
 		proxy.set_inventory_flags(resource_type, desired)
+
+
+## Sets [member facility_strategy], emitting [signal facility_strategy_changed]
+## only on change.
+func _set_facility_strategy(strategy_id: int) -> void:
+	if facility_strategy == strategy_id:
+		return
+	facility_strategy = strategy_id
+	facility_strategy_changed.emit(strategy_id)
+
+
+## Authors the facility-wide posture and applies its server buildout knobs — the
+## facility analog of [method _author_resource_strategies]. Called on init, each
+## quarter, and when the player's directive for this facility changes; the per-module
+## build/decommission decision itself is the server's job, not the AI's.
+func _author_facility_strategy() -> void:
+	var strategy := _reconcile_facility_strategy()
+	_set_facility_strategy(strategy)
+	_apply_facility_knobs(strategy)
+
+
+## Folds the player's per-facility directive into a facility posture. Contraction
+## (the DECOMMISSIONING posture) is reserved for an explicit wind-down directive;
+## every other directive grows or holds, leaving the facility to grow autonomously
+## with no directive. A custom AI overrides this to change the mapping or to weigh
+## the facility's own situation.
+func _reconcile_facility_strategy() -> int:
+	const PF := PlayerBaseAI.PlayerFacilityStrategies
+	const FS := FacilityStrategies
+	var directive: int = _player_ai.player_facility_strategies.get(proxy.facility_id, 0)
+	match directive:
+		PF.DIVEST:
+			return FS.DECOMMISSIONING
+		PF.FLAGSHIP, PF.STAR:
+			return FS.GROWTH
+		PF.CASH_COW, PF.QUESTION_MARK, PF.DOG:
+			return FS.PROFITABILITY
+		PF.STRATEGIC_OUTPOST:
+			return FS.STRATEGIC_OUTPOST
+		PF.SUBSIDIZED:
+			return FS.STEADY_STATE
+	return FS.GROWTH # NEUTRAL and any add-on directive: autonomous growth
+
+
+## Translates the posture's def into server knobs: the buildout-intensity flow
+## variable and the BUILDOUT_* algorithm flag bits (flags written only on change;
+## preserves any other FROM_PROXY bits).
+func _apply_facility_knobs(strategy: int) -> void:
+	const BUILDOUT_BY_RETURN := FacilityProxy.FacilityFlags.BUILDOUT_BY_RETURN
+	const BUILDOUT_ALLOW_TRIM := FacilityProxy.FacilityFlags.BUILDOUT_ALLOW_TRIM
+	const FROM_PROXY_MASK := FacilityProxy.FacilityFlags.FROM_PROXY_MASK
+	var def := facility_strategy_defs[strategy]
+	var intensity: float = def.get(&"buildout_intensity", DEFAULT_BUILDOUT_INTENSITY)
+	proxy.set_buildout_intensity(intensity)
+	var current := proxy.get_flags() & FROM_PROXY_MASK
+	var desired := current & ~(BUILDOUT_BY_RETURN | BUILDOUT_ALLOW_TRIM)
+	if def.get(&"buildout_by_return", false):
+		desired |= BUILDOUT_BY_RETURN
+	if def.get(&"buildout_allow_trim", false):
+		desired |= BUILDOUT_ALLOW_TRIM
+	if desired != current:
+		proxy.set_flags(desired)
