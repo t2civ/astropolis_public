@@ -269,6 +269,7 @@ var _forward_instrument_scratch: PackedInt32Array
 # ************************* VIRTUAL & IMPLEMENTATION **************************
 
 func _init() -> void:
+	super()
 	var n_resources: int = _table_n_rows[&"resources"]
 	resource_strategies.resize(n_resources)
 	_net_long_units.resize(n_resources)

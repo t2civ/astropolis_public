@@ -284,6 +284,7 @@ var _player_ai: PlayerBaseAI
 # ************************* VIRTUAL & IMPLEMENTATION **************************
 
 func _init() -> void:
+	super()
 	var n_resources: int = _table_n_rows[&"resources"]
 	facility_resource_strategies.resize(n_resources)
 	var n_operations: int = _table_n_rows[&"operations"]
