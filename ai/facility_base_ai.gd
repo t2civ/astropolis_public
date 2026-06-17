@@ -175,10 +175,6 @@ enum OperationStrategies {
 ## Short alias for the per-resource strategy enum, used by the authoring helpers.
 const _RS := FacilityResourceStrategies
 
-## Fallback growth rate for a facility posture whose def omits
-## [code]buildout_intensity[/code] (matches the server-side default).
-const DEFAULT_BUILDOUT_INTENSITY := 0.3
-
 
 ## Member names persisted by save/load (interval timing inherited from BaseAI).
 const PERSIST_PROPERTIES: Array[StringName] = [
@@ -190,24 +186,22 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 ]
 
 
-## Facility-posture strategy definitions; index = [enum FacilityStrategies]
-## value. Keys are facility-wide knob params read by [method _apply_facility_knobs]:
-## [code]buildout_intensity[/code] (signed autonomous growth rate — positive grows,
-## 0 holds, negative winds down), [code]buildout_by_return[/code] (let the server
-## allocate buildout by economic return rather than proportionally to the existing
-## mix), and [code]buildout_allow_trim[/code] (let return-based buildout decommission
-## chronically idle / loss-making modules). Empty entries take
-## [constant DEFAULT_BUILDOUT_INTENSITY] with proportional, no-trim growth.
+## Facility-posture strategy definitions; index = [enum FacilityStrategies] value.
+## The [code]buildout_spending_share[/code] key (read by [method _apply_facility_knobs])
+## is the fraction of facility income the server directs to construction: a positive
+## value grows toward that share, a negative value winds capacity down at that rate,
+## and an omitted key (NAN) holds. Postures never selected by
+## [method _reconcile_facility_strategy] are left empty.
 static var facility_strategy_defs: Array[Dictionary] = [
 	{}, # NEUTRAL
-	{&"buildout_intensity": 0.5}, # GROWTH
-	{&"buildout_intensity": 0.3, &"buildout_by_return": true}, # PROFITABILITY
+	{&"buildout_spending_share": 0.15}, # GROWTH
+	{&"buildout_spending_share": 0.08}, # PROFITABILITY
 	{}, # DIVERSIFICATION
 	{}, # SPECIALIZATION
-	{&"buildout_intensity": 0.1}, # STRATEGIC_OUTPOST
+	{&"buildout_spending_share": 0.03}, # STRATEGIC_OUTPOST
 	{}, # DEVELOPMENT
-	{&"buildout_intensity": 0.15, &"buildout_by_return": true}, # STEADY_STATE
-	{&"buildout_intensity": -0.5}, # DECOMMISSIONING
+	{&"buildout_spending_share": 0.05}, # STEADY_STATE
+	{&"buildout_spending_share": -0.5}, # DECOMMISSIONING (negative = wind-down)
 	{}, # EMERGENCY
 ]
 
@@ -236,16 +230,15 @@ static var facility_resource_strategy_defs: Array[Dictionary] = [
 ]
 
 ## Per-operation strategy definitions; index = [enum OperationStrategies] value.
-## Keys are operation-side knob params read by [method _apply_operation_knobs]:
-## [code]target_utilization[/code] (run-rate fraction of capacity, default 1.0) and
-## the operation gate switches [code]margin_gated[/code], [code]shortage_priority[/code],
-## [code]strategic_floor[/code], [code]clearance_limited[/code]. Empty entries take
-## full target utilization with no gate (AUTO — server reactive gating only, today's
-## behavior). Several entries are deliberately AUTO-equivalent for now (their
-## distinguishing run-rate shaping is future tuning).
+## Keys are operation-side gate switches read by [method _apply_operation_knobs]:
+## [code]shortage_priority[/code], [code]strategic_floor[/code], and
+## [code]clearance_limited[/code]. Empty entries take no gate (AUTO). Several entries
+## are deliberately AUTO-equivalent for now; the universal margin floor (per-op target
+## margin, default 0.0) handles profitability gating and the run-rate target is
+## server-authoritative (Tier-3 controller, later stage).
 static var operation_strategy_defs: Array[Dictionary] = [
 	{}, # AUTO — full target, server reactive gating only
-	{&"margin_gated": true}, # PROFIT_MAXIMIZE
+	{}, # PROFIT_MAXIMIZE (margin floor is now the universal base mode)
 	{}, # VOLUME_MAXIMIZE — run full regardless of margin
 	{}, # BASELOAD — steady rate (tuning TBD)
 	{}, # PEAKER — idle until spike (tuning TBD)
@@ -513,24 +506,16 @@ func _reconcile_facility_strategy() -> int:
 	return FS.GROWTH # NEUTRAL and any add-on directive: autonomous growth
 
 
-## Translates the posture's def into server knobs: the buildout-intensity flow
-## variable and the BUILDOUT_* algorithm flag bits (flags written only on change;
-## preserves any other FROM_PROXY bits).
+## Translates the posture's def into the BUILDOUT operation's target spending share
+## (the fraction of facility income directed to construction; NAN holds). The server
+## controller turns this into build pressure. The BUILDOUT op is resolved by tag, so
+## no table entity name is referenced here.
 func _apply_facility_knobs(strategy: int) -> void:
-	const BUILDOUT_BY_RETURN := FacilityProxy.FacilityFlags.BUILDOUT_BY_RETURN
-	const BUILDOUT_ALLOW_TRIM := FacilityProxy.FacilityFlags.BUILDOUT_ALLOW_TRIM
-	const FROM_PROXY_MASK := FacilityProxy.FacilityFlags.FROM_PROXY_MASK
 	var def := facility_strategy_defs[strategy]
-	var intensity: float = def.get(&"buildout_intensity", DEFAULT_BUILDOUT_INTENSITY)
-	proxy.set_buildout_intensity(intensity)
-	var current := proxy.get_flags() & FROM_PROXY_MASK
-	var desired := current & ~(BUILDOUT_BY_RETURN | BUILDOUT_ALLOW_TRIM)
-	if def.get(&"buildout_by_return", false):
-		desired |= BUILDOUT_BY_RETURN
-	if def.get(&"buildout_allow_trim", false):
-		desired |= BUILDOUT_ALLOW_TRIM
-	if desired != current:
-		proxy.set_flags(desired)
+	var share: float = def.get(&"buildout_spending_share", NAN)
+	var buildout_ops: PackedInt32Array = _tag_operations.get(&"buildout", PackedInt32Array())
+	for operation_type in buildout_ops:
+		proxy.set_operations_target_spending_share(operation_type, share)
 
 
 ## Sets [member operation_strategies] for [param operation_type], emitting
@@ -571,16 +556,13 @@ func _reconcile_operation_strategy() -> int:
 ## written only on change; preserves any other FROM_PROXY bits). The run-rate target
 ## itself is now server-authoritative (set by the Tier-3 controller, later stage).
 func _apply_operation_knobs(operation_type: int, strategy: int) -> void:
-	const MARGIN_GATED := FacilityProxy.OperationsFlags.MARGIN_GATED
 	const SHORTAGE_PRIORITY := FacilityProxy.OperationsFlags.SHORTAGE_PRIORITY
 	const STRATEGIC_FLOOR := FacilityProxy.OperationsFlags.STRATEGIC_FLOOR
 	const CLEARANCE_LIMITED := FacilityProxy.OperationsFlags.CLEARANCE_LIMITED
 	const FROM_PROXY_MASK := FacilityProxy.OperationsFlags.FROM_PROXY_MASK
 	var def := operation_strategy_defs[strategy]
 	var current := proxy.get_operations_flags(operation_type) & FROM_PROXY_MASK
-	var desired := current & ~(MARGIN_GATED | SHORTAGE_PRIORITY | STRATEGIC_FLOOR | CLEARANCE_LIMITED)
-	if def.get(&"margin_gated", false):
-		desired |= MARGIN_GATED
+	var desired := current & ~(SHORTAGE_PRIORITY | STRATEGIC_FLOOR | CLEARANCE_LIMITED)
 	if def.get(&"shortage_priority", false):
 		desired |= SHORTAGE_PRIORITY
 	if def.get(&"strategic_floor", false):

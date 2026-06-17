@@ -69,9 +69,6 @@ static func _populate_tags() -> void:
 	_populate_table_tags(&"resources", _tag_resources)
 	_populate_table_tags(&"operations", _tag_operations)
 	_populate_table_tags(&"modules", _tag_modules)
-	print(_tag_resources)
-	print(_tag_operations)
-	print(_tag_modules)
 
 
 static func _populate_table_tags(table_name: StringName,
