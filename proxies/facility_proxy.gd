@@ -267,13 +267,28 @@ func get_buildout_intensity() -> float:
 @abstract func get_operations_capacity_factors() -> PackedFloat64Array
 
 
-## Returns the AI-set target utilization of operation [param operation_type].
+## Returns the Tier-3 target utilization of operation [param operation_type] (the
+## server/controller's run-rate target; for display).
 @abstract func get_operations_target_utilization(operation_type: int) -> float
 
 
 ## Returns the per-operation target utilizations array. Return is proxy array
 ## reference; read only!
 @abstract func get_operations_target_utilizations() -> PackedFloat64Array
+
+
+## Returns the AI/player-set target margin floor of operation [param operation_type].
+@abstract func get_operations_target_margin(operation_type: int) -> float
+
+
+## Returns the AI/player-set target spending share of operation [param operation_type]
+## (NAN = not in effect).
+@abstract func get_operations_target_spending_share(operation_type: int) -> float
+
+
+## Returns the AI/player-set target run rate of operation [param operation_type]
+## (NAN = not in effect).
+@abstract func get_operations_target_run_rate(operation_type: int) -> float
 
 
 ## Returns the build/decommission lever for [param module_type]; see
@@ -466,10 +481,20 @@ func get_market() -> MarketProxy:
 @abstract func set_operations_flags(operation_type: int, value: int) -> void
 
 
-## Sets the target utilization for [param type]. Proxy-authoritative:
-## this change flows proxy -> server. No-op on an out-of-range index or invalid
-## value.
-@abstract func set_operations_target_utilization(type: int, value: float) -> void
+## Sets the target margin floor for operation [param type] (run while gross margin
+## >= value). Proxy-authoritative: this change flows proxy -> server. No-op on an
+## out-of-range index or NAN.
+@abstract func set_operations_target_margin(type: int, value: float) -> void
+
+
+## Sets the target spending share for operation [param type] (fraction of facility
+## income, or NAN = not in effect). Proxy-authoritative; flows proxy -> server.
+@abstract func set_operations_target_spending_share(type: int, value: float) -> void
+
+
+## Sets the target run rate for operation [param type] (absolute rate, or NAN = not
+## in effect). Proxy-authoritative; flows proxy -> server.
+@abstract func set_operations_target_run_rate(type: int, value: float) -> void
 
 
 ## Overrides the server's autonomous build/decommission decision for

@@ -567,9 +567,9 @@ func _reconcile_operation_strategy() -> int:
 	return OperationStrategies.AUTO
 
 
-## Translates the operation's strategy def into server knobs: the target-utilization
-## flow variable and the operation gate-flag bits (flags written only on change;
-## preserves any other FROM_PROXY bits).
+## Translates the operation's strategy def into the operation gate-flag bits (flags
+## written only on change; preserves any other FROM_PROXY bits). The run-rate target
+## itself is now server-authoritative (set by the Tier-3 controller, later stage).
 func _apply_operation_knobs(operation_type: int, strategy: int) -> void:
 	const MARGIN_GATED := FacilityProxy.OperationsFlags.MARGIN_GATED
 	const SHORTAGE_PRIORITY := FacilityProxy.OperationsFlags.SHORTAGE_PRIORITY
@@ -577,8 +577,6 @@ func _apply_operation_knobs(operation_type: int, strategy: int) -> void:
 	const CLEARANCE_LIMITED := FacilityProxy.OperationsFlags.CLEARANCE_LIMITED
 	const FROM_PROXY_MASK := FacilityProxy.OperationsFlags.FROM_PROXY_MASK
 	var def := operation_strategy_defs[strategy]
-	var target_utilization: float = def.get(&"target_utilization", 1.0)
-	proxy.set_operations_target_utilization(operation_type, target_utilization)
 	var current := proxy.get_operations_flags(operation_type) & FROM_PROXY_MASK
 	var desired := current & ~(MARGIN_GATED | SHORTAGE_PRIORITY | STRATEGIC_FLOOR | CLEARANCE_LIMITED)
 	if def.get(&"margin_gated", false):
