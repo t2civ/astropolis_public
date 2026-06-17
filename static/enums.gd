@@ -14,12 +14,19 @@ extends Object
 ## Generic 'type' enums may be used and re-used in different contexts.
 enum Types {
 	ALL,
-	ELECTRICITY,
 	EX_PLANET_SPACE,
 	MOONS,
 	OFF_HOMEWORLD,
 	PLANETOIDS,
 	PLANETS,
+}
+
+
+## Identifies resource as having unique internal (hard-coded) mechanics. One
+## and only one must exist in resources.tsv.
+enum UniqueResources {
+	ELECTRICITY,
+	EXCHANGE_SERVICES,
 }
 
 ## Trade classes group resources by handling (electricity, bulk, cryogenic,
