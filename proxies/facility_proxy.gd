@@ -103,9 +103,6 @@ enum OperationsFlags {
 	## Mask of all server-published signal bits.
 	FROM_SERVER_MASK = (1 << 32) - 1,
 
-	## Idle the operation whenever its margin is non-positive and prices are
-	## reliable.
-	MARGIN_GATED = 1 << 32,
 	## When any of the op's outputs is below operational reserve, suspend
 	## profit-gating and ease storage throttling so the op can ramp up.
 	SHORTAGE_PRIORITY = 1 << 33,
