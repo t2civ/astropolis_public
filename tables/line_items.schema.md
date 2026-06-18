@@ -37,3 +37,6 @@ are derived from these leaves in code
 - is_tax — for an `INCOME` leaf, TRUE routes it into the `TAX` subtotal (signed: `revenue` TRUE adds,
   FALSE subtracts) below operating income, instead of `REVENUE`/`COST_OF_GOODS`; net income is the
   derived `operating income + TAX`. Unused for `CASH_FLOW`/`BALANCE` leaves (leave blank).
+- sector_applicability — `Enums.SectorApplicability` member, written in full (no prefix): blank applies
+  to both sectors, `SECTOR_PUBLIC` to public-sector entities only (e.g. `TAX_REVENUE`), `SECTOR_PRIVATE`
+  to private only (e.g. `INCOME_TAX`). Declarative; reserved for display/validation gating.

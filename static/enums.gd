@@ -107,6 +107,15 @@ enum BalanceClasses {
 	BALANCE_CLASS_EQUITY,
 }
 
+## Sector a [code]line_items.tsv[/code] line item applies to: a blank cell (−1)
+## applies to both sectors, [code]SECTOR_PUBLIC[/code] to public-sector entities
+## only, [code]SECTOR_PRIVATE[/code] to private only. Declarative; reserved for
+## display/validation gating (the tax math uses facility [code]public_sector[/code]).
+enum SectorApplicability {
+	SECTOR_PUBLIC,
+	SECTOR_PRIVATE,
+}
+
 ## Random-player selection options for game start.
 enum RandomPlayer {
 	RANDOM,
