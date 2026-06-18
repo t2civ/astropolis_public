@@ -33,6 +33,7 @@ const SUBGROUP_INDENT := 25
 const SUBTOTAL_REVENUE := 0
 const SUBTOTAL_COST_OF_GOODS := 1
 const SUBTOTAL_OPERATING_EXPENSE := 8
+const SUBTOTAL_TAX := 10
 
 # Bounds of the available LABEL_USD_* magnitude units (thousands..quintillions).
 const USD_MIN_EXPONENT := 1
@@ -70,9 +71,10 @@ var _balance_statement := Enums.StatementTypes.STATEMENT_BALANCE
 var _usd_inv: float = 1.0 / IVUnits.unit_multipliers[&"$"]
 
 # line_items entity-name keys for leaf rows, rendered via Label auto-translation
-# (entities.csv). _item_subtotals maps each leaf to its base income subtotal index
-# (SUBTOTAL_REVENUE or SUBTOTAL_COST_OF_GOODS); _item_balance_classes maps each
-# balance leaf to its Enums.BalanceClasses. All cached so proxy-thread reads stay safe.
+# (entities.csv). _item_subtotals maps each income leaf to its base subtotal index
+# (SUBTOTAL_REVENUE, SUBTOTAL_COST_OF_GOODS, SUBTOTAL_OPERATING_EXPENSE, or
+# SUBTOTAL_TAX); _item_balance_classes maps each balance leaf to its
+# Enums.BalanceClasses. All cached so proxy-thread reads stay safe.
 var _item_keys: Array[String] = []
 var _item_subtotals := PackedInt32Array()
 var _item_balance_classes := PackedInt32Array()
@@ -138,13 +140,16 @@ func timer_update() -> void:
 func _precompute_display_names() -> void:
 	var item_revenue: Array[bool] = _db_tables[&"line_items"][&"revenue"]
 	var item_operating_expense: Array[bool] = _db_tables[&"line_items"][&"operating_expense"]
+	var item_is_tax: Array[bool] = _db_tables[&"line_items"][&"is_tax"]
 	var item_balance_classes: Array[int] = _db_tables[&"line_items"][&"balance_class"]
 	_item_keys.resize(_n_line_items)
 	_item_subtotals.resize(_n_line_items)
 	_item_balance_classes.resize(_n_line_items)
 	for item in _n_line_items:
 		_item_keys[item] = String(_item_names[item])
-		if item_operating_expense[item]:
+		if item_is_tax[item]:
+			_item_subtotals[item] = SUBTOTAL_TAX
+		elif item_operating_expense[item]:
 			_item_subtotals[item] = SUBTOTAL_OPERATING_EXPENSE
 		else:
 			_item_subtotals[item] = SUBTOTAL_REVENUE if item_revenue[item] else SUBTOTAL_COST_OF_GOODS
@@ -255,10 +260,10 @@ func _get_proxy_data(target_name: StringName) -> void:
 	var footer := []
 
 	if tab == _income_statement:
-		# Income waterfall: gross profit renders as a leafless subtotal line (between
-		# cost-of-goods and the operating-expense group); operating income is the
-		# bottom-line footer. The opex group is summed from its leaves (no tracked-
-		# subtotal history getter), like the cash-flow groups.
+		# Income waterfall: gross profit and operating income render as leafless
+		# subtotal lines; the tax group (signed like SUBTOTAL_TAX) sits below operating
+		# income, and net income is the bottom-line footer. The opex and tax groups are
+		# summed from their leaves (no tracked-subtotal history getter).
 		var subtotals := proxy.get_financials_subtotals()
 		var accountings := proxy.get_financials_accountings().duplicate()
 		var revenue_history := proxy.get_financials_revenue_history()
@@ -275,7 +280,14 @@ func _get_proxy_data(target_name: StringName) -> void:
 				_item_subtotals, SUBTOTAL_OPERATING_EXPENSE, "SUBTOTAL_OPERATING_EXPENSE")
 		groups.append(opex_group)
 		var opex_series: PackedFloat64Array = opex_group[1]
-		footer = ["SUBTOTAL_OPERATING_INCOME", _subtract_series(gross_profit_series, opex_series)]
+		var operating_income_series := _subtract_series(gross_profit_series, opex_series)
+		groups.append(["SUBTOTAL_OPERATING_INCOME", operating_income_series, []])
+		var tax_group := _collect_tax_group(proxy, accountings)
+		groups.append(tax_group)
+		var tax_series: PackedFloat64Array = tax_group[1]
+		var net_income_series := operating_income_series.duplicate()
+		_add_series(net_income_series, tax_series)
+		footer = ["SUBTOTAL_NET_INCOME", net_income_series]
 	elif tab == _cash_flow_statement:
 		# Inflow/outflow group series are summed from their leaf series (cash-flow
 		# direction is per-leaf; only the net is a tracked subtotal).
@@ -345,6 +357,28 @@ func _collect_summed_group(proxy: Proxy, accountings: Dictionary[int, float], st
 	return [title, group_series, rows]
 
 
+func _collect_tax_group(proxy: Proxy, accountings: Dictionary[int, float]) -> Array:
+	# Like _collect_summed_group, but signs each is_tax income leaf into the group the
+	# way SUBTOTAL_TAX does (TAX_REVENUE adds, INCOME_TAX subtracts) — the net tax
+	# effect on net income. Each displayed leaf keeps its raw magnitude.
+	var item_revenue: Array[bool] = _db_tables[&"line_items"][&"revenue"]
+	var rows := []
+	var group_series := PackedFloat64Array()
+	for item in _n_line_items:
+		if _item_statements[item] != _income_statement or _item_subtotals[item] != SUBTOTAL_TAX:
+			continue
+		var current_value: float = accountings.get(item, 0.0)
+		var leaf_series := _make_series(proxy.get_financials_accounting_history(item), current_value)
+		if item_revenue[item]:
+			_add_series(group_series, leaf_series)
+		else:
+			_subtract_into_series(group_series, leaf_series)
+		if !_has_nonzero(leaf_series):
+			continue
+		rows.append([_item_keys[item], leaf_series])
+	return ["SUBTOTAL_TAX", group_series, rows]
+
+
 func _append_balance_group(groups: Array, proxy: Proxy, accountings: Dictionary[int, float],
 		balance_class: int, title: String) -> void:
 	# Appends the balance-class group unless it has no nonzero leaf (keeps empty
@@ -361,6 +395,13 @@ func _add_series(into: PackedFloat64Array, add: PackedFloat64Array) -> void:
 		into.resize(add.size())
 	for q in add.size():
 		into[q] += add[q]
+
+
+func _subtract_into_series(into: PackedFloat64Array, sub: PackedFloat64Array) -> void:
+	if into.size() < sub.size():
+		into.resize(sub.size())
+	for q in sub.size():
+		into[q] -= sub[q]
 
 
 func _has_nonzero(series: PackedFloat64Array) -> bool:
