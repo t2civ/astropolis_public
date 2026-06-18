@@ -11,3 +11,4 @@ Players are described in `players.descriptive.md`.
 - part_of — If present, specifies that this player's population and activity are counted as part of another player.
 - polity — National polity of the player.
 - homeworld — Always Earth (by default).
+- tax_rate — Income-tax rate (fraction of operating income) levied on the private sector of this player's facilities. Default 0.2.

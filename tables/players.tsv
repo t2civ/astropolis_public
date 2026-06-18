@@ -1,6 +1,6 @@
-name\Field	player_class	is_start	gui_hide	is_playable	polity	homeworld
-Type	Enums.PlayerClasses	BOOL	BOOL	BOOL	TABLE_ROW	STRING_NAME
-Default		TRUE				PLANET_EARTH
+name\Field	player_class	is_start	gui_hide	is_playable	polity	homeworld	tax_rate
+Type	Enums.PlayerClasses	BOOL	BOOL	BOOL	TABLE_ROW	STRING_NAME	FLOAT
+Default		TRUE				PLANET_EARTH	0.2
 Unit
 Prefix/PLAYER_	PLAYER_CLASS_				PLAYER_
 USA	POLITY				USA
