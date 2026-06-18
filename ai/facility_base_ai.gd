@@ -242,7 +242,7 @@ static var operation_strategy_defs: Array[Dictionary] = [
 	{}, # VOLUME_MAXIMIZE — run full regardless of margin
 	{}, # BASELOAD — steady rate (tuning TBD)
 	{}, # PEAKER — idle until spike (tuning TBD)
-	{&"target_utilization": 0.0}, # MOTHBALL — idle, capacity preserved
+	{&"process_utilization": 0.0}, # MOTHBALL — idle, capacity preserved
 	{}, # DECOMMISSION — capacity wind-down is Tier 1/2; run as AUTO here
 	{}, # DEMAND_FOLLOWING — server storage cap already follows offtake
 	{&"shortage_priority": true}, # SHORTAGE_RELIEF

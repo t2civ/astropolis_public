@@ -233,7 +233,7 @@ func get_flags() -> int:
 
 
 # Operations (facility-only). Facility-only reads, plus proxy-authoritative knobs
-# (flags, target utilization) with reverse data flow proxy -> server. Implemented
+# (flags and the target_* setters) with reverse data flow proxy -> server. Implemented
 # on the server-side facility proxy against its operations component.
 
 ## Returns the capacity factor (environmental or historical limit) of operation
@@ -246,14 +246,14 @@ func get_flags() -> int:
 @abstract func get_operations_capacity_factors() -> PackedFloat64Array
 
 
-## Returns the Tier-3 target utilization of operation [param operation_type] (the
+## Returns the Tier-3 process utilization of operation [param operation_type] (the
 ## server/controller's run-rate target; for display).
-@abstract func get_operations_target_utilization(operation_type: int) -> float
+@abstract func get_operations_process_utilization(operation_type: int) -> float
 
 
-## Returns the per-operation target utilizations array. Return is proxy array
+## Returns the per-operation process utilizations array. Return is proxy array
 ## reference; read only!
-@abstract func get_operations_target_utilizations() -> PackedFloat64Array
+@abstract func get_operations_process_utilizations() -> PackedFloat64Array
 
 
 ## Returns the AI/player-set target margin floor of operation [param operation_type].
@@ -338,7 +338,7 @@ func get_flags() -> int:
 
 ## Returns the expected net flow rate for [param resource_type] (positive =
 ## net production, negative = net consumption), projected from operating
-## intent — consumption at target utilization × capacity, production at
+## intent — consumption at process utilization × capacity, production at
 ## capacity factor × capacity (a time-horizon moving average of realized
 ## utilization, which smooths the production side). Not degraded by transient
 ## input shortages.
