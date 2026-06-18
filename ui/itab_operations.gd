@@ -530,6 +530,8 @@ class RowItem extends HBoxContainer:
 			margin_label.text = " "
 		elif margin == INF:
 			margin_label.text = "?"
+		elif margin == -INF:
+			margin_label.text = "—" # cash-sink op (e.g. buildout): cost, no revenue
 		else:
 			margin_label.text = "%.f" % (100.0 * margin)
 	

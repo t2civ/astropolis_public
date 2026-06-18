@@ -30,6 +30,13 @@ enum UniqueResources {
 }
 
 
+## Identifies a module as having unique internal (hard-coded) mechanics. One
+## and only one must exist in modules.tsv.
+enum UniqueModules {
+	CONSTRUCTION_YARDS,
+}
+
+
 ## Identifies a line item with unique internal (hard-coded) mechanics, booked
 ## directly from engine code (not referenced by operations.tsv or
 ## facility_classes.tsv). Each member must exist exactly once in line_items.tsv.
