@@ -34,3 +34,6 @@ are derived from these leaves in code
 - balance_class — for a `BALANCE` leaf, its `Enums.BalanceClasses` member (prefix `BALANCE_CLASS_`):
   `ASSET`, `LIABILITY`, or `EQUITY`. Routes the leaf into the assets, liabilities, or equity subtotal.
   Unused for `INCOME`/`CASH_FLOW` leaves (leave blank).
+- is_tax — for an `INCOME` leaf, TRUE routes it into the `TAX` subtotal (signed: `revenue` TRUE adds,
+  FALSE subtracts) below operating income, instead of `REVENUE`/`COST_OF_GOODS`; net income is the
+  derived `operating income + TAX`. Unused for `CASH_FLOW`/`BALANCE` leaves (leave blank).

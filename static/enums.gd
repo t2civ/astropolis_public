@@ -52,6 +52,10 @@ enum UniqueLineItems {
 	BOND_ESCROW,
 	TRADE_RECEIVABLES,
 	FIXED_ASSETS,
+	INCOME_TAX,
+	TAX_REVENUE,
+	TAX_PAID,
+	TAX_RECEIVED,
 }
 
 ## Trade classes group resources by handling (electricity, bulk, cryogenic,

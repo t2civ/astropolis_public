@@ -1,5 +1,5 @@
-name\Field	unique_type	statement	revenue	gross_output	operating_expense	balance_class
-Type	Enums.UniqueLineItems	Enums.StatementTypes	BOOL	BOOL	BOOL	Enums.BalanceClasses
+name\Field	unique_type	statement	revenue	gross_output	operating_expense	balance_class	is_tax
+Type	Enums.UniqueLineItems	Enums.StatementTypes	BOOL	BOOL	BOOL	Enums.BalanceClasses	BOOL
 Prefix/LINE_ITEM_		STATEMENT_				BALANCE_CLASS_
 ENERGY_REVENUE		INCOME	x	x
 ENERGY_COGS		INCOME
@@ -35,3 +35,7 @@ CASH	CASH	BALANCE				ASSET
 BOND_ESCROW	BOND_ESCROW	BALANCE				ASSET
 TRADE_RECEIVABLES	TRADE_RECEIVABLES	BALANCE				ASSET
 FIXED_ASSETS	FIXED_ASSETS	BALANCE				ASSET
+INCOME_TAX	INCOME_TAX	INCOME					x
+TAX_REVENUE	TAX_REVENUE	INCOME	x				x
+TAX_PAID	TAX_PAID	CASH_FLOW
+TAX_RECEIVED	TAX_RECEIVED	CASH_FLOW	x
