@@ -1,6 +1,6 @@
-	solar_occlusion
+	solar_transmission
 Type	FLOAT
-Default	0.5
+Default	1.0
 Unit	
 Prefix/MOON_	
 MOON	
@@ -93,7 +93,7 @@ POLYDEUCES
 DIONE	
 HELENE	
 RHEA	
-TITAN	0.99
+TITAN	0.1
 HYPERION	
 IAPETUS	
 KIVIUQ	

@@ -1,16 +1,16 @@
-	solar_occlusion
-Type	FLOAT
-Default	0.5
-Unit	
-Prefix/PLANET_	
-MERCURY	
-VENUS	0.99
-EARTH	0.75
-MARS	0.6
-CERES	
-JUPITER	0.95
-SATURN	0.95
-URANUS	0.95
-NEPTUNE	0.95
-PLUTO	
-@MODIFIES=planets	
+	solar_transmission	wind_factor	geothermal_factor
+Type	FLOAT	FLOAT	FLOAT
+Default	1.0
+Unit
+Prefix/PLANET_
+MERCURY
+VENUS	0.01
+EARTH	0.5	0.30	0.75
+MARS	0.9
+CERES
+JUPITER
+SATURN
+URANUS
+NEPTUNE
+PLUTO
+@MODIFIES=planets
