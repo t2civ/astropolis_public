@@ -136,18 +136,18 @@ func timer_update() -> void:
 
 
 func _precompute_display_names() -> void:
-	var item_is_revenue: Array[bool] = _db_tables[&"line_items"][&"is_revenue"]
-	var item_is_operating_expense: Array[bool] = _db_tables[&"line_items"][&"is_operating_expense"]
+	var item_revenue: Array[bool] = _db_tables[&"line_items"][&"revenue"]
+	var item_operating_expense: Array[bool] = _db_tables[&"line_items"][&"operating_expense"]
 	var item_balance_classes: Array[int] = _db_tables[&"line_items"][&"balance_class"]
 	_item_keys.resize(_n_line_items)
 	_item_subtotals.resize(_n_line_items)
 	_item_balance_classes.resize(_n_line_items)
 	for item in _n_line_items:
 		_item_keys[item] = String(_item_names[item])
-		if item_is_operating_expense[item]:
+		if item_operating_expense[item]:
 			_item_subtotals[item] = SUBTOTAL_OPERATING_EXPENSE
 		else:
-			_item_subtotals[item] = SUBTOTAL_REVENUE if item_is_revenue[item] else SUBTOTAL_COST_OF_GOODS
+			_item_subtotals[item] = SUBTOTAL_REVENUE if item_revenue[item] else SUBTOTAL_COST_OF_GOODS
 		_item_balance_classes[item] = item_balance_classes[item]
 
 

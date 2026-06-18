@@ -29,6 +29,31 @@ enum UniqueResources {
 	EXCHANGE_SERVICES,
 }
 
+
+## Identifies a line item with unique internal (hard-coded) mechanics, booked
+## directly from engine code (not referenced by operations.tsv or
+## facility_classes.tsv). Each member must exist exactly once in line_items.tsv.
+enum UniqueLineItems {
+	OPERATION_MAINTENANCE,
+	MODULE_MAINTENANCE,
+	TRADING_GAINS,
+	EXCHANGE_FEES,
+	DEFAULT_PENALTIES,
+	DEFAULT_COMPENSATION,
+	DISPOSAL_GAINS,
+	SETTLEMENT_RECEIPTS,
+	SETTLEMENT_PAYMENTS,
+	PL_SETTLEMENTS,
+	FEES_PAID,
+	BONDS_POSTED,
+	BONDS_RELEASED,
+	COMPENSATION_RECEIPTS,
+	CASH,
+	BOND_ESCROW,
+	TRADE_RECEIVABLES,
+	FIXED_ASSETS,
+}
+
 ## Trade classes group resources by handling (electricity, bulk, cryogenic,
 ## etc.) for trade and storage logic.
 enum TradeClasses {
