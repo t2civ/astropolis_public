@@ -103,6 +103,12 @@ func get_market() -> MarketProxy:
 	return market
 
 
+## Returns the environmental capacity factor for renewable-power operation
+## [param operation_type] at this body, in [0, 1]; NAN if it is not a renewable
+## this body models (e.g. hydro/tidal) or that renewable is unavailable here.
+@abstract func calculate_capacity_factor(operation_type: int) -> float
+
+
 # Strata. The composition layers live on the server.
 
 ## Returns true if this body has any stratum composition layers.

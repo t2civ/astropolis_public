@@ -143,8 +143,11 @@ var market_maker: bool
 ## True if all resource streams flow from/to inventory (no atmosphere/surface
 ## market).
 var closed_cycle_ops: bool
-## Fraction of solar irradiance occluded at this site (0.0–1.0).
-var solar_occlusion: float
+## Per-source corrections multiplying this site's body-level renewable capacity
+## factor (territorial quality vs the body baseline; 1.0 = body value).
+var solar_correction := 1.0
+var wind_correction := 1.0
+var geothermal_correction := 1.0
 ## Time horizon used by AI and automations (inventory reserves, resupply, etc.).
 var time_horizon: float
 ## Bidirectional bit flags (see [enum FacilityFlags]). FROM_SERVER bits are
@@ -195,6 +198,12 @@ func remove() -> void:
 
 func has_development() -> bool:
 	return true
+
+
+## Returns the environmental capacity factor for renewable-power operation
+## [param operation_type] at this facility (the body factor scaled by this site's
+## per-source correction); NAN if not a body-modeled renewable or unavailable here.
+@abstract func calculate_capacity_factor(operation_type: int) -> float
 
 
 func has_markets() -> bool:
