@@ -118,7 +118,6 @@ ARCHITECTURE_ENGINEERING	1.72e7,0	9.67e5,0	8.06e6,0	1.13e7,0	1.61e6,0	2.2e6,0	1.
 FACILITIES_MANAGEMENT	1.72e7,0	9.67e5,0	8.06e6,0	1.13e7,0	1.61e6,0	2.2e6,0	1.4e7,0											
 ACCOUNTING_SERVICES	1.29e7,0	7.25e5,0	6.04e6,0	8.46e6,0	1.21e6,0	1.65e6,0	1.05e7,0											
 CYBERSECURITY	8.6e6,0	4.83e5,0	4.03e6,0	5.64e6,0	8.06e5,0	1.1e6,0	6.98e6,0											
-EXCHANGE_SERVICES	4.3e6,0	2.42e5,0	2.01e6,0	2.82e6,0	4.03e5,0	5.51e5,0	3.49e6,0											
 # (reserve, for_sale)																		
 # in trade_unit from resources.tsv																		
 # transposed on import to:																		
