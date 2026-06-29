@@ -1,11 +1,13 @@
-	spacecraft	station	use_pitch_yaw	lazy_model	sleep	file_prefix	en.wiki	symbol	show_in_nav_panel	parent	body_class	model_type	semi_major_axis	eccentricity	inclination	longitude_ascending_node	argument_periapsis	mean_anomaly_at_epoch	mean_motion	nodal_period	apsidal_period	reference_plane_type	orbit_right_ascention	orbit_declination	tidally_locked	axis_locked	rotation_period	right_ascension	declination	gravitational_parameter	mean_radius	mean_density	magnitude	albedo	shade_factor
-Type	BOOL	BOOL	BOOL	BOOL	BOOL	STRING_NAME	STRING	STRING	BOOL	STRING_NAME	TABLE_ROW	TABLE_ROW	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	IVOrbit.ReferencePlane	FLOAT	FLOAT	BOOL	BOOL	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT
-Default	TRUE		TRUE	TRUE	TRUE			\u25CC			SPACECRAFT	SPACECRAFT													TRUE	TRUE				0	0	0	0	0	0.5
-Unit													km		deg	deg	deg	deg	deg/d	a	a		deg	deg			d	deg	deg	km^3/s^2	m	g/cm^3			
-Prefix/SPACECRAFT_											BODY_CLASS_	MODEL_										REFERENCE_PLANE_													
-ISS		x				ISS	International_Space_Station		x	PLANET_EARTH			6786.5	0.0003279	51.6453	323.0932	182.5211	317.8761	5579.9691768			EQUATORIAL								0.0000001	30				
-TIANGONG		x				Tiangong	Tiangong_space_station		x	PLANET_EARTH		SMALL_C_BODY	6753.5	0.0005825	41.4727	120.7294	229.1472	112.8289	5623.0750944			EQUATORIAL								0.0000001	20				
-# replaces ivoyager/solar_system/																																			
-# spacecrafts.tsv																																			
-# https://www.heavens-above.com/																																			
-# FIXME: epoch, Om & w																																			
+	spacecraft	station	use_pitch_yaw	lazy_model	sleep	file_prefix	en.wiki	symbol	show_in_nav_panel	parent	orbit	body_class	tidally_locked	axis_locked	rotation_period	right_ascension	declination	gravitational_parameter	mean_radius	mean_density	magnitude	albedo	shade_factor
+Type	BOOL	BOOL	BOOL	BOOL	BOOL	STRING_NAME	STRING	STRING	BOOL	STRING_NAME	TABLE_ROW	TABLE_ROW	BOOL	BOOL	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT
+Default	TRUE		TRUE	TRUE	TRUE			\u25CC				SPACECRAFT	TRUE	TRUE					0	0	0	0	0.5
+Unit															d	deg	deg	km^3/s^2	m	g/cm^3			
+Prefix/SPACECRAFT_											ORBIT_	BODY_CLASS_											
+ISS		x				ISS	International_Space_Station		x	PLANET_EARTH	SPACECRAFT_INTERNATIONAL_SPACE_STATION							0.0000001	30				
+TIANGONG		x				Tiangong	Tiangong_space_station		x	PLANET_EARTH	SPACECRAFT_TIANGONG							0.0000001	20				
+# Replaces the ivoyager_core spacecrafts.tsv (registered in public_preinitializer.gd).
+# Orbital elements now live in the Core orbits.tsv and this project's orbits_mod.tsv:
+#   ISS reuses the Core orbit row ORBIT_SPACECRAFT_INTERNATIONAL_SPACE_STATION;
+#   TIANGONG uses ORBIT_SPACECRAFT_TIANGONG added by orbits_mod.tsv.
+# https://www.heavens-above.com/
+# FIXME: epoch, Om & w (Tiangong elements approximate; see orbits_mod.tsv).

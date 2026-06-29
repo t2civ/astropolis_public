@@ -123,6 +123,7 @@ func _on_table_initializer_instantiated(_table_initializer: IVTableInitializer) 
 	# primary table mods (modify existing ivoyager tables)
 	tables.planets_mod = path_format % "planets_mod"
 	tables.moons_mod = path_format % "moons_mod"
+	tables.orbits_mod = path_format % "orbits_mod" # adds ORBIT_SPACECRAFT_TIANGONG
 	# entity x entity tables
 	tables.facilities_resources = path_format % "facilities_resources"
 	tables.facilities_modules = path_format % "facilities_modules"
