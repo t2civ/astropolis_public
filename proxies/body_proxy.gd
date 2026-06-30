@@ -42,7 +42,11 @@ signal positions_changed(position_key: PackedInt32Array, value: PackedFloat64Arr
 
 var body_id := -1  ## Index into [member ProxyBus.body_proxies].
 var body_flags := 0  ## Body flags from [enum IVBody.BodyFlags].
-var solar_occlusion: float  ## Average solar irradiance occlusion at this body.
+var shade_factor: float  ## Average fraction of time this body's sites are shaded from the sun (day-night or orbital eclipse).
+var solar_transmission: float  ## Atmospheric transmission of sunlight, in [0, 1] (1.0 = airless/transparent).
+var wind_factor: float  ## Wind-power capacity factor for this body; NAN if wind power is unavailable here.
+var geothermal_factor: float  ## Geothermal-power capacity factor for this body; NAN if unavailable here.
+var solar_irradiance := 1.0  ## Solar irradiance at this body, normalized to 1.0 at 1 AU; refreshed ~weekly.
 
 # *****************************************************************************
 # persisted
@@ -76,7 +80,7 @@ func _clear_for_destruction() -> void:
 	market = null
 
 
-# ********************************* PROXY API *********************************
+# ***************************** THREAD-SAFE READ ******************************
 
 func has_development() -> bool:
 	return is_facilities
@@ -97,6 +101,12 @@ func get_facilities() -> Array[Proxy]:
 
 func get_market() -> MarketProxy:
 	return market
+
+
+## Returns the environmental capacity factor for renewable-power operation
+## [param operation_type] at this body, in [0, 1]; NAN if it is not a renewable
+## this body models (e.g. hydro/tidal) or that renewable is unavailable here.
+@abstract func calculate_capacity_factor(operation_type: int) -> float
 
 
 # Strata. The composition layers live on the server.
@@ -231,6 +241,8 @@ func get_market() -> MarketProxy:
 ## Returns true if the stratum at [param index] is the body's atmosphere.
 @abstract func get_stratum_is_atmosphere(index: int) -> bool
 
+
+# ******************************** AI METHODS *********************************
 
 ## Registers [param satellite] under this body. Updates [member is_satellites].
 @abstract func add_satellite(satellite: BodyProxy) -> void

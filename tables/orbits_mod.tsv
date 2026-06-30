@@ -1,0 +1,9 @@
+# Supplements the ivoyager_core orbits.tsv with Astropolis-specific orbit rows.
+# Adds ORBIT_SPACECRAFT_TIANGONG (referenced by spacecrafts.tsv); the Core table
+# already supplies ORBIT_SPACECRAFT_INTERNATIONAL_SPACE_STATION used by project ISS.
+	parent	reference_plane_type	eccentricity	inclination	longitude_ascending_node	argument_periapsis	semi_major_axis	mean_anomaly_at_epoch	mean_motion
+Type	STRING_NAME	IVOrbit.ReferencePlane	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT
+Unit				deg	deg	deg	km	deg	deg/d
+Prefix/ORBIT_		REFERENCE_PLANE_							
+SPACECRAFT_TIANGONG	PLANET_EARTH	EQUATORIAL	0.0005825	41.4727	120.7294	229.1472	6753.5	112.8289	5623.0750944
+@MODIFIES=orbits

@@ -22,6 +22,9 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"_on_ready_tab",
 ]
 
+## Shared refresh interval (seconds) for all info-tab subpanels.
+const TIMER_INTERVAL := 1.0
+
 # persisted
 ## Generic shared memory that tabs may use (e.g., open states).
 var memory := {}
@@ -65,7 +68,8 @@ func _ready() -> void:
 	mouse_filter = MOUSE_FILTER_PASS
 	tab_changed.connect(_tab_listener)
 	add_child(_timer)
-	_timer.start() # 1 s interval unless we change
+	_timer.wait_time = TIMER_INTERVAL
+	_timer.start()
 	if !_is_new: # loaded game
 		IVStateManager.game_loaded.connect(_on_game_loaded, CONNECT_ONE_SHOT)
 		return

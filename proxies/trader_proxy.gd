@@ -30,6 +30,12 @@ signal positions_changed(position_key: PackedInt32Array, value: PackedFloat64Arr
 		ask: PackedInt32Array, bid: PackedInt32Array)
 
 
+## Upper bound on forward orders: [method set_ask] / [method set_bid] accept
+## instrument ordinal quarters in [code][ordinal_qtr, ordinal_qtr +
+## MAX_FORWARD_QUARTERS)[/code]; a call outside the range is a no-op.
+const MAX_FORWARD_QUARTERS := 40
+
+
 var trader_id := -1  ## Index in [member ProxyBus.trader_proxies].
 var player_id := -1  ## [member PlayerProxy.player_id] of the owning facility's player.
 var facility_id := -1  ## [member FacilityProxy.facility_id] of [member facility].
@@ -39,7 +45,7 @@ var market_id := -1  ## [member MarketProxy.market_id] of [member market].
 # persisted
 
 var facility: FacilityProxy  ## Owning [FacilityProxy]. Immutable after init.
-var market: MarketProxy  ## May change at runtime. Lives on markets thread!
+var market: MarketProxy  ## Lives on markets thread!
 
 # *****************************************************************************
 
@@ -78,7 +84,8 @@ func get_market() -> MarketProxy:
 ## 0. [param unit_quantity] and [param unit_price] are in trade units. The
 ## resulting position side (long/short) follows from matching; a trader may hold
 ## either side at any delivery body and may flip. The current quarter is the
-## near-immediate ("spot") case; later quarters are forward delivery. [param
+## near-immediate ("spot") case; later quarters are forward delivery, accepted
+## up to (excluding) ordinal_qtr + [constant MAX_FORWARD_QUARTERS]. [param
 ## delivery_market_id] is the market at the delivery body; the caller already
 ## holds it, since it must query that market to see available instruments.
 @abstract func set_ask(instrument: PackedInt32Array, unit_quantity: int,

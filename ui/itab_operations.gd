@@ -180,7 +180,7 @@ func _select_tab(tab: int) -> void:
 
 
 func _update_tab(_dummy := false) -> void:
-	if !visible or !IVStateManager.running:
+	if !visible or !IVStateManager.is_threads_allowed():
 		return
 	var target_name := _selection_manager.get_name()
 	
@@ -530,6 +530,8 @@ class RowItem extends HBoxContainer:
 			margin_label.text = " "
 		elif margin == INF:
 			margin_label.text = "?"
+		elif margin == -INF:
+			margin_label.text = "—" # cash-sink op (e.g. buildout): cost, no revenue
 		else:
 			margin_label.text = "%.f" % (100.0 * margin)
 	

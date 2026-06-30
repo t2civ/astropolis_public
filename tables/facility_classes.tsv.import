@@ -1,0 +1,14 @@
+[remap]
+
+importer="ivoyager.tables"
+type="IVTableResource"
+uid="uid://xlcyxk2j183o"
+path="res://.godot/imported/facility_classes.tsv-75e0516c92f5c7955fafe4fc86ca122f.tres"
+
+[deps]
+
+source_file="res://public/tables/facility_classes.tsv"
+dest_files=["res://.godot/imported/facility_classes.tsv-75e0516c92f5c7955fafe4fc86ca122f.tres"]
+
+[params]
+

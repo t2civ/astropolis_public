@@ -15,7 +15,15 @@ extends RefCounted
 ## declare a typed [code]proxy[/code] field and drive AI logic on the proxy
 ## thread. To write custom AI, extend a [code]*BaseAI[/code] class and add
 ## [code]const OVERRIDE_AI := true[/code]; see [PlayerCustomAI] for the
-## template.[br][br]
+## template. A custom AI that does heavy per-interval work should poll
+## [code]_stop[/code] and return promptly when it is true, so it never holds
+## the proxy thread past a stop request.[br][br]
+##
+## AIs should *never* name a table entity by name, e.g., RESOURCE_ELECTRICITY.
+## Instead, use tags defined in individual table `ai_tags` fields. These are
+## used to populate this class's dictionaries: [member _tag_resources], [member
+## _tag_operations], and [member _tag_modules]. (More table dictionaries can be
+## added if needed.)[br][br]
 ##
 ## WARNING: Lives on the proxy thread. AI instances exist only on peers that
 ## run the AI for their entity (typically the owning player); peers that don't
@@ -33,15 +41,56 @@ const INTERVAL := Proxy.INTERVAL
 const PERSIST_MODE := IVGlobal.PERSIST_PROCEDURAL
 
 
+@warning_ignore_start("unused_private_class_variable") # used by subclasses
+## Mirrors the proxy thread's stop state, set by the proxy server from the engine's
+## thread-stop signals. A long-running AI override (e.g. a heavy per-resource loop) should
+## poll this and return promptly when true, so it never holds the proxy thread past a stop
+## request. Read-only for AI subclasses.
+static var _stop := true
+## Populated from resources.tsv field `ai_tags`. Provides resource types for
+## any table tag. E.g. ELECTRICITY = [0] since it is the only resource with
+## this tag.
+static var _tag_resources: Dictionary[StringName, PackedInt32Array]
+## Populated from operations.tsv field `ai_tags`. Provides operation types for
+## any table tag.
+static var _tag_operations: Dictionary[StringName, PackedInt32Array]
+## Populated from modules.tsv field `ai_tags`. Provides module types for any
+## table tag.
+static var _tag_modules: Dictionary[StringName, PackedInt32Array]
+
+
+
 var _last_interval := -INF
 var _next_interval := -INF
 var _ordinal_qtr := -1
+
+
+static func _populate_tags() -> void:
+	_populate_table_tags(&"resources", _tag_resources)
+	_populate_table_tags(&"operations", _tag_operations)
+	_populate_table_tags(&"modules", _tag_modules)
+
+
+static func _populate_table_tags(table_name: StringName,
+		tag_dict: Dictionary[StringName, PackedInt32Array]) -> void:
+	var field_column: Array[Array] = IVTableData.get_db_field_array(table_name, &"ai_tags")
+	for type in field_column.size():
+		var tags: Array[StringName] = field_column[type]
+		if !tags:
+			continue
+		for tag in tags:
+			if tag_dict.has(tag):
+				tag_dict[tag].append(type)
+			else:
+				tag_dict[tag] = PackedInt32Array([type])
 
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
 
 func _init() -> void:
 	IVStateManager.about_to_free_procedural_nodes.connect.call_deferred(_clear_for_destruction)
+	if !_tag_resources:
+		_populate_tags()
 
 
 ## Override to null every outgoing Proxy / BaseAI ref. Both sides of a 2-cycle

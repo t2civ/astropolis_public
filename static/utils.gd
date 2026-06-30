@@ -8,8 +8,9 @@
 class_name Utils
 extends Object
 
-## Astropolis-wide static utilities for bit manipulation, packed-array
-## conversion, weighted-average computation, and float-array math.
+## Astropolis-wide static utilities for bit manipulation, quarter-calendar
+## time math, packed-array conversion, weighted-average computation, and
+## float-array math.
 ##
 ## See [IVArrays] (in [code]ivoyager_core[/code]) for general-purpose array
 ## utilities; this class adds Astropolis-specific helpers.
@@ -54,6 +55,38 @@ static func get_n_bits(n: int) -> int:
 		return ((1 << 63)) - 1 | (1 << 63)
 	assert(false, "n must be in range 0 to 64")
 	return 0
+
+
+# quarter calendar
+
+## Returns the sim time (J2000 TT seconds) at the calendar start of
+## [param ordinal_quarter], where ordinal quarter counts as
+## [code]year * 4 + (quarter - 1)[/code] (Gregorian; see
+## [member IVGlobal.date_aux]). Uses the same day mapping as
+## [method IVTimekeeper.get_jdn_at_time], so the boundary aligns with the
+## simulator's quarter rollover. Returns 0.0 for negative input.
+static func get_time_at_ordinal_quarter(ordinal_quarter: int) -> float:
+	const DAY := IVUnits.DAY
+	assert(ordinal_quarter >= 0, "ordinal_quarter must be >= 0")
+	if ordinal_quarter < 0:
+		return 0.0 # guard against AI: safe default (debug assert above)
+	@warning_ignore("integer_division")
+	var year := ordinal_quarter / 4
+	var month := (ordinal_quarter % 4) * 3 + 1
+	var jdn := IVTimekeeper.get_jdn_at_gregorian_date(year, month, 1)
+	return (jdn - IVTimekeeper.JULIAN_DAY_NUMBER_AT_J2000) * DAY
+
+
+## Returns the duration of [param ordinal_quarter] in sim time (90-92 days,
+## Gregorian). Returns 0.0 for negative input. Time remaining in a current
+## quarter is a derivation:
+## [code]get_time_at_ordinal_quarter(ordinal_quarter + 1) - time[/code].
+static func get_ordinal_quarter_duration(ordinal_quarter: int) -> float:
+	assert(ordinal_quarter >= 0, "ordinal_quarter must be >= 0")
+	if ordinal_quarter < 0:
+		return 0.0 # guard against AI: safe default (debug assert above)
+	return (get_time_at_ordinal_quarter(ordinal_quarter + 1)
+			- get_time_at_ordinal_quarter(ordinal_quarter))
 
 
 # array & dict utils
@@ -365,3 +398,48 @@ static func zero_array_of_float_arrays(array: Array[Array]) -> void:
 		while j > 0:
 			j -= 1
 			array[i][j] = 0.0
+
+
+# display scaling
+
+
+## Returns the base-1000 magnitude exponent shared by the most elements of
+## [param values] — the exponent [code]e[/code] for which dividing each element
+## by [code]1000 ** e[/code] lands the largest count of them in the [1, 1000)
+## display range. Computed as the statistical mode of each element's
+## [code]floor(log1000(abs(value)))[/code]; zero and non-finite elements are
+## ignored. Returns 0 when no element has positive magnitude. O(n), single pass.
+## Generic over any quantity; pair with [method get_usd_unit_string] for dollars.
+static func get_modal_base1000_exponent(values: PackedFloat64Array) -> int:
+	const INV_LOG_1000 := 1.0 / (3.0 * log(10.0))
+	var counts: Dictionary[int, int] = {}
+	var best_exponent := 0
+	var best_count := 0
+	for value in values:
+		var magnitude := absf(value)
+		if magnitude == 0.0 or !is_finite(magnitude):
+			continue
+		var exponent := floori(log(magnitude) * INV_LOG_1000)
+		var count: int = counts.get(exponent, 0) + 1
+		counts[exponent] = count
+		if count > best_count:
+			best_count = count
+			best_exponent = exponent
+	return best_exponent
+
+
+## Returns the localized US-dollar magnitude-unit label (e.g. "($Thousands)",
+## "($Millions)") for base-1000 [param exponent], where 1 is thousands. Clamped
+## to the available [code]LABEL_USD_*[/code] range (thousands through
+## quintillions). Pair with [method get_modal_base1000_exponent].
+static func get_usd_unit_string(exponent: int) -> String:
+	const KEYS: Array[StringName] = [
+		&"LABEL_USD_THOUSANDS",
+		&"LABEL_USD_MILLIONS",
+		&"LABEL_USD_BILLIONS",
+		&"LABEL_USD_TRILLIONS",
+		&"LABEL_USD_QUADRILLIONS",
+		&"LABEL_USD_QUINTILLIONS",
+	]
+	var index := clampi(exponent - 1, 0, KEYS.size() - 1)
+	return String(TranslationServer.translate(KEYS[index]))

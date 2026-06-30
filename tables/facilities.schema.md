@@ -21,8 +21,9 @@ Facilities are described in `facilities.descriptive.md`. Content of this table i
 - biodiversity_fraction — See Information & Biodiversity below.
 - information_fraction — See Information & Biodiversity below.
 - nominal_information — For small facilities with relatively little computer capacity, assign a nominal Shannon information content in Terrabits (Tbit). Use this field instead of `information_fraction` if unique information content is too small to significantly affect the global information model.
-- solar_occlusion — Average solar occlusion in a player's territory. This is 1.0 minus solar insolation as a fraction of total possible at a distance from the sun without any blockage. Agencies on a planet should have the same value as their owning polity. Leave empty for spacecraft.
+- solar_correction / wind_correction / geothermal_correction — Per-source multipliers (default 1.0) on this site's body-level renewable capacity factor, capturing territorial quality versus the body baseline (latitude, climate, regional regime). Facility capacity factor = body factor × correction (see `calculate_capacity_factor` on Body/Facility). Agencies on a planet should match their owning polity. Hydro and tidal have no correction — they are not yet body-modeled and run from the seeded `facilities_operations` rate.
 - time_horizon — Planning horizon used by AI and automations (inventory reserves, resupply, etc.). Shorter for facilities with frequent resupply (e.g., Earth), longer for facilities with infrequent resupply (e.g., LEO).
+- facility_class — `facility_classes.tsv` row classifying this facility. For unitary facilities it supplies the revenue/cost line items (the facility is one activity); for non-unitary facilities it is descriptive (they book per operation). Current values: POLITY (the nations), GROUND_FACILITIES (Earth space agencies), RESEARCH_STATION (ISS / Tiangong slices).
 
 
 ## Information & Biodiversity 

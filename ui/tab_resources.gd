@@ -46,6 +46,8 @@ func _ready() -> void:
 func refresh() -> void:
 	if !_body_name or !_selection_name:
 		return
+	if !IVStateManager.is_threads_allowed():
+		return
 	MainThreadGlobal.call_proxy_thread(_get_proxy_data.bind(_body_name, _selection_name))
 
 
@@ -56,6 +58,8 @@ func update_selection(body_name: StringName, selection_name: StringName) -> void
 	if _body_name != body_name or _selection_name != selection_name:
 		_body_name = body_name
 		_selection_name = selection_name
+		if !IVStateManager.is_threads_allowed():
+			return
 		MainThreadGlobal.call_proxy_thread(_get_proxy_data.bind(body_name, selection_name))
 
 

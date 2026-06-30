@@ -26,11 +26,14 @@ extends Proxy
 var player_id := -1 ## Index into [member ProxyBus.player_proxies].
 var player_class := -1 ## Player class index ([code]PlayerClasses[/code] enum).
 var homeworld := "" ## Name of this player's homeworld body.
+var tax_rate := 0.0 ## Income-tax rate applied to this player's facilities.
 
 # *****************************************************************************
 # persisted
 
 var polity: PlayerProxy ## Self if [member player_class] == [code]PLAYER_CLASS_POLITY[/code].
+## This player's treasury facility (its homeworld facility at game start; may be null).
+var administrative_center: FacilityProxy
 var is_facilities := true ## True while this player owns at least one facility ("alive" test).
 ## Facilities owned by this player. Resizable container — not threadsafe!
 var facilities: Array[Proxy] = []
@@ -42,10 +45,11 @@ var facilities: Array[Proxy] = []
 
 func _clear_for_destruction() -> void:
 	polity = null
+	administrative_center = null
 	facilities.clear()
 
 
-# ********************************* PROXY API *********************************
+# ***************************** THREAD-SAFE READ ******************************
 
 func has_development() -> bool:
 	return true
@@ -67,6 +71,8 @@ func get_polity_name() -> StringName:
 func get_facilities() -> Array[Proxy]:
 	return facilities
 
+
+# ******************************** AI METHODS *********************************
 
 ## Registers [param facility] under this player. Marks the player "alive".
 @abstract func add_facility(facility: Proxy) -> void

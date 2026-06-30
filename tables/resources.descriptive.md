@@ -141,24 +141,33 @@ Notes:
 
 ## Services
 
-*Intangibles.*
+*Intangible services: computing and information products, professional and business services, and services delivered to people and settlements.*
 
-- **Scalar Compute** — 
-- **Tensor Compute** — 
-- **Neuromorphic Compute** — 
-- **Research & Development** — 
-- **Transport Services** — 
-- **Wholesale/Logistics** — 
-- **Maintenance** — 
-- **Retail Services** — 
-- **Entertainment** — 
-- **Hospitality** — 
-- **Healthcare** — 
-- **Education** — 
-- **Consulting** — 
-- **Marketing/Advertising** — 
-- **Financial Services** — 
-- **Real Estate Services** — 
-- **Accounting Services** — 
-- **Legal Services** — 
+- **Scalar Compute** — General-purpose serial and modestly parallel computation (CPU-class), measured in floating-point operations. The capacity behind business systems, databases, transaction processing, modeling, and the control of automated machinery — the workhorse compute underlying most digital activity.
+- **Tensor Compute** — Massively parallel accelerated computation (GPU- and tensor-accelerator-class) optimized for the dense linear algebra of machine learning, simulation, and signal processing. The compute behind AI training and inference; nascent in the 2020s and scaling rapidly thereafter.
+- **Neuromorphic Compute** — Brain-inspired, event-driven computation delivering extreme energy efficiency for cognitive workloads, and the eventual substrate for advanced general intelligence and emulated minds. Speculative and effectively unavailable in the 2020s.
+- **Facilities Management** — Upkeep, repair, and operation of physical assets: maintenance planning and coordination, digital and IT-system maintenance, and property and infrastructure management. The service that keeps installed capital running.
+- **Telecommunications** — Carriage of voice and data: the transmission service itself, distinct from the content carried and from the cabling, relays, and ground stations it rides on. Spans everything from local networks to the latency-bound links between worlds.
+- **Cybersecurity** — Protection of information systems and data: threat monitoring, intrusion defense, cryptography, and incident response. Critical wherever automated systems govern physical infrastructure.
+- **Broadcast & Streaming** — Production and distribution of audiovisual content to audiences — news, programming, streaming media, and publishing — independent of the transmission that delivers it.
+- **Marketing & Advertising** — Market research, brand promotion, and the creation and placement of advertising to generate demand.
+- **Business Services** — Outsourced administration and back-office operations: contact centers, records and payroll processing, scheduling, and remote administrative support.
+- **Accounting Services** — Bookkeeping, auditing, tax, and financial reporting and compliance.
+- **Consulting** — Expert advisory services — strategy, management, technical, and specialized-domain guidance — sold to enterprises and institutions.
+- **Legal Services** — Counsel, representation, contracting, dispute resolution, and regulatory and compliance work.
+- **Financial Services** — Banking, lending, payments, and investment and asset management — the allocation of capital.
+- **Insurance & Risk** — Underwriting and risk transfer: coverage against loss in exchange for premiums, including actuarial assessment and reinsurance. Used to hedge exposures across operations, transport, and trade.
+- **Architecture & Engineering** — Design and technical specification of buildings, structures, vehicles, and systems — the design product itself, distinct from the construction or fabrication that realizes it.
+- **Research & Development** — Systematic scientific and engineering investigation yielding new knowledge, designs, materials, and processes. Compute- and instrument-intensive; the wellspring of technological advancement.
+- **Exchange Services** — Operation of trading venues and central clearing: matching buyers and sellers of commodities and contracts, guaranteeing settlement, and coordinating the load-out of traded goods for delivery.
+- **Wholesale & Logistics** — Bulk distribution and freight movement of goods within a body: warehousing, wholesaling, and surface and regional shipping.
+- **Passenger Services** — Movement of people within a body: transit systems, regional carriers, taxis, and mobility services.
+- **Retail Services** — Sale and last-mile distribution of goods to end consumers through storefronts, markets, and direct fulfillment.
+- **Hospitality** — Lodging, food service, and tourism: hotels, restaurants, and travel accommodation.
+- **Entertainment** — In-person leisure and recreation: venues, live events, sports, attractions, and gaming.
+- **Personal Services** — Direct services to individuals: grooming, fitness, childcare, domestic help, and repair of personal goods.
+- **Healthcare** — Medical and health services: diagnosis, treatment, surgery, nursing, public health, and pharmacy. Equipment- and supply-intensive; central to population welfare in every settlement.
+- **Education** — In-person teaching and training, from primary schooling through tertiary and vocational instruction.
+- **Public/Gov Services** — Administration, security, justice, defense, and civic services provided by governing bodies.
+- **Utilities/Env Services** — Delivered utilities and sanitation: water at the tap, power and gas distribution to premises, and waste collection, recycling, and environmental remediation — distinct from the generation, extraction, and treatment upstream.
 

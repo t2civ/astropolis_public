@@ -176,18 +176,32 @@ enum OperationStrategies {
 const _RS := FacilityResourceStrategies
 
 
-## Facility-posture strategy definitions; index = [enum FacilityStrategies]
-## value.
+## Member names persisted by save/load (interval timing inherited from BaseAI).
+const PERSIST_PROPERTIES: Array[StringName] = [
+	&"_last_interval",
+	&"_next_interval",
+	&"facility_strategy",
+	&"facility_resource_strategies",
+	&"operation_strategies",
+]
+
+
+## Facility-posture strategy definitions; index = [enum FacilityStrategies] value.
+## The [code]buildout_spending_share[/code] key (read by [method _apply_facility_knobs])
+## is the fraction of facility income the server directs to construction: a positive
+## value grows toward that share, a negative value winds capacity down at that rate,
+## and an omitted key (NAN) holds. Postures never selected by
+## [method _reconcile_facility_strategy] are left empty.
 static var facility_strategy_defs: Array[Dictionary] = [
 	{}, # NEUTRAL
-	{}, # GROWTH
-	{}, # PROFITABILITY
+	{&"buildout_spending_share": 0.15}, # GROWTH
+	{&"buildout_spending_share": 0.08}, # PROFITABILITY
 	{}, # DIVERSIFICATION
 	{}, # SPECIALIZATION
-	{}, # STRATEGIC_OUTPOST
+	{&"buildout_spending_share": 0.03}, # STRATEGIC_OUTPOST
 	{}, # DEVELOPMENT
-	{}, # STEADY_STATE
-	{}, # DECOMMISSIONING
+	{&"buildout_spending_share": 0.05}, # STEADY_STATE
+	{&"buildout_spending_share": -0.5}, # DECOMMISSIONING (negative = wind-down)
 	{}, # EMERGENCY
 ]
 
@@ -215,42 +229,32 @@ static var facility_resource_strategy_defs: Array[Dictionary] = [
 	{&"strategic_reserve_factor": 1.0, &"mm_base_lot": 4, &"protect_reserve": true}, # MARKET_MAKE
 ]
 
-## Per-operation strategy definitions; index = [enum OperationStrategies]
-## value.
+## Per-operation strategy definitions; index = [enum OperationStrategies] value.
+## Keys are operation-side gate switches read by [method _apply_operation_knobs]:
+## [code]shortage_priority[/code], [code]strategic_floor[/code], and
+## [code]clearance_limited[/code]. Empty entries take no gate (AUTO). Several entries
+## are deliberately AUTO-equivalent for now; the universal margin floor (per-op target
+## margin, default 0.0) handles profitability gating and the run-rate target is
+## server-authoritative (Tier-3 controller, later stage).
 static var operation_strategy_defs: Array[Dictionary] = [
-	{}, # AUTO
-	{}, # PROFIT_MAXIMIZE
-	{}, # VOLUME_MAXIMIZE
-	{}, # BASELOAD
-	{}, # PEAKER
-	{}, # MOTHBALL
-	{}, # DECOMMISSION
-	{}, # DEMAND_FOLLOWING
-	{}, # SHORTAGE_RELIEF
-	{}, # LEARNING
-	{}, # HARVEST
-	{}, # STRATEGIC_HOLD
-	{}, # CLEARANCE_LIMITED
+	{}, # AUTO — full target, server reactive gating only
+	{}, # PROFIT_MAXIMIZE (margin floor is now the universal base mode)
+	{}, # VOLUME_MAXIMIZE — run full regardless of margin
+	{}, # BASELOAD — steady rate (tuning TBD)
+	{}, # PEAKER — idle until spike (tuning TBD)
+	{&"process_utilization": 0.0}, # MOTHBALL — idle, capacity preserved
+	{}, # DECOMMISSION — capacity wind-down is Tier 1/2; run as AUTO here
+	{}, # DEMAND_FOLLOWING — server storage cap already follows offtake
+	{&"shortage_priority": true}, # SHORTAGE_RELIEF
+	{}, # LEARNING — run regardless to accumulate experience
+	{}, # HARVEST — run for max output
+	{&"strategic_floor": true}, # STRATEGIC_HOLD
+	{&"clearance_limited": true}, # CLEARANCE_LIMITED
 ]
-
-
-## Member names persisted by save/load (interval timing inherited from BaseAI).
-const PERSIST_PROPERTIES: Array[StringName] = [
-	&"_last_interval",
-	&"_next_interval",
-	&"facility_strategy",
-	&"facility_resource_strategies",
-	&"operation_strategies",
-]
-
 
 static var _table_n_rows := IVTableData.table_n_rows
 static var _trade_unit_multipliers := ThreadsafeGlobal.resource_trade_unit_multipliers
-
-## Per-resource tradability mask (1 = tradable), indexed by resource_type.
-## Built once; a resource is tradable if it is a commodity with a storage class.
-static var _is_tradable: PackedByteArray
-
+static var _tradable_resources: PackedInt32Array
 
 var proxy: FacilityProxy
 
@@ -273,12 +277,16 @@ var _player_ai: PlayerBaseAI
 # ************************* VIRTUAL & IMPLEMENTATION **************************
 
 func _init() -> void:
+	super()
 	var n_resources: int = _table_n_rows[&"resources"]
 	facility_resource_strategies.resize(n_resources)
 	var n_operations: int = _table_n_rows[&"operations"]
 	operation_strategies.resize(n_operations)
-	if _is_tradable.is_empty():
-		_build_tradable_mask(n_resources)
+	if !_tradable_resources:
+		var trade_classes: Array[int] = IVTableData.db_tables[&"resources"][&"trade_class"]
+		for resource_type in n_resources:
+			if trade_classes[resource_type] != -1:
+				_tradable_resources.append(resource_type)
 
 
 func _clear_for_destruction() -> void:
@@ -300,6 +308,8 @@ func ai_init() -> void:
 	# new_quarter does not fire on load or the first adopted quarter, so author once
 	# here to bootstrap (and re-author idempotently after load).
 	_author_resource_strategies()
+	_author_facility_strategy()
+	_author_operation_strategies()
 
 
 ## Re-author each interval (the prior cadence): identity from sticky capability is
@@ -313,6 +323,8 @@ func process_ai_interval(_delta: float) -> void:
 ## the change guard makes the quarter-boundary call a no-op when nothing changed.
 func process_ai_new_quarter() -> void:
 	_author_resource_strategies()
+	_author_facility_strategy()
+	_author_operation_strategies()
 
 
 # **************************** STRATEGY LISTENERS *****************************
@@ -328,6 +340,8 @@ func _on_player_resource_strategy_changed(_resource_type: int, _strategy_id: int
 func _on_player_facility_strategy_changed(facility_id: int, _strategy_id: int) -> void:
 	if facility_id == proxy.facility_id:
 		_author_resource_strategies()
+		_author_facility_strategy()
+		_author_operation_strategies()
 
 
 func _on_player_body_strategy_changed(_target_body_id: int, _strategy_id: int) -> void:
@@ -349,9 +363,7 @@ func _set_facility_resource_strategy(resource_type: int, strategy_id: int) -> vo
 ## resulting server knobs. The single authoring path for init, interval, quarter,
 ## and player-strategy changes.
 func _author_resource_strategies() -> void:
-	for resource_type in _is_tradable.size():
-		if !_is_tradable[resource_type]:
-			continue
+	for resource_type in _tradable_resources:
 		var capability := _capability_strategy(resource_type)
 		var strategy := _reconcile_resource_strategy(resource_type, capability)
 		_set_facility_resource_strategy(resource_type, strategy)
@@ -452,12 +464,110 @@ func _apply_strategy_knobs(resource_type: int, strategy: int) -> void:
 		proxy.set_inventory_flags(resource_type, desired)
 
 
-static func _build_tradable_mask(n_resources: int) -> void:
-	_is_tradable.resize(n_resources)
-	var resource_table: Dictionary[StringName, Array] = IVTableData.db_tables[&"resources"]
-	var commodities: Array = resource_table[&"commodity"]
-	var storage_classes := PackedInt32Array(resource_table[&"storage_class"])
-	for resource_type in n_resources:
-		var is_commodity: bool = commodities[resource_type]
-		var tradable := is_commodity and storage_classes[resource_type] != -1
-		_is_tradable[resource_type] = 1 if tradable else 0
+## Sets [member facility_strategy], emitting [signal facility_strategy_changed]
+## only on change.
+func _set_facility_strategy(strategy_id: int) -> void:
+	if facility_strategy == strategy_id:
+		return
+	facility_strategy = strategy_id
+	facility_strategy_changed.emit(strategy_id)
+
+
+## Authors the facility-wide posture and applies its server buildout knobs — the
+## facility analog of [method _author_resource_strategies]. Called on init, each
+## quarter, and when the player's directive for this facility changes; the per-module
+## build/decommission decision itself is the server's job, not the AI's.
+func _author_facility_strategy() -> void:
+	var strategy := _reconcile_facility_strategy()
+	_set_facility_strategy(strategy)
+	_apply_facility_knobs(strategy)
+
+
+## Folds the player's per-facility directive into a facility posture. Contraction
+## (the DECOMMISSIONING posture) is reserved for an explicit wind-down directive;
+## every other directive grows or holds, leaving the facility to grow autonomously
+## with no directive. A custom AI overrides this to change the mapping or to weigh
+## the facility's own situation.
+func _reconcile_facility_strategy() -> int:
+	const PF := PlayerBaseAI.PlayerFacilityStrategies
+	const FS := FacilityStrategies
+	var directive: int = _player_ai.player_facility_strategies.get(proxy.facility_id, 0)
+	match directive:
+		PF.DIVEST:
+			return FS.DECOMMISSIONING
+		PF.FLAGSHIP, PF.STAR:
+			return FS.GROWTH
+		PF.CASH_COW, PF.QUESTION_MARK, PF.DOG:
+			return FS.PROFITABILITY
+		PF.STRATEGIC_OUTPOST:
+			return FS.STRATEGIC_OUTPOST
+		PF.SUBSIDIZED:
+			return FS.STEADY_STATE
+	return FS.GROWTH # NEUTRAL and any add-on directive: autonomous growth
+
+
+## Translates the posture's def into the BUILDOUT operation's target spending share
+## (the fraction of facility income directed to construction; NAN holds). The server
+## controller turns this into build pressure. The BUILDOUT op is resolved by tag, so
+## no table entity name is referenced here.
+func _apply_facility_knobs(strategy: int) -> void:
+	var def := facility_strategy_defs[strategy]
+	var share: float = def.get(&"buildout_spending_share", NAN)
+	var buildout_ops: PackedInt32Array = _tag_operations.get(&"buildout", PackedInt32Array())
+	for operation_type in buildout_ops:
+		proxy.set_operations_target_spending_share(operation_type, share)
+
+
+## Sets [member operation_strategies] for [param operation_type], emitting
+## [signal operation_strategy_changed] only on change.
+func _set_operation_strategy(operation_type: int, strategy_id: int) -> void:
+	if operation_strategies[operation_type] == strategy_id:
+		return
+	operation_strategies[operation_type] = strategy_id
+	operation_strategy_changed.emit(operation_type, strategy_id)
+
+
+## Authors per-operation run-rate policy (Tier 3) and applies its server knobs — the
+## operation analog of [method _author_resource_strategies]. v1 derives one
+## posture-driven strategy for all of the facility's operations; the server's
+## per-interval gating then acts on it. Called wherever the facility posture is
+## (re)authored.
+func _author_operation_strategies() -> void:
+	const CAN_HAVE := FacilityProxy.OperationsFlags.CAN_HAVE
+	var strategy := _reconcile_operation_strategy()
+	for operation_type in operation_strategies.size():
+		if !(proxy.get_operations_flags(operation_type) & CAN_HAVE):
+			continue
+		_set_operation_strategy(operation_type, strategy)
+		_apply_operation_knobs(operation_type, strategy)
+
+
+## Maps the facility posture to a per-operation run-rate strategy. v1: a
+## profit-optimizing posture margin-gates operations; every other posture runs AUTO
+## (server-gated full run, today's behavior). A custom AI overrides this for richer
+## per-operation policy (e.g. from each op's resource strategies).
+func _reconcile_operation_strategy() -> int:
+	if facility_strategy == FacilityStrategies.PROFITABILITY:
+		return OperationStrategies.PROFIT_MAXIMIZE
+	return OperationStrategies.AUTO
+
+
+## Translates the operation's strategy def into the operation gate-flag bits (flags
+## written only on change; preserves any other FROM_PROXY bits). The run-rate target
+## itself is now server-authoritative (set by the Tier-3 controller, later stage).
+func _apply_operation_knobs(operation_type: int, strategy: int) -> void:
+	const SHORTAGE_PRIORITY := FacilityProxy.OperationsFlags.SHORTAGE_PRIORITY
+	const STRATEGIC_FLOOR := FacilityProxy.OperationsFlags.STRATEGIC_FLOOR
+	const CLEARANCE_LIMITED := FacilityProxy.OperationsFlags.CLEARANCE_LIMITED
+	const FROM_PROXY_MASK := FacilityProxy.OperationsFlags.FROM_PROXY_MASK
+	var def := operation_strategy_defs[strategy]
+	var current := proxy.get_operations_flags(operation_type) & FROM_PROXY_MASK
+	var desired := current & ~(SHORTAGE_PRIORITY | STRATEGIC_FLOOR | CLEARANCE_LIMITED)
+	if def.get(&"shortage_priority", false):
+		desired |= SHORTAGE_PRIORITY
+	if def.get(&"strategic_floor", false):
+		desired |= STRATEGIC_FLOOR
+	if def.get(&"clearance_limited", false):
+		desired |= CLEARANCE_LIMITED
+	if desired != current:
+		proxy.set_operations_flags(operation_type, desired)

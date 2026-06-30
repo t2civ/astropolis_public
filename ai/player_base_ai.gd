@@ -309,6 +309,7 @@ var counterparty_strategies: Dictionary[int, int]
 # ************************* VIRTUAL & IMPLEMENTATION **************************
 
 func _init() -> void:
+	super()
 	var n_resources: int = _table_n_rows[&"resources"]
 	player_resource_strategies.resize(n_resources)
 

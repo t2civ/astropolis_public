@@ -51,7 +51,7 @@ const INTERVAL := 7.0 * IVUnits.DAY ## AI tick interval. See [constant BaseAI.IN
 
 ## ivoyager save/load category. A Proxy persists NONE of its server data — Net
 ## components and scalar fields all re-flow from the server entity via
-## set_network_init() + dirty-sync. A subclass DOES persist its cross-proxy
+## _set_network_init() + dirty-sync. A subclass DOES persist its cross-proxy
 ## references (and the few relationship scalars a peer sets), so save/load relinks
 ## the proxy graph directly instead of re-resolving it; list those in the
 ## subclass's PERSIST_PROPERTIES. Never persist a Net component or entity data.
@@ -136,7 +136,7 @@ func _on_ready() -> void:
 
 
 ## Initializes this proxy from a server-supplied init payload. Modders: Don't touch this!
-@abstract func set_network_init(data: Array) -> void
+@abstract func _set_network_init(data: Array) -> void
 
 
 ## Applies a server-supplied dirty payload. Modders: Don't touch this!
@@ -511,6 +511,22 @@ func get_financials_gross_output_history() -> PackedFloat64Array:
 
 ## Returns the per-quarter cost-of-goods-sold history (oldest first), or empty.
 func get_financials_cost_of_goods_sold_history() -> PackedFloat64Array:
+	return PackedFloat64Array()
+
+
+## Returns the derived subtotals array (revenue, cost-of-goods, gross-output,
+## gross-profit, net-cash-flow), or empty.
+func get_financials_subtotals() -> PackedFloat64Array:
+	return PackedFloat64Array()
+
+
+## Returns the sparse line-item dict (line_items index -> value), or empty.
+func get_financials_accountings() -> Dictionary[int, float]:
+	return {}
+
+
+## Returns the per-quarter history of line item [param _item] (oldest first), or empty.
+func get_financials_accounting_history(_item: int) -> PackedFloat64Array:
 	return PackedFloat64Array()
 
 

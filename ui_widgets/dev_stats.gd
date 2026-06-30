@@ -66,10 +66,6 @@ var column_names: Array[StringName] = [&"PLANET_EARTH", &"TXT_OFF_EARTH"]
 ## target proxy is missing. Empty entries fall back to the target string.
 var fallback_names: Array[StringName] = [&"", &""]
 
-var _thread_targets: Array[StringName]
-var _thread_fallback_names: Array[StringName]
-var _thread_column_names: Array[StringName]
-
 @onready var _grid: GridContainer = $Grid
 
 
@@ -83,23 +79,24 @@ func update_targets(targets_: Array[StringName], column_names_: Array[StringName
 	update()
 
 
-## Refreshes the grid by dispatching to the proxy thread.
+## Refreshes the grid by dispatching to the proxy thread. No-op while sim threads
+## are stopped (menu, save/load) — the proxy thread isn't draining then.
 func update() -> void:
-	MainThreadGlobal.call_proxy_thread(_set_data)
+	if !IVStateManager.is_threads_allowed():
+		return
+	MainThreadGlobal.call_proxy_thread(_set_data.bind(targets, column_names, fallback_names))
 
 
 # ******************************* PROXY THREAD ********************************
 
-func _set_data() -> void:
+func _set_data(targets_: Array[StringName], column_names_: Array[StringName],
+		fallback_names_: Array[StringName]) -> void:
 	var data := []
-	_thread_targets = targets # for thread safety
-	_thread_column_names = column_names
-	_thread_fallback_names = fallback_names
-	
+
 	# get Proxies and check required components
 	var proxies: Array[Proxy] = []
 	var has_data := false
-	for target in _thread_targets:
+	for target in targets_:
 		var proxy := Proxy.get_proxy_by_name(target)
 		if proxy:
 			if proxy.get(required_component):
@@ -126,14 +123,14 @@ func _set_data() -> void:
 	while i < n_proxies:
 		var proxy: Proxy = proxies[i]
 		var use_name := ""
-		if _thread_column_names:
-			use_name = _thread_column_names[i]
+		if column_names_:
+			use_name = column_names_[i]
 		elif proxy:
 			use_name = proxy.gui_name if proxy.gui_name else tr(proxy.name)
-		elif _thread_fallback_names[i]:
-			use_name = _thread_fallback_names[i]
+		elif fallback_names_[i]:
+			use_name = fallback_names_[i]
 		else:
-			use_name = _thread_targets[i]
+			use_name = targets_[i]
 		data.append(use_name) # header
 		i += 1
 	i = 0

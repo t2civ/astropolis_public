@@ -47,8 +47,9 @@ enum FacilityFlags {
 	MODE_EMERGENCY = 1 << 32,
 	## Laid-up state: no operations run; capacity is preserved for later restart.
 	MODE_MOTHBALL = 1 << 33,
-	## Winding down: only operations that net-consume inventory continue.
-	MODE_DECOMMISSIONING = 1 << 34,
+	## Inventory drawdown: only operations that net-consume inventory continue
+	## (distinct from the DECOMMISSIONING operation, which tears down modules).
+	MODE_DRAWDOWN = 1 << 34,
 	## Mask of all AI-command bits.
 	FROM_PROXY_MASK = ~((1 << 32) - 1),
 }
@@ -102,9 +103,6 @@ enum OperationsFlags {
 	## Mask of all server-published signal bits.
 	FROM_SERVER_MASK = (1 << 32) - 1,
 
-	## Idle the operation whenever its margin is non-positive and prices are
-	## reliable.
-	MARGIN_GATED = 1 << 32,
 	## When any of the op's outputs is below operational reserve, suspend
 	## profit-gating and ease storage throttling so the op can ramp up.
 	SHORTAGE_PRIORITY = 1 << 33,
@@ -145,8 +143,11 @@ var market_maker: bool
 ## True if all resource streams flow from/to inventory (no atmosphere/surface
 ## market).
 var closed_cycle_ops: bool
-## Fraction of solar irradiance occluded at this site (0.0–1.0).
-var solar_occlusion: float
+## Per-source corrections multiplying this site's body-level renewable capacity
+## factor (territorial quality vs the body baseline; 1.0 = body value).
+var solar_correction := 1.0
+var wind_correction := 1.0
+var geothermal_correction := 1.0
 ## Time horizon used by AI and automations (inventory reserves, resupply, etc.).
 var time_horizon: float
 ## Bidirectional bit flags (see [enum FacilityFlags]). FROM_SERVER bits are
@@ -184,8 +185,6 @@ func _clear_for_destruction() -> void:
 	texture_2d = null
 
 
-# ********************************* PROXY API *********************************
-
 ## Detaches this facility from its body and player, then breaks its outgoing
 ## refs via [method super.remove]. Called by the server side at runtime when a
 ## facility is removed mid-game.
@@ -195,13 +194,16 @@ func remove() -> void:
 	super.remove()
 
 
-## Sets [member gui_name] and marks the proxy dirty. Reverse-flow:
-## proxy -> server.
-@abstract func set_gui_name(new_gui_name: String) -> void
-
+# ***************************** THREAD-SAFE READ ******************************
 
 func has_development() -> bool:
 	return true
+
+
+## Returns the environmental capacity factor for renewable-power operation
+## [param operation_type] at this facility (the body factor scaled by this site's
+## per-source correction); NAN if not a body-modeled renewable or unavailable here.
+@abstract func calculate_capacity_factor(operation_type: int) -> float
 
 
 func has_markets() -> bool:
@@ -239,15 +241,8 @@ func get_flags() -> int:
 	return flags
 
 
-## Sets the [code]FROM_PROXY_MASK[/code] bits of [member flags] to
-## [param value], preserving the server-authoritative
-## [code]FROM_SERVER_MASK[/code] bits. Proxy-authoritative: this change
-## flows proxy -> server.
-@abstract func set_flags(value: int) -> void
-
-
 # Operations (facility-only). Facility-only reads, plus proxy-authoritative knobs
-# (flags, target utilization) with reverse data flow proxy -> server. Implemented
+# (flags and the target_* setters) with reverse data flow proxy -> server. Implemented
 # on the server-side facility proxy against its operations component.
 
 ## Returns the capacity factor (environmental or historical limit) of operation
@@ -260,13 +255,37 @@ func get_flags() -> int:
 @abstract func get_operations_capacity_factors() -> PackedFloat64Array
 
 
-## Returns the AI-set target utilization of operation [param operation_type].
-@abstract func get_operations_target_utilization(operation_type: int) -> float
+## Returns the Tier-3 process utilization of operation [param operation_type] (the
+## server/controller's run-rate target; for display).
+@abstract func get_operations_process_utilization(operation_type: int) -> float
 
 
-## Returns the per-operation target utilizations array. Return is proxy array
+## Returns the per-operation process utilizations array. Return is proxy array
 ## reference; read only!
-@abstract func get_operations_target_utilizations() -> PackedFloat64Array
+@abstract func get_operations_process_utilizations() -> PackedFloat64Array
+
+
+## Returns the AI/player-set target margin floor of operation [param operation_type].
+@abstract func get_operations_target_margin(operation_type: int) -> float
+
+
+## Returns the AI/player-set target spending share of operation [param operation_type]
+## (NAN = not in effect).
+@abstract func get_operations_target_spending_share(operation_type: int) -> float
+
+
+## Returns the AI/player-set target run rate of operation [param operation_type]
+## (NAN = not in effect).
+@abstract func get_operations_target_run_rate(operation_type: int) -> float
+
+
+## Returns the build/decommission lever for [param module_type]; see
+## [method set_operations_module_buildout] for what the value means.
+@abstract func get_operations_module_buildout(module_type: int) -> float
+
+
+## Returns the capitalized book value (historical cost) of [param module_type].
+@abstract func get_operations_module_book_value(module_type: int) -> float
 
 
 ## Returns the full bidirectional flag value for operation [param operation_type].
@@ -276,18 +295,6 @@ func get_flags() -> int:
 ## Returns the per-operation flags array. Return is proxy array reference;
 ## read only!
 @abstract func get_operations_flags_array() -> PackedInt64Array
-
-
-## Sets the [code]FROM_PROXY_MASK[/code] bits of operations flags for
-## [param operation_type] to [param value]. Proxy-authoritative: this
-## change flows proxy -> server. No-op on an out-of-range index.
-@abstract func set_operations_flags(operation_type: int, value: int) -> void
-
-
-## Sets the target utilization for [param type]. Proxy-authoritative:
-## this change flows proxy -> server. No-op on an out-of-range index or invalid
-## value.
-@abstract func set_operations_target_utilization(type: int, value: float) -> void
 
 
 # Inventory (facility-only). Facility-only reads, plus proxy-authoritative knobs
@@ -338,8 +345,12 @@ func get_flags() -> int:
 @abstract func get_inventory_strategic_reserves() -> PackedFloat64Array
 
 
-## Returns the smoothed expected net rate for [param resource_type] (positive =
-## net production, negative = net consumption).
+## Returns the expected net flow rate for [param resource_type] (positive =
+## net production, negative = net consumption), projected from operating
+## intent — consumption at process utilization × capacity, production at
+## capacity factor × capacity (a time-horizon moving average of realized
+## utilization, which smooths the production side). Not degraded by transient
+## input shortages.
 @abstract func get_inventory_expected_rate(resource_type: int) -> float
 
 
@@ -396,18 +407,6 @@ func get_flags() -> int:
 @abstract func get_inventory_flags_array() -> PackedInt64Array
 
 
-## Sets the [code]FROM_PROXY_MASK[/code] bits of inventory flags for
-## [param resource_type] to [param value]. Proxy-authoritative: this
-## change flows proxy -> server. No-op on an out-of-range index.
-@abstract func set_inventory_flags(resource_type: int, value: int) -> void
-
-
-## Sets the strategic reserve for [param type]. Proxy-authoritative:
-## this change flows proxy -> server. No-op on an out-of-range index or invalid
-## value.
-@abstract func set_inventory_strategic_reserve(type: int, value: float) -> void
-
-
 # Population (facility-only). Facility-only reads. Implemented on the server-side
 # facility proxy against its population component.
 
@@ -438,3 +437,77 @@ func get_flags() -> int:
 ## Returns this facility's [MarketProxy], or null if not yet set.
 func get_market() -> MarketProxy:
 	return market
+
+
+# ******************************** AI METHODS *********************************
+
+## Sets [member gui_name] and marks the proxy dirty. Reverse-flow:
+## proxy -> server.
+@abstract func set_gui_name(new_gui_name: String) -> void
+
+
+## Sets the [code]FROM_PROXY_MASK[/code] bits of [member flags] to
+## [param value], preserving the server-authoritative
+## [code]FROM_SERVER_MASK[/code] bits. Proxy-authoritative: this change
+## flows proxy -> server.
+@abstract func set_flags(value: int) -> void
+
+
+## Sets the [code]FROM_PROXY_MASK[/code] bits of operations flags for
+## [param operation_type] to [param value]. Proxy-authoritative: this
+## change flows proxy -> server. No-op on an out-of-range index.
+@abstract func set_operations_flags(operation_type: int, value: int) -> void
+
+
+## Sets the target margin floor for operation [param type] (run while gross margin
+## >= value). Proxy-authoritative: this change flows proxy -> server. No-op on an
+## out-of-range index or NAN.
+@abstract func set_operations_target_margin(type: int, value: float) -> void
+
+
+## Sets the target spending share for operation [param type] (fraction of facility
+## income, or NAN = not in effect). Proxy-authoritative; flows proxy -> server.
+@abstract func set_operations_target_spending_share(type: int, value: float) -> void
+
+
+## Sets the target run rate for operation [param type] (absolute rate, or NAN = not
+## in effect). Proxy-authoritative; flows proxy -> server.
+@abstract func set_operations_target_run_rate(type: int, value: float) -> void
+
+
+## Overrides the server's autonomous build/decommission decision for
+## [param module_type]. Pass [code]NAN[/code] (the default) to leave the module
+## on auto — the facility allocates its build/decommission from demand and
+## economics. Pass a number to override
+## just this module; it is read relative to the other modules' effective levers,
+## rate-limited by the facility's construction yards:[br]
+## - NAN (default): auto — let the server decide this module.[br]
+## - 1.0: expand in proportion to the module's current size; an all-1.0 fill
+##   grows the whole facility while preserving its mix.[br]
+## - 0.0: leave this module alone — its share of construction goes to others.[br]
+## - 0.0 to 1.0 (exclusive): expand at reduced emphasis, letting the mix drift
+##   away from current.[br]
+## - >1.0: prioritize this module — grow faster than proportional. *This is the
+##   only way to bootstrap build a module that has 0.0 current quantity.*[br]
+## - <0.0 (<-1.0 to prioritize): decommission instead, reclaiming materials.
+@abstract func set_operations_module_buildout(module_type: int, value: float) -> void
+
+
+## Fills the entire per-module build/decommission override array with
+## [param value] — the array-wide form of [method set_operations_module_buildout].
+## Pass [code]NAN[/code] to return every module to auto (server-decided)
+## allocation, or e.g. 1.0 to override all modules to proportional growth.
+## Proxy-authoritative: this change flows proxy -> server.
+@abstract func set_operations_module_buildouts_fill(value: float) -> void
+
+
+## Sets the [code]FROM_PROXY_MASK[/code] bits of inventory flags for
+## [param resource_type] to [param value]. Proxy-authoritative: this
+## change flows proxy -> server. No-op on an out-of-range index.
+@abstract func set_inventory_flags(resource_type: int, value: int) -> void
+
+
+## Sets the strategic reserve for [param type]. Proxy-authoritative:
+## this change flows proxy -> server. No-op on an out-of-range index or invalid
+## value.
+@abstract func set_inventory_strategic_reserve(type: int, value: float) -> void

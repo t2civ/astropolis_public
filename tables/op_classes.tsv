@@ -6,4 +6,4 @@ CONVERSION
 MANUFACTURING
 BIOMES
 SERVICES
-# hard-coded in GUI only
+# hard-coded in GUI only (itab_operations.gd tab enums mirror this row order)

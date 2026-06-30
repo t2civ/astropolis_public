@@ -53,8 +53,6 @@ var _is_busy := false # don't update if getting data on ai thread (cheap mutex)
 
 func _ready() -> void:
 	
-	# FIXME: SelectionManager handling & UI refresh
-	
 	IVGlobal.ui_dirty.connect(_update_selection)
 	IVStateManager.about_to_free_procedural_nodes.connect(_clear_procedural)
 	IVStateManager.about_to_start_simulator.connect(_connect_selection_manager)
@@ -63,6 +61,7 @@ func _ready() -> void:
 
 
 func _clear_procedural() -> void:
+	_is_busy = false # a dispatch in flight at teardown loses its channel callback
 	if _selection_manager:
 		_selection_manager.selection_changed.disconnect(_update_selection)
 		_selection_manager = null
@@ -81,6 +80,8 @@ func _update_selection(_dummy := false) -> void:
 		return
 	if not _selection_manager.has_selection():
 		return
+	if !IVStateManager.is_threads_allowed():
+		return # don't dispatch into the non-draining proxy channel while threads stopped
 	_is_busy = true
 	var body_name := _selection_manager.get_body_name()
 	MainThreadGlobal.call_proxy_thread(_set_selections_on_proxy_thread.bind(body_name))
