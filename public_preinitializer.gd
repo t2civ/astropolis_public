@@ -48,7 +48,9 @@ func _init() -> void:
 	
 	# changed classes
 	IVCoreInitializer.program_refcounteds[&"InfoCloner"] = InfoCloner
-	IVCoreInitializer.program_refcounteds.erase(&"CompositionBuilder")
+	# Astropolis represents body composition with its own stratum system, so Core's
+	# IVComposition components are dead weight in memory and in save files.
+	IVCoreInitializer.program_refcounteds.erase(&"TableCompositionBuilder")
 	IVCoreInitializer.tree_program_nodes.append(&"AstropolisGUI")
 	
 	# translations
