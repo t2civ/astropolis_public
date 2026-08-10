@@ -43,7 +43,7 @@ extends Node
 
 # SI base units
 const SECOND := 1.0 # Astropolis note: Treat as hard-coded.
-const METER := 1e-3
+const METER := 1.0
 const KG := 1.0
 const AMPERE := 1.0
 const KELVIN := 1.0

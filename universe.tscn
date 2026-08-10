@@ -24,12 +24,16 @@
 [ext_resource type="PackedScene" uid="uid://bwhxsdlg1kpbh" path="res://addons/ivoyager_core/ui_widgets/exit_button.tscn" id="18_6hhg8"]
 [ext_resource type="PackedScene" uid="uid://c5afahau0g63j" path="res://addons/ivoyager_save/gui/save_dialog.tscn" id="19_2c5b4"]
 [ext_resource type="PackedScene" uid="uid://8vqmd07h6kmk" path="res://addons/ivoyager_save/gui/load_dialog.tscn" id="20_p6unk"]
+[ext_resource type="PackedScene" uid="uid://beaq440kp2utp" path="res://addons/ivoyager_core/tree/stars_visual.tscn" id="21_strvs"]
+[ext_resource type="PackedScene" uid="uid://bgmsnatpv0h5g" path="res://addons/ivoyager_core/ui/screenshot_dialog.tscn" id="22_scrsh"]
 
 [node name="Universe" type="Node3D" unique_id=209802986]
 process_mode = 3
 script = ExtResource("1_vasii")
 
 [node name="WorldEnvironment" parent="." unique_id=1354747850 instance=ExtResource("2_6hhg8")]
+
+[node name="StarsVisual" parent="." unique_id=680322112 instance=ExtResource("21_strvs")]
 
 [node name="TopUI" parent="." unique_id=537039887 instance=ExtResource("3_rcfea")]
 process_mode = 3
@@ -139,3 +143,5 @@ offset_bottom = 96.0
 [node name="HotkeysPopup" parent="TopUI" unique_id=123574415 instance=ExtResource("13_jcto4")]
 
 [node name="ConfirmationDialog" parent="TopUI" unique_id=1361761154 instance=ExtResource("14_8ho4p")]
+
+[node name="ScreenshotDialog" parent="TopUI" unique_id=1049336722 instance=ExtResource("22_scrsh")]
