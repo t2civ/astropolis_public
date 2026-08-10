@@ -1,10 +1,10 @@
-	spacecraft	station	use_pitch_yaw	lazy_model	sleep	file_prefix	en.wiki	symbol	show_in_nav_panel	parent	orbit	body_class	tidally_locked	axis_locked	rotation_period	right_ascension	declination	gravitational_parameter	mean_radius	mean_density	magnitude	albedo	shade_factor
-Type	BOOL	BOOL	BOOL	BOOL	BOOL	STRING_NAME	STRING	STRING	BOOL	STRING_NAME	TABLE_ROW	TABLE_ROW	BOOL	BOOL	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT
-Default	TRUE		TRUE	TRUE	TRUE			\u25CC				SPACECRAFT	TRUE	TRUE					0	0	0	0	0.5
+	spacecraft	station	use_pitch_yaw	lazy_model	sleep	file_prefix	en.wiki	show_in_nav_panel	parent	orbit	body_class	surface_class	tidally_locked	axis_locked	rotation_period	right_ascension	declination	gravitational_parameter	mean_radius	mean_density	magnitude	albedo	shade_factor
+Type	BOOL	BOOL	BOOL	BOOL	BOOL	STRING_NAME	STRING	BOOL	STRING_NAME	TABLE_ROW	TABLE_ROW	TABLE_ROW	BOOL	BOOL	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT
+Default	TRUE		TRUE	TRUE	TRUE						SPACECRAFT	FALLBACK	TRUE	TRUE					0	0	0	0	0.5
 Unit															d	deg	deg	km^3/s^2	m	g/cm^3			
-Prefix/SPACECRAFT_											ORBIT_	BODY_CLASS_											
-ISS		x				ISS	International_Space_Station		x	PLANET_EARTH	SPACECRAFT_INTERNATIONAL_SPACE_STATION							0.0000001	30				
-TIANGONG		x				Tiangong	Tiangong_space_station		x	PLANET_EARTH	SPACECRAFT_TIANGONG							0.0000001	20				
+Prefix/SPACECRAFT_										ORBIT_	BODY_CLASS_	SURFACE_CLASS_											
+ISS		x				ISS	International_Space_Station	x	PLANET_EARTH	SPACECRAFT_INTERNATIONAL_SPACE_STATION								0.0000001	30				
+TIANGONG		x				Tiangong	Tiangong_space_station	x	PLANET_EARTH	SPACECRAFT_TIANGONG								0.0000001	20				
 # Replaces the ivoyager_core spacecrafts.tsv (registered in public_preinitializer.gd).
 # Orbital elements now live in the Core orbits.tsv and this project's orbits_mod.tsv:
 #   ISS reuses the Core orbit row ORBIT_SPACECRAFT_INTERNATIONAL_SPACE_STATION;
