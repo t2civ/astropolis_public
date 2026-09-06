@@ -3,11 +3,14 @@ Type	BOOL	BOOL	BOOL	BOOL	BOOL	STRING_NAME	STRING	BOOL	STRING_NAME	TABLE_ROW	TABL
 Default	TRUE		TRUE	TRUE	TRUE						SPACECRAFT	FALLBACK	TRUE	TRUE					0	0	0	0	0.5
 Unit															d	deg	deg	km^3/s^2	m	g/cm^3			
 Prefix/SPACECRAFT_										ORBIT_	BODY_CLASS_	SURFACE_CLASS_											
-ISS		x				ISS	International_Space_Station	x	PLANET_EARTH	SPACECRAFT_INTERNATIONAL_SPACE_STATION								0.0000001	30				
+ISS		x				ISS	International_Space_Station	x	PLANET_EARTH	SPACECRAFT_INTERNATIONAL_SPACE_STATION								0.0000001	30			0.07	
 TIANGONG		x				Tiangong	Tiangong_space_station	x	PLANET_EARTH	SPACECRAFT_TIANGONG								0.0000001	20				
 # Replaces the ivoyager_core spacecrafts.tsv (registered in public_preinitializer.gd).
 # Orbital elements now live in the Core orbits.tsv and this project's orbits_mod.tsv:
 #   ISS reuses the Core orbit row ORBIT_SPACECRAFT_INTERNATIONAL_SPACE_STATION;
 #   TIANGONG uses ORBIT_SPACECRAFT_TIANGONG added by orbits_mod.tsv.
+# ISS albedo is Core's own value for the same shipped model, which physical-light
+# exposure meters on. TIANGONG has no model and draws the gray FALLBACK surface
+# class, which the metering default of 0.3 already fits.
 # https://www.heavens-above.com/
 # FIXME: epoch, Om & w (Tiangong elements approximate; see orbits_mod.tsv).

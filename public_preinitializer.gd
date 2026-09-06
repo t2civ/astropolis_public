@@ -12,8 +12,8 @@ extends RefCounted
 ## ivoyager plugins (core, save, units, assistant) up to Astropolis-specific
 ## defaults.
 ##
-## Configures: proxy thread verbosity, start time and sim time mode, program
-## class registration ([InfoCloner], [code]AstropolisGUI[/code]),
+## Configures: proxy thread verbosity, start time and sim time mode, physical
+## light, program class registration ([InfoCloner], [code]AstropolisGUI[/code]),
 ## translations, units formatting, save/load gates, and the
 ## [code]IVAssistantServer[/code] ready predicate.
 
@@ -45,6 +45,9 @@ func _init() -> void:
 	# to prevent update storm. Also check all `_process(delta: float)` for usage
 	# of `delta`, but I don't think there is any.
 	IVCoreSettings.manage_engine_time_scale = false
+	# Photometric sunlight with a compensating camera. The user can still turn it
+	# off at runtime via the "Physical Light" Options row this setting surfaces.
+	IVCoreSettings.enable_physical_light = true
 	
 	# changed classes
 	IVCoreInitializer.program_refcounteds[&"InfoCloner"] = InfoCloner
