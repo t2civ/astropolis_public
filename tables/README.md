@@ -212,6 +212,11 @@ Definitions that still apply:
 * ISS and Tiangong solar panels are modeled at 50% capacity factor (shaded half the time at 1 AU), consistent with NASA's 75-90 kW figure for the USOS segment.
 
 
+## globals.tsv
+
+Game-wide scalar values that belong to no entity: the biodiversity and information pools that facility fractions sample from, and the intrinsic population growth rate seeded onto every population. It is a one-row `@DB_ANONYMOUS` table, so code reads it as row 0. See `globals.schema.md`.
+
+
 ## major_strata.tsv
 
 Enumeration table for names of physical strata that may occur in any body.

@@ -28,9 +28,6 @@ Facilities are described in `facilities.descriptive.md`. Content of this table i
 
 "Information" here refers to the Shannon information content (or "Shannon entropy") represented in all computer systems. This is a measure of unique knowledge and unpredictable state, not physical hardware bits. "Biodiversity" is measured in effective species of macroscopic organisms (equal to the number of species if all were equally represented), which is the exponential of the Shannon index. These concepts are mathematically related and modeled internally as Shannon entropy with shared content (mutual information) among facilities.
 
-Derivations, sources and the 2015 / 2025 / 2035 values are kept in the development repository's `EARTH_CALIBRATION.md`. The simulation uses these global values for 2015, its start year:
-
-- information — 1.8e22 bits (Shannon index 51.24)
-- biodiversity — 32,860 effective species (Shannon index 10.40)
+The global pools these fractions are taken from are `information_pool` and `biodiversity_pool` in `globals.tsv`. Derivations, sources and the 2015 / 2025 / 2035 values are kept in the development repository's `EARTH_CALIBRATION.md`.
 
 Table parameters `information_fraction` and `biodiversity_fraction` are fractions of the respective information (in bits) or biodiversity (in effective species) represented in the "facility" relative to global values (e.g., in all USA territory relative to all Earth). These values sum to >1 due to shared content. 
