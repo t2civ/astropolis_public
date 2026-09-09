@@ -1,6 +1,6 @@
 # Schema for facilities_resources.tsv
 
-This Entity x Entity table defines resource quantities at facilities at simulation start in 2025. Facilities are described in `facilities.descriptive.md`. Resources are described in `resources.descriptive.md`.
+This Entity x Entity table defines resource quantities at facilities at simulation start in 2015. Facilities are described in `facilities.descriptive.md`. Resources are described in `resources.descriptive.md`.
 
 
 ## Table Data

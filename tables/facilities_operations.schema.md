@@ -1,6 +1,6 @@
 # Schema for facilities_operations.tsv
 
-This Entity x Entity table defines the state of operations at facilities at simulation start in 2025. Facilities are described in `facilities.descriptive.md`. Operations are described in `operations.descriptive.md`.
+This Entity x Entity table defines the state of operations at facilities at simulation start in 2015. Facilities are described in `facilities.descriptive.md`. Operations are described in `operations.descriptive.md`.
 
 
 ## Table Data
