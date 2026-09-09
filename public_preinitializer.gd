@@ -38,7 +38,7 @@ func _init() -> void:
 	ProxyBus.verbose = PROXY_VERBOSE
 	ProxyBus.verbose2 = PROXY_VERBOSE2
 	IVCoreSettings.use_threads = USE_THREADS
-	IVCoreSettings.start_time_date_clock = [2025, 1, 1, 12, 0, 0]
+	IVCoreSettings.start_time_date_clock = [2015, 1, 1, 12, 0, 0]
 	IVCoreSettings.start_time_is_terrestrial_time = false
 	# Keep Engine.time_scale at 1.0 (core default would slave it to game speed).
 	# We might change this in the future for graphics. If so, fix all GUI timers

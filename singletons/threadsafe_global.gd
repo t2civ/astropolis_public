@@ -14,8 +14,8 @@ extends Node
 var resource_trade_unit_multipliers: PackedFloat64Array
 
 # settings
-var total_biodiversity_pool := 25336.0 * IVUnits.SPP  ## Global biodiversity pool (species count units).
-var total_information_pool := 6.4e22 * IVUnits.BIT  ## Global information pool (bit units).
+var total_biodiversity_pool := 32860.0 * IVUnits.SPP  ## Global biodiversity pool (species count units).
+var total_information_pool := 1.8e22 * IVUnits.BIT  ## Global information pool (bit units).
 
 # game
 var local_player_name := &"PLAYER_NASA"  ## Name of the local player at game start.
