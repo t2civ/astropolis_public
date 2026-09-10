@@ -37,15 +37,17 @@ enum UniqueModules {
 
 
 ## Identifies an operation with unique internal (hard-coded) mechanics. Each
-## member must exist exactly once in operations.tsv. These are the renewable-
-## power operations, whose run rate is set from a computed environmental
-## capacity factor (by body and site) rather than a player or market lever.
+## member must exist exactly once in operations.tsv. Their run rate is set by
+## the simulation rather than by a player or market lever: the renewable-power
+## operations from a computed environmental capacity factor (by body and site),
+## and URBAN_OPERATIONS from the population its module houses.
 enum UniqueOperations {
 	SOLAR_POWER,
 	WIND_POWER,
 	HYDROPOWER,
 	GEOTHERMAL_POWER,
 	TIDAL_POWER,
+	URBAN_OPERATIONS,
 }
 
 

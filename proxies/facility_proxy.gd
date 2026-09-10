@@ -462,6 +462,17 @@ func get_flags() -> int:
 @abstract func get_population_migration_pressure(population_type: int) -> float
 
 
+## Returns the smoothed share of life-support needs met for the population housed in
+## [param carrying_capacity_group] (1.0 = fully met); a shortfall shrinks the group's
+## effective carrying capacity. Safe default on an out-of-range index.
+@abstract func get_population_life_support_satisfaction(carrying_capacity_group: int) -> float
+
+
+## Returns the smoothed share of the rest of that population's consumption met (1.0 =
+## fully met); recorded only. Safe default on an out-of-range index.
+@abstract func get_population_consumption_satisfaction(carrying_capacity_group: int) -> float
+
+
 ## Returns this facility's [MarketProxy], or null if not yet set.
 func get_market() -> MarketProxy:
 	return market
