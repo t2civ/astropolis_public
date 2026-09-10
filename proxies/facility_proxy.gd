@@ -73,6 +73,9 @@ enum InventoryFlags {
 	CAN_HAVE_INPUT = 1 << 6,
 	## A can-have operation at this facility produces or extracts this resource.
 	CAN_HAVE_OUTPUT = 1 << 7,
+	## Surplus of this resource is being disposed of here to relieve its storage
+	## class; operations here value it at zero, as both input and output.
+	DUMPING = 1 << 8,
 	## Mask of all server-published signal bits.
 	FROM_SERVER_MASK = (1 << 32) - 1,
 
@@ -379,6 +382,17 @@ func get_flags() -> int:
 @abstract func get_inventory_rates() -> PackedFloat64Array
 
 
+## Returns the rate at which surplus [param resource_type] was disposed of over
+## the last interval to relieve a full storage class (>= 0.0). Disposal is not
+## counted in [method get_inventory_rate]. See [constant InventoryFlags.DUMPING].
+@abstract func get_inventory_disposal_rate(resource_type: int) -> float
+
+
+## Returns the per-resource disposal rates array. Return is proxy array
+## reference; read only!
+@abstract func get_inventory_disposal_rates() -> PackedFloat64Array
+
+
 ## Returns the storage capacity of storage class [param storage_type].
 @abstract func get_inventory_storage(storage_type: int) -> float
 
@@ -391,6 +405,19 @@ func get_flags() -> int:
 ## Returns the amount of storage class [param storage_type] currently in use
 ## (local stocks plus remote stores).
 @abstract func get_inventory_storage_used(storage_type: int) -> float
+
+
+## Returns what a unit of space in storage class [param storage_type] was worth
+## at the last interval, in price per sim unit of stock: 0.0 when the class
+## needed no disposal (or only worthless surplus was disposed of), the value of
+## the last resource disposed of otherwise, and INF when the class stayed full
+## with nothing left it could dispose of.
+@abstract func get_inventory_storage_value(storage_type: int) -> float
+
+
+## Returns the per-storage-class space values array. Return is proxy array
+## reference; read only!
+@abstract func get_inventory_storage_values() -> PackedFloat64Array
 
 
 ## Returns the quantity of [param resource_type] this facility owns stored

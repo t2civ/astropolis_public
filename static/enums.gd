@@ -93,6 +93,13 @@ enum TradeClasses {
 	TRADE_CLASS_CYBER, ## Tradable in the universal cyber market.
 }
 
+## Body stratum that receives a resource's disposed-of surplus (the
+## [code]disposal_sink[/code] column of [code]resources.tsv[/code]).
+enum DisposalSinks {
+	DISPOSAL_SINK_ATMOSPHERE,
+	DISPOSAL_SINK_SURFACE,
+}
+
 ## Top-level kind of a [PlayerProxy] (state polity, space agency, or
 ## private company).
 enum PlayerClasses {
