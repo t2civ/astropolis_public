@@ -79,7 +79,8 @@ enum InventoryFlags {
 	## Mask of all server-published signal bits.
 	FROM_SERVER_MASK = (1 << 32) - 1,
 
-	## Operations must not draw this resource below its strategic reserve.
+	## Neither operations nor disposal of storage surplus may draw this resource
+	## below its strategic reserve.
 	PROTECT_STRATEGIC_RESERVE = 1 << 32,
 	## No operation may consume this resource (e.g., embargo, phase-out).
 	PROHIBIT_CONSUMPTION = 1 << 33,

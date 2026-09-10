@@ -228,7 +228,8 @@ static var facility_resource_strategy_defs: Array[Dictionary] = [
 	{&"prohibit_production": true}, # PHASE_OUT
 	# MARKET_MAKE deliberately omits protect_reserve: it is the one identity a
 	# facility applies to every resource it touches, inputs included, so a hard
-	# consumption floor there starves the ops that would refill the reserve.
+	# consumption floor there starves the ops that would refill the reserve, and a
+	# reserve scaled on throughput can outgrow the storage class disposal must relieve.
 	{&"strategic_reserve_factor": 1.0, &"mm_base_lot": 4}, # MARKET_MAKE
 ]
 
