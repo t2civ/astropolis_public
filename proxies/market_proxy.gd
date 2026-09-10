@@ -40,10 +40,11 @@ extends Proxy
 ## Prices and order quantities are integer "ticks": price in integer USD per trade
 ## unit (assumes [code]IVUnits.USD == 1.0[/code]), quantity in integer "trade units"
 ## ([code]trade_unit[/code] in [code]resources.tsv[/code]) — not the "sim units"
-## used elsewhere ([IVUnits]). A [code]get_*_price[/code] getter returns sim units;
-## "unit" in the name ([method get_unit_price]) returns the market-internal
-## trade-unit value. Volume is float sim units. A stored 0 price means no current
-## price.[br][br]
+## used elsewhere ([IVUnits]). Quantities need 64 bits — a quarter's flow of a large
+## resource passes 2^31 trade units — so hold them in [PackedInt64Array], never
+## [PackedInt32Array]. A [code]get_*_price[/code] getter returns sim units; "unit" in
+## the name ([method get_unit_price]) returns the market-internal trade-unit value.
+## Volume is float sim units. A stored 0 price means no current price.[br][br]
 ##
 ## The read side: AI and GUI read prices, volume, and [member instruments] here, and
 ## place or change orders via [method TraderProxy.set_ask] /
@@ -74,7 +75,7 @@ var cyber_market: MarketProxy ## The one system-wide cyber market (self if this 
 ## read-only here. WARNING: resizable container maintained on the proxy thread —
 ## access on the proxy thread only (directly or via the
 ## [code]get_instrument_*[/code] getters).
-var instruments: Dictionary[PackedInt32Array, PackedInt32Array]
+var instruments: Dictionary[PackedInt32Array, PackedInt64Array]
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
 

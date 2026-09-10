@@ -12,8 +12,8 @@ extends RefCounted
 ## ivoyager plugins (core, save, units, assistant) up to Astropolis-specific
 ## defaults.
 ##
-## Configures: proxy thread verbosity, start time and sim time mode, program
-## class registration ([InfoCloner], [code]AstropolisGUI[/code]),
+## Configures: proxy thread verbosity, start time and sim time mode, physical
+## light, program class registration ([InfoCloner], [code]AstropolisGUI[/code]),
 ## translations, units formatting, save/load gates, and the
 ## [code]IVAssistantServer[/code] ready predicate.
 
@@ -38,13 +38,16 @@ func _init() -> void:
 	ProxyBus.verbose = PROXY_VERBOSE
 	ProxyBus.verbose2 = PROXY_VERBOSE2
 	IVCoreSettings.use_threads = USE_THREADS
-	IVCoreSettings.start_time_date_clock = [2025, 1, 1, 12, 0, 0]
+	IVCoreSettings.start_time_date_clock = [2015, 1, 1, 12, 0, 0]
 	IVCoreSettings.start_time_is_terrestrial_time = false
 	# Keep Engine.time_scale at 1.0 (core default would slave it to game speed).
 	# We might change this in the future for graphics. If so, fix all GUI timers
 	# to prevent update storm. Also check all `_process(delta: float)` for usage
 	# of `delta`, but I don't think there is any.
 	IVCoreSettings.manage_engine_time_scale = false
+	# Photometric sunlight with a compensating camera. The user can still turn it
+	# off at runtime via the "Physical Light" Options row this setting surfaces.
+	IVCoreSettings.enable_physical_light = true
 	
 	# changed classes
 	IVCoreInitializer.program_refcounteds[&"InfoCloner"] = InfoCloner
@@ -105,6 +108,7 @@ func _on_table_initializer_instantiated(_table_initializer: IVTableInitializer) 
 	
 	tables.carrying_capacity_groups = path_format % "carrying_capacity_groups"
 	tables.facilities = path_format % "facilities"
+	tables.globals = path_format % "globals"
 	tables.facilities_modules = path_format % "facilities_modules"
 	tables.facilities_operations = path_format % "facilities_operations"
 	tables.modules = path_format % "modules"

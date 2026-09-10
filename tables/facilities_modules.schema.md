@@ -1,6 +1,6 @@
 # Schema for facilities_modules.tsv
 
-This Entity x Entity table defines module quantities and configurations at facilities at simulation start in 2025. Facilities are described in `facilities.descriptive.md`. Modules are described in `modules.descriptive.md`.
+This Entity x Entity table defines module quantities and configurations at facilities at simulation start in 2015. Facilities are described in `facilities.descriptive.md`. Modules are described in `modules.descriptive.md`.
 
 
 ## Table Data

@@ -222,11 +222,11 @@ var resource_strategies: PackedInt32Array
 ## ordinal_quarter, body_id] for a transport trader (which trades a resource at many
 ## bodies). Values are [unit_quantity, unit_price] in trade units; unique per key. Mirrors
 ## the market's resting ask, refreshed via position notifications.
-var _asks: Dictionary[PackedInt32Array, PackedInt32Array] = {}
+var _asks: Dictionary[PackedInt32Array, PackedInt64Array] = {}
 
 ## Memory of open bids, keyed like [member _asks] with values [unit_quantity, unit_price]
 ## in trade units.
-var _bids: Dictionary[PackedInt32Array, PackedInt32Array] = {}
+var _bids: Dictionary[PackedInt32Array, PackedInt64Array] = {}
 
 # *****************************************************************************
 
@@ -513,7 +513,7 @@ func _set_ask(instrument: PackedInt32Array, unit_quantity: int,
 	if _key_width == 3: # transport: append the delivery body (see _key_width)
 		mem_key.append(_market_body_id(delivery_market_id))
 	if unit_quantity:
-		var ask: PackedInt32Array
+		var ask: PackedInt64Array
 		if _asks.has(mem_key):
 			ask = _asks[mem_key]
 		else:
@@ -540,7 +540,7 @@ func _set_bid(instrument: PackedInt32Array, unit_quantity: int,
 	if _key_width == 3: # transport: append the delivery body (see _key_width)
 		mem_key.append(_market_body_id(delivery_market_id))
 	if unit_quantity:
-		var bid: PackedInt32Array
+		var bid: PackedInt64Array
 		if _bids.has(mem_key):
 			bid = _bids[mem_key]
 		else:
@@ -737,7 +737,7 @@ func _on_facility_resource_strategy_changed(resource_type: int, strategy_id: int
 # (_positions_by_instrument) is a facility convenience; a transport reads proxy.positions
 # directly, so it is maintained only when _facility is set.
 func _on_positions_changed(position_key: PackedInt32Array, value: PackedFloat64Array,
-		ask: PackedInt32Array, bid: PackedInt32Array) -> void:
+		ask: PackedInt64Array, bid: PackedInt64Array) -> void:
 	var order_key := position_key.slice(0, _key_width)
 	if _facility:
 		if value:

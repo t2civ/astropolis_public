@@ -1,0 +1,5 @@
+	biodiversity_pool	information_pool	population_intrinsic_growth
+Type	FLOAT	FLOAT	FLOAT
+Unit	spp	bit	1/y
+	32860	1.8e22	0.024
+@DB_ANONYMOUS
