@@ -13,6 +13,6 @@ Resources are described in `resources.descriptive.md`.
 - storage_class — One of storage classes defined in storage_classes.tsv. Describes the physical storage and transport infrastructure required for the resource. Empty for service resources.
 - trade_unit — Resource unit for trade and price display.
 - start_price — INT in USD per `trade_unit` (the row's `trade_unit`). Imported and used at game start to seed market prices, at the 2015 vintage the simulation starts from. Being an integer, small values round; the float sources and the 2015 / 2025 / 2035 price targets are kept in the development repository's `EARTH_CALIBRATION.md`.
-- is_extraction — TRUE ("x") for extractable resources.
+- is_extraction — TRUE ("x") for resources that can exist in a body stratum: extractable deposits, and wastes that facilities deposit on a surface.
 - is_volatile — TRUE ("x") for volatile resources.
 - disposal_sink — `ATMOSPHERE` or `SURFACE` (`Enums.DisposalSinks`): the body stratum that receives this resource when a facility disposes of surplus from a full storage class. Required on every `is_extraction` resource that has a `storage_class`, and blank on all others (only extractable resources can live in a stratum). Choose by phase at Earth ambient: gases to `ATMOSPHERE`; water, liquids and solids to `SURFACE`. A facility without that stratum (e.g. a spacecraft) disposes of the resource out of the simulation.
