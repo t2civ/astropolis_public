@@ -104,6 +104,9 @@ enum OperationsFlags {
 	## The operation was throttled below its intended rate last interval
 	## because an output's storage was nearly full.
 	WAS_STORAGE_LIMITED = 1 << 3,
+	## The operation made up a short input from others in its substitution group
+	## last interval.
+	WAS_SUBSTITUTING = 1 << 4,
 	## Mask of all server-published signal bits.
 	FROM_SERVER_MASK = (1 << 32) - 1,
 
