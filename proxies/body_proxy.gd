@@ -37,7 +37,7 @@ extends Proxy
 ## and [param bid] are the trader's outstanding ask and bid [unit_quantity, unit_price]
 ## in trade units for this instrument; an empty array is a cleared ask or bid.
 signal positions_changed(position_key: PackedInt32Array, value: PackedFloat64Array,
-		ask: PackedInt32Array, bid: PackedInt32Array)
+		ask: PackedInt64Array, bid: PackedInt64Array)
 
 
 var body_id := -1  ## Index into [member ProxyBus.body_proxies].
