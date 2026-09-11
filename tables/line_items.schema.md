@@ -7,6 +7,12 @@ are derived from these leaves in code
 (hard-coded `SUBTOTAL_*` constants in the financials components), not stored as rows. See
 `FINANCIAL_MODEL.md` for the model.
 
+A leaf holds one direction and never goes negative, except the `CASH` and `TRADE_RECEIVABLES`
+balances. An event that can go either way books its size to one of a pair by its sign:
+`TRADING_GAINS` / `TRADING_LOSSES`, `DISPOSAL_GAINS` / `DISPOSAL_LOSSES`,
+`EXCHANGE_CLEARING_GAINS` / `EXCHANGE_TAKE_COGS`, and on the cash-flow statement
+`PL_SETTLEMENTS` / `PL_PAYMENTS` and `EXCHANGE_TAKE_RECEIVED` / `EXCHANGE_TAKE_PAID`.
+
 ## Fields
 
 - name (1st column) — Item name, prefixed `LINE_ITEM_`. Line items are referenced by
