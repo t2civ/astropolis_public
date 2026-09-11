@@ -11,11 +11,12 @@ extends MarginContainer
 ## "Budget" tab subpanel for [InfoPanel]. Shows the selected entity's chart of
 ## accounts as one subtab per financial statement (income, cash flow, balance).
 ##
-## The income statement shows revenue and cost-of-goods groups (each expandable
-## to its per-activity leaves) plus a derived gross-profit line. The cash-flow
-## statement shows inflow and outflow groups (by per-leaf direction) plus a
-## derived net-cash-flow line. The balance statement lights up in a later
-## development step.
+## The income statement is a waterfall: revenue and cost-of-goods groups, a
+## derived gross-profit line, an operating-expense group, a derived
+## operating-income line, a tax group, and a derived net-income line; each
+## group expands to its leaves. The cash-flow statement shows inflow and
+## outflow groups (by per-leaf direction) plus a derived net-cash-flow line.
+## The balance statement shows asset, liability, and equity groups.
 ##
 ## Each statement is a grid of recent quarters, newest at right. A header row
 ## labels the quarters ("2025Q1", ...) and its leftmost cell names the USD
@@ -56,8 +57,8 @@ var label_width := 110.0  ## Min width of the leftmost name/label region.
 var column_width := 58.0  ## Min width of each quarter column.
 var n_visible_quarters := 6  ## Number of quarter columns shown at once.
 var arrow_width := 24.0  ## Min width of the "<" / ">" shift buttons and matching row gutters.
-var foldable_indent := 20.0  ## Foldable title left-lead (fold-icon + style-box margin); aligns header/footer names with group titles.
-var scroll_correction := 7.0  ## Trailing spacer on the out-of-scroll header/footer; offsets their columns to match the in-scroll content past the vertical scrollbar.
+var foldable_indent := 20.0  ## Foldable title left-lead (fold-icon + style-box margin); aligns the header's unit label with group titles.
+var scroll_correction := 7.0  ## Trailing spacer on the out-of-scroll header; offsets its columns to match the in-scroll content past the vertical scrollbar.
 
 # table indexing
 var _db_tables := IVTableData.db_tables
@@ -104,7 +105,7 @@ var _no_budget_label: Label
 var _content_vboxes: Array[VBoxContainer] = []
 var _scrolls: Array[ScrollContainer] = []
 var _headers: Array[BudgetHeaderRow] = []
-var _footers: Array[BudgetGroup] = []  # gross-profit line, a leafless foldable
+var _footers: Array[BudgetGroup] = []  # net-income / net-cash-flow line, a leafless foldable
 var _empty_labels: Array[Label] = []
 
 @warning_ignore("unsafe_property_access")
@@ -197,7 +198,7 @@ func _build_ui() -> void:
 		content.size_flags_vertical = SIZE_EXPAND_FILL
 		scroll.add_child(content)
 
-		# Groups and the gross-profit footer live inside the scroll — the whole
+		# Groups and the bottom-line footer live inside the scroll — the whole
 		# statement is one scrollable unit; only the header stays pinned outside.
 		# The footer is itself a leafless foldable so it shares the groups' styling.
 		var groups_vbox := VBoxContainer.new()
@@ -337,10 +338,11 @@ func _collect_group(proxy: Proxy, accountings: Dictionary[int, float], subtotal:
 func _collect_summed_group(proxy: Proxy, accountings: Dictionary[int, float], statement: int,
 		classifier: PackedInt32Array, class_value: int, title: String) -> Array:
 	# Like _collect_group, but the group series is summed from its leaf series
-	# rather than read from a tracked subtotal. Used for cash-flow direction groups
-	# (classifier _item_subtotals, where only the net is a tracked subtotal) and
-	# balance-sheet groups (classifier _item_balance_classes). Leaves in table order,
-	# matching this statement and classifier value, with any nonzero quarter.
+	# rather than read from a tracked subtotal. Used for the operating-expense group
+	# (classifier _item_subtotals), cash-flow direction groups (classifier
+	# _item_subtotals, where only the net is a tracked subtotal), and balance-sheet
+	# groups (classifier _item_balance_classes). Leaves in table order, matching this
+	# statement and classifier value, with any nonzero quarter.
 	var rows := []
 	var group_series := PackedFloat64Array()
 	for item in _n_line_items:
@@ -588,9 +590,9 @@ func _format_quarter(ordinal_qtr: int) -> String:
 # Columns are right-anchored. Foldable groups are full width, with the name on
 # the native title and only the value cells in a right-aligned title control, so
 # column position is independent of the title text. Leaf rows (in the foldable
-# body) and the title cells share the in-scroll right edge. The header and footer
-# sit outside the scroll, so a trailing scroll_correction spacer pushes their
-# columns in to match the content past the vertical scrollbar. (Pattern mirrors
+# body) and the title cells share the in-scroll right edge. The header sits
+# outside the scroll, so a trailing scroll_correction spacer pushes its columns
+# in to match the content past the vertical scrollbar. (Pattern mirrors
 # itab_operations.gd.)
 
 class BudgetHeaderRow extends HBoxContainer:
@@ -681,7 +683,7 @@ class BudgetHeaderRow extends HBoxContainer:
 
 class BudgetGroup extends FoldableContainer:
 	# Foldable subtotal group: the native title shows the group name; a right-aligned
-	# title control shows the per-quarter subtotal cells; it expands to its per-activity
+	# title control shows the per-quarter subtotal cells; it expands to its
 	# leaf rows. Full width, so the right-aligned cells sit at the content's right edge
 	# regardless of title length — keeping columns aligned across groups. A group with
 	# no leaves gets a blank fold-icon substitute (preserving the title's left lead) and
@@ -790,10 +792,9 @@ class BudgetGroup extends FoldableContainer:
 
 
 class BudgetRow extends HBoxContainer:
-	# One account line (leaf or footer). The name fills the left; the gutter-flanked
+	# One leaf account line. The name fills the left; the gutter-flanked
 	# value cells hug the right so they line up with the foldable's right-aligned
-	# subtotal cells. A leaf passes trailing == 0; the out-of-scroll footer passes the
-	# scroll correction so its columns clear the scrollbar like the header.
+	# subtotal cells. Leaf rows sit inside the scroll and pass trailing == 0.
 
 	var _indent_spacer := Control.new()
 	var _name_label := Label.new()
