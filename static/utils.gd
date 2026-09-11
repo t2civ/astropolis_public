@@ -17,9 +17,9 @@ extends Object
 
 
 ## Maps a power-of-two ([code]1 << n[/code]) to its index [code]n[/code], for
-## [code]n[/code] in 0..62. Used by sync helpers to recover the bit index of
-## the least significant set bit. Index 63 isn't available because the sign
-## bit ([code]1 << 63[/code]) can't be left-shifted further.
+## [code]n[/code] in 0..62: the lookup behind [method get_lsb_index]. Index 63
+## isn't available because the sign bit ([code]1 << 63[/code]) can't be
+## left-shifted further.
 const BIT_INDEXES: Dictionary[int, int] = { # indexed by power-of-2s from 2^0 to 2^62
 	1 << 0 : 0, 1 << 1 : 1, 1 << 2 : 2, 1 << 3 : 3, 1 << 4 : 4,
 	1 << 5 : 5, 1 << 6 : 6, 1 << 7 : 7, 1 << 8 : 8, 1 << 9 : 9,
