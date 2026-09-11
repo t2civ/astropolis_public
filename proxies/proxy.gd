@@ -78,8 +78,7 @@ var proxy_id := -1  ## Index into [member ProxyBus.proxies].
 var entity_type := -1  ## Entity type tag; set by the server-side proxy.
 var name := &""  ## Unique, immutable identifier (e.g. [code]&"PLAYER_NASA"[/code]).
 var gui_name := ""  ## Display name; mutable. Empty player gui_name hides from GUI.
-## Quarterly clock as [code]year * 4 + (quarter - 1)[/code]. Never set for a
-## [BodyProxy] without a facility.
+## Quarterly clock as [code]year * 4 + (quarter - 1)[/code]; -1 until the entity's first tick.
 var ordinal_qtr := -1
 ## True once this proxy's cross-proxy refs are wired and one-time setup has run;
 ## the server ticks AI only after. Proxy-thread state.
