@@ -751,7 +751,7 @@ class BudgetGroup extends FoldableContainer:
 		var n_children := _rows_vbox.get_child_count()
 		while n_children < n_rows:
 			_rows_vbox.add_child(BudgetRow.new(_label_width, _column_width, _arrow_width,
-					_n_columns, SUBGROUP_INDENT, 0.0))
+					_n_columns, SUBGROUP_INDENT))
 			n_children += 1
 		var i := 0
 		while i < n_rows:
@@ -792,30 +792,26 @@ class BudgetGroup extends FoldableContainer:
 
 
 class BudgetRow extends HBoxContainer:
-	# One leaf account line. The name fills the left; the gutter-flanked
-	# value cells hug the right so they line up with the foldable's right-aligned
-	# subtotal cells. Leaf rows sit inside the scroll and pass trailing == 0.
+	# One leaf account line. The name fills the left; the gutter-flanked value cells
+	# hug the right so they line up with the foldable's right-aligned subtotal cells.
 
 	var _indent_spacer := Control.new()
 	var _name_label := Label.new()
 	var _left_gutter := Control.new()
 	var _right_gutter := Control.new()
-	var _trailing_spacer := Control.new()
 	var _cells: Array[Label] = []
 	var _label_width: float
 	var _column_width: float
 	var _arrow_width: float
 	var _indent: float
-	var _trailing: float
 
 
 	func _init(label_width: float, column_width: float, arrow_width: float, n_columns: int,
-			indent: float, trailing: float) -> void:
+			indent: float) -> void:
 		_label_width = label_width
 		_column_width = column_width
 		_arrow_width = arrow_width
 		_indent = indent
-		_trailing = trailing
 		size_flags_horizontal = SIZE_FILL
 		add_theme_constant_override(&"separation", 0)  # explicit gutters/widths only
 		add_child(_indent_spacer)
@@ -831,7 +827,6 @@ class BudgetRow extends HBoxContainer:
 			add_child(cell)
 			_cells[c] = cell
 		add_child(_right_gutter)
-		add_child(_trailing_spacer)
 		var gui_size: int = IVSettingsManager.get_setting(&"gui_size")
 		_resize(gui_size)
 		IVSettingsManager.changed.connect(_settings_listener)
@@ -849,7 +844,6 @@ class BudgetRow extends HBoxContainer:
 		_name_label.custom_minimum_size.x = (_label_width - _indent) * multiplier
 		_left_gutter.custom_minimum_size.x = _arrow_width * multiplier
 		_right_gutter.custom_minimum_size.x = _arrow_width * multiplier
-		_trailing_spacer.custom_minimum_size.x = _trailing * multiplier
 		var cell_width := _column_width * multiplier
 		for cell in _cells:
 			cell.custom_minimum_size.x = cell_width
