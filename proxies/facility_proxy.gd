@@ -397,6 +397,18 @@ func get_flags() -> int:
 @abstract func get_inventory_disposal_rates() -> PackedFloat64Array
 
 
+## Returns the most this facility's traders will pay per unit of [param resource_type],
+## in [method MarketProxy.get_price] units: what the operations consuming it could pay
+## and still clear their margin floors, set by the marginal one (see TRADE_MODEL.md,
+## "Price discovery"). INF when nothing here with revenue consumes it.
+@abstract func get_inventory_reservation_price(resource_type: int) -> float
+
+
+## Returns the per-resource reservation prices array. Return is proxy array
+## reference; read only!
+@abstract func get_inventory_reservation_prices() -> PackedFloat64Array
+
+
 ## Returns the storage capacity of storage class [param storage_type].
 @abstract func get_inventory_storage(storage_type: int) -> float
 

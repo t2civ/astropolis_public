@@ -350,7 +350,8 @@ func process_ai_interval(_delta: float) -> void:
 ## only on material divergence. Open positions count against the want quantities: a
 ## filled order is committed in/outflow until the short side physically settles it
 ## (up to ~a trader interval), so quoting without netting would re-order
-## already-filled demand every interval.
+## already-filled demand every interval. A bid never exceeds what the operations
+## consuming the resource can pay (see [method _cap_bid_price]).
 func _process_facility_support(resource_type: int, market: MarketProxy,
 		instrument: PackedInt32Array, def: Dictionary) -> void:
 	var sell: bool = def.get(&"sell_above_reserve", false)
@@ -379,7 +380,11 @@ func _process_facility_support(resource_type: int, market: MarketProxy,
 	if buy: # open longs are committed inbound goods, like in-transit stock
 		bid_units = (int((target - stock - _facility.get_inventory_in_transit(resource_type))
 				/ multiplier) - _net_long_units[resource_type])
-	var bid_price := maxi(1, ceili(reference_price * (1.0 + spread)))
+	var bid_price := _cap_bid_price(resource_type,
+			maxi(1, ceili(reference_price * (1.0 + spread))))
+	if bid_price < 1: # the facility's operations can pay nothing for it
+		bid_units = 0
+		bid_price = 1 # placeholder: the proxy rejects price <= 0 even for a cancel
 	_maintain_bid(instrument, bid_units, bid_price, min_lot, price_tol, qty_tol)
 
 
@@ -430,7 +435,8 @@ func _process_market_making(resource_type: int, market: MarketProxy,
 ## remote facility planning years ahead quotes proportionally farther out. Runs
 ## for every resource (even front-only defs) and maintains out to the farthest
 ## remembered forward order past the def horizon, so a strategy change, def
-## shrink, or lost reference price want-0-clears stale orders.
+## shrink, or lost reference price want-0-clears stale orders. Bids are capped like
+## the front's (see [method _cap_bid_price]).
 func _process_forward_flow(resource_type: int, market: MarketProxy, def: Dictionary) -> void:
 	var def_forward_quarters: int = def.get(&"forward_quarters", 0)
 	var forward_quarters := 0
@@ -466,7 +472,11 @@ func _process_forward_flow(resource_type: int, market: MarketProxy, def: Diction
 	# same resource cross. Placeholder 1 on cancel-only paths — the proxy rejects
 	# price <= 0 even for a cancel.
 	var ask_price := maxi(1, floori(reference_price * (1.0 - spread)))
-	var bid_price := maxi(1, ceili(reference_price * (1.0 + spread)))
+	var bid_price := _cap_bid_price(resource_type,
+			maxi(1, ceili(reference_price * (1.0 + spread))))
+	if bid_price < 1: # the facility's operations can pay nothing for it
+		want_bid = false
+		bid_price = 1
 	var current_qtr := proxy.ordinal_qtr
 	for k in range(1, n_quarters + 1):
 		var ordinal_quarter := current_qtr + k
@@ -591,6 +601,17 @@ func _maintain_bid(instrument: PackedInt32Array,
 	var have := _bids[instrument]
 	if _needs_requote(have[0], have[1], want_quantity, want_price, price_tol, qty_tol):
 		_set_bid(instrument, want_quantity, want_price, market_id)
+
+
+## Returns [param bid_price] (trade units) capped at the facility's reservation price
+## for [param resource_type] (see [method FacilityProxy.get_inventory_reservation_price]).
+## Returns 0 when its operations can pay nothing for the resource.
+func _cap_bid_price(resource_type: int, bid_price: int) -> int:
+	var cap := (_facility.get_inventory_reservation_price(resource_type)
+			* _trade_unit_multipliers[resource_type])
+	if cap >= bid_price: # INF too: nothing here with revenue consumes it
+		return bid_price
+	return floori(cap)
 
 
 # Resolves which market an order for [param resource_type] routes to: the cyber market
