@@ -10,6 +10,7 @@ Facilities are described in `facilities.descriptive.md`. Content of this table i
 - body — Simulation body.
 - player — Owning or controlling player.
 - is_unitary — True ("x") if the facility can be treated as one activity for economic accounting. If false, each operation is treated as a separate activity for internal mechanics like taxation and gross product calculation.
+- market_maker — True ("x") if the facility makes its body's market: it warehouses stock and keeps a bid and an ask standing on the resources it trades. The Earth nations are market makers; a spaceport will be. See "Market makers" in the development repository's `TRADE_MODEL.md`.
 - closed_cycle_ops — True ("x") if the facility runs operations in a "closed cycle"; i.e., resource streams are entirely from and to inventory.
 - public_sector — Fraction of economic activity that is public sector. For unitary facilities, this is usually 1 (agencies) or 0 (companies).
 - population — Population or personnel count in 2015. For national polities, this is total national population. For agencies, this includes direct employees and the contractor/support workforce.
