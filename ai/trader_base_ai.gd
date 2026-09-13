@@ -13,15 +13,15 @@ extends BaseAI
 ## To implement a custom trader AI, extend this class and add
 ## [code]const OVERRIDE_AI := true[/code].[br][br]
 ##
-## Traders are paired 1-to-1 with facilities. This trader AI has awareness of
-## its facility's resource strategies and inventory (it trusts that this
-## already incorporates player resource strategies).[br][br]
+## Traders are paired 1-to-1 with facilities. This trader AI trades in the posture
+## and resource strategies its facility's AI authors, against the facility's
+## inventory (it trusts that these already incorporate player strategies).[br][br]
 ##
 ## A facility-paired trader orders delivery/pickup [b]only at its own
 ## facility's body[/b]: the executors and maintain helpers resolve the delivery
 ## market to [member TraderProxy.market_id] internally. The front
 ## (current-quarter) executors trade the facility's [i]stock[/i] imbalance
-## against its reserve target; the forward executor trades projected [i]flow[/i]
+## against its stock target; the forward executor trades projected [i]flow[/i]
 ## one-sided on later-quarter instruments (see [method _process_forward_flow]).
 ## The future transport trader will be this same class running different
 ## strategies, discriminated by [member TraderProxy.facility_id] == -1 — all
@@ -63,6 +63,11 @@ enum TraderStrategies {
 	## stockpiling — even at facility cost. Analog: state-owned trading
 	## enterprise.
 	POLICY_AGENT,
+	## Make the facility's body's market: keep a bid and an ask standing on every
+	## resource the facility trades, backed by its buffer stock (see TRADE_MODEL.md,
+	## "Market makers"). The posture of a market-making facility's trader. Analog: a
+	## wholesale merchant; a spaceport's commodity desk.
+	MARKET_MAKING,
 	N_BASE_TRADER_STRATEGIES,
 }
 
@@ -87,9 +92,6 @@ enum ResourceStrategies {
 	## Sell into the market at depressed prices to clear inventory or harm
 	## competing suppliers. Analog: predatory dumping, fire sale.
 	DUMP,
-	## Quote both bid and ask; profit on the spread; provide liquidity.
-	## Analog: market-maker / specialist desks.
-	MARKET_MAKING,
 	## Build inventory in expectation of price rise; accept carrying cost.
 	## Analog: contango trade, commodity bull bet.
 	SPECULATIVE_LONG,
@@ -123,8 +125,8 @@ enum ResourceStrategies {
 const SPREAD := 0.02
 ## Minimum order size in trade units; smaller surpluses/deficits are not quoted.
 const MIN_LOT := 1
-## Market-maker bid ceiling above the trade-reserve target, in trade units; the maker
-## buys up toward target + this band and sells down to its operational reserve.
+## Market-maker bid ceiling above its stock target, in trade units; the maker buys up
+## toward target + this band and sells down to its reserves.
 const MM_BAND_LOTS := 2
 ## Re-quote a standing order when its price drifts beyond this fraction of its price.
 const PRICE_TOLERANCE := 0.05
@@ -139,7 +141,11 @@ const FORWARD_HEDGE := 0.75
 const NULL_PF64ARRAY: PackedFloat64Array = []
 
 
-## Trader-posture strategy definitions; index = [enum TraderStrategies] value.
+## Trader-posture strategy definitions; index = [enum TraderStrategies] value. The
+## [code]two_sided[/code] switch makes markets: the market-making executor quotes every
+## resource the facility trades (see [method is_market_resource]) with this def standing
+## in for the resource's own in [member resource_strategy_defs] — tuning and forward
+## keys alike — and the facility AI warehouses buffer stock for those resources.
 static var trader_strategy_defs: Array[Dictionary] = [
 	{}, # INIT
 	{}, # FACILITY_SUPPORT
@@ -147,12 +153,13 @@ static var trader_strategy_defs: Array[Dictionary] = [
 	{}, # CONSERVATIVE
 	{}, # OPPORTUNISTIC
 	{}, # POLICY_AGENT
+	{&"two_sided": true, &"forward_quarters": 2}, # MARKET_MAKING — front maker + forward flow hedge
 ]
 
 ## Per-resource strategy definitions; index = [enum ResourceStrategies] value.
-## Boolean switches select the executor branch: [code]two_sided[/code] (maker
-## quotes both sides), [code]sell_above_reserve[/code], [code]buy_to_reserve[/code].
-## Tuning keys ([code]spread[/code], [code]min_lot[/code], [code]band_lots[/code],
+## Boolean switches select what the facility-support executor does:
+## [code]sell_above_reserve[/code], [code]buy_to_reserve[/code]. Tuning keys
+## ([code]spread[/code], [code]min_lot[/code], [code]band_lots[/code],
 ## [code]price_tol[/code], [code]qty_tol[/code]) may override the class-constant
 ## defaults. An empty entry trades nothing.[br][br]
 ##
@@ -161,7 +168,7 @@ static var trader_strategy_defs: Array[Dictionary] = [
 ## facility's planning horizon (see [method _process_forward_flow]). Forward is
 ## always one-sided, driven by the sign of the facility's projected net flow;
 ## [code]forward_hedge[/code] scales the hedged fraction and the sell/buy switches
-## cap the allowed side (a two-sided maker hedges whichever way its flow runs).
+## cap the allowed side (a two-sided posture hedges whichever way its flow runs).
 ## NEUTRAL stays deliberately front-only (no [code]forward_quarters[/code]): with
 ## both switches set, early forward deliveries could push stock above target and be
 ## re-sold at a loss (bought at ref×(1+spread), dumped at ref×(1−spread)) — bounded
@@ -173,7 +180,6 @@ static var resource_strategy_defs: Array[Dictionary] = [
 	{}, # LIQUIDATE
 	{}, # HOARD
 	{}, # DUMP
-	{&"two_sided": true, &"forward_quarters": 2}, # MARKET_MAKING — front maker + forward flow hedge
 	{}, # SPECULATIVE_LONG
 	{}, # SPECULATIVE_SHORT
 	{}, # AUTARKIC
@@ -264,6 +270,20 @@ var _forward_mem_horizons: PackedInt32Array
 # Forward instrument scratch [resource_type, ordinal_quarter]; safe for lookups, the aux
 # position lookup, and outgoing calls (downstream duplicates), never stored as a key.
 var _forward_instrument_scratch: PackedInt32Array
+# Per-resource front executor at the last interval: 0 not yet run, 1 facility support, 2
+# market making. A switch clears the resource's orders first (see _clear_resource_orders).
+var _executor_branches: PackedByteArray
+
+
+# ********************************** STATIC ***********************************
+
+## True if inventory [param flags] mark a resource a market-making posture makes a
+## market in: tradable, and produced or consumed by the facility.
+static func is_market_resource(flags: int) -> bool:
+	const TRADABLE := FacilityProxy.InventoryFlags.TRADABLE
+	const CAN_HAVE_INPUT := FacilityProxy.InventoryFlags.CAN_HAVE_INPUT
+	const CAN_HAVE_OUTPUT := FacilityProxy.InventoryFlags.CAN_HAVE_OUTPUT
+	return (flags & TRADABLE) != 0 and (flags & (CAN_HAVE_INPUT | CAN_HAVE_OUTPUT)) != 0
 
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
@@ -277,6 +297,7 @@ func _init() -> void:
 	_instrument_scratch.resize(2)
 	_forward_mem_horizons.resize(n_resources)
 	_forward_instrument_scratch.resize(2)
+	_executor_branches.resize(n_resources)
 	if _start_unit_prices.is_empty():
 		const TRADE_CLASS_CYBER := Enums.TradeClasses.TRADE_CLASS_CYBER
 		var resources_table: Dictionary[StringName, Array] = IVTableData.db_tables[&"resources"]
@@ -310,20 +331,24 @@ func ai_init() -> void:
 		_positions_by_instrument[position_key.slice(0, 2)] = proxy.positions[position_key]
 	_facility_ai = Proxy.proxy_bus.facility_ais[proxy.facility_id]
 	assert(_facility_ai, "TraderBaseAI expects facility's AI to be FacilityBaseAI")
+	_facility_ai.trader_strategy_changed.connect(_on_facility_trader_strategy_changed)
 	_facility_ai.facility_resource_strategy_changed.connect(_on_facility_resource_strategy_changed)
 	# The facility may have authored its strategies before we connected (init order
-	# across entity types is not guaranteed), so re-sync the full array now.
+	# across entity types is not guaranteed), so re-sync them now.
+	trader_strategy = _facility_ai.trader_strategy
 	for resource_type in resource_strategies.size():
 		var facility_strategy := _facility_ai.facility_resource_strategies[resource_type]
 		resource_strategies[resource_type] = _trader_strategy_for_facility(facility_strategy)
 
 
-## Acts on live market and inventory state using the sticky per-resource strategy
-## (authored by the facility, translated and stored on change). The strategy's def
-## selects the front executor branch: two-sided maker vs. one-sided facility
-## support, both SET orders on the front (current-quarter) instrument at the
-## trader's local market. Def-gated strategies also maintain forward-flow orders
-## on later quarters (see [method _process_forward_flow]).
+## Acts on live market and inventory state using the posture and the sticky
+## per-resource strategies (authored by the facility, translated and stored on
+## change). A two-sided posture makes markets in the resources the facility trades
+## (see [method is_market_resource]), its def standing in for theirs; every other
+## resource gets the facility-support executor per its strategy's def. Both SET
+## orders on the front (current-quarter) instrument at the trader's local market, and
+## def-gated strategies also maintain forward-flow orders on later quarters (see
+## [method _process_forward_flow]).
 func process_ai_interval(_delta: float) -> void:
 	var market := proxy.market
 	if !market or !_facility:
@@ -331,23 +356,33 @@ func process_ai_interval(_delta: float) -> void:
 	_drop_expired_memory()
 	_tally_net_positions()
 	_instrument_scratch[1] = proxy.ordinal_qtr
+	var posture_def := trader_strategy_defs[trader_strategy]
+	var makes_markets: bool = posture_def.get(&"two_sided", false)
 	for resource_type in resource_strategies.size():
 		if _stop:
 			return # cooperative bail; remaining resources re-quote next interval (idempotent)
 		_instrument_scratch[0] = resource_type
 		var def := resource_strategy_defs[resource_strategies[resource_type]]
-		if def.get(&"two_sided", false):
+		var is_made := (makes_markets
+				and is_market_resource(_facility.get_inventory_flags(resource_type)))
+		var branch := 2 if is_made else 1
+		if _executor_branches[resource_type] != branch:
+			if _executor_branches[resource_type]:
+				_clear_resource_orders(resource_type)
+			_executor_branches[resource_type] = branch
+		if is_made:
+			def = posture_def
 			_process_market_making(resource_type, market, _instrument_scratch, def)
 		else:
 			_process_facility_support(resource_type, market, _instrument_scratch, def)
 		_process_forward_flow(resource_type, market, def)
 
 
-## Trades one resource to service facility operations: clears stock above the reserve
-## target (sell) and/or replenishes up toward it (buy), per the def switches. With both
-## enabled it self-balances around the reserve — stock can't be both over and under, so
-## at most one side quotes. A still-valid resting order is left untouched; we re-quote
-## only on material divergence. Open positions count against the want quantities: a
+## Trades one resource to service facility operations: clears stock above its stock
+## target (the two reserves and any buffer stock) and/or replenishes up toward it, per
+## the def switches. With both enabled it self-balances around the target — stock
+## can't be both over and under, so at most one side quotes. A still-valid resting
+## order is left untouched; we re-quote only on material divergence. Open positions count against the want quantities: a
 ## filled order is committed in/outflow until the short side physically settles it
 ## (up to ~a trader interval), so quoting without netting would re-order
 ## already-filled demand every interval. A bid never exceeds what the operations
@@ -369,7 +404,8 @@ func _process_facility_support(resource_type: int, market: MarketProxy,
 	var qty_tol: float = def.get(&"qty_tol", QTY_TOLERANCE)
 	var multiplier := _trade_unit_multipliers[resource_type]
 	var target := (_facility.get_inventory_ops_reserve(resource_type)
-			+ _facility.get_inventory_strategic_reserve(resource_type))
+			+ _facility.get_inventory_strategic_reserve(resource_type)
+			+ _facility.get_inventory_buffer_stock(resource_type))
 	var stock := _facility.get_inventory_stock(resource_type)
 	var ask_units := 0
 	if sell: # open shorts are committed outbound stock
@@ -388,11 +424,12 @@ func _process_facility_support(resource_type: int, market: MarketProxy,
 	_maintain_bid(instrument, bid_units, bid_price, min_lot, price_tol, qty_tol)
 
 
-## Quotes both sides for a market-relevant resource: bid below the reference price, ask
-## above it, so the maker earns the spread and provides liquidity (the inverse of
+## Quotes both sides for a resource the facility trades: bid below the reference price,
+## ask above it, so the maker earns the spread and provides liquidity (the inverse of
 ## facility-support, which crosses to transact). Quantities self-balance inventory toward
-## the trade-reserve target as fills occur, netting open positions like facility-support.
-## Falls back to the resource's start_price when no live market price exists.
+## the stock target (both reserves plus buffer stock) as fills occur, selling only stock
+## above the reserves and netting open positions like facility-support. Falls back to the
+## resource's start_price when no live market price exists.
 func _process_market_making(resource_type: int, market: MarketProxy,
 		instrument: PackedInt32Array, def: Dictionary) -> void:
 	var spread: float = def.get(&"spread", SPREAD)
@@ -410,11 +447,12 @@ func _process_market_making(resource_type: int, market: MarketProxy,
 		return
 	var ask_price := maxi(1, ceili(reference_price * (1.0 + spread)))
 	var bid_price := maxi(1, floori(reference_price * (1.0 - spread)))
-	var ops_reserve := _facility.get_inventory_ops_reserve(resource_type)
-	var target := ops_reserve + _facility.get_inventory_strategic_reserve(resource_type)
+	var reserves := (_facility.get_inventory_ops_reserve(resource_type)
+			+ _facility.get_inventory_strategic_reserve(resource_type))
+	var target := reserves + _facility.get_inventory_buffer_stock(resource_type)
 	var ceiling := target + band_lots * multiplier
 	var stock := _facility.get_inventory_stock(resource_type)
-	var ask_units := int((stock - ops_reserve) / multiplier) - _net_short_units[resource_type]
+	var ask_units := int((stock - reserves) / multiplier) - _net_short_units[resource_type]
 	var bid_units := (int((ceiling - stock - _facility.get_inventory_in_transit(resource_type))
 			/ multiplier) - _net_long_units[resource_type])
 	_maintain_ask(instrument, maxi(0, ask_units), ask_price, min_lot,
@@ -722,7 +760,6 @@ func _trader_strategy_for_facility(facility_strategy: int) -> int:
 	const ROUTINE_INPUT := FacilityBaseAI.FacilityResourceStrategies.ROUTINE_INPUT
 	const CONSUMABLE := FacilityBaseAI.FacilityResourceStrategies.CONSUMABLE
 	const CLOSED_LOOP_INTERMEDIATE := FacilityBaseAI.FacilityResourceStrategies.CLOSED_LOOP_INTERMEDIATE
-	const MARKET_MAKE := FacilityBaseAI.FacilityResourceStrategies.MARKET_MAKE
 	const STRATEGIC_RESERVE := FacilityBaseAI.FacilityResourceStrategies.STRATEGIC_RESERVE
 	const PHASE_OUT := FacilityBaseAI.FacilityResourceStrategies.PHASE_OUT
 	match facility_strategy:
@@ -730,8 +767,6 @@ func _trader_strategy_for_facility(facility_strategy: int) -> int:
 			return ResourceStrategies.EXPORT_FOCUS
 		CRITICAL_INPUT, ROUTINE_INPUT, CONSUMABLE:
 			return ResourceStrategies.IMPORT_PRIORITY
-		MARKET_MAKE:
-			return ResourceStrategies.MARKET_MAKING
 		STRATEGIC_RESERVE:
 			return ResourceStrategies.STRATEGIC_RESERVE
 		PHASE_OUT:
@@ -741,15 +776,12 @@ func _trader_strategy_for_facility(facility_strategy: int) -> int:
 	return ResourceStrategies.NEUTRAL
 
 
+func _on_facility_trader_strategy_changed(strategy_id: int) -> void:
+	trader_strategy = strategy_id
+
+
 func _on_facility_resource_strategy_changed(resource_type: int, strategy_id: int) -> void:
-	var new_strategy := _trader_strategy_for_facility(strategy_id)
-	if new_strategy == resource_strategies[resource_type]:
-		return
-	resource_strategies[resource_type] = new_strategy
-	# A new strategy may switch the executor branch; clear the resource's instruments
-	# (every quarter) so a lingering old-branch order cannot cross the new branch's
-	# quote (see _clear_resource_orders).
-	_clear_resource_orders(resource_type)
+	resource_strategies[resource_type] = _trader_strategy_for_facility(strategy_id)
 
 
 # Mirrors the trader's resting ask/bid (carried in every notification) into order memory,

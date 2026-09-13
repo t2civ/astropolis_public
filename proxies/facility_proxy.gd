@@ -79,9 +79,6 @@ enum InventoryFlags {
 	## Mask of all server-published signal bits.
 	FROM_SERVER_MASK = (1 << 32) - 1,
 
-	## Neither operations nor disposal of storage surplus may draw this resource
-	## below its strategic reserve.
-	PROTECT_STRATEGIC_RESERVE = 1 << 32,
 	## No operation may consume this resource (e.g., embargo, phase-out).
 	PROHIBIT_CONSUMPTION = 1 << 33,
 	## No operation may produce this resource (e.g., divestment, phase-out).
@@ -136,6 +133,7 @@ enum InventoryItems {
 	IN_TRANSITS = 1 << 5,
 	RATES = 1 << 6,
 	FLAGS = 1 << 7,
+	BUFFER_STOCKS = 1 << 8,
 }
 
 
@@ -145,7 +143,8 @@ var facility_class := -1  ## Facility class index. Not implemented yet.
 var public_sector: float
 ## True if this is a small focused activity (affects stats and tax treatment).
 var is_unitary: bool
-## Large and/or port facilities act as market makers.
+## True if this facility makes its body's market, warehousing stock and keeping a bid
+## and an ask standing (see TRADE_MODEL.md, "Market makers").
 var market_maker: bool
 ## True if all resource streams flow from/to inventory (no atmosphere/surface
 ## market).
@@ -305,7 +304,7 @@ func get_flags() -> int:
 
 
 # Inventory (facility-only). Facility-only reads, plus proxy-authoritative knobs
-# (flags, strategic reserve) with reverse data flow proxy -> server. Implemented
+# (flags, strategic reserve, buffer stock) with reverse data flow proxy -> server. Implemented
 # on the server-side facility proxy against its inventory component.
 
 ## Returns the [enum InventoryItems] fields selected by [param items_mask] for
@@ -342,14 +341,26 @@ func get_flags() -> int:
 @abstract func get_inventory_ops_reserves() -> PackedFloat64Array
 
 
-## Returns the strategic reserve target for [param resource_type] — an AI-set
-## buffer held beyond operational need.
+## Returns the strategic reserve for [param resource_type]: stock the AI keeps beyond
+## the operational reserve so operations run through a supply interruption. Operations
+## draw it; trade never sells it (see AI_ARCHITECTURE.md, "Stock levels").
 @abstract func get_inventory_strategic_reserve(resource_type: int) -> float
 
 
 ## Returns the per-resource strategic reserves array. Return is proxy array
 ## reference; read only!
 @abstract func get_inventory_strategic_reserves() -> PackedFloat64Array
+
+
+## Returns the buffer stock for [param resource_type]: stock the AI holds for the
+## market beyond both reserves, such as a market maker's warehouse. Operations draw it
+## and trade sells it (see AI_ARCHITECTURE.md, "Stock levels").
+@abstract func get_inventory_buffer_stock(resource_type: int) -> float
+
+
+## Returns the per-resource buffer stocks array. Return is proxy array
+## reference; read only!
+@abstract func get_inventory_buffer_stocks() -> PackedFloat64Array
 
 
 ## Returns the expected net flow rate for [param resource_type] (positive =
@@ -565,3 +576,8 @@ func get_market() -> MarketProxy:
 ## this change flows proxy -> server. No-op on an out-of-range index or invalid
 ## value.
 @abstract func set_inventory_strategic_reserve(type: int, value: float) -> void
+
+
+## Sets the buffer stock for [param type]. Proxy-authoritative: this change
+## flows proxy -> server. No-op on an out-of-range index or invalid value.
+@abstract func set_inventory_buffer_stock(type: int, value: float) -> void

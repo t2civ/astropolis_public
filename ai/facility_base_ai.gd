@@ -13,12 +13,14 @@ extends BaseAI
 ## To implement a custom facility AI, extend this class and add
 ## [code]const OVERRIDE_AI := true[/code].[br][br]
 ##
-## Strategy selections are in part declarative. Note that the paired
-## TraderBaseAI is aware of this AI's resource strategies.
+## Strategy selections are in part declarative. The paired TraderBaseAI trades
+## in the posture and resource strategies this AI authors.
 
 
 ## Emitted when [member facility_strategy] changes.
 signal facility_strategy_changed(strategy_id: int)
+## Emitted when [member trader_strategy] changes.
+signal trader_strategy_changed(strategy_id: int)
 ## Emitted when an entry in [member facility_resource_strategies] changes.
 signal facility_resource_strategy_changed(resource_type: int, strategy_id: int)
 ## Emitted when an entry in [member operation_strategies] changes.
@@ -114,10 +116,6 @@ enum FacilityResourceStrategies {
 	## produce or consume it and run inventory down. Analog: a multi-product
 	## plant exiting a product line; a utility's coal phase-down.
 	PHASE_OUT,
-	## The facility acts as a two-sided market maker for this tradable resource it
-	## can produce and/or consume; the paired trader quotes both bid and ask. Folds
-	## the facility's market-maker identity into the per-resource strategy channel.
-	MARKET_MAKE,
 	N_BASE_FACILITY_RESOURCE_STRATEGIES,
 }
 
@@ -172,6 +170,14 @@ enum OperationStrategies {
 }
 
 
+## Default buffer stock a market-making facility warehouses, in time horizons of the
+## resource's throughput (def key [code]buffer_stock_factor[/code] overrides).
+const BUFFER_STOCK_FACTOR := 1.0
+## Default buffer stock floor a market-making facility warehouses, in trade units (def
+## key [code]buffer_stock_lots[/code] overrides); backs a standing two-sided quote even
+## for a resource with no current throughput.
+const BUFFER_STOCK_LOTS := 4
+
 ## Short alias for the per-resource strategy enum, used by the authoring helpers.
 const _RS := FacilityResourceStrategies
 
@@ -181,6 +187,7 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"_last_interval",
 	&"_next_interval",
 	&"facility_strategy",
+	&"trader_strategy",
 	&"facility_resource_strategies",
 	&"operation_strategies",
 ]
@@ -208,29 +215,26 @@ static var facility_strategy_defs: Array[Dictionary] = [
 ## Per-resource facility-level strategy definitions; index =
 ## [enum FacilityResourceStrategies] value. Keys are facility-side knob params
 ## read by [method _apply_strategy_knobs]: [code]strategic_reserve_factor[/code]
-## (reserve = factor × throughput × time_horizon), [code]mm_base_lot[/code]
-## (trade-unit reserve floor), [code]protect_reserve[/code],
+## (strategic reserve = factor × throughput × time_horizon),
+## [code]buffer_stock_factor[/code] and [code]buffer_stock_lots[/code] (the buffer
+## stock a market-making facility warehouses; see [constant BUFFER_STOCK_FACTOR]),
 ## [code]prohibit_production[/code], [code]prohibit_consumption[/code]. Empty
-## entries take all defaults (no reserve, no flags).
+## entries take all defaults (no strategic reserve, a market maker's default buffer
+## stock, no flags).
 static var facility_resource_strategy_defs: Array[Dictionary] = [
 	{}, # NEUTRAL
 	{}, # PRIMARY_PRODUCT
 	{}, # SECONDARY_PRODUCT
 	{}, # COPRODUCT
 	{}, # BYPRODUCT
-	{}, # WASTE
+	{&"buffer_stock_factor": 0.0, &"buffer_stock_lots": 0}, # WASTE
 	{&"strategic_reserve_factor": 1.0}, # CRITICAL_INPUT
 	{}, # ROUTINE_INPUT
 	{}, # CONSUMABLE
-	{}, # CLOSED_LOOP_INTERMEDIATE
-	{&"strategic_reserve_factor": 2.0, &"protect_reserve": true}, # STRATEGIC_RESERVE
+	{&"buffer_stock_factor": 0.0, &"buffer_stock_lots": 0}, # CLOSED_LOOP_INTERMEDIATE
+	{&"strategic_reserve_factor": 2.0}, # STRATEGIC_RESERVE
 	{}, # SPECULATIVE_POSITION
-	{&"prohibit_production": true}, # PHASE_OUT
-	# MARKET_MAKE deliberately omits protect_reserve: it is the one identity a
-	# facility applies to every resource it touches, inputs included, so a hard
-	# consumption floor there starves the ops that would refill the reserve, and a
-	# reserve scaled on throughput can outgrow the storage class disposal must relieve.
-	{&"strategic_reserve_factor": 1.0, &"mm_base_lot": 4}, # MARKET_MAKE
+	{&"prohibit_production": true, &"buffer_stock_factor": 0.0, &"buffer_stock_lots": 0}, # PHASE_OUT
 ]
 
 ## Per-operation strategy definitions; index = [enum OperationStrategies] value.
@@ -268,6 +272,9 @@ var proxy: FacilityProxy
 
 ## Facility-posture strategy. See [enum FacilityStrategies].
 var facility_strategy := 0
+## The posture this facility's paired trader trades in, folded from the facility's
+## role. See [enum TraderBaseAI.TraderStrategies].
+var trader_strategy := 0
 ## Per-resource facility-level strategies. See [enum FacilityResourceStrategies].
 var facility_resource_strategies: PackedInt32Array
 ## Per-operation strategies. See [enum OperationStrategies].
@@ -310,7 +317,9 @@ func ai_init() -> void:
 	_player_ai.player_facility_strategy_changed.connect(_on_player_facility_strategy_changed)
 	_player_ai.body_strategy_changed.connect(_on_player_body_strategy_changed)
 	# new_quarter does not fire on load or the first adopted quarter, so author once
-	# here to bootstrap (and re-author idempotently after load).
+	# here to bootstrap (and re-author idempotently after load). The trader's posture
+	# goes first: the resource knobs size a market maker's buffer stock from it.
+	_author_trader_strategy()
 	_author_resource_strategies()
 	_author_facility_strategy()
 	_author_operation_strategies()
@@ -326,6 +335,7 @@ func process_ai_interval(_delta: float) -> void:
 ## Strategic, forward-looking reassessment of sticky policy. Same authoring pass;
 ## the change guard makes the quarter-boundary call a no-op when nothing changed.
 func process_ai_new_quarter() -> void:
+	_author_trader_strategy()
 	_author_resource_strategies()
 	_author_facility_strategy()
 	_author_operation_strategies()
@@ -343,6 +353,7 @@ func _on_player_resource_strategy_changed(_resource_type: int, _strategy_id: int
 
 func _on_player_facility_strategy_changed(facility_id: int, _strategy_id: int) -> void:
 	if facility_id == proxy.facility_id:
+		_author_trader_strategy()
 		_author_resource_strategies()
 		_author_facility_strategy()
 		_author_operation_strategies()
@@ -387,8 +398,6 @@ func _capability_strategy(resource_type: int) -> int:
 	var can_consume := bool(flags & CAN_HAVE_INPUT)
 	if !can_produce and !can_consume:
 		return _RS.NEUTRAL
-	if proxy.market_maker:
-		return _RS.MARKET_MAKE
 	if can_produce and can_consume:
 		# Produced and consumed here: take no special stance and let the trader
 		# balance inventory around the reserve. A true closed loop (no external
@@ -410,13 +419,12 @@ func _reconcile_resource_strategy(resource_type: int, capability: int) -> int:
 	const PR := PlayerBaseAI.PlayerResourceStrategies
 	const PF := PlayerBaseAI.PlayerFacilityStrategies
 
-	# (1) Own crisis: a consumed resource (not a maker) in shortage prioritizes supply
-	# continuity — escalate to CRITICAL_INPUT for a protected import buffer.
-	if capability != _RS.MARKET_MAKE:
-		var inv_flags := proxy.get_inventory_flags(resource_type)
-		if (inv_flags & CAN_HAVE_INPUT) and ((proxy.get_flags() & INPUT_CRISIS) \
-				or (inv_flags & (OPS_RESERVE_BREACHED | STRATEGIC_RESERVE_BREACHED))):
-			return _RS.CRITICAL_INPUT
+	# (1) Own crisis: a consumed resource in shortage prioritizes supply continuity —
+	# escalate to CRITICAL_INPUT for a strategic reserve.
+	var inv_flags := proxy.get_inventory_flags(resource_type)
+	if (inv_flags & CAN_HAVE_INPUT) and ((proxy.get_flags() & INPUT_CRISIS) \
+			or (inv_flags & (OPS_RESERVE_BREACHED | STRATEGIC_RESERVE_BREACHED))):
+		return _RS.CRITICAL_INPUT
 
 	# (2) Player structural directive overrides influence and capability.
 	if _player_ai.player_facility_strategies.get(proxy.facility_id, 0) == PF.DIVEST:
@@ -433,30 +441,30 @@ func _reconcile_resource_strategy(resource_type: int, capability: int) -> int:
 	return capability
 
 
-## Translates the resource's strategy def into server knobs: the strategic-reserve
-## flow variable and the PROTECT / PROHIBIT inventory flag bits (flags written only
+## Translates the resource's strategy def into server knobs: the strategic reserve and
+## buffer stock flow variables and the PROHIBIT inventory flag bits (flags written only
 ## on change; preserves any other FROM_PROXY bits).
 func _apply_strategy_knobs(resource_type: int, strategy: int) -> void:
-	const PROTECT_STRATEGIC_RESERVE := FacilityProxy.InventoryFlags.PROTECT_STRATEGIC_RESERVE
 	const PROHIBIT_CONSUMPTION := FacilityProxy.InventoryFlags.PROHIBIT_CONSUMPTION
 	const PROHIBIT_PRODUCTION := FacilityProxy.InventoryFlags.PROHIBIT_PRODUCTION
 	const FROM_PROXY_MASK := FacilityProxy.InventoryFlags.FROM_PROXY_MASK
 	const EMBARGO := PlayerBaseAI.PlayerResourceStrategies.EMBARGO
 	var def := facility_resource_strategy_defs[strategy]
 
+	var horizon_throughput := (absf(proxy.get_inventory_expected_rate(resource_type))
+			* proxy.time_horizon)
 	var reserve_factor: float = def.get(&"strategic_reserve_factor", 0.0)
-	var mm_base_lot: int = def.get(&"mm_base_lot", 0)
-	var reserve := 0.0
-	if reserve_factor > 0.0 or mm_base_lot > 0:
-		var throughput := absf(proxy.get_inventory_expected_rate(resource_type))
-		reserve = (reserve_factor * throughput * proxy.time_horizon
-				+ mm_base_lot * _trade_unit_multipliers[resource_type])
-	proxy.set_inventory_strategic_reserve(resource_type, reserve)
+	proxy.set_inventory_strategic_reserve(resource_type, reserve_factor * horizon_throughput)
+	var buffer_stock := 0.0
+	if _is_market_made(resource_type):
+		var buffer_factor: float = def.get(&"buffer_stock_factor", BUFFER_STOCK_FACTOR)
+		var buffer_lots: int = def.get(&"buffer_stock_lots", BUFFER_STOCK_LOTS)
+		buffer_stock = (buffer_factor * horizon_throughput
+				+ buffer_lots * _trade_unit_multipliers[resource_type])
+	proxy.set_inventory_buffer_stock(resource_type, buffer_stock)
 
 	var current := proxy.get_inventory_flags(resource_type) & FROM_PROXY_MASK
-	var desired := current & ~(PROTECT_STRATEGIC_RESERVE | PROHIBIT_CONSUMPTION | PROHIBIT_PRODUCTION)
-	if def.get(&"protect_reserve", false):
-		desired |= PROTECT_STRATEGIC_RESERVE
+	var desired := current & ~(PROHIBIT_CONSUMPTION | PROHIBIT_PRODUCTION)
 	if def.get(&"prohibit_production", false):
 		desired |= PROHIBIT_PRODUCTION
 	if def.get(&"prohibit_consumption", false):
@@ -520,6 +528,40 @@ func _apply_facility_knobs(strategy: int) -> void:
 	var buildout_ops: PackedInt32Array = _tag_operations.get(&"buildout", PackedInt32Array())
 	for operation_type in buildout_ops:
 		proxy.set_operations_target_spending_share(operation_type, share)
+
+
+## Sets [member trader_strategy], emitting [signal trader_strategy_changed] only on
+## change.
+func _set_trader_strategy(strategy_id: int) -> void:
+	if trader_strategy == strategy_id:
+		return
+	trader_strategy = strategy_id
+	trader_strategy_changed.emit(strategy_id)
+
+
+## Authors the posture the paired trader trades in — the trader analog of
+## [method _author_facility_strategy]. Called on init, each quarter, and when the
+## player's directive for this facility changes. Author it before the resource
+## strategies, whose knobs depend on it.
+func _author_trader_strategy() -> void:
+	_set_trader_strategy(_reconcile_trader_strategy())
+
+
+## Folds the facility's role into its trader's posture: a market-making facility's trader
+## makes its body's market, and any other supplies its facility. A custom AI overrides
+## this to weigh a player's directive or the facility's own situation.
+func _reconcile_trader_strategy() -> int:
+	const TS := TraderBaseAI.TraderStrategies
+	return TS.MARKET_MAKING if proxy.market_maker else TS.FACILITY_SUPPORT
+
+
+## True if the trader's posture makes a market in [param resource_type] here, which is
+## what a market-making facility warehouses buffer stock for.
+func _is_market_made(resource_type: int) -> bool:
+	var posture_def := TraderBaseAI.trader_strategy_defs[trader_strategy]
+	if !posture_def.get(&"two_sided", false):
+		return false
+	return TraderBaseAI.is_market_resource(proxy.get_inventory_flags(resource_type))
 
 
 ## Sets [member operation_strategies] for [param operation_type], emitting
