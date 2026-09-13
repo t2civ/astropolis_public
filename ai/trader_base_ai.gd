@@ -136,9 +136,17 @@ const MAKER_SPREAD := 0.02
 ## Fraction by which a market maker leans both quotes at a full stock gap, up when short
 ## and down when over (def key [code]maker_lean[/code] overrides per resource strategy).
 const MAKER_LEAN := 0.1
-## Fractional change per week in a market maker's own price at a full stock gap: stock
-## empty, or double its target (def key [code]maker_drift[/code] overrides per posture).
+## Fractional change per week in a market maker's own price at a full stock gap -- stock
+## empty, or double its target -- while the price sits at its long-run price (def key
+## [code]maker_drift[/code] overrides per posture).
 const MAKER_DRIFT := 0.02
+## About how far above its long-run price a full lasting stock gap settles a market maker's
+## price, as a fraction of the long-run price; an overstocked maker's settles at the
+## reciprocal below it (def key [code]maker_premium_limit[/code] overrides per posture).
+const MAKER_PREMIUM_LIMIT := 1.0
+## Years over which a market maker's long-run price follows its price (def key
+## [code]maker_long_run_years[/code] overrides per posture).
+const MAKER_LONG_RUN_YEARS := 7.5
 ## Re-quote a market maker's standing orders when either side's price drifts beyond this
 ## fraction (def key [code]maker_price_tol[/code] overrides per posture).
 const MAKER_PRICE_TOLERANCE := 0.01
@@ -170,7 +178,8 @@ const NULL_PF64ARRAY: PackedFloat64Array = []
 ## [code]two_sided[/code] switch makes markets: the market-making executor quotes every
 ## resource the facility trades (see [method is_market_resource]), and the facility AI
 ## warehouses buffer stock for those resources. There the posture's
-## [code]maker_drift[/code] and [code]maker_price_tol[/code] tune the maker's price and
+## [code]maker_drift[/code], [code]maker_premium_limit[/code],
+## [code]maker_long_run_years[/code] and [code]maker_price_tol[/code] tune the maker's price and
 ## its [code]min_lot[/code], [code]band_lots[/code] and [code]qty_tol[/code] its quotes,
 ## while the resource's own def in [member resource_strategy_defs] sets their spread and
 ## lean; the posture's forward keys stand in for the resource's.
@@ -232,6 +241,7 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"_asks",
 	&"_bids",
 	&"_maker_unit_prices",
+	&"_maker_long_run_unit_prices",
 ]
 
 
@@ -274,6 +284,11 @@ var _bids: Dictionary[PackedInt32Array, PackedInt64Array] = {}
 ## accumulates; 0 until the maker first prices the resource (see
 ## [method _process_market_making]).
 var _maker_unit_prices: PackedFloat64Array
+
+## Per-resource market-maker long-run price in trade units, the slow average of
+## [member _maker_unit_prices] its price moves against; 0 until the maker first prices the
+## resource.
+var _maker_long_run_unit_prices: PackedFloat64Array
 
 # *****************************************************************************
 
@@ -341,6 +356,7 @@ func _init() -> void:
 	_forward_instrument_scratch.resize(2)
 	_executor_branches.resize(n_resources)
 	_maker_unit_prices.resize(n_resources)
+	_maker_long_run_unit_prices.resize(n_resources)
 	if _start_unit_prices.is_empty():
 		const TRADE_CLASS_CYBER := Enums.TradeClasses.TRADE_CLASS_CYBER
 		var resources_table: Dictionary[StringName, Array] = IVTableData.db_tables[&"resources"]
@@ -414,6 +430,7 @@ func process_ai_interval(delta: float) -> void:
 			if _executor_branches[resource_type]:
 				_clear_resource_orders(resource_type)
 				_maker_unit_prices[resource_type] = 0.0 # stale by the time it is made again
+				_maker_long_run_unit_prices[resource_type] = 0.0
 			_executor_branches[resource_type] = branch
 		if is_made:
 			_process_market_making(resource_type, market, _instrument_scratch, posture_def, def,
@@ -477,10 +494,10 @@ func _process_facility_support(resource_type: int, market: MarketProxy,
 
 ## Makes the market in one resource the facility trades (see TRADE_MODEL.md, "Market
 ## makers"). The maker keeps its own price for the resource, raising it while its stock is
-## short of target and lowering it while stock is over, at a rate tied to the gap, held
-## between what the facility's cheapest producing operation needs and what its most
-## tolerant consuming operation can pay, and quotes both sides around that price leaned by
-## the same gap. [param posture_def] sets
+## short of target and lowering it while stock is over, at a rate tied to the gap and
+## toward a premium or discount on its own long-run price, held between what the facility's
+## cheapest producing operation needs and what its most tolerant consuming operation can
+## pay, and quotes both sides around that price leaned by the same gap. [param posture_def] sets
 ## how fast the price moves and [param resource_def], the resource strategy's def, sets
 ## the spread and lean. It steers by the part of its stock target its storage can hold,
 ## sells only stock above both reserves and buys up to that target plus a band, netting
@@ -494,6 +511,8 @@ func _process_market_making(resource_type: int, market: MarketProxy,
 	var min_lot: int = posture_def.get(&"min_lot", MIN_LOT)
 	var band_lots: int = posture_def.get(&"band_lots", MM_BAND_LOTS)
 	var drift: float = posture_def.get(&"maker_drift", MAKER_DRIFT)
+	var premium_limit: float = posture_def.get(&"maker_premium_limit", MAKER_PREMIUM_LIMIT)
+	var long_run_years: float = posture_def.get(&"maker_long_run_years", MAKER_LONG_RUN_YEARS)
 	var price_tol: float = posture_def.get(&"maker_price_tol", MAKER_PRICE_TOLERANCE)
 	var qty_tol: float = posture_def.get(&"qty_tol", QTY_TOLERANCE)
 	var ask_spread: float = resource_def.get(&"maker_ask_spread", MAKER_SPREAD)
@@ -501,6 +520,7 @@ func _process_market_making(resource_type: int, market: MarketProxy,
 	var lean: float = resource_def.get(&"maker_lean", MAKER_LEAN)
 	var multiplier := _trade_unit_multipliers[resource_type]
 	var price := _maker_unit_prices[resource_type]
+	var long_run_price := _maker_long_run_unit_prices[resource_type]
 	if price <= 0.0:
 		price = market.get_unit_price(resource_type)
 		if price <= 0.0:
@@ -509,6 +529,8 @@ func _process_market_making(resource_type: int, market: MarketProxy,
 			_maintain_ask(instrument, 0, 1, min_lot, 0.0, 0.0)
 			_maintain_bid(instrument, 0, 1, min_lot, 0.0, 0.0)
 			return
+	if long_run_price <= 0.0: # first priced here, or a save from before long-run prices
+		long_run_price = price
 	var reserves := (_facility.get_inventory_ops_reserve(resource_type)
 			+ _facility.get_inventory_strategic_reserve(resource_type))
 	var target := reserves + _facility.get_inventory_buffer_stock(resource_type)
@@ -537,8 +559,18 @@ func _process_market_making(resource_type: int, market: MarketProxy,
 	var upper := minf(maxf(floor_price, ceiling_price) * multiplier,
 			MAKER_PRICE_RAIL * maxi(_start_unit_prices[resource_type], 1))
 	var lower := minf(maxf(minf(floor_price, ceiling_price) * multiplier, 1.0), upper)
-	price = clampf(price * pow(1.0 + drift, gap * delta / (7.0 * IVUnits.DAY)), lower, upper)
+	# Unanchored, a gap nothing answers compounds the price for as long as it lasts, so the
+	# gap moves the price only a premium away from its long-run price, which follows slowly.
+	var weeks := delta / (7.0 * IVUnits.DAY)
+	var drift_rate := log(1.0 + drift)
+	var decay_rate := drift_rate / log(1.0 + premium_limit) + 7.0 / (long_run_years * 365.25)
+	var settled_premium := drift_rate * gap / decay_rate
+	var premium := settled_premium + ((log(price / long_run_price) - settled_premium)
+			* exp(-decay_rate * weeks))
+	long_run_price *= exp(premium * weeks * 7.0 / (long_run_years * 365.25))
+	price = clampf(long_run_price * exp(premium), lower, upper)
 	_maker_unit_prices[resource_type] = price
+	_maker_long_run_unit_prices[resource_type] = long_run_price
 	var center := price * (1.0 + lean * gap)
 	var bid_price := maxi(1, floori(center * (1.0 - bid_spread)))
 	var ask_price := maxi(bid_price + 1, ceili(center * (1.0 + ask_spread)))
