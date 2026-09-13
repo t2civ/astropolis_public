@@ -142,10 +142,14 @@ const MAKER_DRIFT := 0.02
 ## Re-quote a market maker's standing orders when either side's price drifts beyond this
 ## fraction (def key [code]maker_price_tol[/code] overrides per posture).
 const MAKER_PRICE_TOLERANCE := 0.01
-## Ceiling on a market maker's own price, in multiples of the resource's start price. It
-## keeps a shortage nothing answers from overflowing prices; a price that reaches it marks
-## a broken run.
+## Ceiling on a market maker's own price, in multiples of the resource's start price: a
+## numerical guard for a resource with nothing to bound its price by (see
+## [constant MAKER_FORCED_DEMAND_MARKUP]). A price that reaches it marks a broken run.
 const MAKER_PRICE_RAIL := 1000.0
+## Most a market maker charges over a resource's production break-even when no consuming
+## operation at its facility can put a price on it: only forced demand draws it (households,
+## upkeep, buildout), or nothing does.
+const MAKER_FORCED_DEMAND_MARKUP := 0.5
 ## Share of a storage class's capacity a market maker's stock targets may fill before it
 ## steers by the part its storage can hold, below where full storage throttles producers.
 const MAKER_STORAGE_FILL := 0.8
@@ -473,8 +477,10 @@ func _process_facility_support(resource_type: int, market: MarketProxy,
 
 ## Makes the market in one resource the facility trades (see TRADE_MODEL.md, "Market
 ## makers"). The maker keeps its own price for the resource, raising it while its stock is
-## short of target and lowering it while stock is over, at a rate tied to the gap, and
-## quotes both sides around that price leaned by the same gap. [param posture_def] sets
+## short of target and lowering it while stock is over, at a rate tied to the gap, held
+## between what the facility's cheapest producing operation needs and what its most
+## tolerant consuming operation can pay, and quotes both sides around that price leaned by
+## the same gap. [param posture_def] sets
 ## how fast the price moves and [param resource_def], the resource strategy's def, sets
 ## the spread and lean. It steers by the part of its stock target its storage can hold,
 ## sells only stock above both reserves and buys up to that target plus a band, netting
@@ -520,8 +526,18 @@ func _process_market_making(resource_type: int, market: MarketProxy,
 	# only once it ships: its seller may be short too, and delivery can wait a quarter.
 	var committed_stock := stock + in_transit - multiplier * _net_short_units[resource_type]
 	var gap := clampf((target - committed_stock) / maxf(target, multiplier), -1.0, 1.0)
-	price = clampf(price * pow(1.0 + drift, gap * delta / (7.0 * IVUnits.DAY)), 1.0,
+	# A price no operation here can pay prices out every consumer, and one below what every
+	# producer needs idles all production: past either, a gap nothing answers never closes.
+	var floor_price := _facility.get_inventory_production_breakeven(resource_type)
+	var ceiling_price := _facility.get_inventory_consumption_breakeven(resource_type)
+	if is_inf(ceiling_price):
+		ceiling_price = floor_price * (1.0 + MAKER_FORCED_DEMAND_MARKUP) # INF: no producer either
+	if is_inf(floor_price):
+		floor_price = 0.0
+	var upper := minf(maxf(floor_price, ceiling_price) * multiplier,
 			MAKER_PRICE_RAIL * maxi(_start_unit_prices[resource_type], 1))
+	var lower := minf(maxf(minf(floor_price, ceiling_price) * multiplier, 1.0), upper)
+	price = clampf(price * pow(1.0 + drift, gap * delta / (7.0 * IVUnits.DAY)), lower, upper)
 	_maker_unit_prices[resource_type] = price
 	var center := price * (1.0 + lean * gap)
 	var bid_price := maxi(1, floori(center * (1.0 - bid_spread)))

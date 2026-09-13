@@ -431,6 +431,32 @@ func get_flags() -> int:
 @abstract func get_inventory_reservation_prices() -> PackedFloat64Array
 
 
+## Returns the least a unit of [param resource_type] must fetch, in
+## [method MarketProxy.get_price] units, for this facility's cheapest producing operation
+## to clear its margin floor: the floor of a market maker's price (see TRADE_MODEL.md,
+## "Market makers"). 0.0 when an operation here clears its floor even giving it away;
+## INF when nothing here produces it at known prices.
+@abstract func get_inventory_production_breakeven(resource_type: int) -> float
+
+
+## Returns the per-resource production break-evens array. Return is proxy array
+## reference; read only!
+@abstract func get_inventory_production_breakevens() -> PackedFloat64Array
+
+
+## Returns the most this facility's most tolerant consuming operation could pay per unit
+## of [param resource_type], in [method MarketProxy.get_price] units, and still clear its
+## margin floor: the ceiling of a market maker's price (see TRADE_MODEL.md, "Market
+## makers"). Unlike [method get_inventory_reservation_price], it counts operations
+## already priced below their floor. INF when nothing here with revenue consumes it.
+@abstract func get_inventory_consumption_breakeven(resource_type: int) -> float
+
+
+## Returns the per-resource consumption break-evens array. Return is proxy array
+## reference; read only!
+@abstract func get_inventory_consumption_breakevens() -> PackedFloat64Array
+
+
 ## Returns the storage capacity of storage class [param storage_type].
 @abstract func get_inventory_storage(storage_type: int) -> float
 
