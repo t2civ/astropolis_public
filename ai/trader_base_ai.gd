@@ -495,9 +495,9 @@ func _process_facility_support(resource_type: int, market: MarketProxy,
 ## Makes the market in one resource the facility trades (see TRADE_MODEL.md, "Market
 ## makers"). The maker keeps its own price for the resource, raising it while its stock is
 ## short of target and lowering it while stock is over, at a rate tied to the gap and
-## toward a premium or discount on its own long-run price, held between what the facility's
-## cheapest producing operation needs and what its most tolerant consuming operation can
-## pay, and quotes both sides around that price leaned by the same gap. [param posture_def] sets
+## toward a premium or discount on its own long-run price, headed only between what the
+## facility's cheapest producing operation needs and what its most tolerant consuming
+## operation can pay, and quotes both sides around that price leaned by the same gap. [param posture_def] sets
 ## how fast the price moves and [param resource_def], the resource strategy's def, sets
 ## the spread and lean. It steers by the part of its stock target its storage can hold,
 ## sells only stock above both reserves and buys up to that target plus a band, netting
@@ -556,19 +556,23 @@ func _process_market_making(resource_type: int, market: MarketProxy,
 		ceiling_price = floor_price * (1.0 + MAKER_FORCED_DEMAND_MARKUP) # INF: no producer either
 	if is_inf(floor_price):
 		floor_price = 0.0
-	var upper := minf(maxf(floor_price, ceiling_price) * multiplier,
-			MAKER_PRICE_RAIL * maxi(_start_unit_prices[resource_type], 1))
-	var lower := minf(maxf(minf(floor_price, ceiling_price) * multiplier, 1.0), upper)
+	var rail := MAKER_PRICE_RAIL * maxi(_start_unit_prices[resource_type], 1)
+	var upper := clampf(maxf(floor_price, ceiling_price) * multiplier, 1.0, rail)
+	var lower := clampf(minf(floor_price, ceiling_price) * multiplier, 1.0, upper)
 	# Unanchored, a gap nothing answers compounds the price for as long as it lasts, so the
-	# gap moves the price only a premium away from its long-run price, which follows slowly.
+	# gap heads the price only a premium away from its long-run price, which follows slowly.
+	# The band bounds where the price is headed rather than the price itself: break-evens
+	# jump as operations cross their floors, and a price snapped to one jumps with them.
 	var weeks := delta / (7.0 * IVUnits.DAY)
 	var drift_rate := log(1.0 + drift)
-	var decay_rate := drift_rate / log(1.0 + premium_limit) + 7.0 / (long_run_years * 365.25)
-	var settled_premium := drift_rate * gap / decay_rate
-	var premium := settled_premium + ((log(price / long_run_price) - settled_premium)
+	var follow_rate := 7.0 / (long_run_years * 365.25)
+	var decay_rate := drift_rate / log(1.0 + premium_limit) + follow_rate
+	var headed_premium := clampf(drift_rate * gap / decay_rate, log(lower / long_run_price),
+			log(upper / long_run_price))
+	var premium := headed_premium + ((log(price / long_run_price) - headed_premium)
 			* exp(-decay_rate * weeks))
-	long_run_price *= exp(premium * weeks * 7.0 / (long_run_years * 365.25))
-	price = clampf(long_run_price * exp(premium), lower, upper)
+	long_run_price *= exp(premium * follow_rate * weeks)
+	price = clampf(long_run_price * exp(premium), 1.0, rail)
 	_maker_unit_prices[resource_type] = price
 	_maker_long_run_unit_prices[resource_type] = long_run_price
 	var center := price * (1.0 + lean * gap)
