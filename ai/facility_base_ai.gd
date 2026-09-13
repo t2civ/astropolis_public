@@ -410,21 +410,28 @@ func _capability_strategy(resource_type: int) -> int:
 
 ## Folds own crisis and player influence onto the capability identity by fixed
 ## precedence: own crisis > player structural directive > player influence >
-## capability default. A custom AI overrides this to change reconciliation.
+## capability default. Own crisis is per resource: a consumed resource whose stock
+## falls below its operations reserve escalates to CRITICAL_INPUT, and stays there
+## until its stock refills the strategic reserve that sets. A custom AI overrides this
+## to change reconciliation.
 func _reconcile_resource_strategy(resource_type: int, capability: int) -> int:
 	const CAN_HAVE_INPUT := FacilityProxy.InventoryFlags.CAN_HAVE_INPUT
-	const INPUT_CRISIS := FacilityProxy.FacilityFlags.INPUT_CRISIS
 	const OPS_RESERVE_BREACHED := FacilityProxy.InventoryFlags.OPS_RESERVE_BREACHED
 	const STRATEGIC_RESERVE_BREACHED := FacilityProxy.InventoryFlags.STRATEGIC_RESERVE_BREACHED
 	const PR := PlayerBaseAI.PlayerResourceStrategies
 	const PF := PlayerBaseAI.PlayerFacilityStrategies
 
-	# (1) Own crisis: a consumed resource in shortage prioritizes supply continuity —
-	# escalate to CRITICAL_INPUT for a strategic reserve.
+	# (1) Own crisis: a consumed resource in shortage prioritizes supply continuity.
 	var inv_flags := proxy.get_inventory_flags(resource_type)
-	if (inv_flags & CAN_HAVE_INPUT) and ((proxy.get_flags() & INPUT_CRISIS) \
-			or (inv_flags & (OPS_RESERVE_BREACHED | STRATEGIC_RESERVE_BREACHED))):
-		return _RS.CRITICAL_INPUT
+	if inv_flags & CAN_HAVE_INPUT:
+		if inv_flags & OPS_RESERVE_BREACHED:
+			return _RS.CRITICAL_INPUT
+		# Hold until the strategic reserve refills, or the escalation ends the interval
+		# stock crosses the operations reserve. Only an escalated resource holds: stock
+		# short of a stockpile directive's larger reserve is not a shortage.
+		if (facility_resource_strategies[resource_type] == _RS.CRITICAL_INPUT
+				and inv_flags & STRATEGIC_RESERVE_BREACHED):
+			return _RS.CRITICAL_INPUT
 
 	# (2) Player structural directive overrides influence and capability.
 	if _player_ai.player_facility_strategies.get(proxy.facility_id, 0) == PF.DIVEST:
