@@ -31,11 +31,13 @@ extends Proxy
 ## The market is the central counterparty; only the cash leg would be centrally
 ## novated, and cash is not implemented yet (TODO).[br][br]
 ##
-## Published per-resource values: [b]price[/b] — the last current-quarter trade, or
-## the best current-quarter ask until one trades, else 0; [b]ask[/b] / [b]bid[/b] —
-## the current-quarter top-of-book, 0 for an empty side; [b]volume[/b] — physically
-## settled trade units per day, smoothed over ~7 days. [member instruments] also
-## carries per-instrument top-of-book for every quarter.[br][br]
+## Published per-resource values: [b]price[/b] — the last current-quarter trade or
+## fiat seed, held between the current-quarter best bid and best ask (see
+## TRADE_MODEL.md, "Price discovery"), or the best ask where neither exists, else 0;
+## [b]ask[/b] / [b]bid[/b] — the current-quarter top-of-book, 0 for an empty side;
+## [b]volume[/b] — physically settled trade units per day, smoothed over ~7 days.
+## [member instruments] also carries per-instrument top-of-book for every
+## quarter.[br][br]
 ##
 ## Prices and order quantities are integer "ticks": price in integer USD per trade
 ## unit (assumes [code]IVUnits.USD == 1.0[/code]), quantity in integer "trade units"

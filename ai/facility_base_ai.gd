@@ -170,8 +170,9 @@ enum OperationStrategies {
 }
 
 
-## Default buffer stock a market-making facility warehouses, in time horizons of the
-## resource's throughput (def key [code]buffer_stock_factor[/code] overrides).
+## Default buffer stock a market-making facility warehouses, in time horizons of its
+## turnover of the resource, the larger of its gross production and consumption (def key
+## [code]buffer_stock_factor[/code] overrides).
 const BUFFER_STOCK_FACTOR := 1.0
 ## Default buffer stock floor a market-making facility warehouses, in trade units (def
 ## key [code]buffer_stock_lots[/code] overrides); backs a standing two-sided quote even
@@ -466,7 +467,11 @@ func _apply_strategy_knobs(resource_type: int, strategy: int) -> void:
 	if _is_market_made(resource_type):
 		var buffer_factor: float = def.get(&"buffer_stock_factor", BUFFER_STOCK_FACTOR)
 		var buffer_lots: int = def.get(&"buffer_stock_lots", BUFFER_STOCK_LOTS)
-		buffer_stock = (buffer_factor * horizon_throughput
+		# A warehouse serves the market's turnover, which the net flow understates
+		# wherever the facility both produces and consumes the resource.
+		var turnover := maxf(proxy.get_inventory_production_rate(resource_type),
+				proxy.get_inventory_consumption_rate(resource_type))
+		buffer_stock = (buffer_factor * turnover * proxy.time_horizon
 				+ buffer_lots * _trade_unit_multipliers[resource_type])
 	proxy.set_inventory_buffer_stock(resource_type, buffer_stock)
 

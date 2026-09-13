@@ -120,14 +120,35 @@ enum ResourceStrategies {
 }
 
 
-## Quote offset from the reference price: asks are placed this fraction below it
-## and bids this fraction above, so a producer's ask and a consumer's bid cross.
+## Forward quote offset from the reference price: forward asks are placed this fraction
+## below it and forward bids this fraction above, so a producer's ask and a consumer's bid
+## cross.
 const SPREAD := 0.02
 ## Minimum order size in trade units; smaller surpluses/deficits are not quoted.
 const MIN_LOT := 1
 ## Market-maker bid ceiling above its stock target, in trade units; the maker buys up
 ## toward target + this band and sells down to its reserves.
 const MM_BAND_LOTS := 2
+## A market maker's default quote offsets from its own price: its ask sits this fraction
+## above and its bid this fraction below (def keys [code]maker_ask_spread[/code] and
+## [code]maker_bid_spread[/code] override per resource strategy).
+const MAKER_SPREAD := 0.02
+## Fraction by which a market maker leans both quotes at a full stock gap, up when short
+## and down when over (def key [code]maker_lean[/code] overrides per resource strategy).
+const MAKER_LEAN := 0.1
+## Fractional change per week in a market maker's own price at a full stock gap: stock
+## empty, or double its target (def key [code]maker_drift[/code] overrides per posture).
+const MAKER_DRIFT := 0.02
+## Re-quote a market maker's standing orders when either side's price drifts beyond this
+## fraction (def key [code]maker_price_tol[/code] overrides per posture).
+const MAKER_PRICE_TOLERANCE := 0.01
+## Ceiling on a market maker's own price, in multiples of the resource's start price. It
+## keeps a shortage nothing answers from overflowing prices; a price that reaches it marks
+## a broken run.
+const MAKER_PRICE_RAIL := 1000.0
+## Share of a storage class's capacity a market maker's stock targets may fill before it
+## steers by the part its storage can hold, below where full storage throttles producers.
+const MAKER_STORAGE_FILL := 0.8
 ## Re-quote a standing order when its price drifts beyond this fraction of its price.
 const PRICE_TOLERANCE := 0.05
 ## Re-quote a standing order when its desired quantity drifts beyond this fraction.
@@ -143,9 +164,12 @@ const NULL_PF64ARRAY: PackedFloat64Array = []
 
 ## Trader-posture strategy definitions; index = [enum TraderStrategies] value. The
 ## [code]two_sided[/code] switch makes markets: the market-making executor quotes every
-## resource the facility trades (see [method is_market_resource]) with this def standing
-## in for the resource's own in [member resource_strategy_defs] — tuning and forward
-## keys alike — and the facility AI warehouses buffer stock for those resources.
+## resource the facility trades (see [method is_market_resource]), and the facility AI
+## warehouses buffer stock for those resources. There the posture's
+## [code]maker_drift[/code] and [code]maker_price_tol[/code] tune the maker's price and
+## its [code]min_lot[/code], [code]band_lots[/code] and [code]qty_tol[/code] its quotes,
+## while the resource's own def in [member resource_strategy_defs] sets their spread and
+## lean; the posture's forward keys stand in for the resource's.
 static var trader_strategy_defs: Array[Dictionary] = [
 	{}, # INIT
 	{}, # FACILITY_SUPPORT
@@ -161,7 +185,11 @@ static var trader_strategy_defs: Array[Dictionary] = [
 ## [code]sell_above_reserve[/code], [code]buy_to_reserve[/code]. Tuning keys
 ## ([code]spread[/code], [code]min_lot[/code], [code]band_lots[/code],
 ## [code]price_tol[/code], [code]qty_tol[/code]) may override the class-constant
-## defaults. An empty entry trades nothing.[br][br]
+## defaults. An empty entry trades nothing at a facility-support trader. At a market
+## maker, which quotes every resource it trades, [code]maker_ask_spread[/code],
+## [code]maker_bid_spread[/code] and [code]maker_lean[/code] shape the quotes for
+## resources under the strategy (see [constant MAKER_SPREAD] and
+## [constant MAKER_LEAN]).[br][br]
 ##
 ## [code]forward_quarters[/code] (int) opts a strategy into forward flow-hedging on
 ## later-quarter instruments and floors the depth — effective depth grows with the
@@ -176,7 +204,7 @@ static var trader_strategy_defs: Array[Dictionary] = [
 static var resource_strategy_defs: Array[Dictionary] = [
 	{&"sell_above_reserve": true, &"buy_to_reserve": true}, # NEUTRAL — maintain at reserve
 	{}, # JUST_IN_TIME
-	{&"buy_to_reserve": true}, # STRATEGIC_RESERVE
+	{&"buy_to_reserve": true, &"maker_ask_spread": 0.25}, # STRATEGIC_RESERVE
 	{}, # LIQUIDATE
 	{}, # HOARD
 	{}, # DUMP
@@ -184,9 +212,10 @@ static var resource_strategy_defs: Array[Dictionary] = [
 	{}, # SPECULATIVE_SHORT
 	{}, # AUTARKIC
 	{&"sell_above_reserve": true, &"forward_quarters": 2, &"forward_hedge": 0.75}, # EXPORT_FOCUS
-	{&"buy_to_reserve": true, &"forward_quarters": 2, &"forward_hedge": 1.0}, # IMPORT_PRIORITY
+	{&"buy_to_reserve": true, &"forward_quarters": 2, &"forward_hedge": 1.0,
+			&"maker_ask_spread": 0.05}, # IMPORT_PRIORITY
 	{}, # OPPORTUNISTIC
-	{&"sell_above_reserve": true}, # WIND_DOWN
+	{&"sell_above_reserve": true, &"maker_ask_spread": 0.0, &"maker_bid_spread": 0.2}, # WIND_DOWN
 ]
 
 
@@ -198,6 +227,7 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"resource_strategies",
 	&"_asks",
 	&"_bids",
+	&"_maker_unit_prices",
 ]
 
 
@@ -208,6 +238,8 @@ static var _trade_unit_multipliers := ThreadsafeGlobal.resource_trade_unit_multi
 static var _start_unit_prices: PackedInt32Array
 ## Per-resource 0/1; trade_class == CYBER (orders route to the cyber market). Built once.
 static var _is_cyber_resource: PackedByteArray
+## Per-resource storage class, -1 for none. Built once.
+static var _resource_storage_classes: PackedInt32Array
 
 
 var proxy: TraderProxy
@@ -233,6 +265,11 @@ var _asks: Dictionary[PackedInt32Array, PackedInt64Array] = {}
 ## Memory of open bids, keyed like [member _asks] with values [unit_quantity, unit_price]
 ## in trade units.
 var _bids: Dictionary[PackedInt32Array, PackedInt64Array] = {}
+
+## Per-resource market-maker price in trade units, fractional so a slow drift
+## accumulates; 0 until the maker first prices the resource (see
+## [method _process_market_making]).
+var _maker_unit_prices: PackedFloat64Array
 
 # *****************************************************************************
 
@@ -271,7 +308,8 @@ var _forward_mem_horizons: PackedInt32Array
 # position lookup, and outgoing calls (downstream duplicates), never stored as a key.
 var _forward_instrument_scratch: PackedInt32Array
 # Per-resource front executor at the last interval: 0 not yet run, 1 facility support, 2
-# market making. A switch clears the resource's orders first (see _clear_resource_orders).
+# market making. A switch clears the resource's orders first (see _clear_resource_orders)
+# and its maker price.
 var _executor_branches: PackedByteArray
 
 
@@ -298,10 +336,12 @@ func _init() -> void:
 	_forward_mem_horizons.resize(n_resources)
 	_forward_instrument_scratch.resize(2)
 	_executor_branches.resize(n_resources)
+	_maker_unit_prices.resize(n_resources)
 	if _start_unit_prices.is_empty():
 		const TRADE_CLASS_CYBER := Enums.TradeClasses.TRADE_CLASS_CYBER
 		var resources_table: Dictionary[StringName, Array] = IVTableData.db_tables[&"resources"]
 		_start_unit_prices = PackedInt32Array(resources_table[&"start_price"])
+		_resource_storage_classes = PackedInt32Array(resources_table[&"storage_class"])
 		var trade_classes := PackedInt32Array(resources_table[&"trade_class"])
 		_is_cyber_resource.resize(trade_classes.size())
 		for resource_type in trade_classes.size():
@@ -344,12 +384,12 @@ func ai_init() -> void:
 ## Acts on live market and inventory state using the posture and the sticky
 ## per-resource strategies (authored by the facility, translated and stored on
 ## change). A two-sided posture makes markets in the resources the facility trades
-## (see [method is_market_resource]), its def standing in for theirs; every other
+## (see [method is_market_resource]), priced as its def and theirs direct; every other
 ## resource gets the facility-support executor per its strategy's def. Both SET
 ## orders on the front (current-quarter) instrument at the trader's local market, and
 ## def-gated strategies also maintain forward-flow orders on later quarters (see
 ## [method _process_forward_flow]).
-func process_ai_interval(_delta: float) -> void:
+func process_ai_interval(delta: float) -> void:
 	var market := proxy.market
 	if !market or !_facility:
 		return # no market yet, or transport trader (transport strategies TBD)
@@ -369,10 +409,12 @@ func process_ai_interval(_delta: float) -> void:
 		if _executor_branches[resource_type] != branch:
 			if _executor_branches[resource_type]:
 				_clear_resource_orders(resource_type)
+				_maker_unit_prices[resource_type] = 0.0 # stale by the time it is made again
 			_executor_branches[resource_type] = branch
 		if is_made:
+			_process_market_making(resource_type, market, _instrument_scratch, posture_def, def,
+					delta)
 			def = posture_def
-			_process_market_making(resource_type, market, _instrument_scratch, def)
 		else:
 			_process_facility_support(resource_type, market, _instrument_scratch, def)
 		_process_forward_flow(resource_type, market, def)
@@ -381,12 +423,15 @@ func process_ai_interval(_delta: float) -> void:
 ## Trades one resource to service facility operations: clears stock above its stock
 ## target (the two reserves and any buffer stock) and/or replenishes up toward it, per
 ## the def switches. With both enabled it self-balances around the target — stock
-## can't be both over and under, so at most one side quotes. A still-valid resting
-## order is left untouched; we re-quote only on material divergence. Open positions count against the want quantities: a
-## filled order is committed in/outflow until the short side physically settles it
-## (up to ~a trader interval), so quoting without netting would re-order
-## already-filled demand every interval. A bid never exceeds what the operations
-## consuming the resource can pay (see [method _cap_bid_price]).
+## can't be both over and under, so at most one side quotes. It takes the book, selling
+## into the best bid and buying at the best ask, and quotes the reference price where
+## the other side is empty (see TRADE_MODEL.md, "Price discovery"). A still-valid
+## resting order is left untouched; we re-quote only on material divergence. Open
+## positions count against the want quantities: a filled order is committed in/outflow
+## until the short side physically settles it (up to ~a trader interval), so quoting
+## without netting would re-order already-filled demand every interval. A bid never
+## exceeds what the operations consuming the resource can pay (see
+## [method _cap_bid_price]).
 func _process_facility_support(resource_type: int, market: MarketProxy,
 		instrument: PackedInt32Array, def: Dictionary) -> void:
 	var sell: bool = def.get(&"sell_above_reserve", false)
@@ -398,7 +443,6 @@ func _process_facility_support(resource_type: int, market: MarketProxy,
 		_maintain_ask(instrument, 0, 1, MIN_LOT, 0.0, 0.0)
 		_maintain_bid(instrument, 0, 1, MIN_LOT, 0.0, 0.0)
 		return
-	var spread: float = def.get(&"spread", SPREAD)
 	var min_lot: int = def.get(&"min_lot", MIN_LOT)
 	var price_tol: float = def.get(&"price_tol", PRICE_TOLERANCE)
 	var qty_tol: float = def.get(&"qty_tol", QTY_TOLERANCE)
@@ -410,55 +454,91 @@ func _process_facility_support(resource_type: int, market: MarketProxy,
 	var ask_units := 0
 	if sell: # open shorts are committed outbound stock
 		ask_units = int((stock - target) / multiplier) - _net_short_units[resource_type]
-	var ask_price := maxi(1, floori(reference_price * (1.0 - spread)))
+	# Quoting off the reference instead, a taker would set the price its next quote reads,
+	# a ratchet wherever its quote is the only one standing.
+	var best_bid := market.get_bid_unit_price(resource_type)
+	var ask_price := best_bid if best_bid > 0 else reference_price
 	_maintain_ask(instrument, ask_units, ask_price, min_lot, price_tol, qty_tol)
 	var bid_units := 0
 	if buy: # open longs are committed inbound goods, like in-transit stock
 		bid_units = (int((target - stock - _facility.get_inventory_in_transit(resource_type))
 				/ multiplier) - _net_long_units[resource_type])
-	var bid_price := _cap_bid_price(resource_type,
-			maxi(1, ceili(reference_price * (1.0 + spread))))
+	var best_ask := market.get_ask_unit_price(resource_type)
+	var bid_price := _cap_bid_price(resource_type, best_ask if best_ask > 0 else reference_price)
 	if bid_price < 1: # the facility's operations can pay nothing for it
 		bid_units = 0
 		bid_price = 1 # placeholder: the proxy rejects price <= 0 even for a cancel
 	_maintain_bid(instrument, bid_units, bid_price, min_lot, price_tol, qty_tol)
 
 
-## Quotes both sides for a resource the facility trades: bid below the reference price,
-## ask above it, so the maker earns the spread and provides liquidity (the inverse of
-## facility-support, which crosses to transact). Quantities self-balance inventory toward
-## the stock target (both reserves plus buffer stock) as fills occur, selling only stock
-## above the reserves and netting open positions like facility-support. Falls back to the
-## resource's start_price when no live market price exists.
+## Makes the market in one resource the facility trades (see TRADE_MODEL.md, "Market
+## makers"). The maker keeps its own price for the resource, raising it while its stock is
+## short of target and lowering it while stock is over, at a rate tied to the gap, and
+## quotes both sides around that price leaned by the same gap. [param posture_def] sets
+## how fast the price moves and [param resource_def], the resource strategy's def, sets
+## the spread and lean. It steers by the part of its stock target its storage can hold,
+## sells only stock above both reserves and buys up to that target plus a band, netting
+## open positions like facility support, and never bids for a resource full storage is
+## disposing of. A maker's first price for a resource is the market's, or the resource's
+## start_price when the market has none.
 func _process_market_making(resource_type: int, market: MarketProxy,
-		instrument: PackedInt32Array, def: Dictionary) -> void:
-	var spread: float = def.get(&"spread", SPREAD)
-	var min_lot: int = def.get(&"min_lot", MIN_LOT)
-	var band_lots: int = def.get(&"band_lots", MM_BAND_LOTS)
-	var price_tol: float = def.get(&"price_tol", PRICE_TOLERANCE)
-	var qty_tol: float = def.get(&"qty_tol", QTY_TOLERANCE)
+		instrument: PackedInt32Array, posture_def: Dictionary, resource_def: Dictionary,
+		delta: float) -> void:
+	const DUMPING := FacilityProxy.InventoryFlags.DUMPING
+	var min_lot: int = posture_def.get(&"min_lot", MIN_LOT)
+	var band_lots: int = posture_def.get(&"band_lots", MM_BAND_LOTS)
+	var drift: float = posture_def.get(&"maker_drift", MAKER_DRIFT)
+	var price_tol: float = posture_def.get(&"maker_price_tol", MAKER_PRICE_TOLERANCE)
+	var qty_tol: float = posture_def.get(&"qty_tol", QTY_TOLERANCE)
+	var ask_spread: float = resource_def.get(&"maker_ask_spread", MAKER_SPREAD)
+	var bid_spread: float = resource_def.get(&"maker_bid_spread", MAKER_SPREAD)
+	var lean: float = resource_def.get(&"maker_lean", MAKER_LEAN)
 	var multiplier := _trade_unit_multipliers[resource_type]
-	var reference_price := market.get_unit_price(resource_type)
-	if reference_price <= 0:
-		reference_price = _start_unit_prices[resource_type]
-	if reference_price <= 0:
-		_maintain_ask(instrument, 0, 1, min_lot, 0.0, 0.0)
-		_maintain_bid(instrument, 0, 1, min_lot, 0.0, 0.0)
-		return
-	var ask_price := maxi(1, ceili(reference_price * (1.0 + spread)))
-	var bid_price := maxi(1, floori(reference_price * (1.0 - spread)))
+	var price := _maker_unit_prices[resource_type]
+	if price <= 0.0:
+		price = market.get_unit_price(resource_type)
+		if price <= 0.0:
+			price = _start_unit_prices[resource_type]
+		if price <= 0.0: # nothing to price it from
+			_maintain_ask(instrument, 0, 1, min_lot, 0.0, 0.0)
+			_maintain_bid(instrument, 0, 1, min_lot, 0.0, 0.0)
+			return
 	var reserves := (_facility.get_inventory_ops_reserve(resource_type)
 			+ _facility.get_inventory_strategic_reserve(resource_type))
 	var target := reserves + _facility.get_inventory_buffer_stock(resource_type)
-	var ceiling := target + band_lots * multiplier
+	# Stock that storage cannot hold would raise the price for a gap that never closes.
+	var storage_class := _resource_storage_classes[resource_type]
+	if storage_class != -1:
+		var storage_demand := _facility.get_inventory_storage_demand(storage_class)
+		var holdable := MAKER_STORAGE_FILL * _facility.get_inventory_storage(storage_class)
+		if storage_demand > holdable:
+			target *= holdable / storage_demand
 	var stock := _facility.get_inventory_stock(resource_type)
+	var in_transit := _facility.get_inventory_in_transit(resource_type)
+	# A sale commits stock the moment it fills, though the maker delivers it later; pricing
+	# before delivery would keep selling cheap into its own shortage. A purchase counts
+	# only once it ships: its seller may be short too, and delivery can wait a quarter.
+	var committed_stock := stock + in_transit - multiplier * _net_short_units[resource_type]
+	var gap := clampf((target - committed_stock) / maxf(target, multiplier), -1.0, 1.0)
+	price = clampf(price * pow(1.0 + drift, gap * delta / (7.0 * IVUnits.DAY)), 1.0,
+			MAKER_PRICE_RAIL * maxi(_start_unit_prices[resource_type], 1))
+	_maker_unit_prices[resource_type] = price
+	var center := price * (1.0 + lean * gap)
+	var bid_price := maxi(1, floori(center * (1.0 - bid_spread)))
+	var ask_price := maxi(bid_price + 1, ceili(center * (1.0 + ask_spread)))
 	var ask_units := int((stock - reserves) / multiplier) - _net_short_units[resource_type]
-	var bid_units := (int((ceiling - stock - _facility.get_inventory_in_transit(resource_type))
-			/ multiplier) - _net_long_units[resource_type])
-	_maintain_ask(instrument, maxi(0, ask_units), ask_price, min_lot,
-			price_tol, qty_tol)
-	_maintain_bid(instrument, maxi(0, bid_units), bid_price, min_lot,
-			price_tol, qty_tol)
+	var bid_units := 0
+	if !(_facility.get_inventory_flags(resource_type) & DUMPING): # storage throws it away
+		bid_units = (int((target + band_lots * multiplier - stock - in_transit) / multiplier)
+				- _net_long_units[resource_type])
+	# The market drops a trader's crossed ask and bid as a wash, without an echo, so the
+	# two quotes re-quote together: one side moved against the other's stale price could
+	# cross it.
+	if (_is_quote_stale(_asks, instrument, ask_units, ask_price, min_lot, price_tol, qty_tol)
+			or _is_quote_stale(_bids, instrument, bid_units, bid_price, min_lot, price_tol,
+			qty_tol)):
+		_maintain_ask(instrument, ask_units, ask_price, min_lot, 0.0, 0.0)
+		_maintain_bid(instrument, bid_units, bid_price, min_lot, 0.0, 0.0)
 
 
 ## Maintains one-sided forward orders on later-quarter instruments at the local
@@ -606,39 +686,42 @@ func _set_bid(instrument: PackedInt32Array, unit_quantity: int,
 ## Brings our resting ask for [param instrument] in line with the desired quantity
 ## and price under SET semantics: a want below [param min_lot] clears any resting
 ## ask (the 0-set is sent only when memory holds one); otherwise posts if absent,
-## or re-quotes on material divergence (see [method _needs_requote]). The delivery
+## or re-quotes on material divergence (see [method _is_quote_stale]). The delivery
 ## market is resolved per resource (see [method _delivery_market_id]).
 func _maintain_ask(instrument: PackedInt32Array,
 		want_quantity: int, want_price: int, min_lot: int, price_tol: float, qty_tol: float
 		) -> void:
-	var market_id := _delivery_market_id(instrument[0])
-	if want_quantity < min_lot:
-		if _asks.has(instrument):
-			_set_ask(instrument, 0, want_price, market_id)
+	if !_is_quote_stale(_asks, instrument, want_quantity, want_price, min_lot, price_tol,
+			qty_tol):
 		return
-	if !_asks.has(instrument):
-		_set_ask(instrument, want_quantity, want_price, market_id)
-		return
-	var have := _asks[instrument]
-	if _needs_requote(have[0], have[1], want_quantity, want_price, price_tol, qty_tol):
-		_set_ask(instrument, want_quantity, want_price, market_id)
+	_set_ask(instrument, want_quantity if want_quantity >= min_lot else 0, want_price,
+			_delivery_market_id(instrument[0]))
 
 
 ## Bid counterpart of [method _maintain_ask].
 func _maintain_bid(instrument: PackedInt32Array,
 		want_quantity: int, want_price: int, min_lot: int, price_tol: float, qty_tol: float
 		) -> void:
-	var market_id := _delivery_market_id(instrument[0])
+	if !_is_quote_stale(_bids, instrument, want_quantity, want_price, min_lot, price_tol,
+			qty_tol):
+		return
+	_set_bid(instrument, want_quantity if want_quantity >= min_lot else 0, want_price,
+			_delivery_market_id(instrument[0]))
+
+
+## True when our resting order in [param orders] ([member _asks] or [member _bids]) for
+## [param instrument] is out of line with the desired quantity and price: one rests
+## against a want below [param min_lot], none rests for a real want, or the resting
+## order has drifted past the tolerances (see [method _needs_requote]).
+func _is_quote_stale(orders: Dictionary[PackedInt32Array, PackedInt64Array],
+		instrument: PackedInt32Array, want_quantity: int, want_price: int, min_lot: int,
+		price_tol: float, qty_tol: float) -> bool:
 	if want_quantity < min_lot:
-		if _bids.has(instrument):
-			_set_bid(instrument, 0, want_price, market_id)
-		return
-	if !_bids.has(instrument):
-		_set_bid(instrument, want_quantity, want_price, market_id)
-		return
-	var have := _bids[instrument]
-	if _needs_requote(have[0], have[1], want_quantity, want_price, price_tol, qty_tol):
-		_set_bid(instrument, want_quantity, want_price, market_id)
+		return orders.has(instrument)
+	if !orders.has(instrument):
+		return true
+	var have := orders[instrument]
+	return _needs_requote(have[0], have[1], want_quantity, want_price, price_tol, qty_tol)
 
 
 ## Returns [param bid_price] (trade units) capped at the facility's reservation price
@@ -722,12 +805,10 @@ func _needs_requote(have_quantity: int, have_price: int, want_quantity: int, wan
 
 
 # Cancels this trader's resting ask and bid (if any) on every quarter's instrument
-# for [param resource_type]. Called on an executor-branch change: the support/flow and
-# market-making branches share price formulas (a sell ask at ref*(1-spread) equals the
-# maker's bid; a buy bid at ref*(1+spread) equals the maker's ask), and those prices sit
-# within [constant PRICE_TOLERANCE] of each other, so a lingering old-branch order would
-# not be re-quoted and could cross the new branch's opposite quote (a self-trade) — on
-# the front or any forward quarter both branches quote.
+# for [param resource_type]. Called on an executor-branch change: an order the old branch
+# left resting can sit within the new branch's tolerances, so it would not be re-quoted,
+# and cross the new branch's opposite quote (a self-trade) — on the front or any forward
+# quarter both branches quote.
 func _clear_resource_orders(resource_type: int) -> void:
 	if !proxy.market:
 		return

@@ -397,6 +397,17 @@ func get_flags() -> int:
 @abstract func get_inventory_rates() -> PackedFloat64Array
 
 
+## Returns the most recent measured gross production rate for [param resource_type]
+## (>= 0.0): the production half of [method get_inventory_rate].
+@abstract func get_inventory_production_rate(resource_type: int) -> float
+
+
+## Returns the most recent measured gross consumption rate for [param resource_type]
+## (>= 0.0), counting operation input, maintenance and buildout draws: the consumption
+## half of [method get_inventory_rate].
+@abstract func get_inventory_consumption_rate(resource_type: int) -> float
+
+
 ## Returns the rate at which surplus [param resource_type] was disposed of over
 ## the last interval to relieve a full storage class (>= 0.0). Disposal is not
 ## counted in [method get_inventory_rate]. See [constant InventoryFlags.DUMPING].
@@ -432,6 +443,13 @@ func get_flags() -> int:
 ## Returns the amount of storage class [param storage_type] currently in use
 ## (local stocks plus remote stores).
 @abstract func get_inventory_storage_used(storage_type: int) -> float
+
+
+## Returns the stock storage class [param storage_type] would hold with every resource in
+## it at its stock levels: the operations and strategic reserves and buffer stock. The
+## part above [method get_inventory_storage] is the facility's storage shortfall, the
+## signal storage buildout acts on (see TRADE_MODEL.md, "Market makers").
+@abstract func get_inventory_storage_demand(storage_type: int) -> float
 
 
 ## Returns what a unit of space in storage class [param storage_type] was worth
