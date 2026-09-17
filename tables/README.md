@@ -328,15 +328,15 @@ One "operation unit" corresponds to quantities in the operations.tsv row. In gen
       and a 'survey factor'.
 
 
-Use of 1 t/h is convenient for operation energy/electricity data, as that is often obtained in untis "MWh per tonne". So, e.g., 1.4 MWh per tonne mass conversion converts to 1.4 MW in the `electricity` field and one tonne in the `mass_conversion` field.
+Use of 1 t/h is convenient for operation energy/electricity data, as that is often obtained in untis "MWh per tonne". So, e.g., 1.4 MWh per tonne mass conversion converts to an ELECTRICITY driver input of `1.4 MW` (`driver_in_inventory`) and one tonne in the `mass_conversion` field.
 
 Fields:
 * `op_class`, `op_group`, `module_class` and `stratum` refer to entities from the corresponding tables.
 * `sub_label` is for GUI dispaly within an op_group.
 * `process_group` is an internal enum used in the process code. (Leave blank to safely disable.)
-* `electricity` is in most cases all of the output or input energy (+ or -, respectively). See General Notes, simplifications.
+* The driver lists (`driver_in_inventory` and its siblings) hold the energy an operation runs on and what that source becomes: in most cases an ELECTRICITY input, or a generator's fuel and its products. A generator lists its ELECTRICITY output in `out_inventory`. See General Notes, simplifications, and "Flow Fields" in `operations.schema.md`.
 * `dev_xxxx` fields correspond to total values that contribute to the major dev metrics: Energy, Manufacturing, Computation and Bioproduction.
-* `in_inventory`, `input_quantities`, `out_inventory` and `output_quantities` refer to all of the resources (other than Electricity) that are used or generated. Quantities are specified in resource `trade_unit` (see [resources.tsv](#resourcestsv)) _per hour_.
+* `in_inventory`, `input_quantities`, `out_inventory` and `output_quantities` refer to the target resources: what the operation processes or produces. Quantities are specified in resource `trade_unit` (see [resources.tsv](#resourcestsv)) _per hour_.
 
 Notes:
 * Extractable resources in differentiated solids (which have variance > 0.0) are assumed to have a log-normal abundance distribution. In most cases, it's only the upper tail of that distribution that is economically accessible for extraction. We use a formula that combines abundance, variance, and a 'survey factor' to obtain a 'deposits' fraction (expressed as 0 - 100% in GUI). The deposits fraction determines extraction efficiency, which is the total extracted resource divided by input energy. Ongoing extraction reduces both abundance and variance, reducing deposits much faster than reducing abundance alone. This can be countered, albeit with diminishing returns, by increasing 'survey factor'. In most cases, the economical usefulness of a resource will be exhausted long before the resource abundance reaches zero.

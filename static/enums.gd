@@ -22,8 +22,9 @@ enum Types {
 }
 
 
-## Identifies resource as having unique internal (hard-coded) mechanics. One
-## and only one must exist in resources.tsv.
+## Identifies a resource that code finds without its name, for presentation only (such as
+## the development "power" statistic); no mechanic treats it differently. Each member must
+## exist exactly once in resources.tsv.
 enum UniqueResources {
 	ELECTRICITY,
 }
