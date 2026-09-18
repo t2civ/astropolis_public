@@ -8,8 +8,7 @@ Operations are described in `operations.descriptive.md`.
 - name (1st column) — Operation name per data table instructions. For extraction operations, the name is constructed with the `stratum_group` value as a prefix, e.g., `CONT_SURFACE_COAL_MINING`, `OCEAN_DESALINATION`, `ATMOSPHERE_SEPARATION`.
 - module — The module that provides capacity for this operation. Each operation belongs to exactly one module (one-to-many relationship from modules to operations).
 - process_group — How the operation's run is decided (`Enums.ProcessGroup`); blank disables the operation.
-  - `PRODUCTION` — Most operations, of every op class. It runs at the utilization the facility sets, within its margin floor, its storage and the stock of its inputs. An operation that names a `stratum_group` extracts (see Extraction Fields).
-  - `RENEWABLE` — Generates from environmental energy, at the capacity factor its body and site allow (see `unique_type`), within its margin floor and storage. It lists only its outputs.
+  - `PRODUCTION` — Every operation without mechanics of its own, of every op class. It runs at the utilization the facility sets, or a renewable-power operation at the capacity factor its body and site allow (see `unique_type`), within its margin floor, its storage and the stock of its inputs. An operation that names a `stratum_group` extracts (see Extraction Fields).
   - `POPULATION` — Its run follows the occupancy of the housing its module provides (the population in the module's carrying-capacity group over that group's carrying capacity), whatever its margin or storage, and it draws each input, or each substitution group (`in_inventory_groups`), as far as its stock allows. Its rates are per unit of its module's housing.
   - `EXCHANGE` — Runs the forward market's clearing service at the system's trading activity, earning a share of the exchange's take.
   - `BUILDOUT`, `DECOMMISSIONING` — Build and retire the facility's modules. They list no flows.

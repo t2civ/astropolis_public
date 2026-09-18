@@ -72,7 +72,6 @@ var _suppress_tab_listener := true
 var _db_tables := IVTableData.db_tables
 var _operation_names: Array[StringName] = _db_tables[&"operations"][&"name"]
 var _operation_sublabels: Array[StringName] = _db_tables[&"operations"][&"sublabel"]
-var _operation_process_groups: Array[int] = _db_tables[&"operations"][&"process_group"]
 var _module_names: Array[StringName] = _db_tables[&"modules"][&"name"]
 var _module_operations: Array[Array] = _db_tables[&"modules"][&"operations"]
 var _module_foldables: Array[bool] = _db_tables[&"modules"][&"foldable"]
@@ -216,7 +215,6 @@ func _settings_listener(setting: StringName, value: Variant) -> void:
 # ******************************* PROXY THREAD ********************************
 
 func _get_proxy_data(target_name: StringName) -> void:
-	const PROCESS_GROUP_PRODUCTION := Enums.ProcessGroup.PROCESS_GROUP_PRODUCTION
 	const Items := Proxy.OperationsItems
 	const OP_MASK := (Items.UTILIZATION | Items.ELECTRICITY | Items.REVENUE
 			| Items.GROSS_MARGIN | Items.FUEL_RATE | Items.EXTRACTION_RATE
@@ -260,12 +258,10 @@ func _get_proxy_data(target_name: StringName) -> void:
 		var margin: float = row[POS_GROSS_MARGIN]
 
 		var module_ops: Array[int] = _module_operations[module_type]
-		var process_group: int = _operation_process_groups[module_ops[0]]
 
 		match tab:
 			TAB_ENERGY:
-				if process_group == PROCESS_GROUP_PRODUCTION:
-					flow = row[POS_FUEL_RATE] / _unit_multipliers[&"t/h"]
+				flow = row[POS_FUEL_RATE] / _unit_multipliers[&"t/h"]
 			TAB_EXTRACTION:
 				electricity = -electricity
 				flow = row[POS_EXTRACTION_RATE] / _unit_multipliers[&"t/h"]
@@ -305,8 +301,7 @@ func _get_proxy_data(target_name: StringName) -> void:
 
 			match tab:
 				TAB_ENERGY:
-					if _operation_process_groups[operation_type] == PROCESS_GROUP_PRODUCTION:
-						flow = row[POS_FUEL_RATE] / _unit_multipliers[&"t/h"]
+					flow = row[POS_FUEL_RATE] / _unit_multipliers[&"t/h"]
 				TAB_EXTRACTION:
 					electricity = -electricity
 					flow = row[POS_EXTRACTION_RATE] / _unit_multipliers[&"t/h"]

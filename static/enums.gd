@@ -116,7 +116,6 @@ enum PlayerClasses {
 ## Process category that determines how an operation's run is decided (see
 ## operations.schema.md, process_group).
 enum ProcessGroup {
-	PROCESS_GROUP_RENEWABLE,
 	PROCESS_GROUP_PRODUCTION,
 	PROCESS_GROUP_BUILDOUT,
 	PROCESS_GROUP_DECOMMISSIONING,
