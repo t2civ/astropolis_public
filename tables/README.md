@@ -333,7 +333,7 @@ Use of 1 t/h is convenient for operation energy/electricity data, as that is oft
 Fields:
 * `op_class`, `op_group`, `module_class` and `stratum` refer to entities from the corresponding tables.
 * `sub_label` is for GUI dispaly within an op_group.
-* `process_group` is an internal enum used in the process code. (Leave blank to safely disable.)
+* `process_group` decides how the process code resolves the operation's run; see `operations.schema.md`. (Leave blank to safely disable.)
 * The driver lists (`driver_in_inventory` and its siblings) hold the energy an operation runs on and what that source becomes: in most cases an ELECTRICITY input, or a generator's fuel and its products. A generator lists its ELECTRICITY output in `out_inventory`. See General Notes, simplifications, and "Flow Fields" in `operations.schema.md`.
 * `dev_xxxx` fields correspond to total values that contribute to the major dev metrics: Energy, Manufacturing, Computation and Bioproduction.
 * `in_inventory`, `input_quantities`, `out_inventory` and `output_quantities` refer to the target resources: what the operation processes or produces. Quantities are specified in resource `trade_unit` (see [resources.tsv](#resourcestsv)) _per hour_.

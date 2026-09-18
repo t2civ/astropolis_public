@@ -38,17 +38,15 @@ enum UniqueModules {
 
 
 ## Identifies an operation with unique internal (hard-coded) mechanics. Each
-## member must exist exactly once in operations.tsv. Their run rate is set by
-## the simulation rather than by a player or market lever: the renewable-power
-## operations from a computed environmental capacity factor (by body and site),
-## and URBAN_OPERATIONS from the population its module houses.
+## member must exist exactly once in operations.tsv. These are the renewable-power
+## operations, whose run rate the simulation sets from a computed environmental
+## capacity factor (by body and site) rather than from a player or market lever.
 enum UniqueOperations {
 	SOLAR_POWER,
 	WIND_POWER,
 	HYDROPOWER,
 	GEOTHERMAL_POWER,
 	TIDAL_POWER,
-	URBAN_OPERATIONS,
 }
 
 
@@ -115,15 +113,15 @@ enum PlayerClasses {
 	PLAYER_CLASS_COMPANY,
 }
 
-## Process category that determines how an operation runs (renewable,
-## conversion, extraction, buildout, decommissioning, or dev/debug).
+## Process category that determines how an operation's run is decided (see
+## operations.schema.md, process_group).
 enum ProcessGroup {
 	PROCESS_GROUP_RENEWABLE,
-	PROCESS_GROUP_CONVERSION,
-	PROCESS_GROUP_EXTRACTION,
+	PROCESS_GROUP_PRODUCTION,
 	PROCESS_GROUP_BUILDOUT,
 	PROCESS_GROUP_DECOMMISSIONING,
 	PROCESS_GROUP_EXCHANGE,
+	PROCESS_GROUP_POPULATION,
 	PROCESS_GROUP_DONT_PROCESS, # dev/debug
 }
 

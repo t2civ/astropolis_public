@@ -216,7 +216,7 @@ func _settings_listener(setting: StringName, value: Variant) -> void:
 # ******************************* PROXY THREAD ********************************
 
 func _get_proxy_data(target_name: StringName) -> void:
-	const PROCESS_GROUP_CONVERSION := Enums.ProcessGroup.PROCESS_GROUP_CONVERSION
+	const PROCESS_GROUP_PRODUCTION := Enums.ProcessGroup.PROCESS_GROUP_PRODUCTION
 	const Items := Proxy.OperationsItems
 	const OP_MASK := (Items.UTILIZATION | Items.ELECTRICITY | Items.REVENUE
 			| Items.GROSS_MARGIN | Items.FUEL_RATE | Items.EXTRACTION_RATE
@@ -264,7 +264,7 @@ func _get_proxy_data(target_name: StringName) -> void:
 
 		match tab:
 			TAB_ENERGY:
-				if process_group == PROCESS_GROUP_CONVERSION:
+				if process_group == PROCESS_GROUP_PRODUCTION:
 					flow = row[POS_FUEL_RATE] / _unit_multipliers[&"t/h"]
 			TAB_EXTRACTION:
 				electricity = -electricity
@@ -305,7 +305,7 @@ func _get_proxy_data(target_name: StringName) -> void:
 
 			match tab:
 				TAB_ENERGY:
-					if _operation_process_groups[operation_type] == PROCESS_GROUP_CONVERSION:
+					if _operation_process_groups[operation_type] == PROCESS_GROUP_PRODUCTION:
 						flow = row[POS_FUEL_RATE] / _unit_multipliers[&"t/h"]
 				TAB_EXTRACTION:
 					electricity = -electricity
