@@ -158,9 +158,6 @@ const MAKER_PRICE_RAIL := 1000.0
 ## operation at its facility can put a price on it: only forced demand draws it (households,
 ## upkeep, buildout), or nothing does.
 const MAKER_FORCED_DEMAND_MARKUP := 0.5
-## Share of a storage class's capacity a market maker's stock targets may fill before it
-## steers by the part its storage can hold, below where full storage throttles producers.
-const MAKER_STORAGE_FILL := 0.8
 ## Re-quote a standing order when its price drifts beyond this fraction of its price.
 const PRICE_TOLERANCE := 0.05
 ## Re-quote a standing order when its desired quantity drifts beyond this fraction.
@@ -252,8 +249,6 @@ static var _trade_unit_multipliers := ThreadsafeGlobal.resource_trade_unit_multi
 static var _start_unit_prices: PackedInt32Array
 ## Per-resource 0/1; trade_class == CYBER (orders route to the cyber market). Built once.
 static var _is_cyber_resource: PackedByteArray
-## Per-resource storage class, -1 for none. Built once.
-static var _resource_storage_classes: PackedInt32Array
 
 
 var proxy: TraderProxy
@@ -361,7 +356,6 @@ func _init() -> void:
 		const TRADE_CLASS_CYBER := Enums.TradeClasses.TRADE_CLASS_CYBER
 		var resources_table: Dictionary[StringName, Array] = IVTableData.db_tables[&"resources"]
 		_start_unit_prices = PackedInt32Array(resources_table[&"start_price"])
-		_resource_storage_classes = PackedInt32Array(resources_table[&"storage_class"])
 		var trade_classes := PackedInt32Array(resources_table[&"trade_class"])
 		_is_cyber_resource.resize(trade_classes.size())
 		for resource_type in trade_classes.size():
@@ -442,8 +436,9 @@ func process_ai_interval(delta: float) -> void:
 
 
 ## Trades one resource to service facility operations: clears stock above its stock
-## target (the two reserves and any buffer stock) and/or replenishes up toward it, per
-## the def switches. With both enabled it self-balances around the target — stock
+## target (the two effective reserves and any effective buffer stock; see
+## [method FacilityProxy.get_inventory_effective_ops_reserve]) and/or replenishes up toward
+## it, per the def switches. With both enabled it self-balances around the target — stock
 ## can't be both over and under, so at most one side quotes. It takes the book, selling
 ## into the best bid and buying at the best ask, and quotes the reference price where
 ## the other side is empty (see TRADE_MODEL.md, "Price discovery"). A still-valid
@@ -468,9 +463,9 @@ func _process_facility_support(resource_type: int, market: MarketProxy,
 	var price_tol: float = def.get(&"price_tol", PRICE_TOLERANCE)
 	var qty_tol: float = def.get(&"qty_tol", QTY_TOLERANCE)
 	var multiplier := _trade_unit_multipliers[resource_type]
-	var target := (_facility.get_inventory_ops_reserve(resource_type)
-			+ _facility.get_inventory_strategic_reserve(resource_type)
-			+ _facility.get_inventory_buffer_stock(resource_type))
+	var target := (_facility.get_inventory_effective_ops_reserve(resource_type)
+			+ _facility.get_inventory_effective_strategic_reserve(resource_type)
+			+ _facility.get_inventory_effective_buffer_stock(resource_type))
 	var stock := _facility.get_inventory_stock(resource_type)
 	var ask_units := 0
 	if sell: # open shorts are committed outbound stock
@@ -497,13 +492,15 @@ func _process_facility_support(resource_type: int, market: MarketProxy,
 ## short of target and lowering it while stock is over, at a rate tied to the gap and
 ## toward a premium or discount on its own long-run price, headed only between what the
 ## facility's cheapest producing operation needs and what its most tolerant consuming
-## operation can pay, and quotes both sides around that price leaned by the same gap. [param posture_def] sets
-## how fast the price moves and [param resource_def], the resource strategy's def, sets
-## the spread and lean. It steers by the part of its stock target its storage can hold,
-## sells only stock above both reserves and buys up to that target plus a band, netting
-## open positions like facility support, and never bids for a resource full storage is
-## disposing of. A maker's first price for a resource is the market's, or the resource's
-## start_price when the market has none.
+## operation can pay, and quotes both sides around that price leaned by the same gap.
+## [param posture_def] sets how fast the price moves and [param resource_def], the resource
+## strategy's def, sets the spread and lean. It steers by the facility's effective stock
+## levels, which fit what its storage can hold (see
+## [method FacilityProxy.get_inventory_storage_level_scale]): it sells only stock above both
+## effective reserves and buys up to its effective target plus a band, netting open positions
+## like facility support, and never bids for a resource full storage is disposing of. A
+## maker's first price for a resource is the market's, or the resource's start_price when the
+## market has none.
 func _process_market_making(resource_type: int, market: MarketProxy,
 		instrument: PackedInt32Array, posture_def: Dictionary, resource_def: Dictionary,
 		delta: float) -> void:
@@ -531,16 +528,9 @@ func _process_market_making(resource_type: int, market: MarketProxy,
 			return
 	if long_run_price <= 0.0: # first priced here, or a save from before long-run prices
 		long_run_price = price
-	var reserves := (_facility.get_inventory_ops_reserve(resource_type)
-			+ _facility.get_inventory_strategic_reserve(resource_type))
-	var target := reserves + _facility.get_inventory_buffer_stock(resource_type)
-	# Stock that storage cannot hold would raise the price for a gap that never closes.
-	var storage_class := _resource_storage_classes[resource_type]
-	if storage_class != -1:
-		var storage_demand := _facility.get_inventory_storage_demand(storage_class)
-		var holdable := MAKER_STORAGE_FILL * _facility.get_inventory_storage(storage_class)
-		if storage_demand > holdable:
-			target *= holdable / storage_demand
+	var reserves := (_facility.get_inventory_effective_ops_reserve(resource_type)
+			+ _facility.get_inventory_effective_strategic_reserve(resource_type))
+	var target := reserves + _facility.get_inventory_effective_buffer_stock(resource_type)
 	var stock := _facility.get_inventory_stock(resource_type)
 	var in_transit := _facility.get_inventory_in_transit(resource_type)
 	# A sale commits stock the moment it fills, though the maker delivers it later; pricing

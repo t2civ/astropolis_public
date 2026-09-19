@@ -58,9 +58,11 @@ enum FacilityFlags {
 ## Per-resource inventory bit flags. FROM_SERVER bits (0 - 31) are signals from
 ## the server; FROM_PROXY bits (32 - 63) are AI commands to the server.
 enum InventoryFlags {
-	## Stock of this resource is below its operational reserve target.
+	## Stock of this resource, with what is on its way here, is below its effective
+	## operational reserve (see [method get_inventory_effective_ops_reserve]).
 	OPS_RESERVE_BREACHED = 1 << 1,
-	## Stock of this resource is below its AI-set strategic reserve target.
+	## Stock of this resource, with what is on its way here, is below its effective
+	## strategic reserve (see [method get_inventory_effective_strategic_reserve]).
 	STRATEGIC_RESERVE_BREACHED = 1 << 2,
 	## No market price is established for this resource at this location.
 	PRICE_UNKNOWN = 1 << 4,
@@ -330,7 +332,8 @@ func get_flags() -> int:
 
 
 ## Returns the operational reserve target for [param resource_type] — the stock
-## level the facility aims to keep on hand to sustain its operations.
+## level the facility aims to keep on hand to sustain its operations. This is the desired
+## level; what the facility acts on is [method get_inventory_effective_ops_reserve].
 @abstract func get_inventory_ops_reserve(resource_type: int) -> float
 
 
@@ -339,9 +342,19 @@ func get_flags() -> int:
 @abstract func get_inventory_ops_reserves() -> PackedFloat64Array
 
 
+## Returns the operational reserve the facility acts on for [param resource_type]:
+## [method get_inventory_ops_reserve] times its storage class's
+## [method get_inventory_storage_level_scale], so that every stock level fits the storage
+## the facility has. The reserve breach flags, disposal, settlement and a trader's quotes all
+## read the effective levels.
+@abstract func get_inventory_effective_ops_reserve(resource_type: int) -> float
+
+
 ## Returns the strategic reserve for [param resource_type]: stock the AI keeps beyond
 ## the operational reserve so operations run through a supply interruption. Operations
-## draw it; trade never sells it (see AI_ARCHITECTURE.md, "Stock levels").
+## draw it; trade never sells it (see AI_ARCHITECTURE.md, "Stock levels"). This is the
+## desired level; what the facility acts on is
+## [method get_inventory_effective_strategic_reserve].
 @abstract func get_inventory_strategic_reserve(resource_type: int) -> float
 
 
@@ -350,15 +363,26 @@ func get_flags() -> int:
 @abstract func get_inventory_strategic_reserves() -> PackedFloat64Array
 
 
+## Returns the strategic reserve the facility acts on for [param resource_type] (see
+## [method get_inventory_effective_ops_reserve]).
+@abstract func get_inventory_effective_strategic_reserve(resource_type: int) -> float
+
+
 ## Returns the buffer stock for [param resource_type]: stock the AI holds for the
 ## market beyond both reserves, such as a market maker's warehouse. Operations draw it
-## and trade sells it (see AI_ARCHITECTURE.md, "Stock levels").
+## and trade sells it (see AI_ARCHITECTURE.md, "Stock levels"). This is the desired level;
+## what the facility acts on is [method get_inventory_effective_buffer_stock].
 @abstract func get_inventory_buffer_stock(resource_type: int) -> float
 
 
 ## Returns the per-resource buffer stocks array. Return is proxy array
 ## reference; read only!
 @abstract func get_inventory_buffer_stocks() -> PackedFloat64Array
+
+
+## Returns the buffer stock the facility acts on for [param resource_type] (see
+## [method get_inventory_effective_ops_reserve]).
+@abstract func get_inventory_effective_buffer_stock(resource_type: int) -> float
 
 
 ## Returns the expected net flow rate for [param resource_type] (positive =
@@ -497,9 +521,11 @@ func get_flags() -> int:
 
 
 ## Returns the stock storage class [param storage_type] would hold with every resource in
-## it at its stock levels: the operations and strategic reserves and buffer stock. The
-## part above [method get_inventory_storage] is the facility's storage shortfall, the
-## signal storage buildout acts on (see TRADE_MODEL.md, "Market makers").
+## it at its desired stock levels: the operations and strategic reserves and buffer stock.
+## Where the class can't hold that, the facility acts on levels scaled down to fit (see
+## [method get_inventory_storage_level_scale]), and what they give up is the facility's
+## storage shortfall, the signal storage buildout acts on (see TRADE_MODEL.md, "Market
+## makers").
 @abstract func get_inventory_storage_demand(storage_type: int) -> float
 
 
@@ -528,6 +554,21 @@ func get_flags() -> int:
 ## Returns the per-storage-class turnover times array. Return is proxy array
 ## reference; read only!
 @abstract func get_inventory_storage_turnover_times() -> PackedFloat64Array
+
+
+## Returns the share of storage class [param storage_type]'s desired stock levels the
+## facility acts on (0.0 - 1.0): 1.0 where the class holds every member's operations and
+## strategic reserves and buffer stock with room to spare, and the share of them it can hold
+## otherwise. Every effective level in the class, such as
+## [method get_inventory_effective_ops_reserve], is its desired level times this. Set at the
+## start of each interval, and 1.0 before the first (see PRODUCTION_MODEL.md, "Stock levels
+## fit storage").
+@abstract func get_inventory_storage_level_scale(storage_type: int) -> float
+
+
+## Returns the per-storage-class level scales array. Return is proxy array
+## reference; read only!
+@abstract func get_inventory_storage_level_scales() -> PackedFloat64Array
 
 
 ## Returns the quantity of [param resource_type] this facility owns stored
