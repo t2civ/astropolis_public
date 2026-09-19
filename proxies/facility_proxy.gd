@@ -399,8 +399,9 @@ func get_flags() -> int:
 @abstract func get_inventory_expected_rates() -> PackedFloat64Array
 
 
-## Returns the in-transit quantity for [param resource_type] (en route to this
-## facility; always >= 0.0).
+## Returns the quantity of [param resource_type] delivered to this facility and not yet taken
+## into stock (always >= 0.0). It uses no storage. The facility's next interval draws it before
+## anything else and stores what is left, and what its storage can't hold then is disposed of.
 @abstract func get_inventory_in_transit(resource_type: int) -> float
 
 
