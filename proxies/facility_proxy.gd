@@ -506,6 +506,20 @@ func get_flags() -> int:
 @abstract func get_inventory_consumption_breakevens() -> PackedFloat64Array
 
 
+## Returns what a unit of [param resource_type] must fetch, in
+## [method MarketProxy.get_price] units, for the costliest unit of production still making
+## it here to clear its margin floor, as of the last interval: the price the merit order
+## sets. Where nothing here made it, the price at which the cheapest unit would start (see
+## PRODUCTION_MODEL.md, "What the facility publishes"). 0.0 when that unit clears its
+## floor giving it away; INF when nothing here produces it at known prices.
+@abstract func get_inventory_marginal_production_breakeven(resource_type: int) -> float
+
+
+## Returns the per-resource marginal production break-evens array. Return is proxy array
+## reference; read only!
+@abstract func get_inventory_marginal_production_breakevens() -> PackedFloat64Array
+
+
 ## Returns the storage capacity of storage class [param storage_type].
 @abstract func get_inventory_storage(storage_type: int) -> float
 
