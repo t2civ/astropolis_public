@@ -42,13 +42,13 @@ enum FacilityFlags {
 	## Mask of all server-published signal bits.
 	FROM_SERVER_MASK = (1 << 32) - 1,
 
-	## Crisis posture: operations continue regardless of profitability and
-	## storage constraints are relaxed.
+	## Crisis posture: operations continue regardless of profitability.
 	MODE_EMERGENCY = 1 << 32,
 	## Laid-up state: no operations run; capacity is preserved for later restart.
 	MODE_MOTHBALL = 1 << 33,
-	## Inventory drawdown: only operations that net-consume inventory continue
-	## (distinct from the DECOMMISSIONING operation, which tears down modules).
+	## Inventory drawdown: no stock may rise, so each operation runs only as far as the
+	## facility itself uses what it makes (distinct from the DECOMMISSIONING operation, which
+	## tears down modules).
 	MODE_DRAWDOWN = 1 << 34,
 	## Mask of all AI-command bits.
 	FROM_PROXY_MASK = ~((1 << 32) - 1),
@@ -62,9 +62,6 @@ enum InventoryFlags {
 	OPS_RESERVE_BREACHED = 1 << 1,
 	## Stock of this resource is below its AI-set strategic reserve target.
 	STRATEGIC_RESERVE_BREACHED = 1 << 2,
-	## The storage class holding this resource is at or above the first
-	## throttling threshold.
-	STORAGE_SURPLUS = 1 << 3,
 	## No market price is established for this resource at this location.
 	PRICE_UNKNOWN = 1 << 4,
 	## This resource is tradable (a commodity assigned to a storage class).
@@ -73,8 +70,9 @@ enum InventoryFlags {
 	CAN_HAVE_INPUT = 1 << 6,
 	## A can-have operation at this facility produces or extracts this resource.
 	CAN_HAVE_OUTPUT = 1 << 7,
-	## Surplus of this resource is being disposed of here to relieve its storage
-	## class; operations here value it at zero, as both input and output.
+	## Nobody here uses or bids for this resource, and it is being disposed of or vented
+	## for want of storage room; operations here value it at zero, as both input and
+	## output, until its stock falls to its reserves or someone uses it or bids for it.
 	DUMPING = 1 << 8,
 	## Mask of all server-published signal bits.
 	FROM_SERVER_MASK = (1 << 32) - 1,
@@ -98,8 +96,8 @@ enum OperationsFlags {
 	## The operation was throttled below its intended rate last interval
 	## because an input was in short supply.
 	WAS_INPUT_LIMITED = 1 << 2,
-	## The operation was throttled below its intended rate last interval
-	## because an output's storage was nearly full.
+	## The operation ran below its intended rate last interval because an output
+	## had no storage room.
 	WAS_STORAGE_LIMITED = 1 << 3,
 	## The operation made up a short input from others in its substitution group
 	## last interval.
@@ -108,13 +106,13 @@ enum OperationsFlags {
 	FROM_SERVER_MASK = (1 << 32) - 1,
 
 	## When any of the op's outputs is below operational reserve, suspend
-	## profit-gating and ease storage throttling so the op can ramp up.
+	## profit-gating so the op can ramp up.
 	SHORTAGE_PRIORITY = 1 << 33,
 	## Hold the operation at a minimum baseline rate even when other
 	## automations would idle it.
 	STRATEGIC_FLOOR = 1 << 34,
-	## Hard-stop the operation when any of its outputs has insufficient
-	## storage headroom (no soft trickle).
+	## Never vent the operation's outputs: it runs only as far as every output has
+	## storage room, rather than venting a co-product it has no room for.
 	CLEARANCE_LIMITED = 1 << 35,
 	## Mask of all AI-command bits.
 	FROM_PROXY_MASK = ~((1 << 32) - 1),
