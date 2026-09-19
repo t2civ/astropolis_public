@@ -411,10 +411,12 @@ func _capability_strategy(resource_type: int) -> int:
 
 ## Folds own crisis and player influence onto the capability identity by fixed
 ## precedence: own crisis > player structural directive > player influence >
-## capability default. Own crisis is per resource: a consumed resource whose stock
-## falls below its operations reserve escalates to CRITICAL_INPUT, and stays there
-## until its stock refills the strategic reserve that sets. A custom AI overrides this
-## to change reconciliation.
+## capability default. Own crisis is per resource: a resource the facility uses more of
+## than it makes, whose stock falls below its operations reserve, escalates to
+## CRITICAL_INPUT, and stays there until its stock refills the strategic reserve that
+## sets. One it makes more of than it uses is never in crisis: its stock runs low because
+## it sells, and a reserve sized by its net flow would hold back its whole output. A custom
+## AI overrides this to change reconciliation.
 func _reconcile_resource_strategy(resource_type: int, capability: int) -> int:
 	const CAN_HAVE_INPUT := FacilityProxy.InventoryFlags.CAN_HAVE_INPUT
 	const OPS_RESERVE_BREACHED := FacilityProxy.InventoryFlags.OPS_RESERVE_BREACHED
@@ -422,9 +424,10 @@ func _reconcile_resource_strategy(resource_type: int, capability: int) -> int:
 	const PR := PlayerBaseAI.PlayerResourceStrategies
 	const PF := PlayerBaseAI.PlayerFacilityStrategies
 
-	# (1) Own crisis: a consumed resource in shortage prioritizes supply continuity.
+	# (1) Own crisis: a resource used here beyond what is made here, in shortage, prioritizes
+	# supply continuity.
 	var inv_flags := proxy.get_inventory_flags(resource_type)
-	if inv_flags & CAN_HAVE_INPUT:
+	if inv_flags & CAN_HAVE_INPUT and proxy.get_inventory_expected_rate(resource_type) < 0.0:
 		if inv_flags & OPS_RESERVE_BREACHED:
 			return _RS.CRITICAL_INPUT
 		# Hold until the strategic reserve refills, or the escalation ends the interval
