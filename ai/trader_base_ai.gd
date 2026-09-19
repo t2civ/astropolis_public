@@ -480,9 +480,11 @@ func _process_facility_support(resource_type: int, market: MarketProxy,
 			+ _facility.get_inventory_effective_strategic_reserve(resource_type)
 			+ _facility.get_inventory_effective_buffer_stock(resource_type))
 	var stock := _facility.get_inventory_stock(resource_type)
+	var outbound := _facility.get_inventory_outbound(resource_type)
 	var ask_units := 0
-	if sell: # open shorts are committed outbound stock
-		ask_units = int((stock - target) / multiplier) - _net_short_units[resource_type]
+	if sell: # open shorts are committed stock, some of it set aside already
+		ask_units = (int((stock + outbound - target) / multiplier)
+				- _net_short_units[resource_type])
 	# Quoting off the reference instead, a taker would set the price its next quote reads,
 	# a ratchet wherever its quote is the only one standing.
 	var best_bid := market.get_bid_unit_price(resource_type)
@@ -490,8 +492,9 @@ func _process_facility_support(resource_type: int, market: MarketProxy,
 	_maintain_ask(instrument, ask_units, ask_price, min_lot, price_tol, qty_tol)
 	var bid_units := 0
 	if buy: # open longs are committed inbound goods, like in-transit stock
-		bid_units = (int((target - stock - _facility.get_inventory_in_transit(resource_type))
-				/ multiplier) - _net_long_units[resource_type])
+		bid_units = (int((target - stock - outbound
+				- _facility.get_inventory_in_transit(resource_type)) / multiplier)
+				- _net_long_units[resource_type])
 	var best_ask := market.get_ask_unit_price(resource_type)
 	var bid_price := _cap_bid_price(resource_type, best_ask if best_ask > 0 else reference_price)
 	if bid_price < 1: # the facility's operations can pay nothing for it
@@ -554,10 +557,12 @@ func _process_market_making(resource_type: int, market: MarketProxy,
 	var target := reserves + _facility.get_inventory_effective_buffer_stock(resource_type)
 	var stock := _facility.get_inventory_stock(resource_type)
 	var in_transit := _facility.get_inventory_in_transit(resource_type)
+	var outbound := _facility.get_inventory_outbound(resource_type)
 	# A sale commits stock the moment it fills, though the maker delivers it later; pricing
 	# before delivery would keep selling cheap into its own shortage. A purchase counts
 	# only once it ships: its seller may be short too, and delivery can wait a quarter.
-	var committed_stock := stock + in_transit - multiplier * _net_short_units[resource_type]
+	var committed_stock := (stock + in_transit + outbound
+			- multiplier * _net_short_units[resource_type])
 	var gap := clampf((target - committed_stock) / maxf(target, multiplier), -1.0, 1.0)
 	# A price no operation here can pay prices out every consumer, and one below what every
 	# producer needs idles all production: past either, a gap nothing answers never closes.
@@ -603,11 +608,11 @@ func _process_market_making(resource_type: int, market: MarketProxy,
 	var center := price * (1.0 + lean * gap)
 	var bid_price := maxi(1, floori(center * (1.0 - bid_spread)))
 	var ask_price := maxi(bid_price + 1, ceili(center * (1.0 + ask_spread)))
-	var ask_units := int((stock - reserves) / multiplier) - _net_short_units[resource_type]
+	var ask_units := int((stock + outbound - reserves) / multiplier) - _net_short_units[resource_type]
 	var bid_units := 0
 	if !(_facility.get_inventory_flags(resource_type) & DUMPING): # storage throws it away
-		bid_units = (int((target + band_lots * multiplier - stock - in_transit) / multiplier)
-				- _net_long_units[resource_type])
+		bid_units = (int((target + band_lots * multiplier - stock - outbound - in_transit)
+				/ multiplier) - _net_long_units[resource_type])
 	# The market drops a trader's crossed ask and bid as a wash, without an echo, so the
 	# two quotes re-quote together: one side moved against the other's stale price could
 	# cross it.

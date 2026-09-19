@@ -410,6 +410,16 @@ func get_flags() -> int:
 @abstract func get_inventory_in_transits() -> PackedFloat64Array
 
 
+## Returns the quantity of [param resource_type] this facility has set aside for deliveries it
+## owes (always >= 0.0). It uses no storage, and settlement delivers it before any stock; what
+## the facility no longer owes returns in transit.
+@abstract func get_inventory_outbound(resource_type: int) -> float
+
+
+## Returns the per-resource outbound array. Return is proxy array reference; read only!
+@abstract func get_inventory_outbounds() -> PackedFloat64Array
+
+
 ## Returns the most recent measured net rate for [param resource_type] (positive
 ## = production, negative = consumption).
 @abstract func get_inventory_rate(resource_type: int) -> float
