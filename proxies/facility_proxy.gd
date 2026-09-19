@@ -417,6 +417,33 @@ func get_flags() -> int:
 @abstract func get_inventory_disposal_rates() -> PackedFloat64Array
 
 
+## Returns the rate at which demand for [param resource_type] went unserved over the last
+## interval (>= 0.0), counted only where this resource was what held its consumer back: an
+## operation short of electricity draws less of its other inputs too, and only the
+## electricity counts. Residents, buildout and maintenance count what they went without, but
+## not a backlog carried from earlier intervals, such as deferred maintenance (see
+## PRODUCTION_MODEL.md, "What the facility publishes").
+@abstract func get_inventory_unmet_rate(resource_type: int) -> float
+
+
+## Returns the per-resource unmet rates array. Return is proxy array reference;
+## read only!
+@abstract func get_inventory_unmet_rates() -> PackedFloat64Array
+
+
+## Returns the rate at which production of [param resource_type] was held back over the last
+## interval because nothing here used it and its storage class had no room for it (>= 0.0),
+## counted only where this resource was the output that held its operation back. What an
+## operation made anyway, running for another output, is vented instead and shows in
+## [method get_inventory_disposal_rate].
+@abstract func get_inventory_curtailed_rate(resource_type: int) -> float
+
+
+## Returns the per-resource curtailed rates array. Return is proxy array reference;
+## read only!
+@abstract func get_inventory_curtailed_rates() -> PackedFloat64Array
+
+
 ## Returns the most this facility's traders will pay per unit of [param resource_type],
 ## in [method MarketProxy.get_price] units: what the operations consuming it could pay
 ## and still clear their margin floors, set by the marginal one (see TRADE_MODEL.md,
@@ -487,6 +514,20 @@ func get_flags() -> int:
 ## Returns the per-storage-class space values array. Return is proxy array
 ## reference; read only!
 @abstract func get_inventory_storage_values() -> PackedFloat64Array
+
+
+## Returns how long storage class [param storage_type] could carry the last interval's flows
+## through it, in sim time: its capacity over its members' gross throughput, each member at
+## the larger of what the facility made and what it used of it. INF when nothing flowed, and
+## before the first interval. Much less than an interval means the class's stock says little
+## about the next one (see PRODUCTION_MODEL.md, "Level plus rates times the period"). A
+## resource with no storage class holds unbounded stock, as though its turnover were INF.
+@abstract func get_inventory_storage_turnover_time(storage_type: int) -> float
+
+
+## Returns the per-storage-class turnover times array. Return is proxy array
+## reference; read only!
+@abstract func get_inventory_storage_turnover_times() -> PackedFloat64Array
 
 
 ## Returns the quantity of [param resource_type] this facility owns stored
