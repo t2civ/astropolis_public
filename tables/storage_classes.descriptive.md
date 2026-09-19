@@ -12,5 +12,6 @@ Storage classes categorize the physical infrastructure required to store and tra
 
 Notes:
 
-1. Simulation mechanics require unrealistically large capacities, particularly for electricity. When setting module capacities, provide storage capacity to cover at least ~2 weeks of facility activity (we may be able to tune this down later).
+1. Capacities are deliberately generous, electricity's far beyond real grids, which hold about an hour of their generation (R18 in the development repository's `EARTH_CALIBRATION.md`). Facility processing is built to work at any storage size, but a probe at real scale found defects to fix first, and each nation's real storage will come from storage modules, so capacities stay generous until then. When setting module capacities, provide storage capacity to cover at least ~2 weeks of facility activity.
 2. Even after minimum consideration above, capacities should be generous: bulk capacity is provided by almost any unused space; ice/volatiles capacity is cheap and must allow for large quantities of water; etc. 
+3. Radioactive capacity comes with the reactors, 5 t per MW of reactor, so that spent fuel can accumulate for more than a century at the seeded fleets. It is a placeholder until real on-site capacity, pools and dry casks, is researched (R17 in the development repository's `EARTH_CALIBRATION.md`) and storage modules can add capacity where it runs short.

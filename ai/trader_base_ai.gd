@@ -133,16 +133,31 @@ const MM_BAND_LOTS := 2
 ## above and its bid this fraction below (def keys [code]maker_ask_spread[/code] and
 ## [code]maker_bid_spread[/code] override per resource strategy).
 const MAKER_SPREAD := 0.02
-## Fraction by which a market maker leans both quotes at a full stock gap, up when short
-## and down when over (def key [code]maker_lean[/code] overrides per resource strategy).
+## Fraction by which a market maker leans both quotes at a full gap, up when short and down
+## when over (def key [code]maker_lean[/code] overrides per resource strategy).
 const MAKER_LEAN := 0.1
-## Fractional change per week in a market maker's own price at a full stock gap -- stock
-## empty, or double its target -- while the price sits at its long-run price (def key
-## [code]maker_drift[/code] overrides per posture).
+## Fractional change per week in a market maker's own price at a full gap -- stock empty or
+## double its target, or flows [constant MAKER_FLOW_SATURATION] out of balance -- while the
+## price sits at its long-run price (def key [code]maker_drift[/code] overrides per posture).
 const MAKER_DRIFT := 0.02
-## About how far above its long-run price a full lasting stock gap settles a market maker's
-## price, as a fraction of the long-run price; an overstocked maker's settles at the
-## reciprocal below it (def key [code]maker_premium_limit[/code] overrides per posture).
+## Turnover time of a resource's storage class, in trader intervals, from which a trader steers
+## by stock alone: a market maker's price by its stock gap, and every trader's quote quantities
+## by its stock against its levels. Below it the facility's flows weigh in, and steer alone
+## where storage carries no flow at all (see [method _get_stock_weight]; def key
+## [code]stock_turnover_intervals[/code] overrides, per posture for a maker and per resource
+## strategy otherwise).
+const STOCK_TURNOVER_INTERVALS := 4.0
+## How far ahead, in trader intervals, the quantities a trader quotes from flows look: about as
+## long as an order takes to fill, ship and be used (def key [code]flow_lookahead_intervals[/code]
+## overrides, like [constant STOCK_TURNOVER_INTERVALS]).
+const FLOW_LOOKAHEAD_INTERVALS := 2.0
+## Share of a resource's gross flow at a market maker's facility that fills its flow gap: what
+## went unmet, less what was held back or vented for want of room (def key
+## [code]maker_flow_saturation[/code] overrides per posture).
+const MAKER_FLOW_SATURATION := 0.05
+## About how far above its long-run price a full lasting gap settles a market maker's price,
+## as a fraction of the long-run price; an overstocked maker's settles at the reciprocal
+## below it (def key [code]maker_premium_limit[/code] overrides per posture).
 const MAKER_PREMIUM_LIMIT := 1.0
 ## Years over which a market maker's long-run price follows its price (def key
 ## [code]maker_long_run_years[/code] overrides per posture).
@@ -158,9 +173,6 @@ const MAKER_PRICE_RAIL := 1000.0
 ## operation at its facility can put a price on it: only forced demand draws it (households,
 ## upkeep, buildout), or nothing does.
 const MAKER_FORCED_DEMAND_MARKUP := 0.5
-## Share of a storage class's capacity a market maker's stock targets may fill before it
-## steers by the part its storage can hold, below where full storage throttles producers.
-const MAKER_STORAGE_FILL := 0.8
 ## Re-quote a standing order when its price drifts beyond this fraction of its price.
 const PRICE_TOLERANCE := 0.05
 ## Re-quote a standing order when its desired quantity drifts beyond this fraction.
@@ -179,8 +191,10 @@ const NULL_PF64ARRAY: PackedFloat64Array = []
 ## resource the facility trades (see [method is_market_resource]), and the facility AI
 ## warehouses buffer stock for those resources. There the posture's
 ## [code]maker_drift[/code], [code]maker_premium_limit[/code],
-## [code]maker_long_run_years[/code] and [code]maker_price_tol[/code] tune the maker's price and
-## its [code]min_lot[/code], [code]band_lots[/code] and [code]qty_tol[/code] its quotes,
+## [code]maker_long_run_years[/code], [code]stock_turnover_intervals[/code],
+## [code]maker_flow_saturation[/code] and [code]maker_price_tol[/code] tune the maker's price and
+## its [code]min_lot[/code], [code]band_lots[/code], [code]flow_lookahead_intervals[/code] and
+## [code]qty_tol[/code] its quotes,
 ## while the resource's own def in [member resource_strategy_defs] sets their spread and
 ## lean; the posture's forward keys stand in for the resource's.
 static var trader_strategy_defs: Array[Dictionary] = [
@@ -442,9 +456,12 @@ func process_ai_interval(delta: float) -> void:
 
 
 ## Trades one resource to service facility operations: clears stock above its stock
-## target (the two reserves and any buffer stock) and/or replenishes up toward it, per
-## the def switches. With both enabled it self-balances around the target — stock
-## can't be both over and under, so at most one side quotes. It takes the book, selling
+## target (the two effective reserves and any effective buffer stock; see
+## [method FacilityProxy.get_inventory_effective_ops_reserve]) and/or replenishes up toward
+## it, per the def switches. With both enabled it self-balances around the target — stock
+## can't be both over and under, so at most one side quotes. Where the resource's storage
+## can't carry a few intervals of its flows, what the flows call for weighs in (see
+## [method _get_stock_weight]). It takes the book, selling
 ## into the best bid and buying at the best ask, and quotes the reference price where
 ## the other side is empty (see TRADE_MODEL.md, "Price discovery"). A still-valid
 ## resting order is left untouched; we re-quote only on material divergence. Open
@@ -467,14 +484,22 @@ func _process_facility_support(resource_type: int, market: MarketProxy,
 	var min_lot: int = def.get(&"min_lot", MIN_LOT)
 	var price_tol: float = def.get(&"price_tol", PRICE_TOLERANCE)
 	var qty_tol: float = def.get(&"qty_tol", QTY_TOLERANCE)
+	var turnover_intervals: float = def.get(&"stock_turnover_intervals", STOCK_TURNOVER_INTERVALS)
+	var lookahead: float = def.get(&"flow_lookahead_intervals", FLOW_LOOKAHEAD_INTERVALS) * INTERVAL
 	var multiplier := _trade_unit_multipliers[resource_type]
-	var target := (_facility.get_inventory_ops_reserve(resource_type)
-			+ _facility.get_inventory_strategic_reserve(resource_type)
-			+ _facility.get_inventory_buffer_stock(resource_type))
+	var stock_weight := _get_stock_weight(resource_type, turnover_intervals)
+	var target := (_facility.get_inventory_effective_ops_reserve(resource_type)
+			+ _facility.get_inventory_effective_strategic_reserve(resource_type)
+			+ _facility.get_inventory_effective_buffer_stock(resource_type))
 	var stock := _facility.get_inventory_stock(resource_type)
+	var outbound := _facility.get_inventory_outbound(resource_type)
 	var ask_units := 0
-	if sell: # open shorts are committed outbound stock
-		ask_units = int((stock - target) / multiplier) - _net_short_units[resource_type]
+	if sell: # open shorts are committed stock, some of it set aside already
+		ask_units = (int((stock + outbound - target) / multiplier)
+				- _net_short_units[resource_type])
+		if stock_weight < 1.0:
+			ask_units = roundi(lerpf(_get_flow_ask_units(resource_type, lookahead), ask_units,
+					stock_weight))
 	# Quoting off the reference instead, a taker would set the price its next quote reads,
 	# a ratchet wherever its quote is the only one standing.
 	var best_bid := market.get_bid_unit_price(resource_type)
@@ -482,8 +507,12 @@ func _process_facility_support(resource_type: int, market: MarketProxy,
 	_maintain_ask(instrument, ask_units, ask_price, min_lot, price_tol, qty_tol)
 	var bid_units := 0
 	if buy: # open longs are committed inbound goods, like in-transit stock
-		bid_units = (int((target - stock - _facility.get_inventory_in_transit(resource_type))
-				/ multiplier) - _net_long_units[resource_type])
+		bid_units = (int((target - stock - outbound
+				- _facility.get_inventory_in_transit(resource_type)) / multiplier)
+				- _net_long_units[resource_type])
+		if stock_weight < 1.0:
+			bid_units = roundi(lerpf(_get_flow_bid_units(resource_type, lookahead), bid_units,
+					stock_weight))
 	var best_ask := market.get_ask_unit_price(resource_type)
 	var bid_price := _cap_bid_price(resource_type, best_ask if best_ask > 0 else reference_price)
 	if bid_price < 1: # the facility's operations can pay nothing for it
@@ -493,17 +522,25 @@ func _process_facility_support(resource_type: int, market: MarketProxy,
 
 
 ## Makes the market in one resource the facility trades (see TRADE_MODEL.md, "Market
-## makers"). The maker keeps its own price for the resource, raising it while its stock is
-## short of target and lowering it while stock is over, at a rate tied to the gap and
-## toward a premium or discount on its own long-run price, headed only between what the
-## facility's cheapest producing operation needs and what its most tolerant consuming
-## operation can pay, and quotes both sides around that price leaned by the same gap. [param posture_def] sets
-## how fast the price moves and [param resource_def], the resource strategy's def, sets
-## the spread and lean. It steers by the part of its stock target its storage can hold,
-## sells only stock above both reserves and buys up to that target plus a band, netting
-## open positions like facility support, and never bids for a resource full storage is
-## disposing of. A maker's first price for a resource is the market's, or the resource's
-## start_price when the market has none.
+## makers"). The maker keeps its own price for the resource, raising it while the resource is
+## short and lowering it while it is over, at a rate tied to the gap and toward a premium or
+## discount on its own long-run price, headed only between what the facility's cheapest
+## producing operation needs and what its most tolerant consuming operation can pay, and
+## quotes both sides around that price leaned by the same gap. The gap is its stock against
+## target where the resource's storage class carries a few intervals of flow (see
+## [constant STOCK_TURNOVER_INTERVALS]). Where it carries less, what the facility went without
+## and held back weighs in (see [method _get_flow_gap]), the price heads no lower than
+## what the costliest unit still making the resource there needs (see
+## [method FacilityProxy.get_inventory_marginal_production_breakeven]), and what the flows call
+## for weighs in on the quantities as it does at facility support.
+## [param posture_def] sets how fast the price moves and [param resource_def], the resource
+## strategy's def, sets the spread and lean. It steers by the facility's effective stock
+## levels, which fit what its storage can hold (see
+## [method FacilityProxy.get_inventory_storage_level_scale]): it sells only stock above both
+## effective reserves and buys up to its effective target plus a band, netting open positions
+## like facility support, and never bids for a resource full storage is disposing of. A
+## maker's first price for a resource is the market's, or the resource's start_price when the
+## market has none.
 func _process_market_making(resource_type: int, market: MarketProxy,
 		instrument: PackedInt32Array, posture_def: Dictionary, resource_def: Dictionary,
 		delta: float) -> void:
@@ -511,6 +548,11 @@ func _process_market_making(resource_type: int, market: MarketProxy,
 	var min_lot: int = posture_def.get(&"min_lot", MIN_LOT)
 	var band_lots: int = posture_def.get(&"band_lots", MM_BAND_LOTS)
 	var drift: float = posture_def.get(&"maker_drift", MAKER_DRIFT)
+	var turnover_intervals: float = posture_def.get(&"stock_turnover_intervals",
+			STOCK_TURNOVER_INTERVALS)
+	var lookahead: float = (posture_def.get(&"flow_lookahead_intervals",
+			FLOW_LOOKAHEAD_INTERVALS) * INTERVAL)
+	var flow_saturation: float = posture_def.get(&"maker_flow_saturation", MAKER_FLOW_SATURATION)
 	var premium_limit: float = posture_def.get(&"maker_premium_limit", MAKER_PREMIUM_LIMIT)
 	var long_run_years: float = posture_def.get(&"maker_long_run_years", MAKER_LONG_RUN_YEARS)
 	var price_tol: float = posture_def.get(&"maker_price_tol", MAKER_PRICE_TOLERANCE)
@@ -531,27 +573,32 @@ func _process_market_making(resource_type: int, market: MarketProxy,
 			return
 	if long_run_price <= 0.0: # first priced here, or a save from before long-run prices
 		long_run_price = price
-	var reserves := (_facility.get_inventory_ops_reserve(resource_type)
-			+ _facility.get_inventory_strategic_reserve(resource_type))
-	var target := reserves + _facility.get_inventory_buffer_stock(resource_type)
-	# Stock that storage cannot hold would raise the price for a gap that never closes.
-	var storage_class := _resource_storage_classes[resource_type]
-	if storage_class != -1:
-		var storage_demand := _facility.get_inventory_storage_demand(storage_class)
-		var holdable := MAKER_STORAGE_FILL * _facility.get_inventory_storage(storage_class)
-		if storage_demand > holdable:
-			target *= holdable / storage_demand
+	var reserves := (_facility.get_inventory_effective_ops_reserve(resource_type)
+			+ _facility.get_inventory_effective_strategic_reserve(resource_type))
+	var target := reserves + _facility.get_inventory_effective_buffer_stock(resource_type)
 	var stock := _facility.get_inventory_stock(resource_type)
 	var in_transit := _facility.get_inventory_in_transit(resource_type)
+	var outbound := _facility.get_inventory_outbound(resource_type)
 	# A sale commits stock the moment it fills, though the maker delivers it later; pricing
 	# before delivery would keep selling cheap into its own shortage. A purchase counts
 	# only once it ships: its seller may be short too, and delivery can wait a quarter.
-	var committed_stock := stock + in_transit - multiplier * _net_short_units[resource_type]
+	var committed_stock := (stock + in_transit + outbound
+			- multiplier * _net_short_units[resource_type])
 	var gap := clampf((target - committed_stock) / maxf(target, multiplier), -1.0, 1.0)
 	# A price no operation here can pay prices out every consumer, and one below what every
 	# producer needs idles all production: past either, a gap nothing answers never closes.
 	var floor_price := _facility.get_inventory_production_breakeven(resource_type)
 	var ceiling_price := _facility.get_inventory_consumption_breakeven(resource_type)
+	# Stock that can't carry a few intervals of its flows says little about the next one. The
+	# flows say what is short instead, and with no stock to cover a shortfall, a price below
+	# what the costliest unit still running needs would idle output the facility still uses.
+	var stock_weight := _get_stock_weight(resource_type, turnover_intervals)
+	if stock_weight < 1.0:
+		gap = (stock_weight * gap
+				+ (1.0 - stock_weight) * _get_flow_gap(resource_type, flow_saturation))
+		var marginal_price := _facility.get_inventory_marginal_production_breakeven(resource_type)
+		if !is_inf(marginal_price): # INF: no producer here whose run its margin floor sets
+			floor_price = lerpf(marginal_price, floor_price, stock_weight)
 	if is_inf(ceiling_price):
 		ceiling_price = floor_price * (1.0 + MAKER_FORCED_DEMAND_MARKUP) # INF: no producer either
 	if is_inf(floor_price):
@@ -578,11 +625,17 @@ func _process_market_making(resource_type: int, market: MarketProxy,
 	var center := price * (1.0 + lean * gap)
 	var bid_price := maxi(1, floori(center * (1.0 - bid_spread)))
 	var ask_price := maxi(bid_price + 1, ceili(center * (1.0 + ask_spread)))
-	var ask_units := int((stock - reserves) / multiplier) - _net_short_units[resource_type]
+	var ask_units := int((stock + outbound - reserves) / multiplier) - _net_short_units[resource_type]
 	var bid_units := 0
 	if !(_facility.get_inventory_flags(resource_type) & DUMPING): # storage throws it away
-		bid_units = (int((target + band_lots * multiplier - stock - in_transit) / multiplier)
-				- _net_long_units[resource_type])
+		bid_units = (int((target + band_lots * multiplier - stock - outbound - in_transit)
+				/ multiplier) - _net_long_units[resource_type])
+		if stock_weight < 1.0:
+			bid_units = roundi(lerpf(_get_flow_bid_units(resource_type, lookahead), bid_units,
+					stock_weight))
+	if stock_weight < 1.0:
+		ask_units = roundi(lerpf(_get_flow_ask_units(resource_type, lookahead), ask_units,
+				stock_weight))
 	# The market drops a trader's crossed ask and bid as a wash, without an echo, so the
 	# two quotes re-quote together: one side moved against the other's stale price could
 	# cross it.
@@ -785,6 +838,54 @@ func _cap_bid_price(resource_type: int, bid_price: int) -> int:
 	if cap >= bid_price: # INF too: nothing here with revenue consumes it
 		return bid_price
 	return floori(cap)
+
+
+## Returns how far [param resource_type]'s stock steers this trader, from 1.0 where its storage
+## class carries [param turnover_intervals] trader intervals of the facility's flows or more, to
+## 0.0 where it carries none; the facility's flows steer the rest. Stock that can't carry a few
+## intervals of its flows swings from empty to full between them and says little about the
+## next one. 1.0 for a resource with no storage class, whose stock is unbounded.
+func _get_stock_weight(resource_type: int, turnover_intervals: float) -> float:
+	var storage_class := _resource_storage_classes[resource_type]
+	if storage_class == -1:
+		return 1.0
+	return clampf(_facility.get_inventory_storage_turnover_time(storage_class)
+			/ (turnover_intervals * INTERVAL), 0.0, 1.0)
+
+
+## Returns what [param resource_type]'s flows call for this trader to offer over
+## [param lookahead], in trade units: what the facility expects to make beyond its own use and
+## what it held back for want of room, less what it has sold already.
+func _get_flow_ask_units(resource_type: int, lookahead: float) -> int:
+	var rate := (_facility.get_inventory_expected_rate(resource_type)
+			+ _facility.get_inventory_curtailed_rate(resource_type))
+	return (int(maxf(rate, 0.0) * lookahead / _trade_unit_multipliers[resource_type])
+			- _net_short_units[resource_type])
+
+
+## Returns what [param resource_type]'s flows call for this trader to buy over
+## [param lookahead], in trade units: what the facility expects to use beyond what it makes,
+## less what has arrived and what it has bought already.
+func _get_flow_bid_units(resource_type: int, lookahead: float) -> int:
+	var need := (maxf(-_facility.get_inventory_expected_rate(resource_type), 0.0) * lookahead
+			- _facility.get_inventory_in_transit(resource_type))
+	return int(need / _trade_unit_multipliers[resource_type]) - _net_long_units[resource_type]
+
+
+## Returns a market maker's flow gap for [param resource_type], -1.0 to 1.0, positive when
+## short: what the facility went without over the last interval, less what it held back or
+## vented for want of room, as a share of the resource's gross flow there, full at
+## [param saturation] (see [constant MAKER_FLOW_SATURATION]).
+func _get_flow_gap(resource_type: int, saturation: float) -> float:
+	var unmet := _facility.get_inventory_unmet_rate(resource_type)
+	var curtailed := _facility.get_inventory_curtailed_rate(resource_type)
+	var surplus := curtailed + _facility.get_inventory_disposal_rate(resource_type)
+	var gross_flow := maxf(_facility.get_inventory_production_rate(resource_type) + curtailed,
+			_facility.get_inventory_consumption_rate(resource_type) + unmet)
+	gross_flow = maxf(gross_flow, surplus) # a delivered glut of what nothing here makes or uses
+	if gross_flow <= 0.0:
+		return 0.0
+	return clampf((unmet - surplus) / (saturation * gross_flow), -1.0, 1.0)
 
 
 # Resolves which market an order for [param resource_type] routes to: the cyber market
