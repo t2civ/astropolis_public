@@ -615,9 +615,36 @@ func get_flags() -> int:
 # Population (facility-only). Facility-only reads. Implemented on the server-side
 # facility proxy against its population component.
 
-## Returns the intrinsic growth rate for [param population_type]. Safe default
-## on an out-of-range index.
-@abstract func get_population_intrinsic_growth(population_type: int) -> float
+## Returns how many of [param population_type] are in its age [param bucket], one of the
+## type's eight (see POPULATION_MODEL.md, "Demographics"). Safe default on an out-of-range
+## index.
+@abstract func get_population_bucket_number(population_type: int, bucket: int) -> float
+
+
+## Returns how many of [param population_type] are in life [param stage], an
+## [enum Enums.LifeStages]. Safe default on an out-of-range index.
+@abstract func get_population_stage_number(population_type: int, stage: int) -> float
+
+
+## Returns the births per second of [param population_type], smoothed over about a
+## quarter. Safe default on an out-of-range index.
+@abstract func get_population_birth_rate(population_type: int) -> float
+
+
+## Returns the deaths per second of [param population_type], starvation included, smoothed
+## over about a quarter. Safe default on an out-of-range index.
+@abstract func get_population_death_rate(population_type: int) -> float
+
+
+## Returns the starvation deaths per second of [param population_type], smoothed over about
+## a quarter: the people who die for want of life support. Safe default on an out-of-range
+## index.
+@abstract func get_population_starvation_rate(population_type: int) -> float
+
+
+## Returns the life expectancy at birth of [param population_type] at its present death
+## rates, in seconds. Safe default on an out-of-range index.
+@abstract func get_population_life_expectancy(population_type: int) -> float
 
 
 ## Returns the carrying capacity for [param carrying_capacity_group]. Safe
@@ -640,8 +667,8 @@ func get_flags() -> int:
 
 
 ## Returns the smoothed share of life-support needs met for the population housed in
-## [param carrying_capacity_group] (1.0 = fully met); a shortfall shrinks the group's
-## effective carrying capacity. Safe default on an out-of-range index.
+## [param carrying_capacity_group] (1.0 = fully met), over about a month; far enough below
+## it, people starve. Safe default on an out-of-range index.
 @abstract func get_population_life_support_satisfaction(carrying_capacity_group: int) -> float
 
 

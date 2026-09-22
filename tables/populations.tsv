@@ -1,15 +1,15 @@
-	carrying_capacity_group	carrying_capacity_group2	is_biological	is_mechanical	is_corporeal	is_virtual	is_subsentient	required_space	reproduction_rate	#comments
-Type	TABLE_ROW	TABLE_ROW	BOOL	BOOL	BOOL	BOOL	BOOL	FLOAT	FLOAT	
-Unit									1/y	
-Default								1	0	
+	carrying_capacity_group	carrying_capacity_group2	required_space	bucket_widths	first_adult_bucket	first_elder_bucket	birth_weights	starvation_rate	starvation_threshold	#comments
+Type	TABLE_ROW	TABLE_ROW	FLOAT	ARRAY[FLOAT]	INT	INT	ARRAY[FLOAT]	FLOAT	FLOAT	
+Unit				y				1/y		
+Default			1	5;10;10;15;15;10;15	2	6	0;0;0.35;0.6;0.05;0;0;0	4	0.8	
 Prefix/POPULATION_	CARRYING_CAPACITY_GROUP_	CARRYING_CAPACITY_GROUP_								
-BASE_HUMAN	HUMAN		x		x				0.04	
-SUBSENTIENT_ANDROID	ANDROID	HUMAN		x	x		x	0.1		# Subsentient "servants"
-SENTIENT_AGI	VIRTUAL					x				
-VIRTUAL_HUMAN	VIRTUAL					x				# Uploaded human or approximate simulation
-CYBORG	ANDROID	HUMAN	x	x	x					# Extensively mechanized, but w/ bio brain
-EMBODIED_ANDROID	ANDROID	HUMAN		x	x					# AGI or approximate human sim in mech body
-EMBODIED_HUMAN	HUMAN		x		x					# A "downloaded" person
-MOD_AQUATIC	AQUATIC		x		x					# Modified for Earth aquatic environment
-MOD_AMPHIBIOUS	AQUATIC	HUMAN	x		x					# Modified for Earth land or aquatic environment
+BASE_HUMAN	HUMAN									
+SUBSENTIENT_ANDROID	ANDROID	HUMAN	0.1							# Subsentient "servants"
+SENTIENT_AGI	VIRTUAL									
+VIRTUAL_HUMAN	VIRTUAL									# Uploaded human or approximate simulation
+CYBORG	ANDROID	HUMAN								# Extensively mechanized, but w/ bio brain
+EMBODIED_ANDROID	ANDROID	HUMAN								# AGI or approximate human sim in mech body
+EMBODIED_HUMAN	HUMAN									# A "downloaded" person
+MOD_AQUATIC	AQUATIC									# Modified for Earth aquatic environment
+MOD_AMPHIBIOUS	AQUATIC	HUMAN								# Modified for Earth land or aquatic environment
 # max 63										

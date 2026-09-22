@@ -113,6 +113,16 @@ enum PlayerClasses {
 	PLAYER_CLASS_COMPANY,
 }
 
+## Life stage of a population type's age buckets: what wants, work, reports and targets read,
+## however the type cuts its buckets (the [code]first_adult_bucket[/code] and
+## [code]first_elder_bucket[/code] columns of [code]populations.tsv[/code]; see
+## POPULATION_MODEL.md, "Demographics").
+enum LifeStages {
+	LIFE_STAGE_YOUNG,
+	LIFE_STAGE_ADULT,
+	LIFE_STAGE_ELDER,
+}
+
 ## Process category that determines how an operation's run is decided (see
 ## operations.schema.md, process_group).
 enum ProcessGroup {
