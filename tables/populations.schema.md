@@ -13,10 +13,6 @@ own content is written, which comes with the first game that holds them
 
 ## Table Data
 
-- carrying_capacity_group — The environment the type lives in (`carrying_capacity_groups.tsv`),
-  whose room housing modules supply.
-- carrying_capacity_group2 — A second environment it can also live in, or empty.
-- required_space — Room one individual takes, relative to a base human's 1.
 - bucket_widths — ARRAY[FLOAT] in years, seven values: how long the type spends in each of
   its first seven age buckets. The eighth, oldest bucket has no upper bound. Each unit of
   time a population moves on the share of a bucket's members that is one over the bucket's
@@ -41,3 +37,6 @@ own content is written, which comes with the first game that holds them
    `POPULATION_MODEL.md`). What a type sets is where its buckets fall in its own lifetime.
 2. A population's own death rates and fertility are state, seeded per facility in
    `facilities_populations.tsv`.
+3. What a type needs, and where it can live, are its wants (`wants.tsv`): room is the want
+   of its shelter need, a draw on the habitation its environments' housing makes, and an
+   individual that takes less room wants less of it (P6 in `POPULATION_MODEL.md`).

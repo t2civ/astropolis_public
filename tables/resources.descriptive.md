@@ -170,4 +170,5 @@ Notes:
 - **Education** — In-person teaching and training, from primary schooling through tertiary and vocational instruction.
 - **Public/Gov Services** — Administration, security, justice, defense, and civic services provided by governing bodies.
 - **Utilities/Env Services** — Delivered utilities and sanitation: water at the tap, power and gas distribution to premises, and waste collection, recycling, and environmental remediation — distinct from the generation, extraction, and treatment upstream.
+- **Human Habitation** — Room to live in shirt-sleeve space — pressurized, breathable and temperate — counted as places occupied over time: one individual housed for a year is one unit. Made by housing modules and drawn by the residents' shelter need; it cannot be stored or traded, and carries no price until households pay rent.
 

@@ -647,34 +647,17 @@ func get_flags() -> int:
 @abstract func get_population_life_expectancy(population_type: int) -> float
 
 
-## Returns the carrying capacity for [param carrying_capacity_group]. Safe
-## default on an out-of-range index.
-@abstract func get_population_carrying_capacity(carrying_capacity_group: int) -> float
-
-
-## Returns the summed carrying capacity across the groups [param population_type]
-## can occupy. Safe default on an out-of-range index.
-@abstract func get_population_carrying_capacity_for_population(population_type: int) -> float
-
-
-## Returns the total population sharing [param carrying_capacity_group].
-@abstract func get_population_number_for_carrying_capacity_group(carrying_capacity_group: int) -> float
-
-
 ## Returns migration pressure for [param population_type] (positive = net
 ## immigration, negative = net emigration). Safe default on an out-of-range index.
 @abstract func get_population_migration_pressure(population_type: int) -> float
 
 
-## Returns the smoothed share of life-support needs met for the population housed in
-## [param carrying_capacity_group] (1.0 = fully met), over about a month; far enough below
-## it, people starve. Safe default on an out-of-range index.
-@abstract func get_population_life_support_satisfaction(carrying_capacity_group: int) -> float
-
-
-## Returns the smoothed share of the rest of that population's consumption met (1.0 =
-## fully met); recorded only. Safe default on an out-of-range index.
-@abstract func get_population_consumption_satisfaction(carrying_capacity_group: int) -> float
+## Returns the share of [param population_type]'s want for [param need], a
+## [code]needs.tsv[/code] row, that it got (1.0 = fully met), smoothed over about a month for
+## an existence need and a quarter for the others. Below its type's threshold in any existence
+## need, people starve. 1.0 for a need the type has no want for. Safe default on an
+## out-of-range index.
+@abstract func get_population_satisfaction(population_type: int, need: int) -> float
 
 
 ## Returns this facility's [MarketProxy], or null if not yet set.

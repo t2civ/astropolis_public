@@ -56,6 +56,7 @@ enum UniqueOperations {
 enum UniqueLineItems {
 	OPERATION_MAINTENANCE,
 	MODULE_MAINTENANCE,
+	POPULATION_UPKEEP,
 	TRADING_GAINS,
 	TRADING_LOSSES,
 	EXCHANGE_FEES,
@@ -123,6 +124,16 @@ enum LifeStages {
 	LIFE_STAGE_ELDER,
 }
 
+## Tier of a need (the [code]tier[/code] column of [code]needs.tsv[/code]): what going without
+## it does and how fast, and so where the residents' draw of it clears. Existence is served
+## first, wellbeing ahead of the operations, and fulfillment after them (POPULATION_MODEL.md,
+## "Needs").
+enum NeedTiers {
+	NEED_TIER_EXISTENCE,
+	NEED_TIER_WELLBEING,
+	NEED_TIER_FULFILLMENT,
+}
+
 ## Process category that determines how an operation's run is decided (see
 ## operations.schema.md, process_group).
 enum ProcessGroup {
@@ -130,7 +141,6 @@ enum ProcessGroup {
 	PROCESS_GROUP_BUILDOUT,
 	PROCESS_GROUP_DECOMMISSIONING,
 	PROCESS_GROUP_EXCHANGE,
-	PROCESS_GROUP_POPULATION,
 	PROCESS_GROUP_DONT_PROCESS, # dev/debug
 }
 

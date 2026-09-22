@@ -9,6 +9,7 @@ Storage classes categorize the physical infrastructure required to store and tra
 - **Cryogenic** — Insulated, pressurized vessels designed to maintain liquefied gases at cryogenic temperatures. Includes dewars, cryotanks, and associated boil-off management systems.
 - **Radioactive** — Heavily shielded containment for highly radioactive materials such as spent nuclear fuel and high-level radioactive waste. Includes spent fuel pools, dry cask storage, and hot cells with remote handling systems.
 - **Special Handling** — Controlled-environment storage for resources that require temperature regulation, vibration isolation, electrostatic discharge protection, cleanroom conditions, security vaults, or other specialized handling not covered by other storage classes. A catchall for high-value, fragile, perishable, hazardous, or precision items.
+- **Pure Flow** — No storage at all, for what cannot be kept: a service is used as it is made, and a place to live is occupied or not. No module holds this class, so what its producers make over an interval is what the facility draws over it.
 
 Notes:
 

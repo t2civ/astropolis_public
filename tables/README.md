@@ -5,7 +5,6 @@
 [achievements.tsv](#achievementstsv)  
 [advancements.tsv](#advancementstsv)  
 [asset_adjustments_mod.tsv](#asset_adjustments_modtsv)  
-[carrying_capacity_groups.tsv](#carrying_capacity_groupstsv)  
 [compositions.tsv](#compositionstsv)  
 [compositions_resources_deposits.tsv](#compositions_resources_depositstsv)  
 [compositions_resources_proportions.tsv](#compositions_resources_proportionstsv)  
@@ -20,6 +19,7 @@
 [mod_classes.tsv](#mod_classestsv)  
 [modules.tsv](#modulestsv)  
 [moons_mod.tsv](#moons_modtsv)  
+[needs.tsv](#needstsv)  
 [op_classes.tsv](#op_classestsv)  
 [op_groups.tsv](#op_groupstsv)  
 [operations.tsv](#operationstsv)  
@@ -32,6 +32,7 @@
 [spacecrafts.tsv](#spacecraftstsv)  
 [strata.tsv](#stratatsv)  
 [surveys.tsv](#surveystsv)  
+[wants.tsv](#wantstsv)  
 
 > **Note (2026-09):** the table set was restructured after much of this file was written: compositions became `strata.tsv` / `strata_resources.tsv`, and the per-facility capacity, extraction and population tables were folded into `facilities.tsv`, `facilities_modules.tsv`, `facilities_operations.tsv` and `facilities_resources.tsv`. The per-table `*.schema.md` and `*.descriptive.md` riders are authoritative for fields and entities; sections below that describe retired tables are kept for their design notes until this file is overhauled.
 
@@ -87,10 +88,6 @@ The table is here to help me develop a conceptual framework for the science/tech
 ## asset_adjustments_mod.tsv
 
 Specifies adjustments to imported assets, e.g., model scaling. This is a "mod" table that modifies ivoyager_core/data/solar_system/asset_adjustments.tsv.
-
-## carrying_capacity_groups.tsv
-
-Enumeration table that defines different population groups for carrying capacity.
 
 ## compositions.tsv
 
@@ -300,6 +297,10 @@ MODULE_LAUNCH_FACILITIES
 
 Modifies ivoyager/data/solar_system/moons.tsv.
 
+## needs.tsv
+
+What a population type can need: nourishment, room, health, learning and the rest, each with its tier. Fields in `needs.schema.md`; the model is the development repository's `POPULATION_MODEL.md`.
+
 ## op_classes.tsv
 
 Op classes define GUI tab groups for operations: Energy, Extraction, Refining, etc. Only used for GUI.
@@ -393,6 +394,10 @@ Specific geophysical layers for the purpose of defining Compositions (which defi
 ## surveys.tsv
 
 Defines our knowledge about a body's composition/resources in a particular strata: both deposits (if applicable) and estimation errors.
+
+## wants.tsv
+
+What one individual of a population type draws to fill a need, written as an operation's recipe is. Fields in `wants.schema.md`.
 
 ****
 
