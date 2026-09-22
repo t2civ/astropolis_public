@@ -417,13 +417,15 @@ func ai_init() -> void:
 
 ## Acts on live market and inventory state using the posture and the sticky
 ## per-resource strategies (authored by the facility, translated and stored on
-## change). A two-sided posture makes markets in the resources the facility trades
-## (see [method is_market_resource]), priced as its def and theirs direct; every other
-## resource gets the facility-support executor per its strategy's def. Both SET
-## orders on the front (current-quarter) instrument at the trader's local market, and
-## def-gated strategies also maintain forward-flow orders on later quarters (see
-## [method _process_forward_flow]).
+## change). Trades only the resources the facility flags
+## [constant FacilityProxy.InventoryFlags.TRADABLE]: a two-sided posture makes markets in
+## those the facility produces or consumes (see [method is_market_resource]), priced as its
+## def and theirs direct, and every other one gets the facility-support executor per its
+## strategy's def. Both SET orders on the front (current-quarter) instrument at the
+## trader's local market, and def-gated strategies also maintain forward-flow orders on
+## later quarters (see [method _process_forward_flow]).
 func process_ai_interval(delta: float) -> void:
+	const TRADABLE := FacilityProxy.InventoryFlags.TRADABLE
 	var market := proxy.market
 	if !market or !_facility:
 		return # no market yet, or transport trader (transport strategies TBD)
@@ -435,10 +437,14 @@ func process_ai_interval(delta: float) -> void:
 	for resource_type in resource_strategies.size():
 		if _stop:
 			return # cooperative bail; remaining resources re-quote next interval (idempotent)
+		# A resource with no trade class can't be traded (resources.schema.md).
+		# Tradability is fixed per resource, so none loses it with orders resting.
+		var flags := _facility.get_inventory_flags(resource_type)
+		if !(flags & TRADABLE):
+			continue
 		_instrument_scratch[0] = resource_type
 		var def := resource_strategy_defs[resource_strategies[resource_type]]
-		var is_made := (makes_markets
-				and is_market_resource(_facility.get_inventory_flags(resource_type)))
+		var is_made := makes_markets and is_market_resource(flags)
 		var branch := 2 if is_made else 1
 		if _executor_branches[resource_type] != branch:
 			if _executor_branches[resource_type]:
@@ -656,7 +662,7 @@ func _process_market_making(resource_type: int, market: MarketProxy,
 ## there. The def's [code]forward_quarters[/code] gates participation and floors
 ## the depth; the facility's [member FacilityProxy.time_horizon] deepens it, so a
 ## remote facility planning years ahead quotes proportionally farther out. Runs
-## for every resource (even front-only defs) and maintains out to the farthest
+## for every tradable resource (even front-only defs) and maintains out to the farthest
 ## remembered forward order past the def horizon, so a strategy change, def
 ## shrink, or lost reference price want-0-clears stale orders. Bids are capped like
 ## the front's (see [method _cap_bid_price]).

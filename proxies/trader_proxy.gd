@@ -81,7 +81,9 @@ func get_market() -> MarketProxy:
 ## Adds, replaces, or cancels this trader's sell (ask) order. [param
 ## instrument] is composed as [resource_type, ordinal_quarter]; the delivery body
 ## is the body of [param delivery_market_id]. Cancels if [param unit_quantity] is
-## 0. [param unit_quantity] and [param unit_price] are in trade units. The
+## 0. Placing an order in a resource with no trade class (see
+## [constant FacilityProxy.InventoryFlags.TRADABLE]) is a no-op.
+## [param unit_quantity] and [param unit_price] are in trade units. The
 ## resulting position side (long/short) follows from matching; a trader may hold
 ## either side at any delivery body and may flip. The current quarter is the
 ## near-immediate ("spot") case; later quarters are forward delivery, accepted

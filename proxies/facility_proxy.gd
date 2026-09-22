@@ -66,7 +66,7 @@ enum InventoryFlags {
 	STRATEGIC_RESERVE_BREACHED = 1 << 2,
 	## No market price is established for this resource at this location.
 	PRICE_UNKNOWN = 1 << 4,
-	## This resource is tradable (a commodity assigned to a storage class).
+	## This resource can be traded: it has a trade class.
 	TRADABLE = 1 << 5,
 	## A can-have operation at this facility consumes this resource.
 	CAN_HAVE_INPUT = 1 << 6,
