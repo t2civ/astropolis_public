@@ -1,15 +1,15 @@
-	bucket_widths	first_adult_bucket	first_elder_bucket	birth_weights	starvation_rate	starvation_threshold	#comments
-Type	ARRAY[FLOAT]	INT	INT	ARRAY[FLOAT]	FLOAT	FLOAT	
-Unit	y				1/y		
-Default	5;10;10;15;15;10;15	2	6	0;0;0.35;0.6;0.05;0;0;0	4	0.8	
-Prefix/POPULATION_							
-BASE_HUMAN							
-SUBSENTIENT_ANDROID							# Subsentient "servants"
-SENTIENT_AGI							
-VIRTUAL_HUMAN							# Uploaded human or approximate simulation
-CYBORG							# Extensively mechanized, but w/ bio brain
-EMBODIED_ANDROID							# AGI or approximate human sim in mech body
-EMBODIED_HUMAN							# A "downloaded" person
-MOD_AQUATIC							# Modified for Earth aquatic environment
-MOD_AMPHIBIOUS							# Modified for Earth land or aquatic environment
-# max 63							
+	bucket_widths	first_adult_bucket	first_elder_bucket	birth_weights	starvation_rate	starvation_threshold	mortality_need	served_mortalities	mortality_elasticities	mortality_floor	mortality_response_time	fertility_need	served_fertility	fertility_elasticity	fertility_floor	fertility_response_time	#comments
+Type	ARRAY[FLOAT]	INT	INT	ARRAY[FLOAT]	FLOAT	FLOAT	TABLE_ROW	ARRAY[FLOAT]	ARRAY[FLOAT]	FLOAT	FLOAT	TABLE_ROW	FLOAT	FLOAT	FLOAT	FLOAT	
+Unit	y				1/y			1/y			y		1/y			y	
+Default	5;10;10;15;15;10;15	2	6	0;0;0.35;0.6;0.05;0;0;0	4	0.8	HEALTH	0.001014;0.0001114;0.0003981;0.0007263;0.002454;0.007459;0.02292;0.1051	0.834;0.834;0.572;0.538;0.387;0.303;0.268;0.148	0.01	10	LEARNING	0.0665	0.407	0.03	15	
+Prefix/POPULATION_							NEED_					NEED_					
+BASE_HUMAN																	
+SUBSENTIENT_ANDROID																	# Subsentient "servants"
+SENTIENT_AGI																	
+VIRTUAL_HUMAN																	# Uploaded human or approximate simulation
+CYBORG																	# Extensively mechanized, but w/ bio brain
+EMBODIED_ANDROID																	# AGI or approximate human sim in mech body
+EMBODIED_HUMAN																	# A "downloaded" person
+MOD_AQUATIC																	# Modified for Earth aquatic environment
+MOD_AMPHIBIOUS																	# Modified for Earth land or aquatic environment
+# max 63																	
