@@ -179,8 +179,9 @@ const PRICE_TOLERANCE := 0.05
 const QTY_TOLERANCE := 0.25
 ## Default fraction of projected per-quarter flow hedged on forward instruments
 ## (def key [code]forward_hedge[/code] overrides). Sell-side defs stay below
-## 1.0: an over-sold forward forces settlement stock-stripping or default,
-## while over-bought forwards self-correct by selling surplus at the front.
+## 1.0: an over-sold forward forces settlement stock-stripping or default. An
+## over-bought forward leaves surplus that only a def with a sell switch sells at
+## the front; a buy-only def holds it (PRODUCTION_MODEL.md, "The loop check").
 const FORWARD_HEDGE := 0.75
 
 const NULL_PF64ARRAY: PackedFloat64Array = []
