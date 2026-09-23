@@ -12,7 +12,8 @@ how much of it each type wants, is `wants.tsv`, and the code never names a need
   - `EXISTENCE` — Without it an individual stops. It is served first, in the survival class
     of the clear, and its satisfaction is smoothed over about a month; below its type's
     `starvation_threshold` (`populations.tsv`) people starve.
-  - `WELLBEING` — Going without is chronic. It is served ahead of the operations.
+  - `WELLBEING` — Going without is chronic. It is served after the operations, with
+    fulfillment (P3 in `POPULATION_MODEL.md`).
   - `FULFILLMENT` — What sentient beings require beyond the other two. It is served after
     the operations (P3 in `POPULATION_MODEL.md`).
 

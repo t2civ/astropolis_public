@@ -126,8 +126,7 @@ enum LifeStages {
 
 ## Tier of a need (the [code]tier[/code] column of [code]needs.tsv[/code]): what going without
 ## it does and how fast, and so where the residents' draw of it clears. Existence is served
-## first, wellbeing ahead of the operations, and fulfillment after them (POPULATION_MODEL.md,
-## "Needs").
+## first, and wellbeing and fulfillment after the operations (POPULATION_MODEL.md, "Needs").
 enum NeedTiers {
 	NEED_TIER_EXISTENCE,
 	NEED_TIER_WELLBEING,
