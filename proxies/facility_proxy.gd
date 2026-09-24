@@ -387,6 +387,28 @@ func get_flags() -> int:
 @abstract func get_inventory_expected_rates() -> PackedFloat64Array
 
 
+## Returns what the facility used of [param resource_type] per unit time, averaged over its
+## time horizon: the internal volume of its own market, and what its desired level is sized
+## from (see PRODUCTION_MODEL.md, "Local prices").
+@abstract func get_inventory_use(resource_type: int) -> float
+
+
+## Returns the per-resource uses array. Return is proxy array reference; read only!
+@abstract func get_inventory_uses() -> PackedFloat64Array
+
+
+## Returns the facility's local price of [param resource_type]: the price at its own market,
+## which its operations plan against, its storage values and its books count, in
+## [method MarketProxy.get_price] units. It moves each interval toward the price at which the
+## facility's own producers and users would have balanced (PRODUCTION_MODEL.md, "Local
+## prices"). 0.0 for a resource that nobody here uses, and for one with no price at all.
+@abstract func get_inventory_local_price(resource_type: int) -> float
+
+
+## Returns the per-resource local prices array. Return is proxy array reference; read only!
+@abstract func get_inventory_local_prices() -> PackedFloat64Array
+
+
 ## Returns the quantity of [param resource_type] delivered to this facility and not yet taken
 ## into stock (always >= 0.0). It uses no storage. The facility's next interval draws it before
 ## anything else and stores what is left, and what its storage can't hold then is disposed of.
