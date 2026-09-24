@@ -215,13 +215,14 @@ static var facility_strategy_defs: Array[Dictionary] = [
 
 ## Per-resource facility-level strategy definitions; index =
 ## [enum FacilityResourceStrategies] value. Keys are facility-side knob params
-## read by [method _apply_strategy_knobs]: [code]strategic_reserve_factor[/code]
-## (strategic reserve = factor × throughput × time_horizon),
+## read by [method _apply_strategy_knobs]: [code]level_lever[/code] (stock held beyond
+## the critical level, in time horizons of use; see
+## [method FacilityProxy.set_inventory_level_lever]),
 ## [code]buffer_stock_factor[/code] and [code]buffer_stock_lots[/code] (the buffer
 ## stock a market-making facility warehouses; see [constant BUFFER_STOCK_FACTOR]),
 ## [code]prohibit_production[/code], [code]prohibit_consumption[/code]. Empty
-## entries take all defaults (no strategic reserve, a market maker's default buffer
-## stock, no flags).
+## entries take all defaults (nothing beyond the critical level, a market maker's default
+## buffer stock, no flags).
 static var facility_resource_strategy_defs: Array[Dictionary] = [
 	{}, # NEUTRAL
 	{}, # PRIMARY_PRODUCT
@@ -229,11 +230,11 @@ static var facility_resource_strategy_defs: Array[Dictionary] = [
 	{}, # COPRODUCT
 	{}, # BYPRODUCT
 	{&"buffer_stock_factor": 0.0, &"buffer_stock_lots": 0}, # WASTE
-	{&"strategic_reserve_factor": 1.0}, # CRITICAL_INPUT
+	{&"level_lever": 1.0}, # CRITICAL_INPUT
 	{}, # ROUTINE_INPUT
 	{}, # CONSUMABLE
 	{&"buffer_stock_factor": 0.0, &"buffer_stock_lots": 0}, # CLOSED_LOOP_INTERMEDIATE
-	{&"strategic_reserve_factor": 2.0}, # STRATEGIC_RESERVE
+	{&"level_lever": 2.0}, # STRATEGIC_RESERVE
 	{}, # SPECULATIVE_POSITION
 	{&"prohibit_production": true, &"buffer_stock_factor": 0.0, &"buffer_stock_lots": 0}, # PHASE_OUT
 ]
@@ -253,7 +254,7 @@ static var operation_strategy_defs: Array[Dictionary] = [
 	{}, # PEAKER — idle until spike (tuning TBD)
 	{&"process_utilization": 0.0}, # MOTHBALL — idle, capacity preserved
 	{}, # DECOMMISSION — capacity wind-down is Tier 1/2; run as AUTO here
-	{}, # DEMAND_FOLLOWING — no rule: only storage room stops production today (under review)
+	{}, # DEMAND_FOLLOWING — no rule: the server's budget holds every run to use
 	{&"shortage_priority": true}, # SHORTAGE_RELIEF
 	{}, # LEARNING — run regardless to accumulate experience
 	{}, # HARVEST — run for max output
@@ -412,11 +413,10 @@ func _capability_strategy(resource_type: int) -> int:
 ## Folds own crisis and player influence onto the capability identity by fixed
 ## precedence: own crisis > player structural directive > player influence >
 ## capability default. Own crisis is per resource: a resource the facility uses more of
-## than it makes, whose stock falls below its operations reserve, escalates to
-## CRITICAL_INPUT, and stays there until its stock refills the strategic reserve that
-## sets. One it makes more of than it uses is never in crisis: its stock runs low because
-## it sells, and a reserve sized by its net flow would hold back its whole output. A custom
-## AI overrides this to change reconciliation.
+## than it makes, whose stock falls below its critical level, escalates to CRITICAL_INPUT,
+## and stays there until its stock refills the desired level that sets. One it makes more of
+## than it uses is never in crisis: its stock runs low because it sells. A custom AI overrides
+## this to change reconciliation.
 func _reconcile_resource_strategy(resource_type: int, capability: int) -> int:
 	const CAN_HAVE_INPUT := FacilityProxy.InventoryFlags.CAN_HAVE_INPUT
 	const OPS_RESERVE_BREACHED := FacilityProxy.InventoryFlags.OPS_RESERVE_BREACHED
@@ -430,9 +430,9 @@ func _reconcile_resource_strategy(resource_type: int, capability: int) -> int:
 	if inv_flags & CAN_HAVE_INPUT and proxy.get_inventory_expected_rate(resource_type) < 0.0:
 		if inv_flags & OPS_RESERVE_BREACHED:
 			return _RS.CRITICAL_INPUT
-		# Hold until the strategic reserve refills, or the escalation ends the interval
-		# stock crosses the operations reserve. Only an escalated resource holds: stock
-		# short of a stockpile directive's larger reserve is not a shortage.
+		# Hold until the desired level refills, or the escalation ends the interval stock
+		# crosses the critical level. Only an escalated resource holds: stock short of a
+		# stockpile directive's larger level is not a shortage.
 		if (facility_resource_strategies[resource_type] == _RS.CRITICAL_INPUT
 				and inv_flags & STRATEGIC_RESERVE_BREACHED):
 			return _RS.CRITICAL_INPUT
@@ -452,9 +452,9 @@ func _reconcile_resource_strategy(resource_type: int, capability: int) -> int:
 	return capability
 
 
-## Translates the resource's strategy def into server knobs: the strategic reserve and
-## buffer stock flow variables and the PROHIBIT inventory flag bits (flags written only
-## on change; preserves any other FROM_PROXY bits).
+## Translates the resource's strategy def into server knobs: the level lever, the buffer stock
+## and the PROHIBIT inventory flag bits (flags written only on change; preserves any other
+## FROM_PROXY bits).
 func _apply_strategy_knobs(resource_type: int, strategy: int) -> void:
 	const PROHIBIT_CONSUMPTION := FacilityProxy.InventoryFlags.PROHIBIT_CONSUMPTION
 	const PROHIBIT_PRODUCTION := FacilityProxy.InventoryFlags.PROHIBIT_PRODUCTION
@@ -462,10 +462,8 @@ func _apply_strategy_knobs(resource_type: int, strategy: int) -> void:
 	const EMBARGO := PlayerBaseAI.PlayerResourceStrategies.EMBARGO
 	var def := facility_resource_strategy_defs[strategy]
 
-	var horizon_throughput := (absf(proxy.get_inventory_expected_rate(resource_type))
-			* proxy.time_horizon)
-	var reserve_factor: float = def.get(&"strategic_reserve_factor", 0.0)
-	proxy.set_inventory_strategic_reserve(resource_type, reserve_factor * horizon_throughput)
+	var lever: float = def.get(&"level_lever", 0.0)
+	proxy.set_inventory_level_lever(resource_type, lever)
 	var buffer_stock := 0.0
 	if _is_market_made(resource_type):
 		var buffer_factor: float = def.get(&"buffer_stock_factor", BUFFER_STOCK_FACTOR)
