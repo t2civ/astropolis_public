@@ -54,15 +54,20 @@ flat at the want and steepest far below it. A population whose people are served
 - fertility_floor — FLOAT, the satisfaction below which going further without adds no
   births.
 - fertility_response_time — FLOAT in years, as `mortality_response_time`, for the fertility.
+- spending_rate — FLOAT per year: the share of its wealth a population spends in a year on
+  its wants. Its classes spend it on their existence wants first, all of it if they take
+  it, and the rest over their other wants in the shares `wants.tsv` sets
+  (`POPULATION_MODEL.md`, "Work and pay"). Its inverse is how many years of spending the
+  wealth seeded in `facilities_populations.tsv` holds. Default `1/y`.
 
 
 ## Notes
 
 1. The number of age buckets, eight, is the model's and not a type's (P1 in
    `POPULATION_MODEL.md`). What a type sets is where its buckets fall in its own lifetime.
-2. A population's own death rates, fertility and spread are state, seeded per facility in
-   `facilities_populations.tsv`. The death rates and fertility then move as above; nothing
-   moves the spread yet.
+2. A population's own death rates, fertility, spread and wealth are state, seeded per
+   facility in `facilities_populations.tsv`. The death rates and fertility then move as
+   above; nothing moves the spread or the wealth yet.
 3. Base humans' response columns are fitted on the 2017 cross-section of countries by
    `tests/calibration/seed_demography.py --fit` (`EARTH_CALIBRATION.md`, "Population"). The
    floors and response times are not fitted.

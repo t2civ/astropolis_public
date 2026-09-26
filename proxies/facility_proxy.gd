@@ -646,6 +646,17 @@ func get_flags() -> int:
 @abstract func get_population_satisfaction(population_type: int, need: int) -> float
 
 
+## Returns [param population_type]'s wealth, in dollars, which its classes hold as unevenly
+## as they are served; 0.0 without a population.
+@abstract func get_population_wealth(population_type: int) -> float
+
+
+## Returns what [param population_type]'s wealth buys: the years of its wants it would pay for
+## at the facility's local prices, as of its last interval. The true measure of its wealth,
+## which compares across places; 0.0 without a population.
+@abstract func get_population_years_of_wants(population_type: int) -> float
+
+
 ## Returns this facility's [MarketProxy], or null if not yet set.
 func get_market() -> MarketProxy:
 	return market

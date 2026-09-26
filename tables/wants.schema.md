@@ -8,10 +8,12 @@ saturation level, and what differs from place to place is what a population gets
 
 A want's recipe is written as an operation's is (`operations.schema.md`, "Flow Fields"),
 with its target lists and none of its driver lists. Each interval the residents of a type
-draw it through the facility's clear as one more consumer, at their head count in each life
-stage times `stage_weights`, each input or substitution group at its own fill, at their
-need's tier (P11 in `POPULATION_MODEL.md`). What they draw books as their upkeep
-(`POPULATION_UPKEEP` in `line_items.tsv`).
+buy it through the facility's clear as one more consumer, each input or substitution group
+at its own fill (P11 in `POPULATION_MODEL.md`). Each of their classes buys it from its
+spending at local prices, up to its share of their head count in each life stage times
+`stage_weights`: its existence wants first, then each other want with `spending_share` of
+what is left ("Work and pay" there). Existence clears first; the other wants clear with the
+operations, and the price rations between them.
 
 
 ## Table Data
@@ -22,6 +24,9 @@ need's tier (P11 in `POPULATION_MODEL.md`). What they draw books as their upkeep
 - stage_weights — ARRAY[FLOAT], three values: how much of the want an individual of each life
   stage (young, adults, elders; `Enums.LifeStages`) draws, relative to the rates. Default
   `1;1;1`.
+- spending_share — FLOAT, the share of what a class has left after its existence wants that
+  it spends on this want, none past the want. Blank for an existence want, which comes
+  first. The shares are relative: a type's are scaled to sum to one.
 - in_inventory, in_inventory_rates, in_inventory_groups — What it draws from inventory, at
   per-individual rates, and its substitution groups, as an operation's. The rates default to
   `t/y`; a resource that is not mass carries its unit (`h/y` for a service, `h/h` for
@@ -44,3 +49,5 @@ need's tier (P11 in `POPULATION_MODEL.md`). What they draw books as their upkeep
    and education at the flat of R20's cross-section, where more stops buying longer lives or
    fewer births (P13 in `POPULATION_MODEL.md`); and the other services at the USA's seeded
    output per head.
+4. Base humans' spending shares are each want's value per head at start prices, over the
+   world's life stages in 2015, as a share of all but their existence want's.
