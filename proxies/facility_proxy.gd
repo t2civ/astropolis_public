@@ -331,11 +331,11 @@ func get_flags() -> int:
 @abstract func get_inventory_contracteds() -> PackedFloat64Array
 
 
-## Returns the critical level of [param resource_type]: the stock the facility's survival
-## draws and operations need until resupply could land, their use over its time horizon. Its
-## producers rebuild it as fast as their capacity allows. Fitted to what storage holds, with
-## every critical level in a class held before any desired level (see PRODUCTION_MODEL.md, "A
-## facility's stock of a resource").
+## Returns the critical level of [param resource_type]: the stock the facility's operations
+## and its residents' existence needs draw until resupply could land, their use over its time
+## horizon. Its producers rebuild it as fast as their capacity allows. Fitted to what storage
+## holds, with every critical level in a class held before any desired level (see
+## PRODUCTION_MODEL.md, "A facility's stock of a resource").
 @abstract func get_inventory_critical_level(resource_type: int) -> float
 
 
