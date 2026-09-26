@@ -24,8 +24,8 @@ need's tier (P11 in `POPULATION_MODEL.md`). What they draw books as their upkeep
   `1;1;1`.
 - in_inventory, in_inventory_rates, in_inventory_groups — What it draws from inventory, at
   per-individual rates, and its substitution groups, as an operation's. The rates default to
-  `t/y`; a resource that is not mass carries its unit (`/y` for a service unit, `MW` for
-  electricity).
+  `t/y`; a resource that is not mass carries its unit (`h/y` for a service, `h/h` for
+  habitation, `MW` for electricity).
 - in_atmos, in_atmos_rates — What it draws from the atmosphere, free where there is one and
   from inventory where the facility runs in closed cycle.
 - out_inventory, out_inventory_rates; out_atmos, out_atmos_rates — What it gives off. Outputs
