@@ -171,4 +171,5 @@ Notes:
 - **Public/Gov Services** — Administration, security, justice, defense, and civic services provided by governing bodies.
 - **Utilities/Env Services** — Delivered utilities and sanitation: water at the tap, power and gas distribution to premises, and waste collection, recycling, and environmental remediation — distinct from the generation, extraction, and treatment upstream.
 - **Human Habitation** — Room to live in shirt-sleeve space — pressurized, breathable and temperate — counted as places occupied over time: one individual housed for an hour is one hour. Made by housing modules and drawn by the residents' shelter need; it cannot be stored or traded, and carries no price until households pay rent.
+- **Labor** — Hours of work, counted as the other services are: one individual working for an hour is one hour. Every operation draws it, and a facility's staff make it, its residents and any staff on loan from another facility's population. Work is done where the worker is, so it cannot be stored or traded; its price is the local wage, which answers what the residents would take for their time.
 

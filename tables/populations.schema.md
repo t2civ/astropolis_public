@@ -59,15 +59,23 @@ flat at the want and steepest far below it. A population whose people are served
   it, and the rest over their other wants in the shares `wants.tsv` sets
   (`POPULATION_MODEL.md`, "Work and pay"). Its inverse is how many years of spending the
   wealth seeded in `facilities_populations.tsv` holds. Default `1/y`.
+- work_resource — TABLE_ROW `resources.tsv`, the resource the type's work makes. Default
+  `LABOR`, which every operation draws (`POPULATION_MODEL.md`, "Work and pay").
+- work_stage_weights — ARRAY[FLOAT], three values, young, adults and elders: how much of a
+  working head each member of a life stage counts as. Default `0;1;0.2`.
+- work_hours — FLOAT in hours per year, the hours a working head works. A population's able
+  hours are its weighted heads times these hours times its participation
+  (`facilities_populations.tsv`), and staff on loan work them in full. Its classes offer them
+  down to their spending per hour lived. Default `1800 h/y`.
 
 
 ## Notes
 
 1. The number of age buckets, eight, is the model's and not a type's (P1 in
    `POPULATION_MODEL.md`). What a type sets is where its buckets fall in its own lifetime.
-2. A population's own death rates, fertility, spread and wealth are state, seeded per
-   facility in `facilities_populations.tsv`. The death rates and fertility then move as
-   above; nothing moves the spread or the wealth yet.
+2. A population's own death rates, fertility, spread, wealth and participation are state,
+   seeded per facility in `facilities_populations.tsv`. The death rates and fertility then
+   move as above; nothing moves the spread, the wealth or the participation yet.
 3. Base humans' response columns are fitted on the 2017 cross-section of countries by
    `tests/calibration/seed_demography.py --fit` (`EARTH_CALIBRATION.md`, "Population"). The
    floors and response times are not fitted.

@@ -651,6 +651,12 @@ func get_flags() -> int:
 @abstract func get_population_wealth(population_type: int) -> float
 
 
+## Returns the most of [param population_type]'s able hours it offers, its head count in each
+## life stage times its type's work weights and the hours a working head works being all of
+## them; 0.0 without a population.
+@abstract func get_population_participation(population_type: int) -> float
+
+
 ## Returns what [param population_type]'s wealth buys: the years of its wants it would pay for
 ## at the facility's local prices, as of its last interval. The true measure of its wealth,
 ## which compares across places; 0.0 without a population.
