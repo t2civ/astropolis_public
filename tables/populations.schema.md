@@ -75,7 +75,8 @@ flat at the want and steepest far below it. A population whose people are served
    `POPULATION_MODEL.md`). What a type sets is where its buckets fall in its own lifetime.
 2. A population's own death rates, fertility, spread, wealth and participation are state,
    seeded per facility in `facilities_populations.tsv`. The death rates and fertility then
-   move as above; nothing moves the spread, the wealth or the participation yet.
+   move as above, and the wealth only with the head count, a death taking its share and a
+   birth bringing the average; nothing moves the spread or the participation yet.
 3. Base humans' response columns are fitted on the 2017 cross-section of countries by
    `tests/calibration/seed_demography.py --fit` (`EARTH_CALIBRATION.md`, "Population"). The
    floors and response times are not fitted.

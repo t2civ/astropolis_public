@@ -97,9 +97,9 @@ enum OperationsFlags {
 	## The operation was throttled below its intended rate last interval
 	## because an input was in short supply.
 	WAS_INPUT_LIMITED = 1 << 2,
-	## The operation ran below its intended rate last interval because its outputs' budgets
-	## called for less: the facility used no more of them, and their stocks were at their
-	## levels (see PRODUCTION_MODEL.md, "A facility's stock of a resource").
+	## The operation ran below its intended rate last interval because the room of an output
+	## that can't be vented held it: the facility used no more of it, and its storage class
+	## could hold no more (see PRODUCTION_MODEL.md, "The output clear").
 	WAS_OUTPUT_LIMITED = 1 << 3,
 	## The operation made up a short input from others in its substitution group
 	## last interval.
@@ -113,8 +113,9 @@ enum OperationsFlags {
 	## Hold the operation at a minimum baseline rate even when other
 	## automations would idle it.
 	STRATEGIC_FLOOR = 1 << 34,
-	## Never run past an output's budget: the operation runs only as far as every output is
-	## called for, rather than as far as any one of them is and making the others with it.
+	## Never make an output past its room for the sake of another: the operation runs only as
+	## far as the room of every output that can't be vented allows, rather than making each
+	## while it runs for the others.
 	CLEARANCE_LIMITED = 1 << 35,
 	## Mask of all AI-command bits.
 	FROM_PROXY_MASK = ~((1 << 32) - 1),
@@ -529,9 +530,8 @@ func get_flags() -> int:
 
 ## Returns what a unit of [param resource_type] must fetch, in
 ## [method MarketProxy.get_price] units, for the costliest unit of production still making
-## it here to clear its margin floor, as of the last interval: the price the merit order
-## sets, and the floor of a market maker's price where storage can't carry the flows (see
-## TRADE_MODEL.md, "Market makers"). Where nothing here made it, the price at which the
+## it here to clear its margin floor, as of the last interval: the floor of a market maker's
+## price where storage can't carry the flows (see TRADE_MODEL.md, "Market makers"). Where nothing here made it, the price at which the
 ## cheapest unit would start. Only operations whose margin floors set their runs count (see
 ## PRODUCTION_MODEL.md, "What the facility publishes"). 0.0 when that unit clears its floor
 ## giving it away; INF when no such operation here produces it at known prices.

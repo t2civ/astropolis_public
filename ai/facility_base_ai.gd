@@ -254,7 +254,7 @@ static var operation_strategy_defs: Array[Dictionary] = [
 	{}, # PEAKER — idle until spike (tuning TBD)
 	{&"process_utilization": 0.0}, # MOTHBALL — idle, capacity preserved
 	{}, # DECOMMISSION — capacity wind-down is Tier 1/2; run as AUTO here
-	{}, # DEMAND_FOLLOWING — no rule: the server's budget holds every run to use
+	{}, # DEMAND_FOLLOWING — no rule: local prices hold every run to use
 	{&"shortage_priority": true}, # SHORTAGE_RELIEF
 	{}, # LEARNING — run regardless to accumulate experience
 	{}, # HARVEST — run for max output
