@@ -9,13 +9,13 @@ how much of it each type wants, is `wants.tsv`, and the code never names a need
 ## Table Data
 
 - tier — `Enums.NeedTiers`: what going without the need does, and how fast.
-  - `EXISTENCE` — Without it an individual stops. It is served first, in the survival class
-    of the clear, and its satisfaction is smoothed over about a month; below its type's
-    `starvation_threshold` (`populations.tsv`) people starve.
-  - `WELLBEING` — Going without is chronic. It is served after the operations, with
-    fulfillment (P3 in `POPULATION_MODEL.md`).
-  - `FULFILLMENT` — What sentient beings require beyond the other two. It is served after
-    the operations (P3 in `POPULATION_MODEL.md`).
+  - `EXISTENCE` — Without it an individual stops. The residents buy it first, with all they
+    spend if it takes that, and its satisfaction is smoothed over about a month; below its
+    type's `starvation_threshold` (`populations.tsv`) people starve.
+  - `WELLBEING` — Going without is chronic. It is bought from what existence leaves, by
+    `spending_share` (`wants.tsv`).
+  - `FULFILLMENT` — What sentient beings require beyond the other two. It is bought as
+    wellbeing is.
 
 
 ## Notes

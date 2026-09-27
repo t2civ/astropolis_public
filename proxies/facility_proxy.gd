@@ -97,9 +97,9 @@ enum OperationsFlags {
 	## The operation was throttled below its intended rate last interval
 	## because an input was in short supply.
 	WAS_INPUT_LIMITED = 1 << 2,
-	## The operation ran below its intended rate last interval because its outputs' budgets
-	## called for less: the facility used no more of them, and their stocks were at their
-	## levels (see PRODUCTION_MODEL.md, "A facility's stock of a resource").
+	## The operation ran below its intended rate last interval because the room of an output
+	## that can't be vented held it: the facility used no more of it, and its storage class
+	## could hold no more (see PRODUCTION_MODEL.md, "The output clear").
 	WAS_OUTPUT_LIMITED = 1 << 3,
 	## The operation made up a short input from others in its substitution group
 	## last interval.
@@ -113,8 +113,9 @@ enum OperationsFlags {
 	## Hold the operation at a minimum baseline rate even when other
 	## automations would idle it.
 	STRATEGIC_FLOOR = 1 << 34,
-	## Never run past an output's budget: the operation runs only as far as every output is
-	## called for, rather than as far as any one of them is and making the others with it.
+	## Never make an output past its room for the sake of another: the operation runs only as
+	## far as the room of every output that can't be vented allows, rather than making each
+	## while it runs for the others.
 	CLEARANCE_LIMITED = 1 << 35,
 	## Mask of all AI-command bits.
 	FROM_PROXY_MASK = ~((1 << 32) - 1),
@@ -331,11 +332,11 @@ func get_flags() -> int:
 @abstract func get_inventory_contracteds() -> PackedFloat64Array
 
 
-## Returns the critical level of [param resource_type]: the stock the facility's survival
-## draws and operations need until resupply could land, their use over its time horizon. Its
-## producers rebuild it as fast as their capacity allows. Fitted to what storage holds, with
-## every critical level in a class held before any desired level (see PRODUCTION_MODEL.md, "A
-## facility's stock of a resource").
+## Returns the critical level of [param resource_type]: the stock the facility's operations
+## and its residents' existence needs draw until resupply could land, their use over its time
+## horizon. Its producers rebuild it as fast as their capacity allows. Fitted to what storage
+## holds, with every critical level in a class held before any desired level (see
+## PRODUCTION_MODEL.md, "A facility's stock of a resource").
 @abstract func get_inventory_critical_level(resource_type: int) -> float
 
 
@@ -529,9 +530,8 @@ func get_flags() -> int:
 
 ## Returns what a unit of [param resource_type] must fetch, in
 ## [method MarketProxy.get_price] units, for the costliest unit of production still making
-## it here to clear its margin floor, as of the last interval: the price the merit order
-## sets, and the floor of a market maker's price where storage can't carry the flows (see
-## TRADE_MODEL.md, "Market makers"). Where nothing here made it, the price at which the
+## it here to clear its margin floor, as of the last interval: the floor of a market maker's
+## price where storage can't carry the flows (see TRADE_MODEL.md, "Market makers"). Where nothing here made it, the price at which the
 ## cheapest unit would start. Only operations whose margin floors set their runs count (see
 ## PRODUCTION_MODEL.md, "What the facility publishes"). 0.0 when that unit clears its floor
 ## giving it away; INF when no such operation here produces it at known prices.
@@ -644,6 +644,23 @@ func get_flags() -> int:
 ## need, people starve. 1.0 for a need the type has no want for. Safe default on an
 ## out-of-range index.
 @abstract func get_population_satisfaction(population_type: int, need: int) -> float
+
+
+## Returns [param population_type]'s wealth, in dollars, which its classes hold as unevenly
+## as they are served; 0.0 without a population.
+@abstract func get_population_wealth(population_type: int) -> float
+
+
+## Returns the most of [param population_type]'s able hours it offers, its head count in each
+## life stage times its type's work weights and the hours a working head works being all of
+## them; 0.0 without a population.
+@abstract func get_population_participation(population_type: int) -> float
+
+
+## Returns what [param population_type]'s wealth buys: the years of its wants it would pay for
+## at the facility's local prices, as of its last interval. The true measure of its wealth,
+## which compares across places; 0.0 without a population.
+@abstract func get_population_years_of_wants(population_type: int) -> float
 
 
 ## Returns this facility's [MarketProxy], or null if not yet set.

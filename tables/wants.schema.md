@@ -7,11 +7,13 @@ saturation level, and what differs from place to place is what a population gets
 (`POPULATION_MODEL.md`, "Needs").
 
 A want's recipe is written as an operation's is (`operations.schema.md`, "Flow Fields"),
-with its target lists and none of its driver lists. Each interval the residents of a type
-draw it through the facility's clear as one more consumer, at their head count in each life
-stage times `stage_weights`, each input or substitution group at its own fill, at their
-need's tier (P11 in `POPULATION_MODEL.md`). What they draw books as their upkeep
-(`POPULATION_UPKEEP` in `line_items.tsv`).
+with its target lists and none of its driver lists. Each of the residents' classes buys it
+at local prices from its spending, up to its share of their head count in each life stage
+times `stage_weights`: its existence wants first, as one bundle, then each input of each other
+want with its share of the want's `spending_share` of what is left, the input's share by its
+value at start prices ("Work and pay" in `POPULATION_MODEL.md`). What they buy of each input is
+a draw of its own in the facility's clear, shared in a shortage with the operations', and what
+they give off follows what they drew (P11 there).
 
 
 ## Table Data
@@ -22,8 +24,14 @@ need's tier (P11 in `POPULATION_MODEL.md`). What they draw books as their upkeep
 - stage_weights — ARRAY[FLOAT], three values: how much of the want an individual of each life
   stage (young, adults, elders; `Enums.LifeStages`) draws, relative to the rates. Default
   `1;1;1`.
+- spending_share — FLOAT, the share of what a class has left after its existence wants that
+  it spends on this want, none past the want. Blank for an existence want, which comes
+  first. The shares are relative: a type's are scaled to sum to one.
 - in_inventory, in_inventory_rates, in_inventory_groups — What it draws from inventory, at
-  per-individual rates, and its substitution groups, as an operation's. The rates default to
+  per-individual rates, and its substitution group: members one for one, each at the rate that
+  fills the want alone, bought from the cheapest at local prices, and what that one can't give
+  spills to the next cheapest within the interval. A want has one group at most, and only an
+  existence want has one. The rates default to
   `t/y`; a resource that is not mass carries its unit (`h/y` for a service, `h/h` for
   habitation, `MW` for electricity).
 - in_atmos, in_atmos_rates — What it draws from the atmosphere, free where there is one and
@@ -37,10 +45,15 @@ need's tier (P11 in `POPULATION_MODEL.md`). What they draw books as their upkeep
 1. A want's inputs share a unit, or are goods counted by mass: the share of it drawn sums
    them by quantity. Satisfiers of one need in different units are separate wants.
 2. Base humans' existence want is their sustenance: food, water and air. Its food is one
-   substitution group, which they eat whichever members are in stock.
+   substitution group, crops, animal products or packaged meals one for one by the kilogram,
+   so they eat the cheapest. Animal products and packaged meals are also a want of their own
+   beyond subsistence, under goods, and the biowaste of the food is split between the two by
+   mass.
 3. The rates are sizing, recorded in the development repository's `EARTH_CALIBRATION.md`
    ("Base humans' wants"): the food, water, air, goods, private cars and household
    electricity of the basket `URBAN_OPERATIONS` drew per person before the model; healthcare
    and education at the flat of R20's cross-section, where more stops buying longer lives or
    fewer births (P13 in `POPULATION_MODEL.md`); and the other services at the USA's seeded
    output per head.
+4. Base humans' spending shares are each want's value per head at start prices, over the
+   world's life stages in 2015, as a share of all but their existence want's.

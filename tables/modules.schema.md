@@ -10,7 +10,7 @@ Modules are described in `modules.descriptive.md`.
 - storage — Quantifies associated resource storage capacities, both on- and off-site. Array elements correspond to classes in `storage_classes.tsv`, in its order; a class past the end of the array holds nothing here (`PURE_FLOW`, the last, is held by no module).
 - reconfig_time — Required time in days (d) to fully reconfigure a module from one operation (100%) to another (100%).
 - reconfig_cost — Required cost in USD millions ($M) to fully reconfigure a module from one operation (100%) to another (100%).
-- biological_crew — The module provides life support for this number of human personnel (CREW_SYSTEMS only). 
+- biological_crew — The module provides life support for this number of human personnel (CREW_SYSTEMS only), the facility's staff, who work its operations (`POPULATION_MODEL.md`, "Staff and crew"). 
 - operations — Operations that the module provides capacity for. Each operation belongs to exactly one module (one-to-many relationship from modules to operations).
 - maintenance — Resources consumed as presence-based maintenance, scaling with installed module capacity regardless of utilization. Parallel to `maintenance_rates`. Deferrable like operation maintenance (a shortfall accrues to the facility's deferred maintenance rather than halting anything) and books to the `MAINTENANCE` line item.
 - maintenance_rates — Maintenance resource rates (per unit of installed module capacity), parallel to `maintenance`.

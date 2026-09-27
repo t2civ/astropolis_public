@@ -56,7 +56,6 @@ enum UniqueOperations {
 enum UniqueLineItems {
 	OPERATION_MAINTENANCE,
 	MODULE_MAINTENANCE,
-	POPULATION_UPKEEP,
 	TRADING_GAINS,
 	TRADING_LOSSES,
 	EXCHANGE_FEES,
@@ -125,8 +124,8 @@ enum LifeStages {
 }
 
 ## Tier of a need (the [code]tier[/code] column of [code]needs.tsv[/code]): what going without
-## it does and how fast, and so where the residents' draw of it clears. Existence is served
-## first, and wellbeing and fulfillment after the operations (POPULATION_MODEL.md, "Needs").
+## it does and how fast. The residents secure their existence first (POPULATION_MODEL.md,
+## "Needs").
 enum NeedTiers {
 	NEED_TIER_EXISTENCE,
 	NEED_TIER_WELLBEING,

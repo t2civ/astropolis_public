@@ -38,12 +38,12 @@ A `PRODUCTION` operation that names a `stratum_group` extracts from that stratum
 
 An operation's flows are the resources it takes in and puts out, each in one of two roles:
 
-- **Driver** flows are the energy the operation runs on and what that source becomes: the electricity a consumer draws, or a generator's fuel, the oxygen it burns and its combustion or fission products. They scale with the operation's run rate, and `closed_cycle_factor` multiplies them in closed cycle.
+- **Driver** flows are the energy the operation runs on and what that source becomes: the electricity a consumer draws, or a generator's fuel, the oxygen it burns and its combustion or fission products; and the LABOR it draws, which every operation lists. They scale with the operation's run rate, and `closed_cycle_factor` multiplies them in closed cycle.
 - **Target** flows are what the operation processes or produces: a consumer's feedstock and products, or a generator's electricity. They scale with its effective rate.
 
 A flow is a driver if its ratio to the operation's products would change with the operation's energy efficiency. Efficiency sets the ratio between the two roles, and at runtime the effective rate over the run rate modifies it. An operation that runs on a different energy source, such as fuel in place of electricity, is a separate operation on the same module with its own driver flows; local economics decide which one runs. A generator is an operation whose target output is ELECTRICITY.
 
-Every process group except BUILDOUT and DECOMMISSIONING lists its flows here. An extraction lists its driver flows, and its deposits (`target_deposits`, or the volatiles present) are implicit target outputs. A renewable lists only its target `out_inventory` (note 2). All lists are semicolon-delimited, and each rates list is parallel to its resource list.
+Every process group except DECOMMISSIONING lists its flows here. BUILDOUT lists the construction yards' inputs per unit run, a tonne built an hour, which each module's build draws for its mass: its labor. An extraction lists its driver flows, and its deposits (`target_deposits`, or the volatiles present) are implicit target outputs. A renewable lists only its labor and its target `out_inventory` (note 2). All lists are semicolon-delimited, and each rates list is parallel to its resource list. The LABOR rates are written by `tests/calibration/seed_labor.py`: an operation's sector's wages as a share of its gross output, times what it makes per unit run at start prices, over labor's start price.
 
 - driver_in_inventory, driver_in_atmos, driver_out_inventory, driver_out_atmos, driver_out_surface — Driver flows, each with a `_rates` column: the same streams and formats as the target columns below.
 - in_inventory — Input resources from inventory.
@@ -73,7 +73,7 @@ When not otherwise constrained, prefer normalization of generators to 1 MW of el
 ## Notes
 
 1. For extraction operations (those with a `stratum_group`) with `target_deposits`, extraction and energy values assume optimal deposit level and knowledge of the target resource(s). This is a best case scenario within the range of realistic possibility.
-2. Renewable power operations and RADIOISOTOPE_POWER list only their electricity output.
+2. Renewable power operations and RADIOISOTOPE_POWER list only their labor and their electricity output.
 3. For generators, normalize the operation to 1 MW of electricity output. For others, normalize the operation so that `mass_flow` is 1 t/h.
 4. Use resources as they are defined in physical_resources.md. E.g., input rate for LE_URANIUM_FUEL should consider the assembled fuel weight, not just the uranium content.
 5. Use catchall resources as needed. E.g., if an operation in the real-world requires 1 kg/h of lithium, use 1 kg/h of INDUSTRIAL_METALS.
