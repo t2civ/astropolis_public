@@ -65,8 +65,8 @@ enum FacilityStrategies {
 ## Per-resource facility strategies — how this facility views a particular
 ## resource given its own operations, inventory state, and player strategies.
 enum FacilityResourceStrategies {
-	## No special facility-level stance; trader applies its own per-resource
-	## strategy independently.
+	## No special facility-level stance beyond a quarter horizon of stock, about an
+	## interval's use; trader applies its own per-resource strategy independently.
 	NEUTRAL,
 	## Primary saleable output the facility exists to produce; the operations
 	## that produce it carry the facility's revenue thesis. Analog: a copper
@@ -196,9 +196,9 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 
 ## Facility-posture strategy definitions; index = [enum FacilityStrategies] value.
 ## The [code]buildout_spending_share[/code] key (read by [method _apply_facility_knobs])
-## is the fraction of facility income the server directs to construction: a positive
-## value grows toward that share, a negative value winds capacity down at that rate,
-## and an omitted key (NAN) holds. Postures never selected by
+## is the most of facility income the server spends on construction, the stand-in for
+## a buildout budget: a positive value builds within that share, a negative value winds
+## capacity down at that rate, and an omitted key (NAN) holds. Postures never selected by
 ## [method _reconcile_facility_strategy] are left empty.
 static var facility_strategy_defs: Array[Dictionary] = [
 	{}, # NEUTRAL
@@ -224,7 +224,7 @@ static var facility_strategy_defs: Array[Dictionary] = [
 ## entries take all defaults (nothing beyond the critical level, a market maker's default
 ## buffer stock, no flags).
 static var facility_resource_strategy_defs: Array[Dictionary] = [
-	{}, # NEUTRAL
+	{&"level_lever": 0.25}, # NEUTRAL
 	{}, # PRIMARY_PRODUCT
 	{}, # SECONDARY_PRODUCT
 	{}, # COPRODUCT
@@ -401,9 +401,11 @@ func _capability_strategy(resource_type: int) -> int:
 	if !can_produce and !can_consume:
 		return _RS.NEUTRAL
 	if can_produce and can_consume:
-		# Produced and consumed here: take no special stance and let the trader
-		# balance inventory around the reserve. A true closed loop (no external
-		# trade) needs production/consumption magnitude to identify — deferred.
+		# Produced and consumed here, where nothing but a stock covers an interval's
+		# gap between what is made and what is drawn: with no stock held past the
+		# critical level, what only builds, maintenance and the residents' other wants
+		# drew went short an interval at a time (PRODUCTION_MODEL.md, "A facility's
+		# stock of a resource").
 		return _RS.NEUTRAL
 	if can_produce:
 		return _RS.PRIMARY_PRODUCT
@@ -532,9 +534,8 @@ func _reconcile_facility_strategy() -> int:
 
 
 ## Translates the posture's def into the BUILDOUT operation's target spending share
-## (the fraction of facility income directed to construction; NAN holds). The server
-## controller turns this into build pressure. The BUILDOUT op is resolved by tag, so
-## no table entity name is referenced here.
+## (the most of facility income the yards spend on construction; NAN holds). The
+## BUILDOUT op is resolved by tag, so no table entity name is referenced here.
 func _apply_facility_knobs(strategy: int) -> void:
 	var def := facility_strategy_defs[strategy]
 	var share: float = def.get(&"buildout_spending_share", NAN)

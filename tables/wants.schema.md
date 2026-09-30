@@ -29,8 +29,8 @@ they give off follows what they drew (P11 there).
   first. The shares are relative: a type's are scaled to sum to one.
 - in_inventory, in_inventory_rates, in_inventory_groups — What it draws from inventory, at
   per-individual rates, and its substitution group: members one for one, each at the rate that
-  fills the want alone, bought from the cheapest at local prices, and what that one can't give
-  spills to the next cheapest within the interval. A want has one group at most, and only an
+  fills the want alone, split among them by their local prices, a member taking none where the
+  cheapest is a fifth below its own price. A want has one group at most, and only an
   existence want has one. The rates default to
   `t/y`; a resource that is not mass carries its unit (`h/y` for a service, `h/h` for
   habitation, `MW` for electricity).

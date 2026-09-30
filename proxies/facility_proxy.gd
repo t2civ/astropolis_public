@@ -68,7 +68,8 @@ enum InventoryFlags {
 	PRICE_UNKNOWN = 1 << 4,
 	## This resource can be traded: it has a trade class.
 	TRADABLE = 1 << 5,
-	## A can-have operation at this facility consumes this resource.
+	## A can-have operation at this facility consumes this resource, its residents draw it, or the
+	## builds and upkeep of the modules it can have draw it.
 	CAN_HAVE_INPUT = 1 << 6,
 	## A can-have operation at this facility produces or extracts this resource.
 	CAN_HAVE_OUTPUT = 1 << 7,
@@ -101,9 +102,6 @@ enum OperationsFlags {
 	## that can't be vented held it: the facility used no more of it, and its storage class
 	## could hold no more (see PRODUCTION_MODEL.md, "The output clear").
 	WAS_OUTPUT_LIMITED = 1 << 3,
-	## The operation made up a short input from others in its substitution group
-	## last interval.
-	WAS_SUBSTITUTING = 1 << 4,
 	## Mask of all server-published signal bits.
 	FROM_SERVER_MASK = (1 << 32) - 1,
 
@@ -706,26 +704,29 @@ func get_market() -> MarketProxy:
 
 ## Overrides the server's autonomous build/decommission decision for
 ## [param module_type]. Pass [code]NAN[/code] (the default) to leave the module
-## on auto — the facility allocates its build/decommission from demand and
-## economics. Pass a number to override
-## just this module; it is read relative to the other modules' effective levers,
-## rate-limited by the facility's construction yards:[br]
-## - NAN (default): auto — let the server decide this module.[br]
-## - 1.0: expand in proportion to the module's current size; an all-1.0 fill
-##   grows the whole facility while preserving its mix.[br]
-## - 0.0: leave this module alone — its share of construction goes to others.[br]
-## - 0.0 to 1.0 (exclusive): expand at reduced emphasis, letting the mix drift
-##   away from current.[br]
-## - >1.0: prioritize this module — grow faster than proportional. *This is the
-##   only way to bootstrap build a module that has 0.0 current quantity.*[br]
-## - <0.0 (<-1.0 to prioritize): decommission instead, reclaiming materials.
+## on auto: the facility builds each of its operations as far as its room, what
+## its outputs' users would still take where a new unit would pay, each output's
+## room going to the operation whose new unit would pay at the least price,
+## wherever its return clears the cost of capital, within the buildout budget and
+## the construction yards. Pass a number to override just this module:[br]
+## - NAN (default): auto, as above.[br]
+## - 0.0: leave this module alone; the yards build none of it.[br]
+## - 0.0 to 1.0 (exclusive): build its operations to that fraction of their
+##   rooms.[br]
+## - 1.0: as auto.[br]
+## - >1.0: build its operations to that multiple of their rooms, and first claim
+##   a flat slice of the yards and the budget, its value over the sum of every
+##   module's (1.0 for a module on auto). *This is the only way to build a module
+##   none of whose operations has room.*[br]
+## - <0.0: decommission instead, reclaiming materials, with a slice of the yards
+##   sized the same way.
 @abstract func set_operations_module_buildout(module_type: int, value: float) -> void
 
 
 ## Fills the entire per-module build/decommission override array with
 ## [param value] — the array-wide form of [method set_operations_module_buildout].
 ## Pass [code]NAN[/code] to return every module to auto (server-decided)
-## allocation, or e.g. 1.0 to override all modules to proportional growth.
+## allocation, or e.g. 0.0 to stop all building.
 ## Proxy-authoritative: this change flows proxy -> server.
 @abstract func set_operations_module_buildouts_fill(value: float) -> void
 
