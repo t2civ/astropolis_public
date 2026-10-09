@@ -8,15 +8,17 @@
 class_name ITabPopulations
 extends MarginContainer
 
-## "Populations" tab subpanel for [InfoPanel]. Shows a facility's residents, one population type
-## at a time, in three views.
+## "Populations" tab subpanel for [InfoPanel]. Shows the residents of the selection, a facility
+## or the facilities a body, player or join aggregates, one population type at a time or, where
+## several live, all together, in three views.
 ##
-## [b]Demog[/b]: the head count, the share in each life stage, each unfolding to its age
-## buckets, and the vital rates. [b]Needs[/b]: how well each need is met, by tier; a need unfolds
-## to its satisfiers, with the facility's unmet rate and local price for each. [b]Means[/b]: the
-## residents' wealth, what it buys, and the work they offer at the wage. A body with one facility
-## shows as that facility. Header and row tooltips define the values; the model behind them is
-## POPULATION_MODEL.md.
+## [b]Demog[/b]: the head count, the share in each life stage, and the vital rates; a type's life
+## stages unfold to its age buckets. [b]Needs[/b]: how well each need is met, by tier; at a
+## facility, a type's needs unfold to their satisfiers, with the facility's unmet rate and local
+## price for each. [b]Means[/b]: the residents' wealth, what it buys, and their work and its pay.
+## All together shows a column for each type and one for all of them, where a type with no want
+## for a need reads "·". A body with one facility shows as that facility. Header and row tooltips
+## define the values; the model behind them is POPULATION_MODEL.md.
 
 const SCENE := "res://public/ui/itab_populations.tscn"  ## Scene file for instancing.
 
@@ -33,6 +35,7 @@ enum {
 }
 
 const N_CELLS := 5
+const MAX_TYPE_COLUMNS := N_CELLS - 1 ## The most types shown together, most populous first.
 const SUBGROUP_INDENT := 25
 
 const TAB_NAMES: Array[StringName] = [ # by TAB_; node names auto-translate as tab titles
@@ -48,10 +51,15 @@ const TIER_TOOLTIPS: Array[String] = [ # by Enums.NeedTiers
 	"What sentient beings require. Going without means fewer children and less able workers.",
 ]
 const TYPE_COLUMN_TOOLTIPS: Array[String] = [ # by TAB_
-	"The population type shown: its heads, their shares by life stage and age, and its vital\nrates.",
-	"The share of the type's want for each need that it got, smoothed over about a month\nfor an existence need and a quarter for the others.",
-	"The type's wealth and what it buys, and the work it offers.",
+	"Heads, their shares by life stage, and the vital rates.",
+	("The share of the want for each need that was met, smoothed over about a month for an"
+			+ "\nexistence need and a quarter for the others."),
+	"Wealth and what it buys, and work and its pay.",
 ]
+const SINGLE_HEADERS: Array[String] = ["", "Met\n(%)", ""] # by TAB_
+const COMBINED_TEXT := "Combined"
+const COMBINED_TOOLTIP := ("\nAll types together; a need's satisfaction weighs each type's by what"
+		+ "\nits want costs at start prices.")
 const SATISFIER_HEADERS: Array[String] = ["Unmet\n(/d)", "Local\n($)"]
 const SATISFIER_TOOLTIPS: Array[String] = [
 	("What the facility's clear left unmet of what its users asked, row units per day:"
@@ -75,15 +83,15 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 ]
 
 # persisted
-## The population type chosen, shown wherever it lives; -1 until one is chosen, which shows the
-## most populous.
+## The population type chosen, shown wherever it lives; -1 for all types together, or where
+## only one lives, that one.
 var population_type := -1
 var current_tab: int = TAB_DEMOGRAPHY
 var _on_ready_tab: int = TAB_DEMOGRAPHY
 
 # not persisted
 ## Min width of each value column.
-var column_width := 58.0
+var column_width := 62.0
 ## Width of the bar left of the value columns.
 var bar_width := 64.0
 ## Min width of the gutter right of the value columns.
@@ -296,48 +304,56 @@ func _get_proxy_data(target_name: StringName, tab: int, chosen_type: int) -> voi
 		var body := proxy as BodyProxy
 		if body and body.facilities.size() == 1:
 			proxy = body.facilities[0]
-	var facility := proxy as FacilityProxy
-	if !facility:
+	if !proxy or !proxy.has_development():
 		_update_no_populations.call_deferred()
 		return
 	var data := PopulationsData.new()
 	for type in _n_populations:
-		if facility.get_population_number(type) > 0.0:
+		if proxy.get_population_number(type) > 0.0:
 			data.types.append(type)
 	if data.types.is_empty():
 		_update_no_populations.call_deferred()
 		return
 	data.types.sort_custom(func(a: int, b: int) -> bool:
-		return facility.get_population_number(a) > facility.get_population_number(b))
-	var shown_type := chosen_type if data.types.has(chosen_type) else data.types[0]
-	data.columns.append(_get_facility_column(facility, shown_type))
-	if tab == TAB_NEEDS:
-		_get_satisfier_values(facility, shown_type, data)
+		return proxy.get_population_number(a) > proxy.get_population_number(b))
+	var facility := proxy as FacilityProxy
+	data.is_facility = facility != null
+	if data.types.has(chosen_type) or data.types.size() == 1:
+		var shown_type := chosen_type if data.types.has(chosen_type) else data.types[0]
+		data.columns.append(_get_column(proxy, shown_type, data.types))
+		if tab == TAB_NEEDS and facility:
+			_get_satisfier_values(facility, shown_type, data)
+	else:
+		for type: int in data.types.slice(0, MAX_TYPE_COLUMNS):
+			data.columns.append(_get_column(proxy, type, data.types))
+		data.columns.append(_get_column(proxy, -1, data.types))
 	_update_tab_display.call_deferred(tab, data)
 
 
-func _get_facility_column(facility: FacilityProxy, type: int) -> ColumnData:
+# A column for [param type], or for all [param types] if -1.
+func _get_column(proxy: Proxy, type: int, types: Array[int]) -> ColumnData:
 	var column := ColumnData.new()
 	column.population_type = type
-	column.number = facility.get_population_number(type)
+	column.number = proxy.get_population_number(type)
 	for stage in Enums.LifeStages.size():
-		column.stage_numbers.append(facility.get_population_stage_number(type, stage))
-	for bucket in _bucket_widths[type].size() + 1:
-		column.bucket_numbers.append(facility.get_population_bucket_number(type, bucket))
-	column.birth_rate = facility.get_population_birth_rate(type)
-	column.death_rate = facility.get_population_death_rate(type)
-	column.starvation_rate = facility.get_population_starvation_rate(type)
-	column.life_expectancy = facility.get_population_life_expectancy(type)
+		column.stage_numbers.append(proxy.get_population_stage_number(type, stage))
+	if type != -1:
+		for bucket in _bucket_widths[type].size() + 1:
+			column.bucket_numbers.append(proxy.get_population_bucket_number(type, bucket))
+	column.birth_rate = proxy.get_population_birth_rate(type)
+	column.death_rate = proxy.get_population_death_rate(type)
+	column.starvation_rate = proxy.get_population_starvation_rate(type)
+	column.life_expectancy = proxy.get_population_life_expectancy(type) if type != -1 else NAN
 	column.satisfactions.resize(_n_needs)
 	for need in _n_needs:
-		column.satisfactions[need] = (facility.get_population_satisfaction(type, need)
-				if _has_wants[type * _n_needs + need] else NAN)
-	column.wealth = facility.get_population_wealth(type)
-	column.years_of_wants = facility.get_population_years_of_wants(type)
-	column.participation = facility.get_population_participation(type)
-	var work_resource := _work_resources[type]
-	column.wage = (facility.get_inventory_local_price(work_resource) if work_resource != -1
-			else NAN)
+		column.satisfactions[need] = (proxy.get_population_satisfaction(type, need)
+				if _has_want(type, types, need) else NAN)
+	column.wealth = proxy.get_population_wealth(type)
+	column.years_of_wants = proxy.get_population_years_of_wants(type)
+	column.participation = proxy.get_population_participation(type)
+	column.offered_hours = proxy.get_population_offered_hours(type)
+	column.worked_hours = proxy.get_population_worked_hours(type)
+	column.wage = proxy.get_population_wage(type)
 	return column
 
 
@@ -353,13 +369,19 @@ func _get_satisfier_values(facility: FacilityProxy, type: int, data: Populations
 func _update_tab_display(tab: int, data: PopulationsData) -> void:
 	_no_populations_label.hide()
 	_tab_container.show()
-	var shown_type := data.columns[0].population_type
+	var is_single := data.columns.size() == 1
 	var headers := PackedStringArray()
 	var tooltips := PackedStringArray()
 	for column in data.columns:
-		headers.append(_get_type_header(column.population_type))
-		tooltips.append(TYPE_COLUMN_TOOLTIPS[tab])
-	if tab == TAB_NEEDS:
+		var type := column.population_type
+		if is_single:
+			headers.append(SINGLE_HEADERS[tab])
+			tooltips.append(TYPE_COLUMN_TOOLTIPS[tab])
+			continue
+		headers.append(_get_type_header(type))
+		tooltips.append(_get_type_text(type) + "\n" + TYPE_COLUMN_TOOLTIPS[tab]
+				+ (COMBINED_TOOLTIP if type == -1 else ""))
+	if tab == TAB_NEEDS and is_single and data.is_facility:
 		headers.append_array(SATISFIER_HEADERS)
 		tooltips.append_array(SATISFIER_TOOLTIPS)
 	var lines: Array[LineData]
@@ -370,11 +392,15 @@ func _update_tab_display(tab: int, data: PopulationsData) -> void:
 			lines = _get_needs_lines(data)
 		_:
 			lines = _get_means_lines(data)
-	var is_bar_shown := tab != TAB_MEANS
+	var is_bar_shown := is_single and tab != TAB_MEANS
+	var type_ids: Array[int] = data.types.duplicate()
+	if data.types.size() > 1:
+		type_ids.append(-1)
 	var type_texts := PackedStringArray()
-	for type in data.types:
-		type_texts.append(tr(_population_names[type]))
-	_headers[tab].set_header(data.types, type_texts, shown_type, headers, tooltips,
+	for type in type_ids:
+		type_texts.append(_get_type_text(type))
+	var shown_type := data.columns[0].population_type if is_single else -1
+	_headers[tab].set_header(type_ids, type_texts, shown_type, headers, tooltips,
 			is_bar_shown)
 
 	var content := _content_vboxes[tab]
@@ -395,135 +421,214 @@ func _update_tab_display(tab: int, data: PopulationsData) -> void:
 
 func _get_demography_lines(data: PopulationsData) -> Array[LineData]:
 	const YEAR := IVUnits.YEAR
-	var column := data.columns[0]
-	var type := column.population_type
-	var number := column.number
+	var columns := data.columns
+	var is_single := columns.size() == 1
 	var lines: Array[LineData] = []
-	var heads := _make_line("Heads", [_format_heads(number)], [_format_named(number)])
+	var heads := _make_line("Heads")
+	for column in columns:
+		_add_cell(heads, _format_prefixed(column.number), _format_named(column.number))
 	lines.append(heads)
-	var bucket_texts := _get_bucket_texts(type)
 	for stage in Enums.LifeStages.size():
-		var stage_number := column.stage_numbers[stage]
-		var share := stage_number / number if number > 0.0 else NAN
-		var line := _make_line(STAGE_TEXTS[stage] + " (%)", [_format_share(share)],
-				[_format_named(stage_number) + " heads"])
-		line.memory_key = "POP_STAGE_%d" % stage
-		line.share = share
-		var first_bucket := 0
-		var end_bucket := _first_adult_buckets[type]
-		if stage == Enums.LifeStages.LIFE_STAGE_ADULT:
-			first_bucket = end_bucket
-			end_bucket = _first_elder_buckets[type]
-		elif stage == Enums.LifeStages.LIFE_STAGE_ELDER:
-			first_bucket = _first_elder_buckets[type]
-			end_bucket = column.bucket_numbers.size()
-		for bucket in range(first_bucket, end_bucket):
-			var bucket_number := column.bucket_numbers[bucket]
-			var bucket_share := bucket_number / number if number > 0.0 else NAN
-			var row := _make_line(bucket_texts[bucket], [_format_share(bucket_share)],
-					[_format_named(bucket_number) + " heads"])
-			row.share = bucket_share
-			line.rows.append(row)
+		var line := _make_line(STAGE_TEXTS[stage] + " (%)")
+		for column in columns:
+			var stage_number := column.stage_numbers[stage]
+			_add_cell(line, _format_share(_get_ratio(stage_number, column.number)),
+					_format_named(stage_number) + " heads")
+		if is_single:
+			_add_buckets(line, columns[0], stage)
 		lines.append(line)
-	var per_thousand := 1000.0 * YEAR / number if number > 0.0 else NAN
-	lines.append(_make_line("Births (/k·y)", [_format_value(column.birth_rate * per_thousand)],
-			["Births a year per thousand heads, over about a quarter."]))
-	lines.append(_make_line("Deaths (/k·y)", [_format_value(column.death_rate * per_thousand)],
-			["Deaths a year per thousand heads, starvation's included, over about a quarter."]))
-	var starvation := column.starvation_rate * per_thousand
-	var starvation_line := _make_line("Starvation (/k·y)", [_format_value(starvation)],
-			["Deaths a year per thousand heads for want of life support, over about a quarter."])
-	if starvation > 0.0:
-		starvation_line.tones[0] = TONE_ALERT
-	lines.append(starvation_line)
-	var increase := (column.birth_rate - column.death_rate) * per_thousand / 10.0
-	lines.append(_make_line("Natural increase (%/y)", [_format_value(increase, true)],
-			["Births less deaths, a percent of the heads a year."]))
-	lines.append(_make_line("Life expectancy (y)",
-			[_format_value(column.life_expectancy / YEAR)],
-			["The mean lifetime of a newborn at the present death rates."]))
+	var births := _make_line("Births (/k·y)",
+			"Births a year per thousand heads, over about a quarter.")
+	var deaths := _make_line("Deaths (/k·y)",
+			"Deaths a year per thousand heads, starvation's included, over about a quarter.")
+	var starvation := _make_line("Starvation (/k·y)",
+			"Deaths a year per thousand heads for want of life support, over about a quarter.")
+	var increase := _make_line("Natural increase (%/y)",
+			"Births less deaths, a percent of the heads a year.")
+	var expectancy := _make_line("Life expectancy (y)",
+			"The mean lifetime of a newborn at the present death rates, a type's own.\n"
+			+ "Unknown where one of its age buckets is empty.")
+	for column in columns:
+		var per_thousand := _get_ratio(1000.0 * YEAR, column.number)
+		_add_cell(births, _format_value(column.birth_rate * per_thousand))
+		_add_cell(deaths, _format_value(column.death_rate * per_thousand))
+		var starvation_rate := column.starvation_rate * per_thousand
+		_add_cell(starvation, _format_value(starvation_rate), "",
+				TONE_ALERT if starvation_rate > 0.0 else TONE_NORMAL)
+		_add_cell(increase, _format_value((column.birth_rate - column.death_rate)
+				* per_thousand / 10.0, true))
+		_add_cell(expectancy, NOT_APPLICABLE if column.population_type == -1
+				else _format_value(column.life_expectancy / YEAR))
+	lines.append_array([births, deaths, starvation, increase, expectancy])
 	return lines
 
 
 func _get_needs_lines(data: PopulationsData) -> Array[LineData]:
-	var column := data.columns[0]
-	var type := column.population_type
+	var columns := data.columns
+	var is_single := columns.size() == 1
+	var is_satisfiers_shown := is_single and data.is_facility
 	var lines: Array[LineData] = []
 	for tier in TIER_TEXTS.size():
-		var section := _make_line(TIER_TEXTS[tier], [], [])
+		var section := _make_line(TIER_TEXTS[tier], TIER_TOOLTIPS[tier])
 		section.is_section = true
-		section.title_tooltip = TIER_TOOLTIPS[tier]
 		lines.append(section)
 		for need in _n_needs:
 			if _need_tiers[need] != tier:
 				continue
-			var satisfaction := column.satisfactions[need]
-			if is_nan(satisfaction):
-				lines.append(_make_line(tr(_need_names[need]), [NOT_APPLICABLE, "", ""],
-						["The type has no want for it.", "", ""]))
+			var line := _make_line(tr(_need_names[need]))
+			for column in columns:
+				var satisfaction := column.satisfactions[need]
+				if is_nan(satisfaction):
+					_add_cell(line, NOT_APPLICABLE, "No want for it.")
+					continue
+				var tone := _get_satisfaction_tone(column.population_type, data.types, need,
+						satisfaction)
+				_add_cell(line, _format_percent(satisfaction), "", tone)
+				if is_single:
+					line.share = satisfaction
+					line.bar_tone = tone
+			if !is_satisfiers_shown:
+				lines.append(line)
 				continue
-			var tone := _get_satisfaction_tone(type, need, satisfaction)
-			var line := _make_line(tr(_need_names[need]),
-					[_format_percent(satisfaction), "", ""], ["", "", ""])
-			line.tones[0] = tone
-			line.share = satisfaction
-			line.bar_tone = tone
-			line.memory_key = "POP_" + _need_names[need]
-			for resource_type in _satisfiers[type * _n_needs + need]:
-				var multiplier := _trade_unit_multipliers[resource_type]
-				var unmet_rate: float = data.unmet_rates.get(resource_type, 0.0)
-				var local_price: float = data.local_prices.get(resource_type, NAN)
-				var row := _make_line(_get_resource_title(resource_type), ["",
-						_format_rate(unmet_rate, multiplier), _format_price(local_price * multiplier)],
-						["", "", ""])
-				if unmet_rate > 0.0:
-					row.tones[1] = TONE_WARNING
-				line.rows.append(row)
+			_add_cell(line, "")
+			_add_cell(line, "")
+			var type := columns[0].population_type
+			if !is_nan(columns[0].satisfactions[need]):
+				line.memory_key = "POP_" + _need_names[need]
+				for resource_type in _satisfiers[type * _n_needs + need]:
+					line.rows.append(_make_satisfier_row(resource_type, data))
 			lines.append(line)
 	return lines
 
 
 func _get_means_lines(data: PopulationsData) -> Array[LineData]:
-	var column := data.columns[0]
-	var type := column.population_type
+	var columns := data.columns
 	var lines: Array[LineData] = []
-	var wealth_per_head := column.wealth / column.number if column.number > 0.0 else NAN
-	lines.append(_make_line("Wealth ($)", [_format_money(column.wealth)],
-			["$" + _format_named(column.wealth)]))
-	lines.append(_make_line("Wealth a head ($)", [_format_money(wealth_per_head)], [""]))
-	lines.append(_make_line("Years of wants (y)", [_format_value(column.years_of_wants)],
-			["What the wealth buys: the years of the type's wants it would pay for at local"
-			+ "\nprices. It compares across places, as purchasing-power parity does."]))
-	lines.append(_make_line("Participation (%)", [_format_percent(column.participation)],
-			["The most of its able hours the type offers."]))
-	var work_resource := _work_resources[type]
-	if work_resource != -1:
-		var unit := _trade_units[work_resource]
-		lines.append(_make_line("Wage ($/%s)" % unit,
-				[_format_price(column.wage * _trade_unit_multipliers[work_resource])],
-				["The local price of %s, what the residents' work earns." % tr(
-				_resource_names[work_resource]).to_lower()]))
+	var wealth := _make_line("Wealth ($)")
+	var wealth_per_head := _make_line("Wealth a head ($)")
+	var years := _make_line("Years of wants (y)",
+			"What the wealth buys: the years of the wants it would pay for at local prices.\n"
+			+ "It compares across places, as purchasing-power parity does.")
+	var participation := _make_line("Participation (%)",
+			"The most of their able hours the residents offer.")
+	var unit := _get_work_unit(_get_work_resource(-1, data.types))
+	var offered := _make_line("Offered (%s/d)" % unit,
+			"The hours the residents offered to work in their last interval, a day.")
+	var worked := _make_line("Worked (%)",
+			"The share of the hours offered that were worked in the last interval.")
+	var wage := _make_line("Wage ($/%s)" % unit,
+			"What an hour of the residents' work was paid in their last interval.")
+	for column in columns:
+		var work_resource := _get_work_resource(column.population_type, data.types)
+		var multiplier := (_trade_unit_multipliers[work_resource] if work_resource != -1
+				else 1.0)
+		_add_cell(wealth, _format_money(column.wealth), "$" + _format_named(column.wealth))
+		_add_cell(wealth_per_head, _format_money(_get_ratio(column.wealth, column.number)))
+		_add_cell(years, _format_value(column.years_of_wants)
+				if _has_any_want(column.population_type, data.types) else NOT_APPLICABLE)
+		_add_cell(participation, _format_percent(column.participation))
+		_add_cell(offered, _format_prefixed(column.offered_hours * IVUnits.DAY / multiplier))
+		_add_cell(worked, _format_percent(_get_ratio(column.worked_hours, column.offered_hours)))
+		_add_cell(wage, _format_price(column.wage * multiplier))
+	lines.append_array([wealth, wealth_per_head, years, participation, offered, worked, wage])
 	return lines
 
 
-func _make_line(title: String, cells: Array[String], tooltips: Array[String]) -> LineData:
+func _make_line(title: String, title_tooltip := "") -> LineData:
 	var line := LineData.new()
 	line.title = title
-	line.cells = PackedStringArray(cells)
-	line.tooltips = PackedStringArray(tooltips)
-	line.tones.resize(cells.size()) # TONE_NORMAL
+	line.title_tooltip = title_tooltip
 	return line
 
 
-# An existence need below its type's starvation threshold kills; any shortfall in one shows.
-func _get_satisfaction_tone(type: int, need: int, satisfaction: float) -> int:
+func _add_cell(line: LineData, text: String, tooltip := "", tone: int = TONE_NORMAL) -> void:
+	line.cells.append(text)
+	line.tooltips.append(tooltip)
+	line.tones.append(tone)
+
+
+# Makes [param line], life [param stage]'s share of [param column], unfold to its age buckets'.
+func _add_buckets(line: LineData, column: ColumnData, stage: int) -> void:
+	var type := column.population_type
+	line.memory_key = "POP_STAGE_%d" % stage
+	line.share = _get_ratio(column.stage_numbers[stage], column.number)
+	var first_bucket := 0
+	var end_bucket := _first_adult_buckets[type]
+	if stage == Enums.LifeStages.LIFE_STAGE_ADULT:
+		first_bucket = end_bucket
+		end_bucket = _first_elder_buckets[type]
+	elif stage == Enums.LifeStages.LIFE_STAGE_ELDER:
+		first_bucket = _first_elder_buckets[type]
+		end_bucket = column.bucket_numbers.size()
+	var bucket_texts := _get_bucket_texts(type)
+	for bucket in range(first_bucket, end_bucket):
+		var bucket_number := column.bucket_numbers[bucket]
+		var bucket_share := _get_ratio(bucket_number, column.number)
+		var row := _make_line(bucket_texts[bucket])
+		_add_cell(row, _format_share(bucket_share), _format_named(bucket_number) + " heads")
+		row.share = bucket_share
+		line.rows.append(row)
+
+
+func _make_satisfier_row(resource_type: int, data: PopulationsData) -> LineData:
+	var multiplier := _trade_unit_multipliers[resource_type]
+	var unmet_rate: float = data.unmet_rates.get(resource_type, 0.0)
+	var local_price: float = data.local_prices.get(resource_type, NAN)
+	var row := _make_line(_get_resource_title(resource_type))
+	_add_cell(row, "")
+	_add_cell(row, _format_rate(unmet_rate, multiplier), "",
+			TONE_WARNING if unmet_rate > 0.0 else TONE_NORMAL)
+	_add_cell(row, _format_price(local_price * multiplier))
+	return row
+
+
+# True if [param type], or any of [param types] if -1, has a want for [param need].
+func _has_want(type: int, types: Array[int], need: int) -> bool:
+	if type != -1:
+		return _has_wants[type * _n_needs + need] == 1
+	for each_type in types:
+		if _has_wants[each_type * _n_needs + need]:
+			return true
+	return false
+
+
+func _has_any_want(type: int, types: Array[int]) -> bool:
+	for need in _n_needs:
+		if _has_want(type, types, need):
+			return true
+	return false
+
+
+# An existence need below its type's starvation threshold kills; any shortfall in one shows. All
+# types together take the highest threshold among [param types].
+func _get_satisfaction_tone(type: int, types: Array[int], need: int, satisfaction: float
+		) -> int:
 	if _need_tiers[need] != Enums.NeedTiers.NEED_TIER_EXISTENCE:
 		return TONE_NORMAL
-	if satisfaction < _starvation_thresholds[type]:
+	var threshold := 0.0
+	for each_type in types:
+		if (type == -1 or each_type == type) and _has_wants[each_type * _n_needs + need]:
+			threshold = maxf(threshold, _starvation_thresholds[each_type])
+	if satisfaction < threshold:
 		return TONE_ALERT
 	if roundi(satisfaction * 100.0) < 100:
 		return TONE_WARNING
 	return TONE_NORMAL
+
+
+# The work resource of [param type], or of the first of [param types] that makes one if -1;
+# -1 if none does.
+func _get_work_resource(type: int, types: Array[int]) -> int:
+	if type != -1:
+		return _work_resources[type]
+	for each_type in types:
+		if _work_resources[each_type] != -1:
+			return _work_resources[each_type]
+	return -1
+
+
+func _get_work_unit(work_resource: int) -> String:
+	return String(_trade_units[work_resource]) if work_resource != -1 else "h"
 
 
 # Each age bucket's bounds in years, the last open-ended.
@@ -540,7 +645,11 @@ func _get_bucket_texts(type: int) -> PackedStringArray:
 
 
 func _get_type_header(type: int) -> String:
-	return tr(_population_names[type]).replace(" ", "\n")
+	return _get_type_text(type).replace(" ", "\n")
+
+
+func _get_type_text(type: int) -> String:
+	return COMBINED_TEXT if type == -1 else tr(_population_names[type])
 
 
 func _get_resource_title(resource_type: int) -> String:
@@ -551,13 +660,19 @@ func _get_resource_title(resource_type: int) -> String:
 	return "%s (%s)" % [title, trade_unit]
 
 
-func _format_heads(number: float) -> String:
+func _get_ratio(numerator: float, denominator: float) -> float:
+	return numerator / denominator if denominator > 0.0 else NAN
+
+
+func _format_prefixed(number: float) -> String:
 	return IVQFormat.prefixed_unit(number, &"").strip_edges()
 
 
 func _format_money(dollars: float) -> String:
 	if is_nan(dollars):
 		return NO_VALUE
+	if !dollars:
+		return "0"
 	return IVQFormat.prefixed_unit(dollars, &"").strip_edges()
 
 
@@ -615,6 +730,7 @@ func _format_rate(rate: float, multiplier: float) -> String:
 class PopulationsData extends RefCounted:
 	# What the selection shows, gathered on the proxy thread. Rates are sim units per second,
 	# prices sim units.
+	var is_facility := false
 	var types: Array[int] = [] # present, most populous first
 	var columns: Array[ColumnData] = []
 	var unmet_rates: Dictionary[int, float] = {} # by satisfier resource
@@ -622,7 +738,7 @@ class PopulationsData extends RefCounted:
 
 
 class ColumnData extends RefCounted:
-	# One population type's values.
+	# One population type's values, or all types' for population_type -1.
 	var population_type: int
 	var number: float
 	var stage_numbers := PackedFloat64Array() # by Enums.LifeStages
@@ -635,7 +751,9 @@ class ColumnData extends RefCounted:
 	var wealth: float
 	var years_of_wants: float
 	var participation: float
-	var wage: float # local price of the type's work resource; NAN without one
+	var offered_hours: float
+	var worked_hours: float
+	var wage: float # per sim unit of the work resource; NAN where no one worked
 
 
 class LineData extends RefCounted:
@@ -691,6 +809,8 @@ class PopulationsHeaderRow extends HBoxContainer:
 		_cells.resize(N_CELLS)
 		for i in N_CELLS:
 			var cell := ITabPopulations._make_cell_label()
+			cell.clip_text = false
+			cell.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 			add_child(cell)
 			_cells[i] = cell
 		add_child(_trailing_spacer)
@@ -704,9 +824,9 @@ class PopulationsHeaderRow extends HBoxContainer:
 		if types != _types:
 			_types = types.duplicate()
 			_type_button.clear()
-			for i in types.size():
-				_type_button.add_item(type_texts[i], types[i])
-		_type_button.select(_type_button.get_item_index(shown_type))
+			for type_text in type_texts:
+				_type_button.add_item(type_text)
+		_type_button.select(_types.find(shown_type))
 		_bar_spacer.visible = is_bar_shown
 		var tones := PackedByteArray()
 		tones.resize(headers.size())
@@ -714,7 +834,7 @@ class PopulationsHeaderRow extends HBoxContainer:
 
 
 	func _on_item_selected(index: int) -> void:
-		type_selected.emit(_type_button.get_item_id(index))
+		type_selected.emit(_types[index])
 
 
 	func _resize(gui_size: int) -> void:

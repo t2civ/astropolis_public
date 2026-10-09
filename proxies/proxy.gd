@@ -583,11 +583,109 @@ func get_financials_accounting_history(_item: int) -> PackedFloat64Array:
 	return PackedFloat64Array()
 
 
-# Population data (read-only). Default 0.0/empty; developed proxies override.
+# Population data (read-only). Default 0.0/empty; developed proxies override. A facility
+# answers for its residents, and a body, player or join for those of the facilities it
+# aggregates, its rates and shares derived from their sums (POPULATION_MODEL.md, "What players
+# and AIs do"). Where population_type may be -1, the getter answers for all types together.
 
 ## Returns the population count for [param population_type], or the total across
 ## all types if -1. Safe default on an out-of-range index.
 func get_population_number(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns how many of [param population_type] are in its age [param bucket], one of the
+## type's eight (see POPULATION_MODEL.md, "Demographics"). Safe default on an out-of-range
+## index.
+func get_population_bucket_number(_population_type: int, _bucket: int) -> float:
+	return 0.0
+
+
+## Returns how many of [param population_type] are in life [param stage], an
+## [enum Enums.LifeStages], or of all types if -1. Safe default on an out-of-range index.
+func get_population_stage_number(_population_type: int, _stage: int) -> float:
+	return 0.0
+
+
+## Returns the births per second of [param population_type], or of all types if -1,
+## smoothed over about a quarter. Safe default on an out-of-range index.
+func get_population_birth_rate(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns the deaths per second of [param population_type], or of all types if -1,
+## starvation included, smoothed over about a quarter. Safe default on an out-of-range index.
+func get_population_death_rate(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns the starvation deaths per second of [param population_type], or of all types if
+## -1, smoothed over about a quarter: the people who die for want of life support. Safe
+## default on an out-of-range index.
+func get_population_starvation_rate(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns the life expectancy at birth of [param population_type] at its present death
+## rates, in seconds. NAN at an aggregate with an empty age bucket, whose death rate is
+## unknown. Safe default on an out-of-range index.
+func get_population_life_expectancy(_population_type: int) -> float:
+	return 0.0
+
+
+## Returns migration pressure for [param population_type] (positive = net immigration,
+## negative = net emigration); facility only. Safe default on an out-of-range index.
+func get_population_migration_pressure(_population_type: int) -> float:
+	return 0.0
+
+
+## Returns the share of [param population_type]'s want for [param need], a
+## [code]needs.tsv[/code] row, that it got (1.0 = fully met), smoothed over about a month for
+## an existence need and a quarter for the others, or of all types' if -1. Below its type's
+## threshold in any existence need, people starve. Where several types' or facilities' are
+## combined, each weighs by what its want costs at start prices. 1.0 for a need no one here has
+## a want for. Safe default on an out-of-range index.
+func get_population_satisfaction(_population_type: int, _need: int) -> float:
+	return 1.0
+
+
+## Returns [param population_type]'s wealth, or all types' if -1, in dollars; a facility's
+## classes hold it as unevenly as they are served. 0.0 without a population.
+func get_population_wealth(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns the most of [param population_type]'s able hours it offers, or of all types' if -1:
+## its head count in each life stage times its type's work weights and the hours a working
+## head works being all of them. NAN where no one is able to work; 0.0 without a population.
+func get_population_participation(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns what [param population_type]'s wealth buys, or all types' if -1: the years of its
+## wants it would pay for at local prices. The true measure of its wealth, which compares
+## across places; 0.0 without a population.
+func get_population_years_of_wants(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns the hours [param population_type]'s residents offered in their last interval, or
+## all types' if -1, in sim units of the type's work resource per second: the number offering
+## to work at once. 0.0 without a population.
+func get_population_offered_hours(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns the hours [param population_type]'s residents worked in their last interval, or
+## all types' if -1, as [method get_population_offered_hours]. 0.0 without a population.
+func get_population_worked_hours(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns what [param population_type]'s work was paid in its last interval, or all types'
+## if -1, in dollars per sim unit of its work resource: the wage. NAN where no one worked;
+## 0.0 without a population.
+func get_population_wage(_population_type := -1) -> float:
 	return 0.0
 
 
