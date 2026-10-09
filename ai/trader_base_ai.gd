@@ -350,12 +350,11 @@ var _executor_branches: PackedByteArray
 # ********************************** STATIC ***********************************
 
 ## True if inventory [param flags] mark a resource a market-making posture makes a
-## market in: tradable, and produced or consumed by the facility.
+## market in: tradable, and one the facility deals in.
 static func is_market_resource(flags: int) -> bool:
 	const TRADABLE := FacilityProxy.InventoryFlags.TRADABLE
-	const CAN_HAVE_INPUT := FacilityProxy.InventoryFlags.CAN_HAVE_INPUT
-	const CAN_HAVE_OUTPUT := FacilityProxy.InventoryFlags.CAN_HAVE_OUTPUT
-	return (flags & TRADABLE) != 0 and (flags & (CAN_HAVE_INPUT | CAN_HAVE_OUTPUT)) != 0
+	const IS_MARKET := FacilityProxy.InventoryFlags.IS_MARKET
+	return (flags & TRADABLE) != 0 and (flags & IS_MARKET) != 0
 
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
@@ -420,7 +419,7 @@ func ai_init() -> void:
 ## per-resource strategies (authored by the facility, translated and stored on
 ## change). Trades only the resources the facility flags
 ## [constant FacilityProxy.InventoryFlags.TRADABLE]: a two-sided posture makes markets in
-## those the facility produces or consumes (see [method is_market_resource]), priced as its
+## those the facility deals in (see [method is_market_resource]), priced as its
 ## def and theirs direct, and every other one gets the facility-support executor per its
 ## strategy's def. Both SET orders on the front (current-quarter) instrument at the
 ## trader's local market, and def-gated strategies also maintain forward-flow orders on

@@ -34,10 +34,10 @@ extends Proxy
 ## Published per-resource values: [b]price[/b] — the last current-quarter trade or
 ## fiat seed, held between the current-quarter best bid and best ask (see
 ## TRADE_MODEL.md, "Price discovery"), or the best ask where neither exists, else 0;
-## [b]ask[/b] / [b]bid[/b] — the current-quarter top-of-book, 0 for an empty side;
-## [b]volume[/b] — physically settled trade units per day, smoothed over ~7 days.
-## [member instruments] also carries per-instrument top-of-book for every
-## quarter.[br][br]
+## [b]ask[/b] / [b]bid[/b] — the current-quarter top-of-book, 0 for an empty side.
+## [member instruments] also carries per-instrument top-of-book for every quarter. What a
+## body's facilities buy and sell here is their own, summed on [BodyProxy] (see
+## [method Proxy.get_operations_bought_rate]).[br][br]
 ##
 ## Prices and order quantities are integer "ticks": price in integer USD per trade
 ## unit (assumes [code]IVUnits.USD == 1.0[/code]), quantity in integer "trade units"
@@ -45,10 +45,10 @@ extends Proxy
 ## used elsewhere ([IVUnits]). Quantities need 64 bits — a quarter's flow of a large
 ## resource passes 2^31 trade units — so hold them in [PackedInt64Array], never
 ## [PackedInt32Array]. A [code]get_*_price[/code] getter returns sim units; "unit" in
-## the name ([method get_unit_price]) returns the market-internal trade-unit value.
-## Volume is float sim units. A stored 0 price means no current price.[br][br]
+## the name ([method get_unit_price]) returns the market-internal trade-unit value. A stored
+## 0 price means no current price.[br][br]
 ##
-## The read side: AI and GUI read prices, volume, and [member instruments] here, and
+## The read side: AI and GUI read prices and [member instruments] here, and
 ## place or change orders via [method TraderProxy.set_ask] /
 ## [method TraderProxy.set_bid]. Indexed getters are defensive — an out-of-range
 ## index returns a safe default (see AI_ARCHITECTURE.md, "Trust the server; guard
@@ -125,11 +125,6 @@ func get_market() -> MarketProxy:
 ## Returns the Market-internal bid unit price for [param type], or 0 if no
 ## current bid.
 @abstract func get_bid_unit_price(type: int) -> int
-
-
-## Returns the physically settled trade volume for [param type] in trade units
-## per day, smoothed over 7 days.
-@abstract func get_unit_volume(type: int) -> float
 
 # Call on proxy thread. Per-instrument top-of-book reads onto [member instruments];
 # any quarter >= the current one is a legitimate query (an absent instrument

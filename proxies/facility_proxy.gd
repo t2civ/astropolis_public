@@ -58,11 +58,13 @@ enum FacilityFlags {
 ## Per-resource inventory bit flags. FROM_SERVER bits (0 - 31) are signals from
 ## the server; FROM_PROXY bits (32 - 63) are AI commands to the server.
 enum InventoryFlags {
-	## Stock of this resource is below its critical level (see
-	## [method get_inventory_critical_level]).
+	## Stock of this resource was below its critical level (see
+	## [method get_inventory_critical_level]) as the facility's last interval began, before its
+	## flows; the stock and levels published since are the interval's end.
 	OPS_RESERVE_BREACHED = 1 << 1,
-	## Stock of this resource is below its desired level (see
-	## [method get_inventory_desired_level]).
+	## Stock of this resource was below its desired level (see
+	## [method get_inventory_desired_level]) as the facility's last interval began, before its
+	## flows.
 	STRATEGIC_RESERVE_BREACHED = 1 << 2,
 	## No market price is established for this resource at this location.
 	PRICE_UNKNOWN = 1 << 4,
@@ -76,6 +78,11 @@ enum InventoryFlags {
 	## Not set since the holding rent replaced disposal for want of room (PRODUCTION_MODEL.md,
 	## "A storage class: the holding rent"). The trader reads it until its rebuild.
 	DUMPING = 1 << 8,
+	## The facility deals in this resource, and a market-making trader makes a market in it
+	## where it is also [constant TRADABLE]. For now the server sets it exactly where
+	## [constant CAN_HAVE_INPUT] or [constant CAN_HAVE_OUTPUT] is; a market maker is to deal in
+	## resources it neither makes nor uses as well.
+	IS_MARKET = 1 << 9,
 	## Mask of all server-published signal bits.
 	FROM_SERVER_MASK = (1 << 32) - 1,
 

@@ -465,6 +465,60 @@ func is_operations_can_have_module(_module_type: int) -> bool:
 	return false
 
 
+# Per-resource market flows (read-only), in sim units per second. Default 0.0/empty;
+# developed proxies override. An aggregate sums its facilities'.
+
+## Returns what the facility's own market passes of [param _resource_type] to its users,
+## averaged over its time horizon: its use where it is non-unitary, and nothing where it is
+## unitary, since a unitary facility books only what it trades (FINANCIAL_MODEL.md, "Unitary and
+## non-unitary facilities").
+func get_operations_internal_volume(_resource_type: int) -> float:
+	return 0.0
+
+
+## Returns the per-resource internal volumes array, or empty if this proxy has no operations.
+## Read-only reference; do not mutate.
+func get_operations_internal_volumes() -> PackedFloat64Array:
+	return PackedFloat64Array()
+
+
+## Returns what the facility took in of [param _resource_type] from deliveries, averaged over
+## its time horizon. At an aggregate, less [method get_operations_sold_rate] it is the net trade
+## across the aggregate's boundary: what its facilities trade among themselves cancels.
+func get_operations_bought_rate(_resource_type: int) -> float:
+	return 0.0
+
+
+## Returns the per-resource bought rates array, or empty if this proxy has no operations.
+## Read-only reference; do not mutate.
+func get_operations_bought_rates() -> PackedFloat64Array:
+	return PackedFloat64Array()
+
+
+## Returns what the facility delivered of [param _resource_type], averaged over its time horizon.
+func get_operations_sold_rate(_resource_type: int) -> float:
+	return 0.0
+
+
+## Returns the per-resource sold rates array, or empty if this proxy has no operations.
+## Read-only reference; do not mutate.
+func get_operations_sold_rates() -> PackedFloat64Array:
+	return PackedFloat64Array()
+
+
+## Returns 1.0 where the facility deals in [param _resource_type]
+## ([constant FacilityProxy.InventoryFlags.IS_MARKET]), else 0.0; at an aggregate, how many of
+## its facilities do.
+func get_operations_market_count(_resource_type: int) -> float:
+	return 0.0
+
+
+## Returns the per-resource market counts array, or empty if this proxy has no operations.
+## Read-only reference; do not mutate.
+func get_operations_market_counts() -> PackedFloat64Array:
+	return PackedFloat64Array()
+
+
 # Financials data (read-only). Default 0.0/empty; Facility, Player, and
 # player-specific Join proxies override. "lfq" = last four quarters.
 
