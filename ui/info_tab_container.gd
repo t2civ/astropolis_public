@@ -9,7 +9,7 @@ class_name InfoTabContainer
 extends TabContainer
 
 ## Tab container hosting the [InfoPanel]'s subpanels (development,
-## operations, markets, physical, orbit, build, budget).
+## populations, operations, markets, physical, orbit, build, budget).
 ##
 ## Added programmatically (rather than via .tscn) so its subpanels persist
 ## across save/load. TODO: Generalize so subpanel classes don't have to be
@@ -33,6 +33,7 @@ var _on_ready_tab := 0
 
 # exposed at init so we can set persist values when pinning
 var itab_development: ITabDevelopment  ## Development tab subpanel.
+var itab_populations: ITabPopulations  ## Populations tab subpanel.
 var itab_operations: ITabOperations  ## Operations tab subpanel.
 var itab_markets: ITabMarkets  ## Markets tab subpanel.
 var itab_physical: ITabPhysical  ## Physical tab subpanel.
@@ -53,14 +54,15 @@ func _init(is_new := false) -> void:
 		return
 	_is_new = true
 	itab_development = IVFiles.make_object_or_scene(ITabDevelopment)
+	itab_populations = IVFiles.make_object_or_scene(ITabPopulations)
 	itab_operations = IVFiles.make_object_or_scene(ITabOperations)
 	itab_markets = IVFiles.make_object_or_scene(ITabMarkets)
 	itab_physical = IVFiles.make_object_or_scene(ITabPhysical)
 	itab_orbit = IVFiles.make_object_or_scene(ITabOrbit)
 	itab_build = IVFiles.make_object_or_scene(ITabBuild)
 	itab_budget = IVFiles.make_object_or_scene(ITabBudget)
-	subpanels = [itab_development, itab_operations, itab_markets, itab_physical, itab_orbit,
-			itab_build, itab_budget]
+	subpanels = [itab_development, itab_populations, itab_operations, itab_markets,
+			itab_physical, itab_orbit, itab_build, itab_budget]
 
 
 func _ready() -> void:
@@ -74,6 +76,7 @@ func _ready() -> void:
 		IVStateManager.game_loaded.connect(_on_game_loaded, CONNECT_ONE_SHOT)
 		return
 	add_child(itab_development)
+	add_child(itab_populations)
 	add_child(itab_operations)
 	add_child(itab_markets)
 	add_child(itab_physical)
@@ -87,6 +90,8 @@ func _on_game_loaded() -> void:
 	for child in get_children():
 		if child is ITabDevelopment:
 			itab_development = child
+		elif child is ITabPopulations:
+			itab_populations = child
 		elif child is ITabOperations:
 			itab_operations = child
 		elif child is ITabMarkets:
@@ -109,6 +114,7 @@ func _init_tabs() -> void:
 	set_current_tab(_on_ready_tab)
 	_suppress_tab_listener = false
 	itab_development.name = &"TAB_DEVELOPMENT"
+	itab_populations.name = &"TAB_POPULATIONS"
 	itab_operations.name = &"TAB_OPERATIONS"
 	itab_markets.name = &"TAB_MARKETS"
 	itab_physical.name = &"TAB_PHYSICAL"
@@ -116,6 +122,7 @@ func _init_tabs() -> void:
 	itab_build.name = &"TAB_BUILD"
 	itab_budget.name = &"TAB_BUDGET"
 	_timer.timeout.connect(itab_development.timer_update)
+	_timer.timeout.connect(itab_populations.timer_update)
 	_timer.timeout.connect(itab_operations.timer_update)
 	_timer.timeout.connect(itab_markets.timer_update)
 	_timer.timeout.connect(itab_physical.timer_update)
