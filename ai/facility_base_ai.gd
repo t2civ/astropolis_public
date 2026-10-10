@@ -196,19 +196,20 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 
 ## Facility-posture strategy definitions; index = [enum FacilityStrategies] value.
 ## The [code]buildout_spending_share[/code] key (read by [method _apply_facility_knobs])
-## is the most of facility income the server spends on construction, the stand-in for
-## a buildout budget: a positive value builds within that share, a negative value winds
-## capacity down at that rate, and an omitted key (NAN) holds. Postures never selected by
+## is the share of the facility's profit, past what wears out, that its owners leave in it
+## for growth: zero or more builds, replacing what wears out first and growing within that
+## share, which the server holds below one; a negative value winds capacity down at that
+## rate; and an omitted key (NAN) holds. Postures never selected by
 ## [method _reconcile_facility_strategy] are left empty.
 static var facility_strategy_defs: Array[Dictionary] = [
 	{}, # NEUTRAL
-	{&"buildout_spending_share": 0.15}, # GROWTH
-	{&"buildout_spending_share": 0.08}, # PROFITABILITY
+	{&"buildout_spending_share": 0.25}, # GROWTH
+	{&"buildout_spending_share": 0.13}, # PROFITABILITY
 	{}, # DIVERSIFICATION
 	{}, # SPECIALIZATION
-	{&"buildout_spending_share": 0.03}, # STRATEGIC_OUTPOST
+	{&"buildout_spending_share": 0.05}, # STRATEGIC_OUTPOST
 	{}, # DEVELOPMENT
-	{&"buildout_spending_share": 0.05}, # STEADY_STATE
+	{&"buildout_spending_share": 0.08}, # STEADY_STATE
 	{&"buildout_spending_share": -0.5}, # DECOMMISSIONING (negative = wind-down)
 	{}, # EMERGENCY
 ]
@@ -534,7 +535,7 @@ func _reconcile_facility_strategy() -> int:
 
 
 ## Translates the posture's def into the BUILDOUT operation's target spending share
-## (the most of facility income the yards spend on construction; NAN holds). The
+## (the share of facility profit past what wears out the yards spend on growth; NAN holds). The
 ## BUILDOUT op is resolved by tag, so no table entity name is referenced here.
 func _apply_facility_knobs(strategy: int) -> void:
 	var def := facility_strategy_defs[strategy]

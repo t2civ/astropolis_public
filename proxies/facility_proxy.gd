@@ -44,8 +44,9 @@ enum FacilityFlags {
 
 	## Crisis posture: operations continue regardless of profitability.
 	MODE_EMERGENCY = 1 << 32,
-	## Laid-up state: no operations run; capacity is preserved for later restart.
-	MODE_MOTHBALL = 1 << 33,
+	## Shut down: no operations run; capacity is preserved for later restart (distinct from the
+	## capacity a facility lays up, its mothballed units, which it keeps without maintenance).
+	MODE_SHUTDOWN = 1 << 33,
 	## Inventory drawdown: no stock may rise, so each operation runs only as far as the
 	## facility itself uses what it makes (distinct from the DECOMMISSIONING operation, which
 	## tears down modules).
@@ -660,7 +661,7 @@ func get_market() -> MarketProxy:
 
 
 ## Sets the target spending share for operation [param type] (fraction of facility
-## income, or NAN = not in effect). Proxy-authoritative; flows proxy -> server.
+## profit past what wears out, or NAN = not in effect). Proxy-authoritative; flows proxy -> server.
 @abstract func set_operations_target_spending_share(type: int, value: float) -> void
 
 
