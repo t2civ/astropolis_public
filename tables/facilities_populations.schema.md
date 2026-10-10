@@ -4,8 +4,8 @@ This Entity x Entity table defines the age structure, vital rates, spread, wealt
 participation of each population at facilities at simulation start in 2015. How many a facility holds of each
 type is `population` in `facilities.tsv`; this table says how they are spread over the
 type's eight age buckets, how fast they die and bear children, how unevenly they are
-served, what they hold and how much they work. It is the populations' starting state: from the first interval their death rates
-and fertility move with what they get (`populations.schema.md`). Population types are described
+served, what they hold and how much they work. It is the populations' starting state: from the first interval their death rates,
+fertility and participation move with what they get (`populations.schema.md`). Population types are described
 in `populations.schema.md`, and the model in `POPULATION_MODEL.md` ("Demographics").
 
 
@@ -22,7 +22,8 @@ The data type is ARRAY[FLOAT]; each cell holds 20 values delimited by semicolons
 - 1 value, in dollars — the wealth per head. Its classes hold it as unevenly as they are
   served, and spend it at the type's `spending_rate` (`populations.tsv`).
 - 1 value — the participation: the most of its able hours the population offers, its
-  weighted heads times `work_hours` (`populations.tsv`) being all of them.
+  weighted heads times `work_hours` (`populations.tsv`) being all of them. From the first
+  interval it moves toward what its type's participation response implies.
 
 The rates carry an inline `/y`. A cell must be present for every population that
 `facilities.tsv` seeds, and is empty otherwise.

@@ -32,11 +32,12 @@ own content is written, which comes with the first game that holds them
   below it. Births fall as the share falls from 1 toward it, with the square of the shortfall
   over the gap between the two, to none at it (`POPULATION_MODEL.md`, "Demographics").
 
-The remaining columns are the type's two slow responses (P12 in `POPULATION_MODEL.md`). Each
-moves a population's rates toward what its satisfaction of one need implies: the rate the
-type has when the need is met, times the satisfaction to the power of minus an elasticity,
-flat at the want and steepest far below it. A population whose people are served unevenly
-(its spread, `facilities_populations.tsv`) takes the average over its classes.
+The next columns are the type's three slow responses (P12 in `POPULATION_MODEL.md`). Each
+moves a population's rates toward what its satisfaction of its needs implies: the rate it has
+when they are met, times each satisfaction to the power of minus an elasticity, flat at the
+want and steepest far below it. A positive elasticity raises the rate as the need goes short,
+and a negative one lowers it. A population whose people are served unevenly (its spread,
+`facilities_populations.tsv`) takes the average over its classes.
 
 - mortality_need — TABLE_ROW `needs.tsv`, the need whose satisfaction sets the death rates.
   Blank holds them at their seeds.
@@ -56,6 +57,18 @@ flat at the want and steepest far below it. A population whose people are served
 - fertility_floor — FLOAT, the satisfaction below which going further without adds no
   births.
 - fertility_response_time — FLOAT in years, as `mortality_response_time`, for the fertility.
+- participation_needs — ARRAY[TABLE_ROW] `needs.tsv`, the needs whose satisfactions set the
+  participation, the most of its able hours a population offers. Blank holds it at its seed.
+  Default `HEALTH`: the sick work less.
+- served_participation — FLOAT, the participation with the needs met. Default `0.651`, the
+  USA's seed, the best-served polity's.
+- participation_elasticities — ARRAY[FLOAT], one for each of `participation_needs`: how
+  steeply the participation moves as the need goes short, negative where it falls. Default
+  `-0.15`.
+- participation_floor — FLOAT, the satisfaction below which going further without moves the
+  participation no further. Default `0.01`.
+- participation_response_time — FLOAT in years, as `mortality_response_time`, for the
+  participation. Default `5 y`.
 - spending_rate — FLOAT per year: the share of its wealth a population spends in a year on
   its wants. Its classes spend it on their existence wants first, all of it if they take
   it, and the rest over their other wants in the shares `wants.tsv` sets
@@ -76,12 +89,13 @@ flat at the want and steepest far below it. A population whose people are served
 1. The number of age buckets, eight, is the model's and not a type's (P1 in
    `POPULATION_MODEL.md`). What a type sets is where its buckets fall in its own lifetime.
 2. A population's own death rates, fertility, spread, wealth and participation are state,
-   seeded per facility in `facilities_populations.tsv`. The death rates and fertility then
-   move as above, and the wealth only with the head count, a death taking its share and a
-   birth bringing the average; nothing moves the spread or the participation yet.
+   seeded per facility in `facilities_populations.tsv`. The death rates, fertility and
+   participation then move as above, and the wealth only with the head count, a death taking
+   its share and a birth bringing the average; nothing moves the spread yet.
 3. Base humans' response columns are fitted on the 2017 cross-section of countries by
    `tests/calibration/seed_demography.py --fit` (`EARTH_CALIBRATION.md`, "Population"). The
-   floors and response times are not fitted.
+   floors and response times are not fitted, and neither is the participation's response,
+   whose values are from recall.
 4. What a type needs, and where it can live, are its wants (`wants.tsv`): room is the want
    of its shelter need, a draw on the habitation its environments' housing makes, and an
    individual that takes less room wants less of it (P6 in `POPULATION_MODEL.md`).
