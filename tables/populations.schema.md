@@ -49,13 +49,15 @@ and a negative one lowers it. A population whose people are served unevenly (its
   faster.
 - mortality_response_time — FLOAT in years: how long the death rates take to move most of
   the way to what a changed satisfaction implies, the time constant of their relaxation.
-- fertility_need — TABLE_ROW `needs.tsv`, the need whose satisfaction sets the fertility.
-  Blank holds it at its seed.
-- served_fertility — FLOAT per year, the fertility with the need met: births per head, each
+- fertility_needs — ARRAY[TABLE_ROW] `needs.tsv`, the needs whose satisfactions set the
+  fertility. Blank holds it at its seed. Base humans' are learning, whose lack raises it,
+  and shelter, whose lack, crowding, lowers it.
+- served_fertility — FLOAT per year, the fertility with the needs met: births per head, each
   weighted by `birth_weights`.
-- fertility_elasticity — FLOAT, how steeply the fertility rises as the need goes short.
-- fertility_floor — FLOAT, the satisfaction below which going further without adds no
-  births.
+- fertility_elasticities — ARRAY[FLOAT], one for each of `fertility_needs`: how steeply the
+  fertility moves as the need goes short, negative where it falls.
+- fertility_floor — FLOAT, the satisfaction below which going further without moves the
+  fertility no further.
 - fertility_response_time — FLOAT in years, as `mortality_response_time`, for the fertility.
 - participation_needs — ARRAY[TABLE_ROW] `needs.tsv`, the needs whose satisfactions set the
   participation, the most of its able hours a population offers. Blank holds it at its seed.
@@ -94,8 +96,8 @@ and a negative one lowers it. A population whose people are served unevenly (its
    its share and a birth bringing the average; nothing moves the spread yet.
 3. Base humans' response columns are fitted on the 2017 cross-section of countries by
    `tests/calibration/seed_demography.py --fit` (`EARTH_CALIBRATION.md`, "Population"). The
-   floors and response times are not fitted, and neither is the participation's response,
-   whose values are from recall.
+   floors and response times are not fitted, and neither are the fertility's response to
+   crowding and the participation's response, whose values are from recall.
 4. What a type needs, and where it can live, are its wants (`wants.tsv`): room is the want
    of its shelter need, a draw on the habitation its environments' housing makes, and an
    individual that takes less room wants less of it (P6 in `POPULATION_MODEL.md`).
