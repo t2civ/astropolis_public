@@ -669,6 +669,16 @@ func get_population_years_of_wants(_population_type := -1) -> float:
 	return 0.0
 
 
+## Returns how unevenly [param population_type]'s people hold their means, their wealth measured
+## in years of their wants, or all types' people if -1: the standard deviation of the log of
+## their means, 0.0 if all hold alike. A facility's type holds them as unevenly as its people
+## are served. Where facilities or types are combined it is the spread whose Theil index is
+## theirs, which counts how far their means differ as well. NAN where no one's means are known;
+## 0.0 without a population.
+func get_population_spread(_population_type := -1) -> float:
+	return 0.0
+
+
 ## Returns the hours [param population_type]'s residents offered in their last interval, or
 ## all types' if -1, in sim units of the type's work resource per second: the number offering
 ## to work at once. 0.0 without a population.

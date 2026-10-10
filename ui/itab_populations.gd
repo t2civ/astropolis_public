@@ -15,10 +15,11 @@ extends MarginContainer
 ## [b]Demog[/b]: the head count, the share in each life stage, and the vital rates; a type's life
 ## stages unfold to its age buckets. [b]Needs[/b]: how well each need is met, by tier; at a
 ## facility, a type's needs unfold to their satisfiers, with the facility's unmet rate and local
-## price for each. [b]Means[/b]: the residents' wealth, what it buys, and their work and its pay.
-## All together shows a column for each type and one for all of them, where a type with no want
-## for a need reads "·". A body with one facility shows as that facility. Header and row tooltips
-## define the values; the model behind them is POPULATION_MODEL.md.
+## price for each. [b]Means[/b]: the residents' wealth, what it buys and how unevenly it is
+## held, and their work and its pay. All together shows a column for each type and one for all
+## of them, where a type with no want for a need reads "·". A body with one facility shows as
+## that facility. Header and row tooltips define the values; the model behind them is
+## POPULATION_MODEL.md.
 
 const SCENE := "res://public/ui/itab_populations.tscn"  ## Scene file for instancing.
 
@@ -350,6 +351,7 @@ func _get_column(proxy: Proxy, type: int, types: Array[int]) -> ColumnData:
 				if _has_want(type, types, need) else NAN)
 	column.wealth = proxy.get_population_wealth(type)
 	column.years_of_wants = proxy.get_population_years_of_wants(type)
+	column.spread = proxy.get_population_spread(type)
 	column.participation = proxy.get_population_participation(type)
 	column.offered_hours = proxy.get_population_offered_hours(type)
 	column.worked_hours = proxy.get_population_worked_hours(type)
@@ -509,6 +511,10 @@ func _get_means_lines(data: PopulationsData) -> Array[LineData]:
 	var years := _make_line("Years of wants (y)",
 			"What the wealth buys: the years of the wants it would pay for at local prices.\n"
 			+ "It compares across places, as purchasing-power parity does.")
+	var inequality := _make_line("Inequality",
+			"How unevenly the residents hold their wealth in years of their wants, as a Gini\n"
+			+ "coefficient: 0 where all hold alike, toward 1 where a few hold most of it. Over\n"
+			+ "several places or types it counts how far their means differ as well.")
 	var participation := _make_line("Participation (%)",
 			"The most of their able hours the residents offer.")
 	var unit := _get_work_unit(_get_work_resource(-1, data.types))
@@ -526,11 +532,14 @@ func _get_means_lines(data: PopulationsData) -> Array[LineData]:
 		_add_cell(wealth_per_head, _format_money(_get_ratio(column.wealth, column.number)))
 		_add_cell(years, _format_value(column.years_of_wants)
 				if _has_any_want(column.population_type, data.types) else NOT_APPLICABLE)
+		_add_cell(inequality, _format_gini(column.spread)
+				if _has_any_want(column.population_type, data.types) else NOT_APPLICABLE)
 		_add_cell(participation, _format_percent(column.participation))
 		_add_cell(offered, _format_prefixed(column.offered_hours * IVUnits.DAY / multiplier))
 		_add_cell(worked, _format_percent(_get_ratio(column.worked_hours, column.offered_hours)))
 		_add_cell(wage, _format_price(column.wage * multiplier))
-	lines.append_array([wealth, wealth_per_head, years, participation, offered, worked, wage])
+	lines.append_array([wealth, wealth_per_head, years, inequality, participation, offered,
+			worked, wage])
 	return lines
 
 
@@ -708,6 +717,19 @@ func _format_percent(share: float) -> String:
 	return "%.f" % (share * 100.0)
 
 
+# Formats [param spread], the standard deviation of the log of a lognormal, as its Gini
+# coefficient, erf(spread / 2).
+func _format_gini(spread: float) -> String:
+	if is_nan(spread):
+		return NO_VALUE
+	# Abramowitz and Stegun 7.1.26, within 1.5e-7.
+	var x := absf(spread) / 2.0
+	var t := 1.0 / (1.0 + 0.3275911 * x)
+	var series := t * (0.254829592 + t * (-0.284496736 + t * (1.421413741
+			+ t * (-1.453152027 + t * 1.061405429))))
+	return "%.2f" % (1.0 - series * exp(-x * x))
+
+
 func _format_price(unit_price: float) -> String:
 	if !(unit_price > 0.0):
 		return NO_VALUE
@@ -750,6 +772,7 @@ class ColumnData extends RefCounted:
 	var satisfactions := PackedFloat64Array() # by need; NAN where the type has no want for it
 	var wealth: float
 	var years_of_wants: float
+	var spread: float # of the log of the means
 	var participation: float
 	var offered_hours: float
 	var worked_hours: float
