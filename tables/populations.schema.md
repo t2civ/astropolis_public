@@ -27,8 +27,10 @@ own content is written, which comes with the first game that holds them
 - starvation_rate — FLOAT per year: the deaths per head a year that the type suffers on top
   of its death rates with no life support at all. Going without life support kills on a time
   constant the type sets: weeks for a biological body, far longer for a machine.
-- starvation_threshold — FLOAT, the share of its life-support needs met below which the
-  type starts to starve. Starvation rises with the square of the shortfall below it.
+- starvation_threshold — FLOAT, between 0 and 1: the share of its life-support needs met
+  below which the type starts to starve. Starvation rises with the square of the shortfall
+  below it. Births fall as the share falls from 1 toward it, with the square of the shortfall
+  over the gap between the two, to none at it (`POPULATION_MODEL.md`, "Demographics").
 
 The remaining columns are the type's two slow responses (P12 in `POPULATION_MODEL.md`). Each
 moves a population's rates toward what its satisfaction of one need implies: the rate the
