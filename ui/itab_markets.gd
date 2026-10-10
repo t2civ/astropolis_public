@@ -21,8 +21,8 @@ extends MarginContainer
 ## resource lists its quarters: forward prices and what is contracted for each. Header tooltips
 ## define the columns.[br][br]
 ##
-## The desired and critical rates, and so the hedged share, read "—" until the facility
-## publishes them (PRODUCTION_MODEL.md, "A facility's flows with the market").[br][br]
+## The desired rate is read at the body market's price, which stands at its seed until trade
+## returns (PRODUCTION_MODEL.md, "A facility's flows with the market").[br][br]
 ##
 ## Tab indices follow row enumerations in [code]resource_classes.tsv[/code], with a
 ## placeholder transport tab after them.
@@ -115,10 +115,10 @@ const COLUMN_TOOLTIPS: Array[String] = [ # by COLUMN_
 	"What the facilities here bought, row units per day.",
 	("What the non-unitary facilities here pass from their own producers and stock to"
 			+ "\ntheir users, row units per day."),
-	("The trade the facility wants, row units per day: + to take, - to give."
-			+ "\nNot yet published."),
+	("The trade the facility wants at the market's price, row units per day: + to take,"
+			+ "\n- to give. Smoothed over its time horizon."),
 	("The trade the facility must have (+), or the most it can spare (-), row units per"
-			+ "\nday. Not yet published."),
+			+ "\nday. Smoothed over its time horizon."),
 	("Stock as a percent of one horizon's outflow: what the facility uses and sells"
 			+ "\nover its time horizon (H)."),
 	("The critical level, the stock its operations and its residents' existence need,"
@@ -126,7 +126,7 @@ const COLUMN_TOOLTIPS: Array[String] = [ # by COLUMN_
 	("The desired level, the stock the facility aims at, as a percent of one horizon's"
 			+ "\noutflow."),
 	("What is contracted for delivery within the horizon, as a percent of the trade the"
-			+ "\nfacility wants over it. Not yet published: it waits on the desired rate."),
+			+ "\nfacility wants over it."),
 	"",
 ]
 
@@ -419,6 +419,8 @@ func _get_facility_rows(facility: FacilityProxy, resource_types: PackedInt32Arra
 		row.unmet_rate = facility.get_inventory_unmet_rate(resource_type)
 		row.curtailed_rate = facility.get_inventory_curtailed_rate(resource_type)
 		row.disposal_rate = facility.get_inventory_disposal_rate(resource_type)
+		row.critical_rate = facility.get_inventory_critical_rate(resource_type)
+		row.desired_rate = facility.get_inventory_desired_rate(resource_type)
 		if row.has_market_price and facility.ordinal_qtr >= 0:
 			_add_facility_quarters(row, market, resource_positions, facility.ordinal_qtr, time,
 					time + facility.time_horizon)
@@ -695,8 +697,17 @@ func _get_row_cell(column: int, row: RowData, horizon: float) -> Array:
 			return [_format_rate(row.bought_rate, multiplier), "", TONE_NORMAL]
 		COLUMN_INTERNAL:
 			return [_format_rate(row.internal_volume, multiplier), "", TONE_NORMAL]
-		COLUMN_DESIRED_RATE, COLUMN_CRITICAL_RATE:
-			return [NO_VALUE if row.is_tradable else NOT_APPLICABLE, "", TONE_NORMAL]
+		COLUMN_DESIRED_RATE:
+			if !row.is_tradable:
+				return [NOT_APPLICABLE, "", TONE_NORMAL]
+			if is_nan(row.desired_rate):
+				return [NO_VALUE, "No market price.", TONE_NORMAL]
+			return [_format_rate(row.desired_rate, multiplier, true), "", TONE_NORMAL]
+		COLUMN_CRITICAL_RATE:
+			if !row.is_tradable:
+				return [NOT_APPLICABLE, "", TONE_NORMAL]
+			return [_format_rate(row.critical_rate, multiplier, true), "",
+					TONE_WARNING if row.critical_rate > 0.0 else TONE_NORMAL]
 		COLUMN_STOCK:
 			# The inventory's breach flags date from the start of the last interval, the stock and
 			# levels from its end, so the tone compares what the row shows.
@@ -718,7 +729,12 @@ func _get_row_cell(column: int, row: RowData, horizon: float) -> Array:
 		COLUMN_HEDGED:
 			if !row.is_tradable:
 				return [NOT_APPLICABLE, "", TONE_NORMAL]
-			return [NO_VALUE, "Contracted within the horizon: %s to take, %s to give." % [
+			var wanted := row.desired_rate * horizon / multiplier # trade units
+			var hedged := NAN
+			if wanted:
+				hedged = (row.window_long - row.window_short) / wanted
+			return [_format_percent(hedged),
+					"Contracted within the horizon: %s to take, %s to give." % [
 					_format_amount(row.window_long, unit), _format_amount(row.window_short, unit)],
 					TONE_NORMAL]
 	return ["", "", TONE_NORMAL]
@@ -902,6 +918,8 @@ class RowData extends RefCounted:
 	var unmet_rate: float
 	var curtailed_rate: float
 	var disposal_rate: float
+	var critical_rate: float
+	var desired_rate: float # NAN without a market price
 	var window_long: float
 	var window_short: float
 	var quarters: Array[QuarterData] = []

@@ -393,6 +393,31 @@ func get_flags() -> int:
 @abstract func get_inventory_expected_rates() -> PackedFloat64Array
 
 
+## Returns the critical rate of [param resource_type], smoothed over the time horizon: the trade
+## the facility must have (positive), what its operations and its residents' existence use past
+## all its producers could make, or the most it can spare (negative). A trader secures at least
+## this where it is positive, and never commits to give more than it allows. 0.0 for a resource
+## that can't be traded. See PRODUCTION_MODEL.md, "A facility's flows with the market".
+@abstract func get_inventory_critical_rate(resource_type: int) -> float
+
+
+## Returns the per-resource critical rates array. Return is proxy array reference; read only!
+@abstract func get_inventory_critical_rates() -> PackedFloat64Array
+
+
+## Returns the desired rate of [param resource_type], smoothed over the time horizon: the trade
+## the facility wants at the body market's price, positive to take and negative to give, where
+## its whole use and the step toward its desired level would meet what its producers make at that
+## price. NAN where the market has no price; 0.0 for a resource that can't be traded. Until trade
+## returns, the market's prices stand at their seeds. See PRODUCTION_MODEL.md, "A facility's
+## flows with the market".
+@abstract func get_inventory_desired_rate(resource_type: int) -> float
+
+
+## Returns the per-resource desired rates array. Return is proxy array reference; read only!
+@abstract func get_inventory_desired_rates() -> PackedFloat64Array
+
+
 ## Returns what the facility used of [param resource_type] per unit time, averaged over its
 ## time horizon: the internal volume of its own market, and what its desired level is sized
 ## from (see PRODUCTION_MODEL.md, "Local prices").
