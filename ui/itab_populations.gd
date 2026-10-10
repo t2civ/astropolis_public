@@ -16,8 +16,10 @@ extends MarginContainer
 ## stages unfold to its age buckets. [b]Needs[/b]: how well each need is met, by tier; at a
 ## facility, a type's needs unfold to their satisfiers, with the facility's unmet rate and local
 ## price for each. [b]Means[/b]: the residents' wealth, what it buys and how unevenly it is
-## held, and their work and its pay. All together shows a column for each type and one for all
-## of them, where a type with no want for a need reads "·". A body with one facility shows as
+## held, the price level of their wants, their work and its pay, and the money that moves their
+## wealth: what they spent and what their facility's owners' settlement paid them. All together
+## shows a column for each type and one for all of them, where a type with no want for a need
+## reads "·". A body with one facility shows as
 ## that facility. Header and row tooltips define the values; the model behind them is
 ## POPULATION_MODEL.md.
 
@@ -55,7 +57,7 @@ const TYPE_COLUMN_TOOLTIPS: Array[String] = [ # by TAB_
 	"Heads, their shares by life stage, and the vital rates.",
 	("The share of the want for each need that was met, smoothed over about a month for an"
 			+ "\nexistence need and a quarter for the others."),
-	"Wealth and what it buys, and work and its pay.",
+	"Wealth and what it buys, work and its pay, and the money that moves the wealth.",
 ]
 const SINGLE_HEADERS: Array[String] = ["", "Met\n(%)", ""] # by TAB_
 const COMBINED_TEXT := "Combined"
@@ -356,6 +358,9 @@ func _get_column(proxy: Proxy, type: int, types: Array[int]) -> ColumnData:
 	column.offered_hours = proxy.get_population_offered_hours(type)
 	column.worked_hours = proxy.get_population_worked_hours(type)
 	column.wage = proxy.get_population_wage(type)
+	column.spending = proxy.get_population_spending(type)
+	column.dividends = proxy.get_population_dividends(type)
+	column.price_level = proxy.get_population_price_level(type)
 	return column
 
 
@@ -524,6 +529,17 @@ func _get_means_lines(data: PopulationsData) -> Array[LineData]:
 			"The share of the hours offered that were worked in the last interval.")
 	var wage := _make_line("Wage ($/%s)" % unit,
 			"What an hour of the residents' work was paid in their last interval.")
+	var price_level := _make_line("Price level",
+			"What a year of the residents' wants costs at local prices over what it would at\n"
+			+ "start prices.")
+	var pay := _make_line("Pay ($/d)",
+			"What the residents' work was paid in their last interval, a day.")
+	var spent := _make_line("Spent ($/d)",
+			"What the residents paid for what they drew in their last interval, a day.")
+	var dividends := _make_line("Dividends ($/d)",
+			"What their facility paid the residents as its owners in its last interval, a day,\n"
+			+ "less what it drew from them where it was short. The residents own their polity's\n"
+			+ "facilities, its public share through its treasury.")
 	for column in columns:
 		var work_resource := _get_work_resource(column.population_type, data.types)
 		var multiplier := (_trade_unit_multipliers[work_resource] if work_resource != -1
@@ -538,8 +554,13 @@ func _get_means_lines(data: PopulationsData) -> Array[LineData]:
 		_add_cell(offered, _format_prefixed(column.offered_hours * IVUnits.DAY / multiplier))
 		_add_cell(worked, _format_percent(_get_ratio(column.worked_hours, column.offered_hours)))
 		_add_cell(wage, _format_price(column.wage * multiplier))
-	lines.append_array([wealth, wealth_per_head, years, inequality, participation, offered,
-			worked, wage])
+		_add_cell(price_level, _format_value(column.price_level))
+		var paid := column.wage * column.worked_hours if column.worked_hours > 0.0 else 0.0
+		_add_cell(pay, _format_money(paid * IVUnits.DAY))
+		_add_cell(spent, _format_money(column.spending * IVUnits.DAY))
+		_add_cell(dividends, _format_money(column.dividends * IVUnits.DAY))
+	lines.append_array([wealth, wealth_per_head, years, inequality, price_level, participation,
+			offered, worked, wage, pay, spent, dividends])
 	return lines
 
 
@@ -777,6 +798,9 @@ class ColumnData extends RefCounted:
 	var offered_hours: float
 	var worked_hours: float
 	var wage: float # per sim unit of the work resource; NAN where no one worked
+	var spending: float # dollars a second
+	var dividends: float # dollars a second, less what was drawn
+	var price_level: float # of the residents' wants; NAN where nothing is wanted
 
 
 class LineData extends RefCounted:

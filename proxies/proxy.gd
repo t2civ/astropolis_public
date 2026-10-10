@@ -482,6 +482,22 @@ func get_operations_internal_volumes() -> PackedFloat64Array:
 	return PackedFloat64Array()
 
 
+## Returns what [method get_operations_internal_volume] and
+## [method get_operations_bought_rate] of [param _resource_type] are worth at the facility's
+## local prices, in dollars per second. At an aggregate, over the two rates it is their average
+## local price.
+func get_operations_volume_value(_resource_type: int) -> float:
+	return 0.0
+
+
+## Returns the price level of goods where the facility is, or its facilities are: what the
+## resources with a trade class that move through it, its internal volume and what it bought,
+## are worth at its local prices over what they would be at their start prices. An aggregate
+## weighs each facility by its volumes. NAN where none move.
+func get_operations_price_level() -> float:
+	return NAN
+
+
 ## Returns what the facility took in of [param _resource_type] from deliveries, averaged over
 ## its time horizon. At an aggregate, less [method get_operations_sold_rate] it is the net trade
 ## across the aggregate's boundary: what its facilities trade among themselves cancels.
@@ -697,6 +713,27 @@ func get_population_worked_hours(_population_type := -1) -> float:
 ## 0.0 without a population.
 func get_population_wage(_population_type := -1) -> float:
 	return 0.0
+
+
+## Returns what [param _population_type]'s residents paid in their last interval for what they
+## drew, or all types' if -1, in dollars per second. 0.0 without a population.
+func get_population_spending(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns what [param _population_type]'s residents got from their facility's settlement with
+## its owners in its last interval, or all types' if -1, in dollars per second: its dividends,
+## less what it drew from them where it was short (FINANCIAL_MODEL.md, "Ownership and money").
+## 0.0 without a population.
+func get_population_dividends(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns the price level of [param _population_type]'s wants, or all types' if -1: what a year
+## of them costs at local prices over what it would at start prices. NAN where nothing is
+## wanted.
+func get_population_price_level(_population_type := -1) -> float:
+	return NAN
 
 
 ## Returns the per-quarter population-number history (oldest first) for

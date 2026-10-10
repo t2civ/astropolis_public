@@ -84,6 +84,12 @@ enum UniqueLineItems {
 	TAX_REVENUE,
 	TAX_PAID,
 	TAX_RECEIVED,
+	RESIDENT_RECEIPTS,
+	WAGES_PAID,
+	DIVIDENDS_PAID,
+	DIVIDENDS_RECEIVED,
+	OWNER_FUNDING,
+	FUNDING_PAID,
 }
 
 ## Trade classes group resources by handling (electricity, bulk, cryogenic,
