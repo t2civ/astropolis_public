@@ -268,14 +268,14 @@ func get_flags() -> int:
 @abstract func get_operations_capacity_factors() -> PackedFloat64Array
 
 
-## Returns the Tier-3 process utilization of operation [param operation_type] (the
-## server/controller's run-rate target; for display).
-@abstract func get_operations_process_utilization(operation_type: int) -> float
+## Returns the availability of operation [param operation_type]: the share of its capacity it can
+## run at, seeded or, for a renewable its body models, its capacity factor.
+@abstract func get_operations_availability(operation_type: int) -> float
 
 
-## Returns the per-operation process utilizations array. Return is proxy array
+## Returns the per-operation availabilities array. Return is proxy array
 ## reference; read only!
-@abstract func get_operations_process_utilizations() -> PackedFloat64Array
+@abstract func get_operations_availabilities() -> PackedFloat64Array
 
 
 ## Returns the AI/player-set target margin floor of operation [param operation_type].

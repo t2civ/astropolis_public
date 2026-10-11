@@ -139,13 +139,13 @@ enum NeedTiers {
 }
 
 ## Process category that determines how an operation's run is decided (see
-## operations.schema.md, process_group).
-enum ProcessGroup {
-	PROCESS_GROUP_PRODUCTION,
-	PROCESS_GROUP_BUILDOUT,
-	PROCESS_GROUP_DECOMMISSIONING,
-	PROCESS_GROUP_EXCHANGE,
-	PROCESS_GROUP_DONT_PROCESS, # dev/debug
+## operations.schema.md, operation_group).
+enum OperationGroup {
+	OPERATION_GROUP_PRODUCTION,
+	OPERATION_GROUP_BUILDOUT,
+	OPERATION_GROUP_DECOMMISSIONING,
+	OPERATION_GROUP_EXCHANGE,
+	OPERATION_GROUP_DONT_PROCESS, # dev/debug
 }
 
 ## Financial statement that a [code]line_items.tsv[/code] line item is reported on.
