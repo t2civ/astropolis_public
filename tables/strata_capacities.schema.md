@@ -12,4 +12,4 @@ An empty cell means the stratum has no limit of that capacity: modules occupying
 
 1. A facility's modules occupy the capacity of the stratum it stands on that has it (`region` in `facilities.tsv`). A facility may stand on only one stratum with each capacity.
 2. Land is the land fit for farms and building, not all of a region's area. What its farms and cities leave free is forest and wild land, and the carrying capacity of a process that follows it (`processes.tsv`, `free_capacity`) follows the share left free.
-3. Hydro and geothermal are the potential of a region's sites, the best developed first. Solar and wind are sized for what the region's grid takes of them without storage: at their capacity, solar would make about 30% of the electricity the grid used at game start, wind about 40%.
+3. Hydro, geothermal and tidal are the potential of a region's sites, the best developed first. Tidal sites lie on a region's continental shelf, the rest on its surface. Solar and wind are sized for what the region's grid takes of them without storage: at their capacity, solar would make about 30% of the electricity the grid used at game start, wind about 40%.
