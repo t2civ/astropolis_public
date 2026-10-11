@@ -39,6 +39,6 @@ The rates carry an inline `/y`. A cell must be present for every population that
    residents drew per head in their first interval at start prices, measured once. The
    participation is written by `tests/calibration/seed_labor.py`, from 2015 employment and
    hours from recall, and `seed_demography.py` keeps it.
-2. An agency takes its polity's cell.
+2. An agency has no residents: its headcount is staff on loan from its polity (`facilities.tsv`, `staff`).
 3. The shares need not sum exactly to one; the game starts each bucket at its share of the
    facility's population, rounded down, and gives the remainder to the largest bucket.

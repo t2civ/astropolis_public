@@ -14,7 +14,8 @@ Facilities are described in `facilities.descriptive.md`. Content of this table i
 - market_maker — True ("x") if the facility makes its body's market: it warehouses stock and keeps a bid and an ask standing on the resources it trades. The Earth nations are market makers; a spaceport will be. See "Market makers" in the development repository's `TRADE_MODEL.md`.
 - closed_cycle_ops — True ("x") if the facility runs operations in a "closed cycle"; i.e., resource streams are entirely from and to inventory.
 - public_sector — Fraction of economic activity that is public sector. For unitary facilities, this is usually 1 (agencies) or 0 (companies).
-- population — Population or personnel count in 2015. For national polities, this is total national population. For agencies, this includes direct employees and the contractor/support workforce. How each population is spread over its age buckets, and its vital rates, are in `facilities_populations.tsv`.
+- population — The residents in 2015, by population type: for a national polity, its total population. How each is spread over its age buckets, and its vital rates, are in `facilities_populations.tsv`.
+- staff — The staff on loan in 2015, by population type: people who work at the facility and belong to its polity's population, which already counts them. For an agency, its direct employees and contractor/support workforce. Crew who live aboard come from the modules that house them (`biological_crew` in `modules.tsv`), not from here.
 - constructions — Total mass of all existing buildings, infrastructure, and manufactured items. Includes "active" monuments (e.g., tourist destinations such as the Pyramids) but not inactive ruins or rubbish.
 - biomass — Total dry-weight mass (not carbon weight).
 - bioproductivity — Production rate of biomass as measured above.
