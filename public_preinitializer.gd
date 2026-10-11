@@ -106,6 +106,7 @@ func _on_table_initializer_instantiated(_table_initializer: IVTableInitializer) 
 	
 	var path_format := "res://public/tables/%s.tsv"
 	
+	tables.capacities = path_format % "capacities"
 	tables.facilities = path_format % "facilities"
 	tables.globals = path_format % "globals"
 	tables.facilities_modules = path_format % "facilities_modules"
@@ -137,6 +138,7 @@ func _on_table_initializer_instantiated(_table_initializer: IVTableInitializer) 
 	tables.facilities_modules = path_format % "facilities_modules"
 	tables.facilities_operations = path_format % "facilities_operations"
 	tables.facilities_populations = path_format % "facilities_populations"
+	tables.strata_capacities = path_format % "strata_capacities"
 	tables.strata_resources = path_format % "strata_resources"
 
 

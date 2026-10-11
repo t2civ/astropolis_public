@@ -5,6 +5,7 @@
 [achievements.tsv](#achievementstsv)  
 [advancements.tsv](#advancementstsv)  
 [asset_adjustments_mod.tsv](#asset_adjustments_modtsv)  
+[capacities.tsv](#capacitiestsv)  
 [compositions.tsv](#compositionstsv)  
 [compositions_resources_deposits.tsv](#compositions_resources_depositstsv)  
 [compositions_resources_proportions.tsv](#compositions_resources_proportionstsv)  
@@ -31,6 +32,7 @@
 [resources.tsv](#resourcestsv)  
 [spacecrafts.tsv](#spacecraftstsv)  
 [strata.tsv](#stratatsv)  
+[strata_capacities.tsv](#strata_capacitiestsv)  
 [surveys.tsv](#surveystsv)  
 [wants.tsv](#wantstsv)  
 
@@ -88,6 +90,10 @@ The table is here to help me develop a conceptual framework for the science/tech
 ## asset_adjustments_mod.tsv
 
 Specifies adjustments to imported assets, e.g., model scaling. This is a "mod" table that modifies ivoyager_core/data/solar_system/asset_adjustments.tsv.
+
+## capacities.tsv
+
+What a stratum has that modules occupy and don't draw down: land, and the sites of geothermal, hydro, wind and solar power. A stratum's amounts are in `strata_capacities.tsv`, and what a module occupies in `modules.tsv`. See `capacities.schema.md`.
 
 ## compositions.tsv
 
@@ -388,6 +394,10 @@ Replaces ivoyager table of the same name. Game start only.
 ## strata.tsv
 
 Specific geophysical layers for the purpose of defining Compositions (which define resources).
+
+## strata_capacities.tsv
+
+Each stratum's capacities at game start. See `strata_capacities.schema.md`.
 
 ## surveys.tsv
 

@@ -9,3 +9,4 @@ A process is a change to a body's strata that no module makes, run in the body's
 - resource — The stratum resource that regrows. Must be `is_extraction` (`resources.tsv`).
 - growth_rate — The stock's intrinsic growth rate, per year: how fast it grows while small against its carrying capacity.
 - seeded_share — The share of its carrying capacity a stratum's seeded mass of the resource stands at (0 < value ≤ 1). A stratum's carrying capacity is its seeded mass over this share.
+- free_capacity — The capacity (`capacities.tsv`) whose free amount the carrying capacity follows, or blank for none: forest grows on the land that farms and cities leave free. Where the stratum has that capacity, its carrying capacity at game start is set per unit of it left free, and follows what is left free from then on.
