@@ -363,9 +363,7 @@ Different kinds of humans or non-humans, corporeal or virtual, that we want to c
 
 ## processes.tsv
 
-_TODO_
-
-Processes are very similar to operations, but do not directly involve modules. These handle non-operation changes in body compositions or characteristics, such as restoration of the fresh water hydrosphere and climate change in response to atmospheric changes.
+Processes are to a body and its strata what operations are to a facility and its modules: the changes to a body's strata that no module makes, such as fish stocks and forests regrowing. Still to come: restoration of the fresh water hydrosphere, the breakdown of wastes, and climate change in response to atmospheric changes. See `processes.schema.md`.
 
 
 ## resource_classes.tsv

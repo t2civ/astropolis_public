@@ -118,6 +118,7 @@ func _on_table_initializer_instantiated(_table_initializer: IVTableInitializer) 
 	tables.operations = path_format % "operations"
 	tables.players = path_format % "players"
 	tables.populations = path_format % "populations"
+	tables.processes = path_format % "processes"
 	tables.resource_classes = path_format % "resource_classes"
 	tables.resources = path_format % "resources"
 	tables.spacecrafts = path_format % "spacecrafts" # ivoyager replacement!
