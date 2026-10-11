@@ -11,6 +11,7 @@ Modules are described in `modules.descriptive.md`.
 - reconfig_time — Required time in days (d) to fully reconfigure a module from one operation (100%) to another (100%).
 - reconfig_cost — Required cost in USD millions ($M) to fully reconfigure a module from one operation (100%) to another (100%).
 - biological_crew — The module provides life support for this number of human personnel (CREW_SYSTEMS only), the facility's staff, who work its operations (`POPULATION_MODEL.md`, "Staff and crew"). 
+- stratum_group — The stratum group the module stands on, or blank for none. Its operations draw on the facility's stratum of that group (see `region` in facilities.tsv), and a facility without one can't have them.
 - operations — Operations that the module provides capacity for. Each operation belongs to exactly one module (one-to-many relationship from modules to operations).
 - maintenance — Resources consumed as presence-based maintenance, scaling with installed module capacity regardless of utilization. Parallel to `maintenance_rates`. Deferrable like operation maintenance (a shortfall accrues to the facility's deferred maintenance rather than halting anything, and the years of it owed cost the module's operations efficiency and speed its wear) and books to the `MAINTENANCE` line item.
 - maintenance_rates — Maintenance resource rates (per unit of installed module capacity), parallel to `maintenance`.

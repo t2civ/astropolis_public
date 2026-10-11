@@ -163,6 +163,9 @@ var wind_correction := 1.0
 var geothermal_correction := 1.0
 ## Time horizon used by AI and automations (inventory reserves, resupply, etc.).
 var time_horizon: float
+## Region of its body the facility stands in, or [code]&""[/code] for none; it stands on the
+## body's strata in that region and those that span the body.
+var region: StringName
 ## Bidirectional bit flags (see [enum FacilityFlags]). FROM_SERVER bits are
 ## server-authoritative; FROM_PROXY bits are proxy-authoritative. Use
 ## [method set_flags] to modify the proxy half.

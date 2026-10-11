@@ -9,6 +9,7 @@ Facilities are described in `facilities.descriptive.md`. Content of this table i
 - is_start — Always TRUE (by default).
 - body — Simulation body.
 - player — Owning or controlling player.
+- region — The region of its body the facility stands in, or blank for none. It stands on the body's strata in that region and those that span the body, one of each stratum group (see `region` in strata.tsv). A space agency's ground facility stands in its polity's region.
 - is_unitary — True ("x") if the facility can be treated as one activity for economic accounting. If false, each operation is treated as a separate activity for internal mechanics like taxation and gross product calculation.
 - market_maker — True ("x") if the facility makes its body's market: it warehouses stock and keeps a bid and an ask standing on the resources it trades. The Earth nations are market makers; a spaceport will be. See "Market makers" in the development repository's `TRADE_MODEL.md`.
 - closed_cycle_ops — True ("x") if the facility runs operations in a "closed cycle"; i.e., resource streams are entirely from and to inventory.
