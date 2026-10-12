@@ -67,6 +67,8 @@ Modified or fictional:
 * 'spp' is used a unit of species diversity (_effective_ species number) with metrix prefixes (e.g., ' 1.3 Mspp'). This is non-standard usage of the real-world 'spp' abreviation.
 * 'Q' is short for QSPNINDC, or the Quantum-Safe, Programmatically Non-Inflationary/Non-Deflationary Coin. It takes standard metric prefixes. It's value is roughly $1M USD circa 2050. _Dev note: We'll have a currency switch from USD to the Q based on in-game events and/or player advancements, probably a few decades after start._
 
+Money appears in the tables only as a game-start value: `start_price` in `resources.tsv` and the wealth per head in `facilities_populations.tsv`. A cost that holds through the game is a share of something the game prices, as `reconfig_cost` in `modules.tsv` is a share of what building the module costs, since what anything costs at a later stage, or in which currency, can't be known.
+
 
 ## achievements.tsv
 

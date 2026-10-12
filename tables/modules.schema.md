@@ -9,7 +9,7 @@ Modules are described in `modules.descriptive.md`.
 - op_class — GUI only category for operations display.
 - storage — Quantifies associated resource storage capacities, both on- and off-site. Array elements correspond to classes in `storage_classes.tsv`, in its order; a class past the end of the array holds nothing here (`PURE_FLOW`, the last, is held by no module).
 - reconfig_time — Required time in days (d) to fully reconfigure a module from one operation (100%) to another (100%).
-- reconfig_cost — Required cost in USD millions ($M) to fully reconfigure a module from one operation (100%) to another (100%).
+- reconfig_cost — What fully reconfiguring a module from one operation (100%) to another (100%) costs, as a share of what building it costs at the same prices (default 0.06). A share holds at whatever resources cost at a later stage of the game, where a sum of money would not.
 - biological_crew — The module provides life support for this number of human personnel (CREW_SYSTEMS only), the facility's staff, who work its operations (`POPULATION_MODEL.md`, "Staff and crew"). 
 - stratum_group — The stratum group the module stands on, or blank for none. Its operations draw on the facility's stratum of that group (see `region` in facilities.tsv), and a facility without one can't have them.
 - occupies — The capacity a unit occupies (`capacities.tsv`), or blank for none. Its units occupy it on the stratum the facility stands on that has it (`strata_capacities.tsv`), units laid up included; a facility that stands on none occupies none.
@@ -29,7 +29,7 @@ Modules are described in `modules.descriptive.md`.
 ## Notes
 
 1. A module's size is defined by its supported operation(s). One module provides capacity for one operation at 100% run rate, or multiple operations at fractional run rates that add to 100%.
-2. A module's capacity can be shifted among its enabled operations (i.e., "reconfigured"). The time and cost of this reconfiguration (`reconfig_time` and `reconfig_cost`) are fixed properties of each module and can represent anything from a minor operational adjustment to a major refitting. In some cases, the reconfiguration might represent relocation (e.g., mining) or infrastructure turnover.
+2. A module's capacity can be shifted among its enabled operations (i.e., "reconfigured"). The time and cost of this reconfiguration (`reconfig_time` and `reconfig_cost`, the cost a share of a new module's) are fixed properties of each module and can represent anything from a minor operational adjustment to a major refitting. In some cases, the reconfiguration might represent relocation (e.g., mining) or infrastructure turnover.
 3. When implementing modules that support multiple operations, it may be necessary to re-normalize operation rows in `operations.tsv`. Specifically, each operation must be normalized so that exactly 1 module provides 1x operation capacity (if configured for only that operation). Prefer to keep one row (the "best") as currently normalized.
 4. Storage capacities should be set generously, and unrealistically high in the case of electricity. See class descriptions and notes in `storage_classes.descriptive.md`.
 5. A module houses people through its operation's habitation output, which residents draw to fill their shelter need (`wants.tsv`): `CITIES_TOWNS`' operation makes 20,000 places. Crew, which has no population, is `biological_crew`.
