@@ -11,9 +11,10 @@ with its target lists and none of its driver lists. Each of the residents' class
 at local prices from its spending, up to its share of their head count in each life stage
 times `stage_weights`: its existence wants first, as one bundle, then each input of each other
 want with its share of the want's `spending_share` of what is left, the input's share by its
-value at start prices ("Work and pay" in `POPULATION_MODEL.md`). What they buy of each input is
-a draw of its own in the facility's clear, shared in a shortage with the operations', and what
-they give off follows what they drew (P11 there).
+value at the facility's long prices, its local prices averaged over a decade ("Work and pay" in
+`POPULATION_MODEL.md`). What they buy of each input is a draw of its own in the facility's
+clear, shared in a shortage with the operations', and what they give off follows what they drew
+(P11 there).
 
 
 ## Table Data

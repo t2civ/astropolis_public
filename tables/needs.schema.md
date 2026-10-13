@@ -22,4 +22,5 @@ how much of it each type wants, is `wants.tsv`, and the code never names a need
 
 1. A need's satisfaction for a type is the share of the type's want for it that the
    residents got. Where a type fills a need with more than one want, each counts by its
-   value at the `start_price`s in `resources.tsv`, or by head count if none has one.
+   value at the facility's long prices, its local prices averaged over a decade, or by head
+   count where none is worth anything.
