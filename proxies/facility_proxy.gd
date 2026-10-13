@@ -33,9 +33,6 @@ extends Proxy
 ## Facility-level bit flags. FROM_SERVER bits (0 - 31) are signals from the
 ## server; FROM_PROXY bits (32 - 63) are AI commands to the server.
 enum FacilityFlags {
-	## Many resources at this facility have no established market price, so
-	## runtime margin estimates here are unreliable.
-	PRICE_UNRELIABLE = 1 << 1,
 	## Multiple critical inputs are simultaneously running below their
 	## operational reserve targets.
 	INPUT_CRISIS = 1 << 2,
@@ -67,8 +64,6 @@ enum InventoryFlags {
 	## [method get_inventory_desired_level]) as the facility's last interval began, before its
 	## flows.
 	STRATEGIC_RESERVE_BREACHED = 1 << 2,
-	## No market price is established for this resource at this location.
-	PRICE_UNKNOWN = 1 << 4,
 	## This resource can be traded: it has a trade class.
 	TRADABLE = 1 << 5,
 	## A can-have operation at this facility consumes this resource, its residents draw it, or the
