@@ -165,7 +165,7 @@ const MAKER_LONG_RUN_YEARS := 7.5
 ## Re-quote a market maker's standing orders when either side's price drifts beyond this
 ## fraction (def key [code]maker_price_tol[/code] overrides per posture).
 const MAKER_PRICE_TOLERANCE := 0.01
-## Ceiling on a market maker's own price, in multiples of the resource's start price: a
+## Ceiling on a market maker's own price, in multiples of its long-run price: a
 ## numerical guard for a resource with nothing to bound its price by (see
 ## [constant MAKER_FORCED_DEMAND_MARKUP]). A price that reaches it marks a broken run.
 const MAKER_PRICE_RAIL := 1000.0
@@ -262,9 +262,6 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 
 static var _table_n_rows := IVTableData.table_n_rows
 static var _trade_unit_multipliers := ThreadsafeGlobal.resource_trade_unit_multipliers
-## Per-resource fiat price anchor (USD per trade unit) from resources.tsv start_price,
-## used when no live market price exists yet. Built once.
-static var _start_unit_prices: PackedInt32Array
 ## Per-resource 0/1; trade_class == CYBER (orders route to the cyber market). Built once.
 static var _is_cyber_resource: PackedByteArray
 ## Per-resource storage class, -1 for none. Built once.
@@ -371,10 +368,9 @@ func _init() -> void:
 	_executor_branches.resize(n_resources)
 	_maker_unit_prices.resize(n_resources)
 	_maker_long_run_unit_prices.resize(n_resources)
-	if _start_unit_prices.is_empty():
+	if _resource_storage_classes.is_empty():
 		const TRADE_CLASS_CYBER := Enums.TradeClasses.TRADE_CLASS_CYBER
 		var resources_table: Dictionary[StringName, Array] = IVTableData.db_tables[&"resources"]
-		_start_unit_prices = PackedInt32Array(resources_table[&"start_price"])
 		_resource_storage_classes = PackedInt32Array(resources_table[&"storage_class"])
 		var trade_classes := PackedInt32Array(resources_table[&"trade_class"])
 		_is_cyber_resource.resize(trade_classes.size())
@@ -545,7 +541,7 @@ func _process_facility_support(resource_type: int, market: MarketProxy,
 ## [method FacilityProxy.get_inventory_storage_level_scale]): it sells only stock above both
 ## effective reserves and buys up to its effective target plus a band, netting open positions
 ## like facility support, and never bids for a resource full storage is disposing of. A
-## maker's first price for a resource is the market's, or the resource's start_price when the
+## maker's first price for a resource is the market's, or its facility's local price when the
 ## market has none.
 func _process_market_making(resource_type: int, market: MarketProxy,
 		instrument: PackedInt32Array, posture_def: Dictionary, resource_def: Dictionary,
@@ -572,7 +568,7 @@ func _process_market_making(resource_type: int, market: MarketProxy,
 	if price <= 0.0:
 		price = market.get_unit_price(resource_type)
 		if price <= 0.0:
-			price = _start_unit_prices[resource_type]
+			price = _facility.get_inventory_local_price(resource_type) * multiplier
 		if price <= 0.0: # nothing to price it from
 			_maintain_ask(instrument, 0, 1, min_lot, 0.0, 0.0)
 			_maintain_bid(instrument, 0, 1, min_lot, 0.0, 0.0)
@@ -609,7 +605,7 @@ func _process_market_making(resource_type: int, market: MarketProxy,
 		ceiling_price = floor_price * (1.0 + MAKER_FORCED_DEMAND_MARKUP) # INF: no producer either
 	if is_inf(floor_price):
 		floor_price = 0.0
-	var rail := MAKER_PRICE_RAIL * maxi(_start_unit_prices[resource_type], 1)
+	var rail := MAKER_PRICE_RAIL * maxf(long_run_price, 1.0)
 	var upper := clampf(maxf(floor_price, ceiling_price) * multiplier, 1.0, rail)
 	var lower := clampf(minf(floor_price, ceiling_price) * multiplier, 1.0, upper)
 	# Unanchored, a gap nothing answers compounds the price for as long as it lasts, so the
