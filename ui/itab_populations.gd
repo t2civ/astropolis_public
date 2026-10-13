@@ -62,7 +62,7 @@ const TYPE_COLUMN_TOOLTIPS: Array[String] = [ # by TAB_
 const SINGLE_HEADERS: Array[String] = ["", "Met\n(%)", ""] # by TAB_
 const COMBINED_TEXT := "Combined"
 const COMBINED_TOOLTIP := ("\nAll types together; a need's satisfaction weighs each type's by what"
-		+ "\nits want costs at start prices.")
+		+ "\nits want has cost over the last decade.")
 const SATISFIER_HEADERS: Array[String] = ["Unmet\n(/d)", "Local\n($)"]
 const SATISFIER_TOOLTIPS: Array[String] = [
 	("What the facility's clear left unmet of what its users asked, row units per day:"
@@ -530,8 +530,8 @@ func _get_means_lines(data: PopulationsData) -> Array[LineData]:
 	var wage := _make_line("Wage ($/%s)" % unit,
 			"What an hour of the residents' work was paid in their last interval.")
 	var price_level := _make_line("Price level",
-			"What a year of the residents' wants costs at local prices over what it would at\n"
-			+ "start prices.")
+			"What a year of the residents' wants costs at local prices over what it has cost\n"
+			+ "over the last decade.")
 	var pay := _make_line("Pay ($/d)",
 			"What the residents' work was paid in their last interval, a day.")
 	var spent := _make_line("Spent ($/d)",

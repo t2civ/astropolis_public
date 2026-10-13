@@ -492,8 +492,9 @@ func get_operations_volume_value(_resource_type: int) -> float:
 
 ## Returns the price level of goods where the facility is, or its facilities are: what the
 ## resources with a trade class that move through it, its internal volume and what it bought,
-## are worth at its local prices over what they would be at their start prices. An aggregate
-## weighs each facility by its volumes. NAN where none move.
+## are worth at its local prices over what they would be at its long prices, each local price
+## averaged over a decade: how far its prices stand from what they have cost lately. An
+## aggregate weighs each facility by its volumes. NAN where none move.
 func get_operations_price_level() -> float:
 	return NAN
 
@@ -659,8 +660,9 @@ func get_population_migration_pressure(_population_type: int) -> float:
 ## [code]needs.tsv[/code] row, that it got (1.0 = fully met), smoothed over about a month for
 ## an existence need and a quarter for the others, or of all types' if -1. Below its type's
 ## threshold in any existence need, people starve. Where several types' or facilities' are
-## combined, each weighs by what its want costs at start prices. 1.0 for a need no one here has
-## a want for. Safe default on an out-of-range index.
+## combined, each weighs by what its want costs at the long prices, each local price averaged
+## over a decade. 1.0 for a need no one here has a want for. Safe default on an out-of-range
+## index.
 func get_population_satisfaction(_population_type: int, _need: int) -> float:
 	return 1.0
 
@@ -730,8 +732,9 @@ func get_population_dividends(_population_type := -1) -> float:
 
 
 ## Returns the price level of [param _population_type]'s wants, or all types' if -1: what a year
-## of them costs at local prices over what it would at start prices. NAN where nothing is
-## wanted.
+## of them costs at local prices over what it would at the long prices, each local price
+## averaged over a decade: how far the prices of its wants stand from what they have cost
+## lately. NAN where nothing is wanted.
 func get_population_price_level(_population_type := -1) -> float:
 	return NAN
 
