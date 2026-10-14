@@ -95,7 +95,7 @@ Specifies adjustments to imported assets, e.g., model scaling. This is a "mod" t
 
 ## capacities.tsv
 
-What a stratum has that modules occupy and don't draw down: land, and the sites of geothermal, hydro, tidal, wind and solar power. A stratum's amounts are in `strata_capacities.tsv`, and what a module occupies in `modules.tsv`. See `capacities.schema.md`.
+What a stratum has that modules occupy and don't draw down: land, and the sites of geothermal, hydro, tidal and wind power. A stratum's amounts are in `strata_capacities.tsv`, and what a module occupies in `modules.tsv`. See `capacities.schema.md`.
 
 ## compositions.tsv
 
