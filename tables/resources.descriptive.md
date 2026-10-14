@@ -15,6 +15,7 @@ Notes:
 *Electricity, primary inputs to power and/or propulsion systems (excluding oxygen and non-energetic propellants), and spent nuclear fuel assemblies.*
 
 - **Electricity** — Locally generated, stored, or transmitted electrical energy; the common output of all power-generation operations and primary energy input for industrial, residential, and life-support activities.
+- **Shade Electricity** — Electricity delivered during the hours a site's solar arrays are in shade, at night, in eclipse or under cloud, as against power while the sun shines.
 - **Hydrogen** — H₂. H 100. Extractable.
 - **Methane** — CH₄. C 74.9, H 25.1. Extractable.
 - **Methanol** — CH₃OH. C 38.7, O 48.3, H 13.0. Extractable.

@@ -148,6 +148,15 @@ enum OperationGroup {
 	OPERATION_GROUP_DONT_PROCESS, # dev/debug
 }
 
+## What an operation does in the light (the [code]light_role[/code] column of
+## [code]operations.tsv[/code]): which share of an interval it runs in, sunlight or shade, and so
+## what it makes of a resource that has a shade form. Blank, it runs the same in light and shade.
+enum LightRoles {
+	LIGHT_ROLE_SOLAR, ## Makes only in sunlight, drawing shade to pair with what it makes.
+	LIGHT_ROLE_PEAKER, ## Runs in sunlight and in shade apart.
+	LIGHT_ROLE_STORAGE, ## Moves what it draws in sunlight into the shade.
+}
+
 ## Financial statement that a [code]line_items.tsv[/code] line item is reported on.
 ## Drives quarter behavior: income and cash-flow leaves are flows (reset at quarter
 ## rollover); balance leaves are stocks (run).

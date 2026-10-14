@@ -25,6 +25,7 @@ Notes:
 - **D-³He Fusion Plants** — Deuterium–helium-3 fusion power stations producing substantially fewer neutrons than D-T designs. May provide facility or district heat.
 - **³He-³He Fusion Plants** — Helium-3 fusion power stations producing no neutrons but requiring the highest ignition temperature of practical fusion cycles. May provide facility or district heat.
 - **Radioisotope Generators** — Radioisotope thermoelectric or Stirling generator units using plutonium-238 or strontium-90. Low power density but extreme reliability and longevity; critical for deep outer solar system installations. May provide facility heat.
+- **Battery Banks** — Grid-scale battery storage: containerized lithium-ion cells with their inverters and transformers, charged while the sun shines and discharged in the dark; on a station, the batteries that carry it through eclipse.
 
 
 ## Extraction

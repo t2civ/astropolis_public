@@ -39,6 +39,7 @@ Notes:
 - **D-³He Fusion Power** — Electricity and heat from D-³He fusion, producing substantially fewer neutrons than D-T cycles but requiring twice the ignition temperature.
 - **³He-³He Fusion Power** — Electricity and heat from ³He-³He fusion, producing no neutrons but requiring higher ignition temperature than D-³He Fusion.
 - **Radioisotope Power** — Electricity and heat from radioactive decay in radioisotope thermoelectric generators (RTGs) and Stirling radioisotope generators. Uses plutonium-238 or strontium-90 produced in reactor operations. Low power density but extreme reliability and longevity; critical for deep outer solar system probes and surface stations with limited sunlight.
+- **Battery Storage** — Charging batteries with power while the sun shines and discharging them at night or in eclipse, a share of it lost on the round trip.
 
 
 ## Extraction
