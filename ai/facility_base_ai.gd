@@ -178,6 +178,12 @@ const BUFFER_STOCK_FACTOR := 1.0
 ## key [code]buffer_stock_lots[/code] overrides); backs a standing two-sided quote even
 ## for a resource with no current throughput.
 const BUFFER_STOCK_LOTS := 4
+## Time horizons of use a market maker holds past its strategy's level for each e-fold its local
+## price moves from one interval to the next, on average over [constant SWING_MEMORY]: stock held
+## against the swings of the market it makes (PRODUCTION_MODEL.md, "What a facility is").
+const SWING_HORIZONS := 1.0
+## How long a market maker's reckoning of its prices' swings remembers them.
+const SWING_MEMORY := IVUnits.YEAR
 
 ## Short alias for the per-resource strategy enum, used by the authoring helpers.
 const _RS := FacilityResourceStrategies
@@ -191,6 +197,8 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"trader_strategy",
 	&"facility_resource_strategies",
 	&"operation_strategies",
+	&"_price_swings",
+	&"_last_prices",
 ]
 
 
@@ -284,6 +292,12 @@ var facility_resource_strategies: PackedInt32Array
 var operation_strategies: PackedInt32Array
 
 # *****************************************************************************
+# persisted
+
+var _price_swings: PackedFloat64Array # each local price's move an interval, in e-folds, averaged
+var _last_prices: PackedFloat64Array # each local price at the last interval
+
+# *****************************************************************************
 
 var _player_ai: PlayerBaseAI
 
@@ -296,6 +310,8 @@ func _init() -> void:
 	facility_resource_strategies.resize(n_resources)
 	var n_operations: int = _table_n_rows[&"operations"]
 	operation_strategies.resize(n_operations)
+	_price_swings.resize(n_resources)
+	_last_prices.resize(n_resources)
 	if !_tradable_resources:
 		var trade_classes: Array[int] = IVTableData.db_tables[&"resources"][&"trade_class"]
 		for resource_type in n_resources:
@@ -331,7 +347,8 @@ func ai_init() -> void:
 ## Re-author each interval (the prior cadence): identity from sticky capability is
 ## cheap and change-guarded, so this stays responsive to capability changes and
 ## keeps reserves tracking live throughput, without the rate-based / write-only smell.
-func process_ai_interval(_delta: float) -> void:
+func process_ai_interval(delta: float) -> void:
+	_update_price_swings(delta)
 	_author_resource_strategies()
 
 
@@ -466,6 +483,8 @@ func _apply_strategy_knobs(resource_type: int, strategy: int) -> void:
 	var def := facility_resource_strategy_defs[strategy]
 
 	var lever: float = def.get(&"level_lever", 0.0)
+	if _is_market_made(resource_type):
+		lever += SWING_HORIZONS * _price_swings[resource_type]
 	proxy.set_inventory_level_lever(resource_type, lever)
 	var buffer_stock := 0.0
 	if _is_market_made(resource_type):
@@ -577,6 +596,20 @@ func _is_market_made(resource_type: int) -> bool:
 	if !posture_def.get(&"two_sided", false):
 		return false
 	return TraderBaseAI.is_market_resource(proxy.get_inventory_flags(resource_type))
+
+
+## Folds how far each tradable resource's local price moved over [param delta], since the last
+## interval, into its swing.
+func _update_price_swings(delta: float) -> void:
+	var weight := minf(delta / SWING_MEMORY, 1.0)
+	for resource_type in _tradable_resources:
+		var price := proxy.get_inventory_local_price(resource_type)
+		var last := _last_prices[resource_type]
+		_last_prices[resource_type] = price
+		if !(price > 0.0 and last > 0.0):
+			continue
+		var swing := _price_swings[resource_type]
+		_price_swings[resource_type] = swing + (absf(log(price / last)) - swing) * weight
 
 
 ## Sets [member operation_strategies] for [param operation_type], emitting
