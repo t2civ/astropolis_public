@@ -72,7 +72,7 @@ enum InventoryFlags {
 	## A can-have operation at this facility produces or extracts this resource.
 	CAN_HAVE_OUTPUT = 1 << 7,
 	## Not set since the holding rent replaced disposal for want of room (PRODUCTION_MODEL.md,
-	## "A storage class: the holding rent"). The trader reads it until its rebuild.
+	## "The output clear"). The trader reads it until its rebuild.
 	DUMPING = 1 << 8,
 	## The facility deals in this resource, and a market-making trader makes a market in it
 	## where it is also [constant TRADABLE]. For now the server sets it exactly where
