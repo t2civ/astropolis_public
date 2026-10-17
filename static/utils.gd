@@ -443,3 +443,13 @@ static func get_usd_unit_string(exponent: int) -> String:
 	]
 	var index := clampi(exponent - 1, 0, KEYS.size() - 1)
 	return String(TranslationServer.translate(KEYS[index]))
+
+
+## Returns [param x] as a bare number of three significant figures with an SI
+## prefix past 1000 ("55.5k", "1.20G"), for GUI text where a number has no unit
+## of its own. An absolute value below 1 is never prefixed, so that "500m" can't
+## be read as millions ("0.500" instead). Returns "NAN" if [param x] is NAN.
+static func format_number(x: float) -> String:
+	if absf(x) < 1.0:
+		return IVQFormat.number(x, 3)
+	return IVQFormat.prefixed_unit(x, &"")
