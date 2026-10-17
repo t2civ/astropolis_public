@@ -598,17 +598,13 @@ func get_flags() -> int:
 @abstract func get_inventory_storage_used(storage_type: int) -> float
 
 
-## Returns the rent storage class [param storage_type] charges per interval, as a share of the
-## value of what it holds: 0.0 at or below its capacity, rising past it with the square of the
-## overfill over the class's give (storage_classes.schema.md), and INF where the class can hold
-## nothing more. Surplus worth less than the rent is disposed of, and what can't be disposed of
-## pays it in its makers' margins (see PRODUCTION_MODEL.md, "A storage class: the holding
-## rent").
-@abstract func get_inventory_storage_rent(storage_type: int) -> float
-
-
-## Returns the per-storage-class rents array. Return is proxy array reference; read only!
-@abstract func get_inventory_storage_rents() -> PackedFloat64Array
+## Returns the price of storage class [param storage_type]'s space at this facility, what keeping a
+## unit of its capacity for a second costs: nothing while what the class holds is within what its
+## modules carry, a store's running cost or more past it (storage_classes.schema.md). NAN for a
+## class with no space of its own. A level is held as far as its space pays for it, and what can't
+## be vented pays its keep in its makers' margins (see PRODUCTION_MODEL.md, "A storage class: its
+## price of space").
+@abstract func get_inventory_storage_space_price(storage_type: int) -> float
 
 
 ## Returns how long storage class [param storage_type] could carry the last interval's flows
