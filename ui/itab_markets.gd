@@ -830,7 +830,7 @@ func _get_cover_share(quantity: float, horizon_need: float) -> float:
 func _format_price(unit_price: float) -> String:
 	if !(unit_price > 0.0):
 		return NO_VALUE
-	return Utils.format_number(unit_price)
+	return IVQFormat.metric_number(unit_price)
 
 
 # Formats [param rate], in sim units per second, as trade units per day.
@@ -841,7 +841,7 @@ func _format_rate(rate: float, multiplier: float, is_signed := false) -> String:
 func _format_per_day(per_day: float, is_signed := false) -> String:
 	if !per_day:
 		return "0"
-	var text := Utils.format_number(per_day)
+	var text := IVQFormat.metric_number(per_day)
 	return "+" + text if is_signed and per_day > 0.0 else text
 
 
@@ -851,7 +851,7 @@ func _format_quantity(quantity: float, multiplier: float, unit: String) -> Strin
 
 
 func _format_amount(trade_quantity: float, unit: String) -> String:
-	return ("0" if !trade_quantity else Utils.format_number(trade_quantity)) + unit
+	return ("0" if !trade_quantity else IVQFormat.metric_number(trade_quantity)) + unit
 
 
 func _format_percent(share: float) -> String:

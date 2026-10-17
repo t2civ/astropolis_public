@@ -433,7 +433,7 @@ func _get_demography_lines(data: PopulationsData) -> Array[LineData]:
 	var lines: Array[LineData] = []
 	var heads := _make_line("Heads")
 	for column in columns:
-		_add_cell(heads, Utils.format_number(column.number), _format_named(column.number))
+		_add_cell(heads, IVQFormat.metric_number(column.number), _format_named(column.number))
 	lines.append(heads)
 	for stage in Enums.LifeStages.size():
 		var line := _make_line(STAGE_TEXTS[stage] + " (%)")
@@ -551,7 +551,7 @@ func _get_means_lines(data: PopulationsData) -> Array[LineData]:
 		_add_cell(inequality, _format_gini(column.spread)
 				if _has_any_want(column.population_type, data.types) else NOT_APPLICABLE)
 		_add_cell(participation, _format_percent(column.participation))
-		_add_cell(offered, Utils.format_number(column.offered_hours * IVUnits.DAY / multiplier))
+		_add_cell(offered, IVQFormat.metric_number(column.offered_hours * IVUnits.DAY / multiplier))
 		_add_cell(worked, _format_percent(_get_ratio(column.worked_hours, column.offered_hours)))
 		_add_cell(wage, _format_price(column.wage * multiplier))
 		_add_cell(price_level, _format_value(column.price_level))
@@ -699,7 +699,7 @@ func _format_money(dollars: float) -> String:
 		return NO_VALUE
 	if !dollars:
 		return "0"
-	return Utils.format_number(dollars)
+	return IVQFormat.metric_number(dollars)
 
 
 func _format_named(number: float) -> String:
@@ -714,7 +714,7 @@ func _format_value(value: float, is_signed := false) -> String:
 		return NO_VALUE
 	if !value:
 		return "0"
-	var text := Utils.format_number(value)
+	var text := IVQFormat.metric_number(value)
 	return "+" + text if is_signed and value > 0.0 else text
 
 
@@ -750,14 +750,14 @@ func _format_gini(spread: float) -> String:
 func _format_price(unit_price: float) -> String:
 	if !(unit_price > 0.0):
 		return NO_VALUE
-	return Utils.format_number(unit_price)
+	return IVQFormat.metric_number(unit_price)
 
 
 # Formats [param rate], in sim units per second, as trade units per day.
 func _format_rate(rate: float, multiplier: float) -> String:
 	if !rate:
 		return "0"
-	return Utils.format_number(rate * IVUnits.DAY / multiplier)
+	return IVQFormat.metric_number(rate * IVUnits.DAY / multiplier)
 
 
 # ****************************** INNER CLASSES ********************************
