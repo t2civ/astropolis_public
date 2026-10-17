@@ -22,8 +22,9 @@ enum Types {
 }
 
 
-## Identifies resource as having unique internal (hard-coded) mechanics. One
-## and only one must exist in resources.tsv.
+## Identifies a resource that code finds without its name, for presentation only (such as
+## the development "power" statistic); no mechanic treats it differently. Each member must
+## exist exactly once in resources.tsv.
 enum UniqueResources {
 	ELECTRICITY,
 }
@@ -37,17 +38,15 @@ enum UniqueModules {
 
 
 ## Identifies an operation with unique internal (hard-coded) mechanics. Each
-## member must exist exactly once in operations.tsv. Their run rate is set by
-## the simulation rather than by a player or market lever: the renewable-power
-## operations from a computed environmental capacity factor (by body and site),
-## and URBAN_OPERATIONS from the population its module houses.
+## member must exist exactly once in operations.tsv. These are the renewable-power
+## operations, whose run rate the simulation sets from a computed environmental
+## capacity factor (by body and site) rather than from a player or market lever.
 enum UniqueOperations {
 	SOLAR_POWER,
 	WIND_POWER,
 	HYDROPOWER,
 	GEOTHERMAL_POWER,
 	TIDAL_POWER,
-	URBAN_OPERATIONS,
 }
 
 
@@ -58,15 +57,19 @@ enum UniqueLineItems {
 	OPERATION_MAINTENANCE,
 	MODULE_MAINTENANCE,
 	TRADING_GAINS,
+	TRADING_LOSSES,
 	EXCHANGE_FEES,
 	EXCHANGE_TAKE_REVENUE,
 	EXCHANGE_TAKE_COGS,
+	EXCHANGE_CLEARING_GAINS,
 	DEFAULT_PENALTIES,
 	DEFAULT_COMPENSATION,
 	DISPOSAL_GAINS,
+	DISPOSAL_LOSSES,
 	SETTLEMENT_RECEIPTS,
 	SETTLEMENT_PAYMENTS,
 	PL_SETTLEMENTS,
+	PL_PAYMENTS,
 	FEES_PAID,
 	BONDS_POSTED,
 	BONDS_RELEASED,
@@ -81,6 +84,12 @@ enum UniqueLineItems {
 	TAX_REVENUE,
 	TAX_PAID,
 	TAX_RECEIVED,
+	RESIDENT_RECEIPTS,
+	WAGES_PAID,
+	DIVIDENDS_PAID,
+	DIVIDENDS_RECEIVED,
+	OWNER_FUNDING,
+	FUNDING_PAID,
 }
 
 ## Trade classes group resources by handling (electricity, bulk, cryogenic,
@@ -110,16 +119,42 @@ enum PlayerClasses {
 	PLAYER_CLASS_COMPANY,
 }
 
-## Process category that determines how an operation runs (renewable,
-## conversion, extraction, buildout, decommissioning, or dev/debug).
-enum ProcessGroup {
-	PROCESS_GROUP_RENEWABLE,
-	PROCESS_GROUP_CONVERSION,
-	PROCESS_GROUP_EXTRACTION,
-	PROCESS_GROUP_BUILDOUT,
-	PROCESS_GROUP_DECOMMISSIONING,
-	PROCESS_GROUP_EXCHANGE,
-	PROCESS_GROUP_DONT_PROCESS, # dev/debug
+## Life stage of a population type's age buckets: what wants, work, reports and targets read,
+## however the type cuts its buckets (the [code]first_adult_bucket[/code] and
+## [code]first_elder_bucket[/code] columns of [code]populations.tsv[/code]; see
+## POPULATION_MODEL.md, "Demographics").
+enum LifeStages {
+	LIFE_STAGE_YOUNG,
+	LIFE_STAGE_ADULT,
+	LIFE_STAGE_ELDER,
+}
+
+## Tier of a need (the [code]tier[/code] column of [code]needs.tsv[/code]): what going without
+## it does and how fast. The residents secure their existence first (POPULATION_MODEL.md,
+## "Needs").
+enum NeedTiers {
+	NEED_TIER_EXISTENCE,
+	NEED_TIER_WELLBEING,
+	NEED_TIER_FULFILLMENT,
+}
+
+## Process category that determines how an operation's run is decided (see
+## operations.schema.md, operation_group).
+enum OperationGroup {
+	OPERATION_GROUP_PRODUCTION,
+	OPERATION_GROUP_BUILDOUT,
+	OPERATION_GROUP_DECOMMISSIONING,
+	OPERATION_GROUP_EXCHANGE,
+	OPERATION_GROUP_DONT_PROCESS, # dev/debug
+}
+
+## What an operation does in the light (the [code]light_role[/code] column of
+## [code]operations.tsv[/code]): which share of an interval it runs in, sunlight or shade, and so
+## what it makes of a resource that has a shade form. Blank, it runs the same in light and shade.
+enum LightRoles {
+	LIGHT_ROLE_SOLAR, ## Makes only in sunlight, drawing shade to pair with what it makes.
+	LIGHT_ROLE_PEAKER, ## Runs in sunlight and in shade apart.
+	LIGHT_ROLE_STORAGE, ## Moves what it draws in sunlight into the shade.
 }
 
 ## Financial statement that a [code]line_items.tsv[/code] line item is reported on.

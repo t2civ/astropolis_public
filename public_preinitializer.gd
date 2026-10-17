@@ -106,18 +106,20 @@ func _on_table_initializer_instantiated(_table_initializer: IVTableInitializer) 
 	
 	var path_format := "res://public/tables/%s.tsv"
 	
-	tables.carrying_capacity_groups = path_format % "carrying_capacity_groups"
+	tables.capacities = path_format % "capacities"
 	tables.facilities = path_format % "facilities"
 	tables.globals = path_format % "globals"
 	tables.facilities_modules = path_format % "facilities_modules"
 	tables.facilities_operations = path_format % "facilities_operations"
 	tables.modules = path_format % "modules"
+	tables.needs = path_format % "needs"
 	tables.line_items = path_format % "line_items"
 	tables.facility_classes = path_format % "facility_classes"
 	tables.op_classes = path_format % "op_classes"
 	tables.operations = path_format % "operations"
 	tables.players = path_format % "players"
 	tables.populations = path_format % "populations"
+	tables.processes = path_format % "processes"
 	tables.resource_classes = path_format % "resource_classes"
 	tables.resources = path_format % "resources"
 	tables.spacecrafts = path_format % "spacecrafts" # ivoyager replacement!
@@ -126,6 +128,7 @@ func _on_table_initializer_instantiated(_table_initializer: IVTableInitializer) 
 	tables.stratum_groups = path_format % "stratum_groups"
 	tables.surveys = path_format % "surveys"
 	tables.views = path_format % "views" # ivoyager replacement!
+	tables.wants = path_format % "wants"
 	# primary table mods (modify existing ivoyager tables)
 	tables.planets_mod = path_format % "planets_mod"
 	tables.moons_mod = path_format % "moons_mod"
@@ -134,6 +137,8 @@ func _on_table_initializer_instantiated(_table_initializer: IVTableInitializer) 
 	tables.facilities_resources = path_format % "facilities_resources"
 	tables.facilities_modules = path_format % "facilities_modules"
 	tables.facilities_operations = path_format % "facilities_operations"
+	tables.facilities_populations = path_format % "facilities_populations"
+	tables.strata_capacities = path_format % "strata_capacities"
 	tables.strata_resources = path_format % "strata_resources"
 
 

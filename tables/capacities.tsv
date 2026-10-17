@@ -1,0 +1,10 @@
+name\Field	quality_exponent
+Type	FLOAT
+Unit	
+Default	
+Prefix/CAPACITY_	
+LAND	4
+GEOTHERMAL	2
+HYDRO	3
+WIND	2
+TIDAL	2

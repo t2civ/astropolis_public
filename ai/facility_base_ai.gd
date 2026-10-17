@@ -13,12 +13,14 @@ extends BaseAI
 ## To implement a custom facility AI, extend this class and add
 ## [code]const OVERRIDE_AI := true[/code].[br][br]
 ##
-## Strategy selections are in part declarative. Note that the paired
-## TraderBaseAI is aware of this AI's resource strategies.
+## Strategy selections are in part declarative. The paired TraderBaseAI trades
+## in the posture and resource strategies this AI authors.
 
 
 ## Emitted when [member facility_strategy] changes.
 signal facility_strategy_changed(strategy_id: int)
+## Emitted when [member trader_strategy] changes.
+signal trader_strategy_changed(strategy_id: int)
 ## Emitted when an entry in [member facility_resource_strategies] changes.
 signal facility_resource_strategy_changed(resource_type: int, strategy_id: int)
 ## Emitted when an entry in [member operation_strategies] changes.
@@ -63,8 +65,8 @@ enum FacilityStrategies {
 ## Per-resource facility strategies — how this facility views a particular
 ## resource given its own operations, inventory state, and player strategies.
 enum FacilityResourceStrategies {
-	## No special facility-level stance; trader applies its own per-resource
-	## strategy independently.
+	## No special facility-level stance beyond a quarter horizon of stock, about an
+	## interval's use; trader applies its own per-resource strategy independently.
 	NEUTRAL,
 	## Primary saleable output the facility exists to produce; the operations
 	## that produce it carry the facility's revenue thesis. Analog: a copper
@@ -114,10 +116,6 @@ enum FacilityResourceStrategies {
 	## produce or consume it and run inventory down. Analog: a multi-product
 	## plant exiting a product line; a utility's coal phase-down.
 	PHASE_OUT,
-	## The facility acts as a two-sided market maker for this tradable resource it
-	## can produce and/or consume; the paired trader quotes both bid and ask. Folds
-	## the facility's market-maker identity into the per-resource strategy channel.
-	MARKET_MAKE,
 	N_BASE_FACILITY_RESOURCE_STRATEGIES,
 }
 
@@ -172,6 +170,21 @@ enum OperationStrategies {
 }
 
 
+## Default buffer stock a market-making facility warehouses, in time horizons of its
+## turnover of the resource, the larger of its gross production and consumption (def key
+## [code]buffer_stock_factor[/code] overrides).
+const BUFFER_STOCK_FACTOR := 1.0
+## Default buffer stock floor a market-making facility warehouses, in trade units (def
+## key [code]buffer_stock_lots[/code] overrides); backs a standing two-sided quote even
+## for a resource with no current throughput.
+const BUFFER_STOCK_LOTS := 4
+## Time horizons of use a market maker holds past its strategy's level for each e-fold its local
+## price moves from one interval to the next, on average over [constant SWING_MEMORY]: stock held
+## against the swings of the market it makes (PRODUCTION_MODEL.md, "What a facility is").
+const SWING_HORIZONS := 1.0
+## How long a market maker's reckoning of its prices' swings remembers them.
+const SWING_MEMORY := IVUnits.YEAR
+
 ## Short alias for the per-resource strategy enum, used by the authoring helpers.
 const _RS := FacilityResourceStrategies
 
@@ -181,56 +194,58 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"_last_interval",
 	&"_next_interval",
 	&"facility_strategy",
+	&"trader_strategy",
 	&"facility_resource_strategies",
 	&"operation_strategies",
+	&"_price_swings",
+	&"_last_prices",
 ]
 
 
 ## Facility-posture strategy definitions; index = [enum FacilityStrategies] value.
 ## The [code]buildout_spending_share[/code] key (read by [method _apply_facility_knobs])
-## is the fraction of facility income the server directs to construction: a positive
-## value grows toward that share, a negative value winds capacity down at that rate,
-## and an omitted key (NAN) holds. Postures never selected by
+## is the share of the facility's profit, past what wears out, that its owners leave in it
+## for growth: zero or more builds, replacing what wears out first and growing within that
+## share, which the server holds below one; a negative value winds capacity down at that
+## rate; and an omitted key (NAN) holds. Postures never selected by
 ## [method _reconcile_facility_strategy] are left empty.
 static var facility_strategy_defs: Array[Dictionary] = [
 	{}, # NEUTRAL
-	{&"buildout_spending_share": 0.15}, # GROWTH
-	{&"buildout_spending_share": 0.08}, # PROFITABILITY
+	{&"buildout_spending_share": 0.25}, # GROWTH
+	{&"buildout_spending_share": 0.13}, # PROFITABILITY
 	{}, # DIVERSIFICATION
 	{}, # SPECIALIZATION
-	{&"buildout_spending_share": 0.03}, # STRATEGIC_OUTPOST
+	{&"buildout_spending_share": 0.05}, # STRATEGIC_OUTPOST
 	{}, # DEVELOPMENT
-	{&"buildout_spending_share": 0.05}, # STEADY_STATE
+	{&"buildout_spending_share": 0.08}, # STEADY_STATE
 	{&"buildout_spending_share": -0.5}, # DECOMMISSIONING (negative = wind-down)
 	{}, # EMERGENCY
 ]
 
 ## Per-resource facility-level strategy definitions; index =
 ## [enum FacilityResourceStrategies] value. Keys are facility-side knob params
-## read by [method _apply_strategy_knobs]: [code]strategic_reserve_factor[/code]
-## (reserve = factor × throughput × time_horizon), [code]mm_base_lot[/code]
-## (trade-unit reserve floor), [code]protect_reserve[/code],
+## read by [method _apply_strategy_knobs]: [code]level_lever[/code] (stock held beyond
+## the critical level, in time horizons of use; see
+## [method FacilityProxy.set_inventory_level_lever]),
+## [code]buffer_stock_factor[/code] and [code]buffer_stock_lots[/code] (the buffer
+## stock a market-making facility warehouses; see [constant BUFFER_STOCK_FACTOR]),
 ## [code]prohibit_production[/code], [code]prohibit_consumption[/code]. Empty
-## entries take all defaults (no reserve, no flags).
+## entries take all defaults (nothing beyond the critical level, a market maker's default
+## buffer stock, no flags).
 static var facility_resource_strategy_defs: Array[Dictionary] = [
-	{}, # NEUTRAL
+	{&"level_lever": 0.25}, # NEUTRAL
 	{}, # PRIMARY_PRODUCT
 	{}, # SECONDARY_PRODUCT
 	{}, # COPRODUCT
 	{}, # BYPRODUCT
-	{}, # WASTE
-	{&"strategic_reserve_factor": 1.0}, # CRITICAL_INPUT
+	{&"buffer_stock_factor": 0.0, &"buffer_stock_lots": 0}, # WASTE
+	{&"level_lever": 1.0}, # CRITICAL_INPUT
 	{}, # ROUTINE_INPUT
 	{}, # CONSUMABLE
-	{}, # CLOSED_LOOP_INTERMEDIATE
-	{&"strategic_reserve_factor": 2.0, &"protect_reserve": true}, # STRATEGIC_RESERVE
+	{&"buffer_stock_factor": 0.0, &"buffer_stock_lots": 0}, # CLOSED_LOOP_INTERMEDIATE
+	{&"level_lever": 2.0}, # STRATEGIC_RESERVE
 	{}, # SPECULATIVE_POSITION
-	{&"prohibit_production": true}, # PHASE_OUT
-	# MARKET_MAKE deliberately omits protect_reserve: it is the one identity a
-	# facility applies to every resource it touches, inputs included, so a hard
-	# consumption floor there starves the ops that would refill the reserve, and a
-	# reserve scaled on throughput can outgrow the storage class disposal must relieve.
-	{&"strategic_reserve_factor": 1.0, &"mm_base_lot": 4}, # MARKET_MAKE
+	{&"prohibit_production": true, &"buffer_stock_factor": 0.0, &"buffer_stock_lots": 0}, # PHASE_OUT
 ]
 
 ## Per-operation strategy definitions; index = [enum OperationStrategies] value.
@@ -246,9 +261,9 @@ static var operation_strategy_defs: Array[Dictionary] = [
 	{}, # VOLUME_MAXIMIZE — run full regardless of margin
 	{}, # BASELOAD — steady rate (tuning TBD)
 	{}, # PEAKER — idle until spike (tuning TBD)
-	{&"process_utilization": 0.0}, # MOTHBALL — idle, capacity preserved
+	{&"availability": 0.0}, # MOTHBALL — idle, capacity preserved
 	{}, # DECOMMISSION — capacity wind-down is Tier 1/2; run as AUTO here
-	{}, # DEMAND_FOLLOWING — server storage cap already follows offtake
+	{}, # DEMAND_FOLLOWING — no rule: local prices hold every run to use
 	{&"shortage_priority": true}, # SHORTAGE_RELIEF
 	{}, # LEARNING — run regardless to accumulate experience
 	{}, # HARVEST — run for max output
@@ -268,10 +283,19 @@ var proxy: FacilityProxy
 
 ## Facility-posture strategy. See [enum FacilityStrategies].
 var facility_strategy := 0
+## The posture this facility's paired trader trades in, folded from the facility's
+## role. See [enum TraderBaseAI.TraderStrategies].
+var trader_strategy := 0
 ## Per-resource facility-level strategies. See [enum FacilityResourceStrategies].
 var facility_resource_strategies: PackedInt32Array
 ## Per-operation strategies. See [enum OperationStrategies].
 var operation_strategies: PackedInt32Array
+
+# *****************************************************************************
+# persisted
+
+var _price_swings: PackedFloat64Array # each local price's move an interval, in e-folds, averaged
+var _last_prices: PackedFloat64Array # each local price at the last interval
 
 # *****************************************************************************
 
@@ -286,6 +310,8 @@ func _init() -> void:
 	facility_resource_strategies.resize(n_resources)
 	var n_operations: int = _table_n_rows[&"operations"]
 	operation_strategies.resize(n_operations)
+	_price_swings.resize(n_resources)
+	_last_prices.resize(n_resources)
 	if !_tradable_resources:
 		var trade_classes: Array[int] = IVTableData.db_tables[&"resources"][&"trade_class"]
 		for resource_type in n_resources:
@@ -310,7 +336,9 @@ func ai_init() -> void:
 	_player_ai.player_facility_strategy_changed.connect(_on_player_facility_strategy_changed)
 	_player_ai.body_strategy_changed.connect(_on_player_body_strategy_changed)
 	# new_quarter does not fire on load or the first adopted quarter, so author once
-	# here to bootstrap (and re-author idempotently after load).
+	# here to bootstrap (and re-author idempotently after load). The trader's posture
+	# goes first: the resource knobs size a market maker's buffer stock from it.
+	_author_trader_strategy()
 	_author_resource_strategies()
 	_author_facility_strategy()
 	_author_operation_strategies()
@@ -319,13 +347,15 @@ func ai_init() -> void:
 ## Re-author each interval (the prior cadence): identity from sticky capability is
 ## cheap and change-guarded, so this stays responsive to capability changes and
 ## keeps reserves tracking live throughput, without the rate-based / write-only smell.
-func process_ai_interval(_delta: float) -> void:
+func process_ai_interval(delta: float) -> void:
+	_update_price_swings(delta)
 	_author_resource_strategies()
 
 
 ## Strategic, forward-looking reassessment of sticky policy. Same authoring pass;
 ## the change guard makes the quarter-boundary call a no-op when nothing changed.
 func process_ai_new_quarter() -> void:
+	_author_trader_strategy()
 	_author_resource_strategies()
 	_author_facility_strategy()
 	_author_operation_strategies()
@@ -343,6 +373,7 @@ func _on_player_resource_strategy_changed(_resource_type: int, _strategy_id: int
 
 func _on_player_facility_strategy_changed(facility_id: int, _strategy_id: int) -> void:
 	if facility_id == proxy.facility_id:
+		_author_trader_strategy()
 		_author_resource_strategies()
 		_author_facility_strategy()
 		_author_operation_strategies()
@@ -387,12 +418,12 @@ func _capability_strategy(resource_type: int) -> int:
 	var can_consume := bool(flags & CAN_HAVE_INPUT)
 	if !can_produce and !can_consume:
 		return _RS.NEUTRAL
-	if proxy.market_maker:
-		return _RS.MARKET_MAKE
 	if can_produce and can_consume:
-		# Produced and consumed here: take no special stance and let the trader
-		# balance inventory around the reserve. A true closed loop (no external
-		# trade) needs production/consumption magnitude to identify — deferred.
+		# Produced and consumed here, where nothing but a stock covers an interval's
+		# gap between what is made and what is drawn: with no stock held past the
+		# critical level, what only builds, maintenance and the residents' other wants
+		# drew went short an interval at a time (PRODUCTION_MODEL.md, "A facility's
+		# stock of a resource").
 		return _RS.NEUTRAL
 	if can_produce:
 		return _RS.PRIMARY_PRODUCT
@@ -401,21 +432,29 @@ func _capability_strategy(resource_type: int) -> int:
 
 ## Folds own crisis and player influence onto the capability identity by fixed
 ## precedence: own crisis > player structural directive > player influence >
-## capability default. A custom AI overrides this to change reconciliation.
+## capability default. Own crisis is per resource: a resource the facility uses more of
+## than it makes, whose stock falls below its critical level, escalates to CRITICAL_INPUT,
+## and stays there until its stock refills the desired level that sets. One it makes more of
+## than it uses is never in crisis: its stock runs low because it sells. A custom AI overrides
+## this to change reconciliation.
 func _reconcile_resource_strategy(resource_type: int, capability: int) -> int:
 	const CAN_HAVE_INPUT := FacilityProxy.InventoryFlags.CAN_HAVE_INPUT
-	const INPUT_CRISIS := FacilityProxy.FacilityFlags.INPUT_CRISIS
 	const OPS_RESERVE_BREACHED := FacilityProxy.InventoryFlags.OPS_RESERVE_BREACHED
 	const STRATEGIC_RESERVE_BREACHED := FacilityProxy.InventoryFlags.STRATEGIC_RESERVE_BREACHED
 	const PR := PlayerBaseAI.PlayerResourceStrategies
 	const PF := PlayerBaseAI.PlayerFacilityStrategies
 
-	# (1) Own crisis: a consumed resource (not a maker) in shortage prioritizes supply
-	# continuity — escalate to CRITICAL_INPUT for a protected import buffer.
-	if capability != _RS.MARKET_MAKE:
-		var inv_flags := proxy.get_inventory_flags(resource_type)
-		if (inv_flags & CAN_HAVE_INPUT) and ((proxy.get_flags() & INPUT_CRISIS) \
-				or (inv_flags & (OPS_RESERVE_BREACHED | STRATEGIC_RESERVE_BREACHED))):
+	# (1) Own crisis: a resource used here beyond what is made here, in shortage, prioritizes
+	# supply continuity.
+	var inv_flags := proxy.get_inventory_flags(resource_type)
+	if inv_flags & CAN_HAVE_INPUT and proxy.get_inventory_expected_rate(resource_type) < 0.0:
+		if inv_flags & OPS_RESERVE_BREACHED:
+			return _RS.CRITICAL_INPUT
+		# Hold until the desired level refills, or the escalation ends the interval stock
+		# crosses the critical level. Only an escalated resource holds: stock short of a
+		# stockpile directive's larger level is not a shortage.
+		if (facility_resource_strategies[resource_type] == _RS.CRITICAL_INPUT
+				and inv_flags & STRATEGIC_RESERVE_BREACHED):
 			return _RS.CRITICAL_INPUT
 
 	# (2) Player structural directive overrides influence and capability.
@@ -433,30 +472,34 @@ func _reconcile_resource_strategy(resource_type: int, capability: int) -> int:
 	return capability
 
 
-## Translates the resource's strategy def into server knobs: the strategic-reserve
-## flow variable and the PROTECT / PROHIBIT inventory flag bits (flags written only
-## on change; preserves any other FROM_PROXY bits).
+## Translates the resource's strategy def into server knobs: the level lever, the buffer stock
+## and the PROHIBIT inventory flag bits (flags written only on change; preserves any other
+## FROM_PROXY bits).
 func _apply_strategy_knobs(resource_type: int, strategy: int) -> void:
-	const PROTECT_STRATEGIC_RESERVE := FacilityProxy.InventoryFlags.PROTECT_STRATEGIC_RESERVE
 	const PROHIBIT_CONSUMPTION := FacilityProxy.InventoryFlags.PROHIBIT_CONSUMPTION
 	const PROHIBIT_PRODUCTION := FacilityProxy.InventoryFlags.PROHIBIT_PRODUCTION
 	const FROM_PROXY_MASK := FacilityProxy.InventoryFlags.FROM_PROXY_MASK
 	const EMBARGO := PlayerBaseAI.PlayerResourceStrategies.EMBARGO
 	var def := facility_resource_strategy_defs[strategy]
 
-	var reserve_factor: float = def.get(&"strategic_reserve_factor", 0.0)
-	var mm_base_lot: int = def.get(&"mm_base_lot", 0)
-	var reserve := 0.0
-	if reserve_factor > 0.0 or mm_base_lot > 0:
-		var throughput := absf(proxy.get_inventory_expected_rate(resource_type))
-		reserve = (reserve_factor * throughput * proxy.time_horizon
-				+ mm_base_lot * _trade_unit_multipliers[resource_type])
-	proxy.set_inventory_strategic_reserve(resource_type, reserve)
+	var lever: float = def.get(&"level_lever", 0.0)
+	if _is_market_made(resource_type):
+		lever += SWING_HORIZONS * _price_swings[resource_type]
+	proxy.set_inventory_level_lever(resource_type, lever)
+	var buffer_stock := 0.0
+	if _is_market_made(resource_type):
+		var buffer_factor: float = def.get(&"buffer_stock_factor", BUFFER_STOCK_FACTOR)
+		var buffer_lots: int = def.get(&"buffer_stock_lots", BUFFER_STOCK_LOTS)
+		# A warehouse serves the market's turnover, which the net flow understates
+		# wherever the facility both produces and consumes the resource.
+		var turnover := maxf(proxy.get_inventory_production_rate(resource_type),
+				proxy.get_inventory_consumption_rate(resource_type))
+		buffer_stock = (buffer_factor * turnover * proxy.time_horizon
+				+ buffer_lots * _trade_unit_multipliers[resource_type])
+	proxy.set_inventory_buffer_stock(resource_type, buffer_stock)
 
 	var current := proxy.get_inventory_flags(resource_type) & FROM_PROXY_MASK
-	var desired := current & ~(PROTECT_STRATEGIC_RESERVE | PROHIBIT_CONSUMPTION | PROHIBIT_PRODUCTION)
-	if def.get(&"protect_reserve", false):
-		desired |= PROTECT_STRATEGIC_RESERVE
+	var desired := current & ~(PROHIBIT_CONSUMPTION | PROHIBIT_PRODUCTION)
 	if def.get(&"prohibit_production", false):
 		desired |= PROHIBIT_PRODUCTION
 	if def.get(&"prohibit_consumption", false):
@@ -511,15 +554,62 @@ func _reconcile_facility_strategy() -> int:
 
 
 ## Translates the posture's def into the BUILDOUT operation's target spending share
-## (the fraction of facility income directed to construction; NAN holds). The server
-## controller turns this into build pressure. The BUILDOUT op is resolved by tag, so
-## no table entity name is referenced here.
+## (the share of facility profit past what wears out the yards spend on growth; NAN holds). The
+## BUILDOUT op is resolved by tag, so no table entity name is referenced here.
 func _apply_facility_knobs(strategy: int) -> void:
 	var def := facility_strategy_defs[strategy]
 	var share: float = def.get(&"buildout_spending_share", NAN)
 	var buildout_ops: PackedInt32Array = _tag_operations.get(&"buildout", PackedInt32Array())
 	for operation_type in buildout_ops:
 		proxy.set_operations_target_spending_share(operation_type, share)
+
+
+## Sets [member trader_strategy], emitting [signal trader_strategy_changed] only on
+## change.
+func _set_trader_strategy(strategy_id: int) -> void:
+	if trader_strategy == strategy_id:
+		return
+	trader_strategy = strategy_id
+	trader_strategy_changed.emit(strategy_id)
+
+
+## Authors the posture the paired trader trades in — the trader analog of
+## [method _author_facility_strategy]. Called on init, each quarter, and when the
+## player's directive for this facility changes. Author it before the resource
+## strategies, whose knobs depend on it.
+func _author_trader_strategy() -> void:
+	_set_trader_strategy(_reconcile_trader_strategy())
+
+
+## Folds the facility's role into its trader's posture: a market-making facility's trader
+## makes its body's market, and any other supplies its facility. A custom AI overrides
+## this to weigh a player's directive or the facility's own situation.
+func _reconcile_trader_strategy() -> int:
+	const TS := TraderBaseAI.TraderStrategies
+	return TS.MARKET_MAKING if proxy.market_maker else TS.FACILITY_SUPPORT
+
+
+## True if the trader's posture makes a market in [param resource_type] here, which is
+## what a market-making facility warehouses buffer stock for.
+func _is_market_made(resource_type: int) -> bool:
+	var posture_def := TraderBaseAI.trader_strategy_defs[trader_strategy]
+	if !posture_def.get(&"two_sided", false):
+		return false
+	return TraderBaseAI.is_market_resource(proxy.get_inventory_flags(resource_type))
+
+
+## Folds how far each tradable resource's local price moved over [param delta], since the last
+## interval, into its swing.
+func _update_price_swings(delta: float) -> void:
+	var weight := minf(delta / SWING_MEMORY, 1.0)
+	for resource_type in _tradable_resources:
+		var price := proxy.get_inventory_local_price(resource_type)
+		var last := _last_prices[resource_type]
+		_last_prices[resource_type] = price
+		if !(price > 0.0 and last > 0.0):
+			continue
+		var swing := _price_swings[resource_type]
+		_price_swings[resource_type] = swing + (absf(log(price / last)) - swing) * weight
 
 
 ## Sets [member operation_strategies] for [param operation_type], emitting

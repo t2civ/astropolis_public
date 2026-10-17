@@ -5,7 +5,7 @@
 [achievements.tsv](#achievementstsv)  
 [advancements.tsv](#advancementstsv)  
 [asset_adjustments_mod.tsv](#asset_adjustments_modtsv)  
-[carrying_capacity_groups.tsv](#carrying_capacity_groupstsv)  
+[capacities.tsv](#capacitiestsv)  
 [compositions.tsv](#compositionstsv)  
 [compositions_resources_deposits.tsv](#compositions_resources_depositstsv)  
 [compositions_resources_proportions.tsv](#compositions_resources_proportionstsv)  
@@ -20,6 +20,7 @@
 [mod_classes.tsv](#mod_classestsv)  
 [modules.tsv](#modulestsv)  
 [moons_mod.tsv](#moons_modtsv)  
+[needs.tsv](#needstsv)  
 [op_classes.tsv](#op_classestsv)  
 [op_groups.tsv](#op_groupstsv)  
 [operations.tsv](#operationstsv)  
@@ -31,7 +32,9 @@
 [resources.tsv](#resourcestsv)  
 [spacecrafts.tsv](#spacecraftstsv)  
 [strata.tsv](#stratatsv)  
+[strata_capacities.tsv](#strata_capacitiestsv)  
 [surveys.tsv](#surveystsv)  
+[wants.tsv](#wantstsv)  
 
 > **Note (2026-09):** the table set was restructured after much of this file was written: compositions became `strata.tsv` / `strata_resources.tsv`, and the per-facility capacity, extraction and population tables were folded into `facilities.tsv`, `facilities_modules.tsv`, `facilities_operations.tsv` and `facilities_resources.tsv`. The per-table `*.schema.md` and `*.descriptive.md` riders are authoritative for fields and entities; sections below that describe retired tables are kept for their design notes until this file is overhauled.
 
@@ -64,6 +67,8 @@ Modified or fictional:
 * 'spp' is used a unit of species diversity (_effective_ species number) with metrix prefixes (e.g., ' 1.3 Mspp'). This is non-standard usage of the real-world 'spp' abreviation.
 * 'Q' is short for QSPNINDC, or the Quantum-Safe, Programmatically Non-Inflationary/Non-Deflationary Coin. It takes standard metric prefixes. It's value is roughly $1M USD circa 2050. _Dev note: We'll have a currency switch from USD to the Q based on in-game events and/or player advancements, probably a few decades after start._
 
+Money appears in the tables only as a game-start value: `start_price` in `resources.tsv` and the wealth per head in `facilities_populations.tsv`. A cost that holds through the game is a share of something the game prices, as `reconfig_cost` in `modules.tsv` is a share of what building the module costs, since what anything costs at a later stage, or in which currency, can't be known.
+
 
 ## achievements.tsv
 
@@ -88,9 +93,9 @@ The table is here to help me develop a conceptual framework for the science/tech
 
 Specifies adjustments to imported assets, e.g., model scaling. This is a "mod" table that modifies ivoyager_core/data/solar_system/asset_adjustments.tsv.
 
-## carrying_capacity_groups.tsv
+## capacities.tsv
 
-Enumeration table that defines different population groups for carrying capacity.
+What a stratum has that modules occupy and don't draw down: land, and the sites of geothermal, hydro, tidal and wind power. A stratum's amounts are in `strata_capacities.tsv`, and what a module occupies in `modules.tsv`. See `capacities.schema.md`.
 
 ## compositions.tsv
 
@@ -300,6 +305,10 @@ MODULE_LAUNCH_FACILITIES
 
 Modifies ivoyager/data/solar_system/moons.tsv.
 
+## needs.tsv
+
+What a population type can need: nourishment, room, health, learning and the rest, each with its tier. Fields in `needs.schema.md`; the model is the development repository's `POPULATION_MODEL.md`.
+
 ## op_classes.tsv
 
 Op classes define GUI tab groups for operations: Energy, Extraction, Refining, etc. Only used for GUI.
@@ -328,15 +337,15 @@ One "operation unit" corresponds to quantities in the operations.tsv row. In gen
       and a 'survey factor'.
 
 
-Use of 1 t/h is convenient for operation energy/electricity data, as that is often obtained in untis "MWh per tonne". So, e.g., 1.4 MWh per tonne mass conversion converts to 1.4 MW in the `electricity` field and one tonne in the `mass_conversion` field.
+Use of 1 t/h is convenient for operation energy/electricity data, as that is often obtained in untis "MWh per tonne". So, e.g., 1.4 MWh per tonne mass conversion converts to an ELECTRICITY driver input of `1.4 MW` (`driver_in_inventory`) and one tonne in the `mass_conversion` field.
 
 Fields:
 * `op_class`, `op_group`, `module_class` and `stratum` refer to entities from the corresponding tables.
 * `sub_label` is for GUI dispaly within an op_group.
-* `process_group` is an internal enum used in the process code. (Leave blank to safely disable.)
-* `electricity` is in most cases all of the output or input energy (+ or -, respectively). See General Notes, simplifications.
+* `operation_group` decides how the process code resolves the operation's run; see `operations.schema.md`. (Leave blank to safely disable.)
+* The driver lists (`driver_in_inventory` and its siblings) hold the energy an operation runs on and what that source becomes: in most cases an ELECTRICITY input, or a generator's fuel and its products. A generator lists its ELECTRICITY output in `out_inventory`. See General Notes, simplifications, and "Flow Fields" in `operations.schema.md`.
 * `dev_xxxx` fields correspond to total values that contribute to the major dev metrics: Energy, Manufacturing, Computation and Bioproduction.
-* `in_inventory`, `input_quantities`, `out_inventory` and `output_quantities` refer to all of the resources (other than Electricity) that are used or generated. Quantities are specified in resource `trade_unit` (see [resources.tsv](#resourcestsv)) _per hour_.
+* `in_inventory`, `input_quantities`, `out_inventory` and `output_quantities` refer to the target resources: what the operation processes or produces. Quantities are specified in resource `trade_unit` (see [resources.tsv](#resourcestsv)) _per hour_.
 
 Notes:
 * Extractable resources in differentiated solids (which have variance > 0.0) are assumed to have a log-normal abundance distribution. In most cases, it's only the upper tail of that distribution that is economically accessible for extraction. We use a formula that combines abundance, variance, and a 'survey factor' to obtain a 'deposits' fraction (expressed as 0 - 100% in GUI). The deposits fraction determines extraction efficiency, which is the total extracted resource divided by input energy. Ongoing extraction reduces both abundance and variance, reducing deposits much faster than reducing abundance alone. This can be countered, albeit with diminishing returns, by increasing 'survey factor'. In most cases, the economical usefulness of a resource will be exhausted long before the resource abundance reaches zero.
@@ -362,9 +371,7 @@ Different kinds of humans or non-humans, corporeal or virtual, that we want to c
 
 ## processes.tsv
 
-_TODO_
-
-Processes are very similar to operations, but do not directly involve modules. These handle non-operation changes in body compositions or characteristics, such as restoration of the fresh water hydrosphere and climate change in response to atmospheric changes.
+Processes are to a body and its strata what operations are to a facility and its modules: the changes to a body's strata that no module makes, such as fish stocks and forests regrowing. Still to come: restoration of the fresh water hydrosphere, the breakdown of wastes, and climate change in response to atmospheric changes. See `processes.schema.md`.
 
 
 ## resource_classes.tsv
@@ -390,9 +397,17 @@ Replaces ivoyager table of the same name. Game start only.
 
 Specific geophysical layers for the purpose of defining Compositions (which define resources).
 
+## strata_capacities.tsv
+
+Each stratum's capacities at game start. See `strata_capacities.schema.md`.
+
 ## surveys.tsv
 
 Defines our knowledge about a body's composition/resources in a particular strata: both deposits (if applicable) and estimation errors.
+
+## wants.tsv
+
+What one individual of a population type draws to fill a need, written as an operation's recipe is. Fields in `wants.schema.md`.
 
 ****
 

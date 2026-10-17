@@ -14,7 +14,8 @@ Notes:
 
 *Electricity, primary inputs to power and/or propulsion systems (excluding oxygen and non-energetic propellants), and spent nuclear fuel assemblies.*
 
-- **Electricity** — Locally generated, stored, or transmitted electrical energy; the common output of all power-generation operations and primary energy input for industrial, residential, and life-support activities. (Special handling in the simulation; don't list as input or output resource.)
+- **Electricity** — Locally generated, stored, or transmitted electrical energy; the common output of all power-generation operations and primary energy input for industrial, residential, and life-support activities.
+- **Shade Electricity** — Electricity delivered during the hours a site's solar arrays are in shade, at night, in eclipse or under cloud, as against power while the sun shines.
 - **Hydrogen** — H₂. H 100. Extractable.
 - **Methane** — CH₄. C 74.9, H 25.1. Extractable.
 - **Methanol** — CH₃OH. C 38.7, O 48.3, H 13.0. Extractable.
@@ -141,7 +142,7 @@ Notes:
 
 ## Services
 
-*Intangible services: computing and information products, professional and business services, and services delivered to people and settlements.*
+*Intangible services: computing and information products, professional and business services, and services delivered to people and settlements. A service is measured in hours: one hour of it is what an hour of work in its sector delivers. Computation is measured in floating-point operations.*
 
 - **Scalar Compute** — General-purpose serial and modestly parallel computation (CPU-class), measured in floating-point operations. The capacity behind business systems, databases, transaction processing, modeling, and the control of automated machinery — the workhorse compute underlying most digital activity.
 - **Tensor Compute** — Massively parallel accelerated computation (GPU- and tensor-accelerator-class) optimized for the dense linear algebra of machine learning, simulation, and signal processing. The compute behind AI training and inference; nascent in the 2020s and scaling rapidly thereafter.
@@ -170,4 +171,6 @@ Notes:
 - **Education** — In-person teaching and training, from primary schooling through tertiary and vocational instruction.
 - **Public/Gov Services** — Administration, security, justice, defense, and civic services provided by governing bodies.
 - **Utilities/Env Services** — Delivered utilities and sanitation: water at the tap, power and gas distribution to premises, and waste collection, recycling, and environmental remediation — distinct from the generation, extraction, and treatment upstream.
+- **Human Habitation** — Room to live in shirt-sleeve space — pressurized, breathable and temperate — counted as places occupied over time: one individual housed for an hour is one hour. Made by housing modules and drawn by the residents' shelter need; it cannot be stored or traded, and carries no price until households pay rent.
+- **Labor** — Hours of work, counted as the other services are: one individual working for an hour is one hour. Every operation draws it, and a facility's staff make it, its residents and any staff on loan from another facility's population. Work is done where the worker is, so it cannot be stored or traded; its price is the local wage, which answers what the residents would take for their time.
 

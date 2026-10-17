@@ -78,8 +78,7 @@ var proxy_id := -1  ## Index into [member ProxyBus.proxies].
 var entity_type := -1  ## Entity type tag; set by the server-side proxy.
 var name := &""  ## Unique, immutable identifier (e.g. [code]&"PLAYER_NASA"[/code]).
 var gui_name := ""  ## Display name; mutable. Empty player gui_name hides from GUI.
-## Quarterly clock as [code]year * 4 + (quarter - 1)[/code]. Never set for a
-## [BodyProxy] without a facility.
+## Quarterly clock as [code]year * 4 + (quarter - 1)[/code]; -1 until the entity's first tick.
 var ordinal_qtr := -1
 ## True once this proxy's cross-proxy refs are wired and one-time setup has run;
 ## the server ticks AI only after. Proxy-thread state.
@@ -466,6 +465,77 @@ func is_operations_can_have_module(_module_type: int) -> bool:
 	return false
 
 
+# Per-resource market flows (read-only), in sim units per second. Default 0.0/empty;
+# developed proxies override. An aggregate sums its facilities'.
+
+## Returns what the facility's own market passes of [param _resource_type] to its users,
+## averaged over its time horizon: its use where it is non-unitary, and nothing where it is
+## unitary, since a unitary facility books only what it trades (FINANCIAL_MODEL.md, "Unitary and
+## non-unitary facilities").
+func get_operations_internal_volume(_resource_type: int) -> float:
+	return 0.0
+
+
+## Returns the per-resource internal volumes array, or empty if this proxy has no operations.
+## Read-only reference; do not mutate.
+func get_operations_internal_volumes() -> PackedFloat64Array:
+	return PackedFloat64Array()
+
+
+## Returns what [method get_operations_internal_volume] and
+## [method get_operations_bought_rate] of [param _resource_type] are worth at the facility's
+## local prices, in dollars per second. At an aggregate, over the two rates it is their average
+## local price.
+func get_operations_volume_value(_resource_type: int) -> float:
+	return 0.0
+
+
+## Returns the price level of goods where the facility is, or its facilities are: what the
+## resources with a trade class that move through it, its internal volume and what it bought,
+## are worth at its local prices over what they would be at its long prices, each local price
+## averaged over a decade: how far its prices stand from what they have cost lately. An
+## aggregate weighs each facility by its volumes. NAN where none move.
+func get_operations_price_level() -> float:
+	return NAN
+
+
+## Returns what the facility took in of [param _resource_type] from deliveries, averaged over
+## its time horizon. At an aggregate, less [method get_operations_sold_rate] it is the net trade
+## across the aggregate's boundary: what its facilities trade among themselves cancels.
+func get_operations_bought_rate(_resource_type: int) -> float:
+	return 0.0
+
+
+## Returns the per-resource bought rates array, or empty if this proxy has no operations.
+## Read-only reference; do not mutate.
+func get_operations_bought_rates() -> PackedFloat64Array:
+	return PackedFloat64Array()
+
+
+## Returns what the facility delivered of [param _resource_type], averaged over its time horizon.
+func get_operations_sold_rate(_resource_type: int) -> float:
+	return 0.0
+
+
+## Returns the per-resource sold rates array, or empty if this proxy has no operations.
+## Read-only reference; do not mutate.
+func get_operations_sold_rates() -> PackedFloat64Array:
+	return PackedFloat64Array()
+
+
+## Returns 1.0 where the facility deals in [param _resource_type]
+## ([constant FacilityProxy.InventoryFlags.IS_MARKET]), else 0.0; at an aggregate, how many of
+## its facilities do.
+func get_operations_market_count(_resource_type: int) -> float:
+	return 0.0
+
+
+## Returns the per-resource market counts array, or empty if this proxy has no operations.
+## Read-only reference; do not mutate.
+func get_operations_market_counts() -> PackedFloat64Array:
+	return PackedFloat64Array()
+
+
 # Financials data (read-only). Default 0.0/empty; Facility, Player, and
 # player-specific Join proxies override. "lfq" = last four quarters.
 
@@ -530,12 +600,143 @@ func get_financials_accounting_history(_item: int) -> PackedFloat64Array:
 	return PackedFloat64Array()
 
 
-# Population data (read-only). Default 0.0/empty; developed proxies override.
+# Population data (read-only). Default 0.0/empty; developed proxies override. A facility
+# answers for its residents, and a body, player or join for those of the facilities it
+# aggregates, its rates and shares derived from their sums (POPULATION_MODEL.md, "What players
+# and AIs do"). Where population_type may be -1, the getter answers for all types together.
 
 ## Returns the population count for [param population_type], or the total across
 ## all types if -1. Safe default on an out-of-range index.
 func get_population_number(_population_type := -1) -> float:
 	return 0.0
+
+
+## Returns how many of [param population_type] are in its age [param bucket], one of the
+## type's eight (see POPULATION_MODEL.md, "Demographics"). Safe default on an out-of-range
+## index.
+func get_population_bucket_number(_population_type: int, _bucket: int) -> float:
+	return 0.0
+
+
+## Returns how many of [param population_type] are in life [param stage], an
+## [enum Enums.LifeStages], or of all types if -1. Safe default on an out-of-range index.
+func get_population_stage_number(_population_type: int, _stage: int) -> float:
+	return 0.0
+
+
+## Returns the births per second of [param population_type], or of all types if -1,
+## smoothed over about a quarter. Safe default on an out-of-range index.
+func get_population_birth_rate(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns the deaths per second of [param population_type], or of all types if -1,
+## starvation included, smoothed over about a quarter. Safe default on an out-of-range index.
+func get_population_death_rate(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns the starvation deaths per second of [param population_type], or of all types if
+## -1, smoothed over about a quarter: the people who die for want of life support. Safe
+## default on an out-of-range index.
+func get_population_starvation_rate(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns the life expectancy at birth of [param population_type] at its present death
+## rates, in seconds. NAN at an aggregate with an empty age bucket, whose death rate is
+## unknown. Safe default on an out-of-range index.
+func get_population_life_expectancy(_population_type: int) -> float:
+	return 0.0
+
+
+## Returns migration pressure for [param population_type] (positive = net immigration,
+## negative = net emigration); facility only. Safe default on an out-of-range index.
+func get_population_migration_pressure(_population_type: int) -> float:
+	return 0.0
+
+
+## Returns the share of [param population_type]'s want for [param need], a
+## [code]needs.tsv[/code] row, that it got (1.0 = fully met), smoothed over about a month for
+## an existence need and a quarter for the others, or of all types' if -1. Below its type's
+## threshold in any existence need, people starve. Where several types' or facilities' are
+## combined, each weighs by what its want costs at the long prices, each local price averaged
+## over a decade. 1.0 for a need no one here has a want for. Safe default on an out-of-range
+## index.
+func get_population_satisfaction(_population_type: int, _need: int) -> float:
+	return 1.0
+
+
+## Returns [param population_type]'s wealth, or all types' if -1, in dollars; a facility's
+## classes hold it as unevenly as they are served. 0.0 without a population.
+func get_population_wealth(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns the most of [param population_type]'s able hours it offers, or of all types' if -1:
+## its head count in each life stage times its type's work weights and the hours a working
+## head works being all of them. NAN where no one is able to work; 0.0 without a population.
+func get_population_participation(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns what [param population_type]'s wealth buys, or all types' if -1: the years of its
+## wants it would pay for at local prices. The true measure of its wealth, which compares
+## across places; 0.0 without a population.
+func get_population_years_of_wants(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns how unevenly [param population_type]'s people hold their means, their wealth measured
+## in years of their wants, or all types' people if -1: the standard deviation of the log of
+## their means, 0.0 if all hold alike. A facility's type holds them as unevenly as its people
+## are served. Where facilities or types are combined it is the spread whose Theil index is
+## theirs, which counts how far their means differ as well. NAN where no one's means are known;
+## 0.0 without a population.
+func get_population_spread(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns the hours [param population_type]'s residents offered in their last interval, or
+## all types' if -1, in sim units of the type's work resource per second: the number offering
+## to work at once. 0.0 without a population.
+func get_population_offered_hours(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns the hours [param population_type]'s residents worked in their last interval, or
+## all types' if -1, as [method get_population_offered_hours]. 0.0 without a population.
+func get_population_worked_hours(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns what [param population_type]'s work was paid in its last interval, or all types'
+## if -1, in dollars per sim unit of its work resource: the wage. NAN where no one worked;
+## 0.0 without a population.
+func get_population_wage(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns what [param _population_type]'s residents paid in their last interval for what they
+## drew, or all types' if -1, in dollars per second. 0.0 without a population.
+func get_population_spending(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns what [param _population_type]'s residents got from their facility's settlement with
+## its owners in its last interval, or all types' if -1, in dollars per second: its dividends,
+## less what it drew from them where it was short (FINANCIAL_MODEL.md, "Ownership and money").
+## 0.0 without a population.
+func get_population_dividends(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns the price level of [param _population_type]'s wants, or all types' if -1: what a year
+## of them costs at local prices over what it would at the long prices, each local price
+## averaged over a decade: how far the prices of its wants stand from what they have cost
+## lately. NAN where nothing is wanted.
+func get_population_price_level(_population_type := -1) -> float:
+	return NAN
 
 
 ## Returns the per-quarter population-number history (oldest first) for

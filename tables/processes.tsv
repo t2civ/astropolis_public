@@ -1,0 +1,7 @@
+name\Field	stratum_group	resource	growth_rate	seeded_share	free_capacity
+Type	TABLE_ROW	TABLE_ROW	FLOAT	FLOAT	TABLE_ROW
+Unit			1/y		
+Default					
+Prefix/PROCESS_	STRATUM_GROUP_	RESOURCE_			CAPACITY_
+FISH_STOCK_REGROWTH	OCEAN	WILD_FISHERIES	0.2	0.5	
+FOREST_REGROWTH	CONT_SURFACE	TIMBER	0.05	0.8	LAND

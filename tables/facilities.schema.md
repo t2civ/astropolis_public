@@ -9,10 +9,13 @@ Facilities are described in `facilities.descriptive.md`. Content of this table i
 - is_start — Always TRUE (by default).
 - body — Simulation body.
 - player — Owning or controlling player.
+- region — The region of its body the facility stands in, or blank for none. It stands on the body's strata in that region and those that span the body, one of each stratum group (see `region` in strata.tsv). A space agency's ground facility stands in its polity's region.
 - is_unitary — True ("x") if the facility can be treated as one activity for economic accounting. If false, each operation is treated as a separate activity for internal mechanics like taxation and gross product calculation.
+- market_maker — True ("x") if the facility makes its body's market: it warehouses stock and keeps a bid and an ask standing on the resources it trades. The Earth nations are market makers; a spaceport will be. See "Market makers" in the development repository's `TRADE_MODEL.md`.
 - closed_cycle_ops — True ("x") if the facility runs operations in a "closed cycle"; i.e., resource streams are entirely from and to inventory.
 - public_sector — Fraction of economic activity that is public sector. For unitary facilities, this is usually 1 (agencies) or 0 (companies).
-- population — Population or personnel count in 2015. For national polities, this is total national population. For agencies, this includes direct employees and the contractor/support workforce.
+- population — The residents in 2015, by population type: for a national polity, its total population. How each is spread over its age buckets, and its vital rates, are in `facilities_populations.tsv`.
+- staff — The staff on loan in 2015, by population type: people who work at the facility and belong to its polity's population, which already counts them. For an agency, its direct employees and contractor/support workforce. Crew who live aboard come from the modules that house them (`biological_crew` in `modules.tsv`), not from here.
 - constructions — Total mass of all existing buildings, infrastructure, and manufactured items. Includes "active" monuments (e.g., tourist destinations such as the Pyramids) but not inactive ruins or rubbish.
 - biomass — Total dry-weight mass (not carbon weight).
 - bioproductivity — Production rate of biomass as measured above.
@@ -20,6 +23,7 @@ Facilities are described in `facilities.descriptive.md`. Content of this table i
 - information_fraction — See Information & Biodiversity below.
 - nominal_information — For small facilities with relatively little computer capacity, assign a nominal Shannon information content in Terrabits (Tbit). Use this field instead of `information_fraction` if unique information content is too small to significantly affect the global information model.
 - solar_correction / wind_correction / geothermal_correction — Per-source multipliers (default 1.0) on this site's body-level renewable capacity factor, capturing territorial quality versus the body baseline (latitude, climate, regional regime). Facility capacity factor = body factor × correction (see `calculate_capacity_factor` on Body/Facility). Agencies on a planet should match their owning polity. Hydro and tidal have no correction — they are not yet body-modeled and run from the seeded `facilities_operations` rate.
+- latitude / longitude — Where the facility stands on its body (degrees; default 0), which sets its light where its body's day outlasts an interval, as the Moon's does: the share of each interval its sun stands above the facility's horizon. A body whose day is far shorter than an interval, as Earth's, or a spacecraft gives its steady average instead, one less its `shade_factor`. Either way `solar_correction` multiplies the share in light, standing for the site's weather and latitude.
 - time_horizon — Planning horizon used by AI and automations (inventory reserves, resupply, etc.). Shorter for facilities with frequent resupply (e.g., Earth), longer for facilities with infrequent resupply (e.g., LEO).
 - facility_class — `facility_classes.tsv` row classifying this facility. For unitary facilities it supplies the revenue/cost line items (the facility is one activity); for non-unitary facilities it is descriptive (they book per operation). Current values: POLITY (the nations), GROUND_FACILITIES (Earth space agencies), RESEARCH_STATION (ISS / Tiangong slices).
 

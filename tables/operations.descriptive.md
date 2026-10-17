@@ -5,8 +5,8 @@ Operations are the activity of modules. Operations generate or consume electrici
 Notes:
 
 1. In extraction operations, energy requirement and output resources depend on the specific strata. Mining and drilling operations listed here are further subdivided within the simulation by target strata, so each listed here really represents multiple operations internally. 
-2. Non-extraction operations are fixed in their input and output resource ratios. For these we have separately listed operations to simulate different resource streams. Fungibility in the simulation is handled by having multiple operations that use the same module (i.e., the same infrastructure); modules can shift operation proportions in response to resource prices or other factors. 
-3. Electricity and heat are handled separately outside of the physical resources list.
+2. Non-extraction operations are fixed in their input and output resource ratios. Alternative inputs or processes, such as a food plant packaging in plastic or in aluminium, are listed as separate operations that use the same module (i.e., the same infrastructure); modules can shift operation proportions in response to resource prices or other factors. 
+3. Heat is handled separately outside of the physical resources list.
 4. The simulation includes resources sinks, sources, and conversions that aren't represented here as operations:
    - Infrastructure and Heavy Rockets/Transports are not available in the commodity trade system (so can never be inputs). They are "used up" locally to create fixed and mobile assets (respectively) handled individually in the simulation.
    - Depending on location, dumps can accumulate (i.e., "store") waste products.
@@ -39,6 +39,7 @@ Notes:
 - **D-³He Fusion Power** — Electricity and heat from D-³He fusion, producing substantially fewer neutrons than D-T cycles but requiring twice the ignition temperature.
 - **³He-³He Fusion Power** — Electricity and heat from ³He-³He fusion, producing no neutrons but requiring higher ignition temperature than D-³He Fusion.
 - **Radioisotope Power** — Electricity and heat from radioactive decay in radioisotope thermoelectric generators (RTGs) and Stirling radioisotope generators. Uses plutonium-238 or strontium-90 produced in reactor operations. Low power density but extreme reliability and longevity; critical for deep outer solar system probes and surface stations with limited sunlight.
+- **Battery Storage** — Charging batteries with power while the sun shines and discharging them at night or in eclipse, a share of it lost on the round trip.
 
 
 ## Extraction
@@ -146,7 +147,7 @@ Notes:
 ## Biological
 
 - **Crew Life Support** — Integrated environmental control and life support for crewed spacecraft, stations, and planetary surface habitats. Encompasses atmosphere management (oxygen supply, carbon dioxide scrubbing, trace contaminant removal), water recovery and purification, thermal regulation, fire detection and suppression, and radiation monitoring. On Earth, most functions are provided by natural environmental services and municipal infrastructure; in space habitats and planetary outposts, requires dedicated closed-loop systems operating continuously with high reliability.
-- **Urban Operations** — Aggregate residential, commercial, transportation, utility, and public-service functions of populated settlements. Encompasses housing, retail and office space, roads and transit systems, power and water distribution, sanitation, education, healthcare delivery, emergency services, and cultural amenities. Represents the carrying capacity for human habitation from small outposts to major metropolitan areas, and what its residents themselves consume day to day: food, drinking water and air, household goods, fuel for private vehicles, and household electricity, returned as sewage and food waste, household refuse, and exhaled and exhaust gases.
+- **Urban Operations** — The housing of populated settlements, from small outposts to major metropolitan areas: the room its residents live in, made as human habitation that they draw to fill their shelter need. What the residents themselves consume day to day, food, water and air, goods, services, fuel for their cars and household electricity, is their wants (`wants.tsv`), not the operation's.
 - **Open Agriculture** — Conventional cultivation of crops and raising of livestock on open land under ambient atmospheric conditions. Produces plant-based foods, animal-based foods, fiber crops, and biomass feedstock. Applicable on Earth and in any sufficiently terraformed open environment, including O'Neill cylinder interiors.
 - **Controlled-Environment Agriculture** — Sealed, controlled-environment crop cultivation and animal husbandry in pressurized greenhouses, space station grow modules, or planetary surface habitats. Requires artificial or filtered lighting, active atmosphere management (CO₂ supply, humidity control), water recycling, and nutrient delivery. Co-produces oxygen via photosynthesis.
 - **Open Aquaculture** — Marine and freshwater farming of fish, shellfish, seaweed, and microalgae in open water bodies.
@@ -157,7 +158,8 @@ Notes:
 - **Open Forestry** — Managed cultivation and harvest of trees for timber, pulp, and biomass in open conditions. (Simulation note: this is an extraction operation.)
 - **Artisanal Farming** — Small-scale family-farm and handcraft food production: artisan cheeses, charcuterie, preserves, craft beverages, baked goods, and other specialty food products. Represents culturally significant, high-value-per-mass food production distinct from industrial agriculture and food processing.
 - **Artisanal Crafting** — Small-scale handcraft production of non-food goods: pottery, handmade textiles, woodcraft, leatherwork, artisanal soap, candles, and decorative items. Represents culturally significant, high-value-per-mass goods production distinct from industrial manufacturing.
-- **Food Processing & Packaging** — Cooking, preservation (retort, freeze-drying, dehydration, thermostabilization), and packaging of agricultural and aquacultural products into shelf-stable prepared meals. Critical for space operations where fresh-food supply is intermittent.
+- **Food Processing & Packaging** — Cooking, preservation (retort, freeze-drying, dehydration, thermostabilization), and packaging in plastic of agricultural and aquacultural products into shelf-stable prepared meals. Critical for space operations where fresh-food supply is intermittent.
+- **Food Processing & Canning** — The same meals preserved in aluminium cans.
 - **Pharmaceuticals Synthesis** — Chemical synthesis, fermentation, purification, and formulation of drugs, vaccines, biologics, and medical compounds. Consumes biochemical intermediates, fine chemicals, water, and packaging materials (glass vials, polymer closures, foil laminates).
 - **Soil Conditioning** — Preparation of growth media from raw regolith, mineral amendments, organic waste, water, and microbial inoculants. Includes composting, pH adjustment, nutrient loading, and toxin remediation (e.g., perchlorate removal for Mars regolith). Critical ISRU step for establishing agriculture on extraterrestrial surfaces.
 - **Biomass Liquefaction** — Hydrothermal liquefaction, catalytic pyrolysis-upgrading, and transesterification of biological lipids and wet biomass to produce liquid hydrocarbons (renewable diesel, bio-crude, biodiesel). Consumes biofeedstock, algal biomass, or crop-derived oils. Co-produces organic residues and water.

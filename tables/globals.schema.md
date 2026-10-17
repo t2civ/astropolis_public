@@ -18,11 +18,6 @@ Values here are game-start seeds at the 2015 vintage, like every other seed in
   how sampling and shared content work.
 - information_pool — FLOAT in `bit`. The equivalent pool for Shannon information, from
   which `information_fraction` samples.
-- population_intrinsic_growth — FLOAT in `1/y`. The intrinsic (unconstrained) growth
-  rate seeded onto every population at every facility, before the carrying-capacity
-  term. One rate for everyone cannot reproduce real divergence between polities —
-  Japan's population falls while India's rises — so this is a starting point, not a
-  finished model.
 
 
 ## Notes
