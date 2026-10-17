@@ -190,6 +190,7 @@ Notes:
 - **Exchange Operations** — Operation of trading venues and central clearing: order matching, settlement guarantee, and coordination of delivery load-out for traded goods. Compute- and communications-intensive.
 - **Wholesale & Logistics** — Bulk distribution and freight movement of goods within a body. Consumes transport vehicles and energy.
 - **Passenger Services** — Movement of people within a body via transit and carriers. Consumes transport vehicles and energy.
+- **Radioactive Storage** — Keeping spent fuel and radioactive waste in dry casks: the space of the radioactive class, made by the watch and handling a store needs. Consumes labor.
 - **Retail Services** — Sale and last-mile distribution of goods to consumers, moving consumer goods to end users.
 - **Hospitality** — Provision of lodging, food service, and travel accommodation. Consumes prepared food and consumer goods.
 - **Entertainment** — Provision of in-person leisure and recreation at venues and events.

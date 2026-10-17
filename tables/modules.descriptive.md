@@ -133,6 +133,7 @@ Notes:
 - **Research Laboratories** — Scientific and engineering research establishments: laboratories, test beds, prototyping shops, observatories, and experimental facilities across the physical, biological, and computational sciences.
 - **Exchanges** — Organized marketplaces and clearing houses where commodities and contracts are traded, settlement is guaranteed, and deliveries are coordinated for dispatch.
 - **Transport & Logistics Hubs** — Freight and passenger infrastructure: warehouses, depots, freight terminals, transit stations, ports, and spaceport surface operations that move goods and people within a body.
+- **Dry-Cask Stores** — Independent installations for spent nuclear fuel and radioactive waste: welded steel canisters in concrete overpacks on shielded pads, passively cooled, with the transfer casks and cranes that load them and the staff who watch them. A unit holds a tonne; its space is what it sells.
 - **Retail & Commercial Centers** — Consumer-facing establishments: shops and markets, hotels and restaurants, entertainment venues, and personal-service businesses. The commercial fabric of a settlement.
 - **Hospitals & Clinics** — Medical establishments: hospitals, clinics, surgeries, diagnostic centers, and pharmacies, equipped for diagnosis, treatment, and care.
 - **Schools & Universities** — Educational establishments: schools, colleges, universities, and vocational and training institutions.

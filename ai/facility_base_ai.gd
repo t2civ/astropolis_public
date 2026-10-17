@@ -608,8 +608,12 @@ func _update_price_swings(delta: float) -> void:
 		_last_prices[resource_type] = price
 		if !(price > 0.0 and last > 0.0):
 			continue
+		# A glut's price can fall to a denormal, past which its ratio to the next overflows.
+		var move := absf(log(price / last))
+		if !is_finite(move):
+			continue
 		var swing := _price_swings[resource_type]
-		_price_swings[resource_type] = swing + (absf(log(price / last)) - swing) * weight
+		_price_swings[resource_type] = swing + (move - swing) * weight
 
 
 ## Sets [member operation_strategies] for [param operation_type], emitting
