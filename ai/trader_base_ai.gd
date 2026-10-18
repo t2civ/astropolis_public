@@ -16,7 +16,7 @@ extends BaseAI
 ## Traders are paired 1-to-1 with facilities. This trader contracts toward its facility's desired
 ## rate of each resource over the coming horizon, within what its facility's critical rate and its
 ## owners' means allow, and leans its quotes toward its facility's own price while what it
-## contracted falls short (TRADE_MODEL.md, "The facility trader rebuilt: the plan"). It reads its
+## contracted falls short (TRADE_MODEL.md, "The facility trader"). It reads its
 ## facility's rates and prices, never its stock, and trades in the posture and resource strategies
 ## its facility's AI authors (it trusts that these already incorporate player strategies).[br][br]
 ##
@@ -146,8 +146,7 @@ const QTY_TOLERANCE := 0.1
 ## [constant CREDIT_SHARE]). The [code]two_sided[/code] switch makes markets in every resource the
 ## facility deals in (see [method is_market_resource]), for which the facility AI holds stock
 ## against its market's swings; the trader's standing quote on the side its gap doesn't ask for is
-## built after facility support passes the colony bench (TRADE_MODEL.md, "The facility trader
-## rebuilt: the plan").
+## not built (TRADE_MODEL.md, "The facility trader").
 static var trader_strategy_defs: Array[Dictionary] = [
 	{}, # INIT
 	{}, # FACILITY_SUPPORT
