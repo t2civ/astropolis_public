@@ -16,7 +16,8 @@ extends BaseAI
 ## Traders are paired 1-to-1 with facilities. This trader contracts toward its facility's desired
 ## rate of each resource over the coming horizon, within what its facility's critical rate and its
 ## owners' means allow, and leans its quotes toward its facility's own price while what it
-## contracted falls short (TRADE_MODEL.md, "The facility trader"). It reads its
+## contracted falls short; in a two-sided posture it also keeps a quote standing on the other side
+## (TRADE_MODEL.md, "The facility trader"). It reads its
 ## facility's rates and prices, never its stock, and trades in the posture and resource strategies
 ## its facility's AI authors (it trusts that these already incorporate player strategies).[br][br]
 ##
@@ -145,8 +146,8 @@ const QTY_TOLERANCE := 0.1
 ## [code]credit_share[/code] sets the share of its owners' means the trader may commit (see
 ## [constant CREDIT_SHARE]). The [code]two_sided[/code] switch makes markets in every resource the
 ## facility deals in (see [method is_market_resource]), for which the facility AI holds stock
-## against its market's swings; the trader's standing quote on the side its gap doesn't ask for is
-## not built (TRADE_MODEL.md, "The facility trader").
+## against its market's swings: the trader keeps a quote standing on the side its gap doesn't ask
+## for (see [method _plan_resource]).
 static var trader_strategy_defs: Array[Dictionary] = [
 	{}, # INIT
 	{}, # FACILITY_SUPPORT
@@ -242,12 +243,15 @@ var _key_width := 2
 # Per resource, how far ahead this interval's quotes contract it, in sim time; 0.0 where it isn't
 # traded.
 var _windows: PackedFloat64Array
-# This interval's quotes, one entry per instrument: its key, the ask and the bid wanted (trade
-# units) and their prices, and the resource's def. Built by _plan_quotes, cut by
-# _bound_commitments and placed by _place_quotes.
+# This interval's quotes, one entry per instrument: its key, the ask and the bid its gap wants and
+# those a two-sided posture keeps standing on the other side (trade units), the ask's and the bid's
+# price, and the resource's def. Built by _plan_resource, cut by _bound_commitments and placed by
+# _place_quotes.
 var _plan_keys: Array[PackedInt32Array] = []
 var _plan_asks: PackedInt64Array
 var _plan_bids: PackedInt64Array
+var _plan_standing_asks: PackedInt64Array
+var _plan_standing_bids: PackedInt64Array
 var _plan_ask_prices: PackedInt64Array
 var _plan_bid_prices: PackedInt64Array
 var _plan_defs: Array[Dictionary] = []
@@ -318,9 +322,9 @@ func ai_init() -> void:
 
 ## Each interval contracts every resource its facility flags
 ## [constant FacilityProxy.InventoryFlags.TRADABLE] toward the facility's desired rate, as its
-## strategy's def directs (see [method _plan_resource]); cuts what it would bid to what its owners'
-## means allow (see [method _bound_commitments]); then places the quotes and cancels any order
-## resting outside them.
+## strategy's def directs, a two-sided posture quoting both sides of each one its facility deals in
+## (see [method _plan_resource]); cuts what it would bid to what its owners' means allow (see
+## [method _bound_commitments]); then places the quotes and cancels any order resting outside them.
 func process_ai_interval(_delta: float) -> void:
 	const TRADABLE := FacilityProxy.InventoryFlags.TRADABLE
 	var market := proxy.market
@@ -329,13 +333,16 @@ func process_ai_interval(_delta: float) -> void:
 	_drop_expired_memory()
 	_clear_plan()
 	var posture_def := trader_strategy_defs[trader_strategy]
+	var two_sided: bool = posture_def.get(&"two_sided", false)
 	for resource_type in resource_strategies.size():
 		if _stop:
 			return # cooperative bail; nothing placed, so the last interval's quotes stand
 		_windows[resource_type] = 0.0
-		if !(_facility.get_inventory_flags(resource_type) & TRADABLE):
+		var flags := _facility.get_inventory_flags(resource_type)
+		if !(flags & TRADABLE):
 			continue
-		_plan_resource(resource_type, market, resource_strategy_defs[resource_strategies[resource_type]])
+		var def := resource_strategy_defs[resource_strategies[resource_type]]
+		_plan_resource(resource_type, market, def, two_sided and is_market_resource(flags))
 	_bound_commitments(posture_def)
 	_place_quotes()
 
@@ -347,8 +354,16 @@ func process_ai_interval(_delta: float) -> void:
 ## is held to the def's sides, never below what the facility could spare (-C, the critical rate)
 ## and at least C where the facility must take. Quotes lean off the reference price toward the
 ## facility's local price, as far as the def's [code]lean[/code] times the gap as a share of what it
-## would contract, each side quoting that limit.
-func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary) -> void:
+## would contract, each side quoting that limit.[br][br]
+##
+## With [param standing], a two-sided posture's, each quarter also keeps a lot (the def's
+## [code]min_lot[/code]) standing on the side its gap doesn't ask for, where the def trades that
+## side: an ask where the facility could spare a lot over the quarter's part of the window, a bid
+## where it uses one. Toward the facility's price it leans the def's whole lean, and on the far side
+## it stands at that price, so its market always has a price, and one that follows its facilities
+## (TRADE_MODEL.md, "Market makers").
+func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, standing: bool
+		) -> void:
 	var buys: bool = def.get(&"buy", false)
 	var sells: bool = def.get(&"sell", false)
 	var desired := _facility.get_inventory_desired_rate(resource_type)
@@ -361,14 +376,17 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary) ->
 		return
 	_windows[resource_type] = window
 	var multiplier := _trade_unit_multipliers[resource_type]
+	var spare := maxf(-critical, 0.0) # the most its facility could spare
 	var rate := desired
 	if !buys:
 		rate = minf(rate, 0.0)
 	if !sells:
 		rate = maxf(rate, 0.0)
-	rate = maxf(rate, -maxf(-critical, 0.0)) # sells no more than its facility could spare
+	rate = maxf(rate, -spare)
 	if buys:
 		rate = maxf(rate, critical) # takes at least what its facility must
+	var min_lot: int = def.get(&"min_lot", MIN_LOT)
+	var use := _facility.get_inventory_use(resource_type) if standing else 0.0
 	var now := _last_interval
 	var end := now + window
 	var current_quarter := proxy.ordinal_qtr
@@ -384,12 +402,31 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary) ->
 			var key := PackedInt32Array([resource_type, quarter])
 			var position: PackedFloat64Array = _positions_by_instrument.get(key,
 					PackedFloat64Array())
-			var want := roundi(rate * held / multiplier - (position[0] if position else 0.0))
+			var position_quantity := position[0] if position else 0.0
+			var want := roundi(rate * held / multiplier - position_quantity)
 			gap += want
 			target += absf(rate * held / multiplier)
+			var ask := maxi(-want, 0)
+			var bid := maxi(want, 0)
+			var standing_ask := 0
+			var standing_bid := 0
+			# A lot gives the market its price: quotes sized to the facility's flow traded on the
+			# gap between prices as much as on the desired rate. A bid where the facility uses
+			# nothing is demand nobody has, which held a good nobody used at whatever its makers
+			# last traded it among themselves.
+			if standing:
+				if (sells and ask < min_lot
+						and position_quantity + spare * held / multiplier >= min_lot):
+					standing_ask = min_lot
+					ask = 0
+				if buys and bid < min_lot and use * held / multiplier >= min_lot:
+					standing_bid = min_lot
+					bid = 0
 			_plan_keys.append(key)
-			_plan_asks.append(maxi(-want, 0))
-			_plan_bids.append(maxi(want, 0))
+			_plan_asks.append(ask)
+			_plan_bids.append(bid)
+			_plan_standing_asks.append(standing_ask)
+			_plan_standing_bids.append(standing_bid)
 			_plan_defs.append(def)
 		start = quarter_end
 		quarter += 1
@@ -403,45 +440,74 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary) ->
 	# that prices it at nothing leans toward the floor.
 	var own_price := maxf(_facility.get_inventory_local_price(resource_type) * multiplier,
 			OWN_PRICE_FLOOR * reference_price)
-	var lean := 0.0
 	var price_gap := log(own_price / reference_price)
+	var full_lean: float = def.get(&"lean", LEAN) * price_gap
+	var lean := 0.0
 	if price_gap * gap_share > 0.0:
-		lean = def.get(&"lean", LEAN) * absf(gap_share) * price_gap
+		lean = absf(gap_share) * full_lean
 	var limit_price := reference_price * exp(lean)
 	var bid_limit := maxi(floori(limit_price), 1)
 	var ask_limit := maxi(ceili(limit_price), 1)
+	# Quoted off the reference alone, a market whose traders' gaps had closed held its last trade's
+	# price while every facility's own moved away from it.
+	var leaned_price := reference_price * exp(full_lean)
+	var standing_ask_price := ceili(maxf(own_price, leaned_price))
+	var standing_bid_price := floori(minf(own_price, leaned_price))
 	# Each quotes its own limit, and a cross matches at the midpoint (TRADE_MODEL.md, "The price").
+	# A standing quote stays clear of the trader's own on the other side, which wouldn't trade.
 	for i in range(first, _plan_keys.size()):
-		_plan_ask_prices.append(ask_limit)
-		_plan_bid_prices.append(bid_limit)
+		var ask_price := ask_limit
+		var bid_price := bid_limit
+		if _plan_standing_asks[i]:
+			ask_price = maxi(standing_ask_price,
+					(bid_limit if _plan_bids[i] else standing_bid_price) + 1)
+		if _plan_standing_bids[i]:
+			bid_price = standing_bid_price
+			if _plan_asks[i] or _plan_standing_asks[i]:
+				bid_price = mini(bid_price, ask_price - 1)
+			if bid_price < 1:
+				_plan_standing_bids[i] = 0
+				bid_price = bid_limit
+		_plan_ask_prices.append(ask_price)
+		_plan_bid_prices.append(bid_price)
 
 
 ## Cuts this interval's planned bids in proportion so that what the trader commits, its open
 ## positions net (longs to pay less shorts to be paid) and the bids, stays within its posture's
 ## [code]credit_share[/code] of what its owners hold (see
-## [method FacilityProxy.get_owners_wealth]).
+## [method FacilityProxy.get_owners_wealth]). The bids its gaps ask for come first; the standing
+## bids of a two-sided posture take what room they leave.
 func _bound_commitments(posture_def: Dictionary) -> void:
 	var payable := 0.0
 	for key in _positions_by_instrument:
 		var position := _positions_by_instrument[key]
 		payable += position[0] * position[1]
 	var bid_value := 0.0
+	var standing_value := 0.0
 	for i in _plan_keys.size():
 		bid_value += float(_plan_bids[i]) * _plan_bid_prices[i]
-	if !(bid_value > 0.0):
+		standing_value += float(_plan_standing_bids[i]) * _plan_bid_prices[i]
+	if !(bid_value + standing_value > 0.0):
 		return
 	var credit_share: float = posture_def.get(&"credit_share", CREDIT_SHARE)
-	var limit := credit_share * _facility.get_owners_wealth()
-	if payable + bid_value <= limit:
+	var room := credit_share * _facility.get_owners_wealth() - payable
+	if bid_value + standing_value <= room:
 		return
-	var share := clampf((limit - payable) / bid_value, 0.0, 1.0)
+	var share := 1.0
+	if bid_value > 0.0:
+		share = clampf(room / bid_value, 0.0, 1.0)
+	var standing_share := 1.0
+	if standing_value > 0.0:
+		standing_share = clampf((room - bid_value) / standing_value, 0.0, 1.0)
 	for i in _plan_keys.size():
 		_plan_bids[i] = floori(_plan_bids[i] * share)
+		_plan_standing_bids[i] = floori(_plan_standing_bids[i] * standing_share)
 
 
 ## Places this interval's planned quotes, each side re-quoted only where it drifted past its def's
-## tolerances, and cancels every order resting on an instrument the plan doesn't cover. A quarter
-## wants one side only, so the other side's order, if any, is cancelled with it.
+## tolerances, and cancels every order resting on an instrument the plan doesn't cover. A quarter's
+## gap wants one side only, so the other side's order, if any, is cancelled with it unless a
+## two-sided posture keeps a quote standing there.
 func _place_quotes() -> void:
 	for i in _plan_keys.size():
 		var key := _plan_keys[i]
@@ -449,8 +515,21 @@ func _place_quotes() -> void:
 		var min_lot: int = def.get(&"min_lot", MIN_LOT)
 		var price_tol: float = def.get(&"price_tol", PRICE_TOLERANCE)
 		var qty_tol: float = def.get(&"qty_tol", QTY_TOLERANCE)
-		_maintain_ask(key, _plan_asks[i], _plan_ask_prices[i], min_lot, price_tol, qty_tol)
-		_maintain_bid(key, _plan_bids[i], _plan_bid_prices[i], min_lot, price_tol, qty_tol)
+		_maintain_ask(key, _plan_asks[i] + _plan_standing_asks[i], _plan_ask_prices[i], min_lot,
+				price_tol, qty_tol)
+		var bid_quantity := _plan_bids[i] + _plan_standing_bids[i]
+		var bid_price := _plan_bid_prices[i]
+		var bid_price_tol := price_tol
+		if _asks.has(key):
+			# An ask kept within its tolerance can stand below the price planned for it, and the
+			# market removes its own bid at or above it unmatched.
+			var ask_price := _asks[key][1]
+			bid_price = mini(bid_price, ask_price - 1)
+			if bid_price < 1:
+				bid_quantity = 0
+			if _bids.has(key) and _bids[key][1] >= ask_price:
+				bid_price_tol = 0.0
+		_maintain_bid(key, bid_quantity, maxi(bid_price, 1), min_lot, bid_price_tol, qty_tol)
 		_planned[key] = true
 	_cancel_unplanned()
 
@@ -591,6 +670,8 @@ func _clear_plan() -> void:
 	_plan_keys.clear()
 	_plan_asks.clear()
 	_plan_bids.clear()
+	_plan_standing_asks.clear()
+	_plan_standing_bids.clear()
 	_plan_ask_prices.clear()
 	_plan_bid_prices.clear()
 	_plan_defs.clear()
