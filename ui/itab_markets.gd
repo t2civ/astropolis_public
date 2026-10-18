@@ -825,10 +825,11 @@ func _get_cover_share(quantity: float, horizon_need: float) -> float:
 	return INF if quantity > 0.0 else NAN
 
 
-func _format_price(unit_price: float) -> String:
-	if !(unit_price > 0.0):
+# Formats [param price], money per trade unit, in dollars.
+func _format_price(price: float) -> String:
+	if !(price > 0.0):
 		return NO_VALUE
-	return IVQFormat.metric_number(unit_price)
+	return IVQFormat.metric_number(price / IVUnits.USD)
 
 
 # Formats [param rate], in sim units per second, as trade units per day.
@@ -868,8 +869,7 @@ func _format_spread(bid_unit_price: int, ask_unit_price: int) -> String:
 
 
 func _format_book(bid_unit_price: int, ask_unit_price: int) -> String:
-	return "Bid %s / ask %s" % [str(bid_unit_price) if bid_unit_price else NO_VALUE,
-			str(ask_unit_price) if ask_unit_price else NO_VALUE]
+	return "Bid %s / ask %s" % [_format_price(bid_unit_price), _format_price(ask_unit_price)]
 
 
 func _format_horizon(horizon: float) -> String:
@@ -893,7 +893,7 @@ func _format_quarter(ordinal_qtr: int) -> String:
 
 class RowData extends RefCounted:
 	# One resource's values, gathered on the proxy thread. Rates are sim units per second,
-	# quantities sim units, local price sim units, unit prices $ per trade unit, and the window
+	# quantities sim units, local price sim units, unit prices money per trade unit, and the window
 	# sums trade units.
 	var resource_type: int
 	var is_tradable: bool

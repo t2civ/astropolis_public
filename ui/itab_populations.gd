@@ -544,7 +544,8 @@ func _get_means_lines(data: PopulationsData) -> Array[LineData]:
 		var work_resource := _get_work_resource(column.population_type, data.types)
 		var multiplier := (_trade_unit_multipliers[work_resource] if work_resource != -1
 				else 1.0)
-		_add_cell(wealth, _format_money(column.wealth), "$" + _format_named(column.wealth))
+		_add_cell(wealth, _format_money(column.wealth),
+				"$" + _format_named(column.wealth / IVUnits.USD))
 		_add_cell(wealth_per_head, _format_money(_get_ratio(column.wealth, column.number)))
 		_add_cell(years, _format_value(column.years_of_wants)
 				if _has_any_want(column.population_type, data.types) else NOT_APPLICABLE)
@@ -694,12 +695,13 @@ func _get_ratio(numerator: float, denominator: float) -> float:
 	return numerator / denominator if denominator > 0.0 else NAN
 
 
-func _format_money(dollars: float) -> String:
-	if is_nan(dollars):
+# Formats [param money] in dollars.
+func _format_money(money: float) -> String:
+	if is_nan(money):
 		return NO_VALUE
-	if !dollars:
+	if !money:
 		return "0"
-	return IVQFormat.metric_number(dollars)
+	return IVQFormat.metric_number(money / IVUnits.USD)
 
 
 func _format_named(number: float) -> String:
@@ -747,10 +749,11 @@ func _format_gini(spread: float) -> String:
 	return "%.2f" % (1.0 - series * exp(-x * x))
 
 
-func _format_price(unit_price: float) -> String:
-	if !(unit_price > 0.0):
+# Formats [param price], money per trade unit, in dollars.
+func _format_price(price: float) -> String:
+	if !(price > 0.0):
 		return NO_VALUE
-	return IVQFormat.metric_number(unit_price)
+	return IVQFormat.metric_number(price / IVUnits.USD)
 
 
 # Formats [param rate], in sim units per second, as trade units per day.

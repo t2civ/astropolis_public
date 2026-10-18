@@ -19,13 +19,13 @@ The data type is ARRAY[FLOAT]; each cell holds 20 values delimited by semicolons
   `birth_weights` in `populations.tsv`.
 - 1 value — the spread: how unevenly the population's people are served, as the standard
   deviation of the log of their access to what they want. Zero serves all alike.
-- 1 value, in dollars — the wealth per head. Its classes hold it as unevenly as they are
+- 1 value, with an inline `$` — the wealth per head. Its classes hold it as unevenly as they are
   served, and spend it at the type's `spending_rate` (`populations.tsv`).
 - 1 value — the participation: the most of its able hours the population offers, its
   weighted heads times `work_hours` (`populations.tsv`) being all of them. From the first
   interval it moves toward what its type's participation response implies.
 
-The rates carry an inline `/y`. A cell must be present for every population that
+The rates carry an inline `/y`, and the wealth an inline `$`. A cell must be present for every population that
 `facilities.tsv` seeds, and is empty otherwise.
 
 
