@@ -170,14 +170,6 @@ enum OperationStrategies {
 }
 
 
-## Default buffer stock a market-making facility warehouses, in time horizons of its
-## turnover of the resource, the larger of its gross production and consumption (def key
-## [code]buffer_stock_factor[/code] overrides).
-const BUFFER_STOCK_FACTOR := 1.0
-## Default buffer stock floor a market-making facility warehouses, in trade units (def
-## key [code]buffer_stock_lots[/code] overrides); backs a standing two-sided quote even
-## for a resource with no current throughput.
-const BUFFER_STOCK_LOTS := 4
 ## Time horizons of use a market maker holds past its strategy's level for each e-fold its local
 ## price moves from one interval to the next, on average over [constant SWING_MEMORY]: stock held
 ## against the swings of the market it makes (PRODUCTION_MODEL.md, "What a facility is").
@@ -226,26 +218,23 @@ static var facility_strategy_defs: Array[Dictionary] = [
 ## [enum FacilityResourceStrategies] value. Keys are facility-side knob params
 ## read by [method _apply_strategy_knobs]: [code]level_lever[/code] (stock held beyond
 ## the critical level, in time horizons of use; see
-## [method FacilityProxy.set_inventory_level_lever]),
-## [code]buffer_stock_factor[/code] and [code]buffer_stock_lots[/code] (the buffer
-## stock a market-making facility warehouses; see [constant BUFFER_STOCK_FACTOR]),
-## [code]prohibit_production[/code], [code]prohibit_consumption[/code]. Empty
-## entries take all defaults (nothing beyond the critical level, a market maker's default
-## buffer stock, no flags).
+## [method FacilityProxy.set_inventory_level_lever]), [code]prohibit_production[/code],
+## [code]prohibit_consumption[/code]. Empty entries take all defaults (nothing beyond the
+## critical level, no flags).
 static var facility_resource_strategy_defs: Array[Dictionary] = [
 	{&"level_lever": 0.25}, # NEUTRAL
 	{}, # PRIMARY_PRODUCT
 	{}, # SECONDARY_PRODUCT
 	{}, # COPRODUCT
 	{}, # BYPRODUCT
-	{&"buffer_stock_factor": 0.0, &"buffer_stock_lots": 0}, # WASTE
+	{}, # WASTE
 	{&"level_lever": 1.0}, # CRITICAL_INPUT
 	{}, # ROUTINE_INPUT
 	{}, # CONSUMABLE
-	{&"buffer_stock_factor": 0.0, &"buffer_stock_lots": 0}, # CLOSED_LOOP_INTERMEDIATE
+	{}, # CLOSED_LOOP_INTERMEDIATE
 	{&"level_lever": 2.0}, # STRATEGIC_RESERVE
 	{}, # SPECULATIVE_POSITION
-	{&"prohibit_production": true, &"buffer_stock_factor": 0.0, &"buffer_stock_lots": 0}, # PHASE_OUT
+	{&"prohibit_production": true}, # PHASE_OUT
 ]
 
 ## Per-operation strategy definitions; index = [enum OperationStrategies] value.
@@ -272,7 +261,6 @@ static var operation_strategy_defs: Array[Dictionary] = [
 ]
 
 static var _table_n_rows := IVTableData.table_n_rows
-static var _trade_unit_multipliers := ThreadsafeGlobal.resource_trade_unit_multipliers
 static var _tradable_resources: PackedInt32Array
 
 var proxy: FacilityProxy
@@ -337,7 +325,7 @@ func ai_init() -> void:
 	_player_ai.body_strategy_changed.connect(_on_player_body_strategy_changed)
 	# new_quarter does not fire on load or the first adopted quarter, so author once
 	# here to bootstrap (and re-author idempotently after load). The trader's posture
-	# goes first: the resource knobs size a market maker's buffer stock from it.
+	# goes first: the resource knobs hold a market maker's stock against its swings from it.
 	_author_trader_strategy()
 	_author_resource_strategies()
 	_author_facility_strategy()
@@ -472,9 +460,8 @@ func _reconcile_resource_strategy(resource_type: int, capability: int) -> int:
 	return capability
 
 
-## Translates the resource's strategy def into server knobs: the level lever, the buffer stock
-## and the PROHIBIT inventory flag bits (flags written only on change; preserves any other
-## FROM_PROXY bits).
+## Translates the resource's strategy def into server knobs: the level lever and the PROHIBIT
+## inventory flag bits (flags written only on change; preserves any other FROM_PROXY bits).
 func _apply_strategy_knobs(resource_type: int, strategy: int) -> void:
 	const PROHIBIT_CONSUMPTION := FacilityProxy.InventoryFlags.PROHIBIT_CONSUMPTION
 	const PROHIBIT_PRODUCTION := FacilityProxy.InventoryFlags.PROHIBIT_PRODUCTION
@@ -486,17 +473,6 @@ func _apply_strategy_knobs(resource_type: int, strategy: int) -> void:
 	if _is_market_made(resource_type):
 		lever += SWING_HORIZONS * _price_swings[resource_type]
 	proxy.set_inventory_level_lever(resource_type, lever)
-	var buffer_stock := 0.0
-	if _is_market_made(resource_type):
-		var buffer_factor: float = def.get(&"buffer_stock_factor", BUFFER_STOCK_FACTOR)
-		var buffer_lots: int = def.get(&"buffer_stock_lots", BUFFER_STOCK_LOTS)
-		# A warehouse serves the market's turnover, which the net flow understates
-		# wherever the facility both produces and consumes the resource.
-		var turnover := maxf(proxy.get_inventory_production_rate(resource_type),
-				proxy.get_inventory_consumption_rate(resource_type))
-		buffer_stock = (buffer_factor * turnover * proxy.time_horizon
-				+ buffer_lots * _trade_unit_multipliers[resource_type])
-	proxy.set_inventory_buffer_stock(resource_type, buffer_stock)
 
 	var current := proxy.get_inventory_flags(resource_type) & FROM_PROXY_MASK
 	var desired := current & ~(PROHIBIT_CONSUMPTION | PROHIBIT_PRODUCTION)
@@ -589,8 +565,8 @@ func _reconcile_trader_strategy() -> int:
 	return TS.MARKET_MAKING if proxy.market_maker else TS.FACILITY_SUPPORT
 
 
-## True if the trader's posture makes a market in [param resource_type] here, which is
-## what a market-making facility warehouses buffer stock for.
+## True if the trader's posture makes a market in [param resource_type] here, for which a
+## market-making facility holds stock against its market's swings.
 func _is_market_made(resource_type: int) -> bool:
 	var posture_def := TraderBaseAI.trader_strategy_defs[trader_strategy]
 	if !posture_def.get(&"two_sided", false):

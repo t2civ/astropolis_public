@@ -132,7 +132,6 @@ enum InventoryItems {
 	IN_TRANSITS = 1 << 5,
 	RATES = 1 << 6,
 	FLAGS = 1 << 7,
-	BUFFER_STOCKS = 1 << 8,
 }
 
 
@@ -366,17 +365,6 @@ func get_flags() -> int:
 ## Returns the per-resource level levers array. Return is proxy array reference;
 ## read only!
 @abstract func get_inventory_level_levers() -> PackedFloat64Array
-
-
-## Returns the buffer stock for [param resource_type]: stock the AI would hold for the market,
-## such as a market maker's warehouse. The facility ignores it until trade is rebuilt
-## (PRODUCTION_MODEL.md, "Build order" of the feedback plan, step 8).
-@abstract func get_inventory_buffer_stock(resource_type: int) -> float
-
-
-## Returns the per-resource buffer stocks array. Return is proxy array
-## reference; read only!
-@abstract func get_inventory_buffer_stocks() -> PackedFloat64Array
 
 
 ## Returns the net flow rate of [param resource_type] averaged over the time horizon (positive
@@ -719,9 +707,3 @@ func get_market() -> MarketProxy:
 ## [method get_inventory_desired_level]). Proxy-authoritative: this change flows proxy ->
 ## server. No-op on an out-of-range index or invalid value.
 @abstract func set_inventory_level_lever(type: int, value: float) -> void
-
-
-## Sets the buffer stock for [param type], which the facility ignores until trade is rebuilt.
-## Proxy-authoritative: this change flows proxy -> server. No-op on an out-of-range index or
-## invalid value.
-@abstract func set_inventory_buffer_stock(type: int, value: float) -> void
