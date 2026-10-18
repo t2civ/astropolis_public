@@ -39,8 +39,8 @@ extends Proxy
 ## body's facilities buy and sell here is their own, summed on [BodyProxy] (see
 ## [method Proxy.get_operations_bought_rate]).[br][br]
 ##
-## Prices and order quantities are integer "ticks": price in integer cents per trade
-## unit ([code]ThreadsafeGlobal.UNIT_PRICES_PER_USD[/code]), quantity in integer "trade units"
+## Prices and order quantities are integer "ticks": price in integer USD per trade
+## unit (assumes [code]IVUnits.USD == 1.0[/code]), quantity in integer "trade units"
 ## ([code]trade_unit[/code] in [code]resources.tsv[/code]) — not the "sim units"
 ## used elsewhere ([IVUnits]). Quantities need 64 bits — a quarter's flow of a large
 ## resource passes 2^31 trade units — so hold them in [PackedInt64Array], never

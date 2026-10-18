@@ -87,7 +87,7 @@ const BIT := 1.0 # TODO: Backport to I, Voyager and use in unit_multipliers
 const FLOP := 1.0 # Time integral of FLOPS
 const FLOPS := FLOP / SECOND # Same as real-world FLOPS except FP32-equivilant
 const SPP := 1.0 # biodiversity (effective species)
-const USD := 1.0  # Treat as hard-coded (markets price in cents of it, see ThreadsafeGlobal).
+const USD := 1.0  # Treat as hard-coded (this is Markets price "tick").
 const Q := 1e6 # Short for the QSNINDC ;)
 
 # ********************************************

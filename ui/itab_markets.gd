@@ -77,7 +77,6 @@ enum {
 }
 
 const N_CELLS := 5
-const UNIT_PRICES_PER_USD := ThreadsafeGlobal.UNIT_PRICES_PER_USD
 const SUBGROUP_INDENT := 25
 
 const FACILITY_FLOWS: Array[int] = [COLUMN_LOCAL, COLUMN_TRADE, COLUMN_INTERNAL,
@@ -675,7 +674,7 @@ func _get_row_cell(column: int, row: RowData, horizon: float) -> Array:
 			if !row.has_market_price:
 				return [NO_VALUE, "No market here: only cyber resources have a price at a join\n"
 						+ "or player.\n" + count_text, TONE_NORMAL]
-			return [_format_price(row.unit_price / UNIT_PRICES_PER_USD),
+			return [_format_price(row.unit_price),
 					_format_book(row.bid_unit_price, row.ask_unit_price) + "\n" + count_text,
 					TONE_NORMAL]
 		COLUMN_SPREAD:
@@ -746,7 +745,7 @@ func _get_quarter_cell(column: int, row: RowData, quarter: QuarterData) -> Array
 	var unit := _get_unit_text(row.resource_type)
 	match column:
 		COLUMN_LOCAL, COLUMN_PRICE:
-			return [_format_price(quarter.unit_price / UNIT_PRICES_PER_USD),
+			return [_format_price(quarter.unit_price),
 					_format_book(quarter.bid_unit_price, quarter.ask_unit_price)]
 		COLUMN_SPREAD:
 			return [_format_spread(quarter.bid_unit_price, quarter.ask_unit_price),
@@ -774,8 +773,7 @@ func _get_local_tooltip(row: RowData, unit: String) -> String:
 	elif !row.has_market_price:
 		lines.append("No market price.")
 	else:
-		lines.append("Market price %s (%s)" % [
-				_format_price(row.unit_price / UNIT_PRICES_PER_USD),
+		lines.append("Market price %s (%s)" % [_format_price(row.unit_price),
 				_format_book(row.bid_unit_price, row.ask_unit_price).to_lower()])
 	if row.unmet_rate:
 		lines.append("Unmet %s/d" % (_format_rate(row.unmet_rate, multiplier) + unit))
@@ -870,9 +868,8 @@ func _format_spread(bid_unit_price: int, ask_unit_price: int) -> String:
 
 
 func _format_book(bid_unit_price: int, ask_unit_price: int) -> String:
-	return "Bid %s / ask %s" % [
-			_format_price(bid_unit_price / UNIT_PRICES_PER_USD) if bid_unit_price else NO_VALUE,
-			_format_price(ask_unit_price / UNIT_PRICES_PER_USD) if ask_unit_price else NO_VALUE]
+	return "Bid %s / ask %s" % [str(bid_unit_price) if bid_unit_price else NO_VALUE,
+			str(ask_unit_price) if ask_unit_price else NO_VALUE]
 
 
 func _format_horizon(horizon: float) -> String:
@@ -896,7 +893,7 @@ func _format_quarter(ordinal_qtr: int) -> String:
 
 class RowData extends RefCounted:
 	# One resource's values, gathered on the proxy thread. Rates are sim units per second,
-	# quantities sim units, local price sim units, unit prices cents per trade unit, and the window
+	# quantities sim units, local price sim units, unit prices $ per trade unit, and the window
 	# sums trade units.
 	var resource_type: int
 	var is_tradable: bool

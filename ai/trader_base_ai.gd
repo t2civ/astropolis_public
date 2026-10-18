@@ -139,7 +139,6 @@ const MIN_LOT := 1
 const PRICE_TOLERANCE := 0.005
 ## Re-quote a standing order when its desired quantity drifts beyond this fraction.
 const QTY_TOLERANCE := 0.1
-const UNIT_PRICES_PER_USD := ThreadsafeGlobal.UNIT_PRICES_PER_USD
 
 
 ## Trader-posture strategy definitions; index = [enum TraderStrategies] value.
@@ -195,7 +194,6 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 
 static var _table_n_rows := IVTableData.table_n_rows
 static var _trade_unit_multipliers := ThreadsafeGlobal.resource_trade_unit_multipliers
-static var _unit_price_multipliers := ThreadsafeGlobal.resource_unit_price_multipliers
 ## Per-resource 0/1; trade_class == CYBER (orders route to the cyber market). Built once.
 static var _is_cyber_resource: PackedByteArray
 
@@ -404,8 +402,7 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary) ->
 	# no more: a fixed step took years to close seeds ten or a hundred times off. A buyer leans up
 	# only where its facility prices the resource above the market, a seller down only below; one
 	# that prices it at nothing leans toward the floor.
-	var own_price := maxf(_facility.get_inventory_local_price(resource_type)
-			* _unit_price_multipliers[resource_type],
+	var own_price := maxf(_facility.get_inventory_local_price(resource_type) * multiplier,
 			OWN_PRICE_FLOOR * reference_price)
 	var lean := 0.0
 	var price_gap := log(own_price / reference_price)
@@ -428,10 +425,10 @@ func _bound_commitments(posture_def: Dictionary) -> void:
 	var payable := 0.0
 	for key in _positions_by_instrument:
 		var position := _positions_by_instrument[key]
-		payable += position[0] * position[1] / UNIT_PRICES_PER_USD
+		payable += position[0] * position[1]
 	var bid_value := 0.0
 	for i in _plan_keys.size():
-		bid_value += float(_plan_bids[i]) * _plan_bid_prices[i] / UNIT_PRICES_PER_USD
+		bid_value += float(_plan_bids[i]) * _plan_bid_prices[i]
 	if !(bid_value > 0.0):
 		return
 	var credit_share: float = posture_def.get(&"credit_share", CREDIT_SHARE)
