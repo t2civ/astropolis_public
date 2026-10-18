@@ -347,7 +347,7 @@ func process_ai_interval(_delta: float) -> void:
 ## is held to the def's sides, never below what the facility could spare (-C, the critical rate)
 ## and at least C where the facility must take. Quotes lean off the reference price toward the
 ## facility's local price, as far as the def's [code]lean[/code] times the gap as a share of what it
-## would contract, and a quote takes a standing order on the other side that is better than it.
+## would contract, each side quoting that limit.
 func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary) -> void:
 	var buys: bool = def.get(&"buy", false)
 	var sells: bool = def.get(&"sell", false)
