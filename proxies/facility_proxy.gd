@@ -640,6 +640,11 @@ func get_market() -> MarketProxy:
 	return market
 
 
+## Returns what the owners this facility settles its cash with hold: the money its trader's
+## commitments are paid from (FINANCIAL_MODEL.md, "The settlement"). 0.0 where it has no owners.
+@abstract func get_owners_wealth() -> float
+
+
 # ******************************** AI METHODS *********************************
 
 ## Sets [member gui_name] and marks the proxy dirty. Reverse-flow:
