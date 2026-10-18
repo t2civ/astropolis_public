@@ -191,6 +191,12 @@ Notes:
 - **Wholesale & Logistics** — Bulk distribution and freight movement of goods within a body. Consumes transport vehicles and energy.
 - **Passenger Services** — Movement of people within a body via transit and carriers. Consumes transport vehicles and energy.
 - **Radioactive Storage** — Keeping spent fuel and radioactive waste in dry casks: the space of the radioactive class, made by the watch and handling a store needs. Consumes labor.
+- **Bulk Storage** — Keeping solid goods in warehouses, silos and stockyards: the space of the bulk class, made by the handling a store needs. Consumes labor.
+- **Ice/Volatile Storage** — Keeping water and volatile gases in sealed tanks: the space of the ice and volatile class. Consumes labor.
+- **Liquid Storage** — Keeping liquids in tank farms: the space of the liquid class. Consumes labor.
+- **Cryogenic Storage** — Keeping liquefied gases in insulated tanks: the space of the cryogenic class, made by the handling a store needs and the power that reliquefies what boils off. Consumes labor and electricity.
+- **Special-Handling Storage** — Keeping what is dear or fragile in vaults and controlled stores: the space of the special-handling class, made by the guards and the climate control a store needs. Consumes labor and electricity.
+- **Perishables Storage** — Keeping what spoils in cold stores: the space of the perishables class, made by the handling a store needs and the power that keeps it cold. Consumes labor and electricity.
 - **Retail Services** — Sale and last-mile distribution of goods to consumers, moving consumer goods to end users.
 - **Hospitality** — Provision of lodging, food service, and travel accommodation. Consumes prepared food and consumer goods.
 - **Entertainment** — Provision of in-person leisure and recreation at venues and events.
