@@ -71,9 +71,6 @@ enum InventoryFlags {
 	CAN_HAVE_INPUT = 1 << 6,
 	## A can-have operation at this facility produces or extracts this resource.
 	CAN_HAVE_OUTPUT = 1 << 7,
-	## Not set since the holding rent replaced disposal for want of room (PRODUCTION_MODEL.md,
-	## "The output clear"). The trader reads it until its rebuild.
-	DUMPING = 1 << 8,
 	## The facility deals in this resource, and a market-making trader makes a market in it
 	## where it is also [constant TRADABLE]. For now the server sets it exactly where
 	## [constant CAN_HAVE_INPUT] or [constant CAN_HAVE_OUTPUT] is; a market maker is to deal in
@@ -481,9 +478,9 @@ func get_flags() -> int:
 @abstract func get_inventory_consumption_rate(resource_type: int) -> float
 
 
-## Returns the rate at which surplus [param resource_type] was disposed of over
-## the last interval to relieve a full storage class (>= 0.0). Disposal is not
-## counted in [method get_inventory_rate]. See [constant InventoryFlags.DUMPING].
+## Returns the rate at which surplus [param resource_type] was disposed of over the last interval,
+## where keeping it would have cost more than it is worth (>= 0.0). Disposal is not counted in
+## [method get_inventory_rate].
 @abstract func get_inventory_disposal_rate(resource_type: int) -> float
 
 
@@ -510,7 +507,7 @@ func get_flags() -> int:
 ## interval because the facility used no more of it and its stock was at its levels (>= 0.0),
 ## counted only where this resource was the output that held its operation back. What an
 ## operation made anyway, running for another output, goes to stock instead, and leaves it by
-## [method get_inventory_disposal_rate] if its class's rent says so.
+## [method get_inventory_disposal_rate] if keeping it would cost more than it is worth.
 @abstract func get_inventory_curtailed_rate(resource_type: int) -> float
 
 
@@ -728,27 +725,3 @@ func get_market() -> MarketProxy:
 ## Proxy-authoritative: this change flows proxy -> server. No-op on an out-of-range index or
 ## invalid value.
 @abstract func set_inventory_buffer_stock(type: int, value: float) -> void
-
-
-## @deprecated: Read by the trader until its rebuild (PRODUCTION_MODEL.md, "Build order" of the
-## feedback plan, step 8). Returns [method get_inventory_critical_level].
-func get_inventory_effective_ops_reserve(resource_type: int) -> float:
-	return get_inventory_critical_level(resource_type)
-
-
-## @deprecated: Read by the trader until its rebuild. Returns the desired level less the
-## critical level.
-func get_inventory_effective_strategic_reserve(resource_type: int) -> float:
-	return get_inventory_desired_level(resource_type) - get_inventory_critical_level(resource_type)
-
-
-## @deprecated: Read by the trader until its rebuild. Returns
-## [method get_inventory_buffer_stock].
-func get_inventory_effective_buffer_stock(resource_type: int) -> float:
-	return get_inventory_buffer_stock(resource_type)
-
-
-## @deprecated: Read by the trader until its rebuild. Returns 1.0: levels are fitted to storage
-## before they are published.
-func get_inventory_storage_level_scale(_storage_type: int) -> float:
-	return 1.0
