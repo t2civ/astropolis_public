@@ -411,18 +411,10 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary) ->
 	var limit_price := reference_price * exp(lean)
 	var bid_limit := maxi(floori(limit_price), 1)
 	var ask_limit := maxi(ceili(limit_price), 1)
+	# Each quotes its own limit, and a cross matches at the midpoint (TRADE_MODEL.md, "The price").
 	for i in range(first, _plan_keys.size()):
-		var key := _plan_keys[i]
-		var bid_price := bid_limit
-		var best_ask := market.get_instrument_ask_unit_price(resource_type, key[1])
-		if best_ask > 0 and best_ask < bid_price and !_asks.has(key):
-			bid_price = best_ask # takes the better ask, not one of our own
-		var ask_price := ask_limit
-		var best_bid := market.get_instrument_bid_unit_price(resource_type, key[1])
-		if best_bid > ask_price and !_bids.has(key):
-			ask_price = best_bid # takes the better bid, not one of our own
-		_plan_ask_prices.append(ask_price)
-		_plan_bid_prices.append(bid_price)
+		_plan_ask_prices.append(ask_limit)
+		_plan_bid_prices.append(bid_limit)
 
 
 ## Cuts this interval's planned bids in proportion so that what the trader commits, its open
