@@ -14,11 +14,11 @@ extends BaseAI
 ## [code]const OVERRIDE_AI := true[/code].[br][br]
 ##
 ## Traders are paired 1-to-1 with facilities. This trader contracts toward its facility's desired
-## rate of each resource over the coming horizon, within what its facility's critical rate, its
-## reservation price and its owners' means allow, and leans its quotes while what it contracted
-## falls short (TRADE_MODEL.md, "The facility trader rebuilt: the plan"). It reads nothing of its
-## facility's inventory, and trades in the posture and resource strategies its facility's AI
-## authors (it trusts that these already incorporate player strategies).[br][br]
+## rate of each resource over the coming horizon, within what its facility's critical rate and its
+## owners' means allow, and leans its quotes toward its facility's own price while what it
+## contracted falls short (TRADE_MODEL.md, "The facility trader rebuilt: the plan"). It reads its
+## facility's rates and prices, never its stock, and trades in the posture and resource strategies
+## its facility's AI authors (it trusts that these already incorporate player strategies).[br][br]
 ##
 ## A facility-paired trader orders delivery/pickup [b]only at its own facility's body[/b], or at
 ## the cyber market for a cyber resource: the order helpers resolve the delivery market
@@ -124,6 +124,9 @@ enum ResourceStrategies {
 ## market, and down while short of what it would sell, where its facility prices it below (def key
 ## [code]lean[/code] overrides per resource strategy).
 const LEAN := 0.5
+## Least a trader's lean takes its facility's price to be, as a share of the market's: a facility
+## that prices a resource at nothing would give it away.
+const OWN_PRICE_FLOOR := 0.001
 ## How many of its facility's time horizons ahead a trader contracts (def key
 ## [code]contract_horizons[/code] overrides per resource strategy).
 const CONTRACT_HORIZONS := 1.0
@@ -344,9 +347,8 @@ func process_ai_interval(_delta: float) -> void:
 ## times the part of the window it holds, net of the position there, as a bid or an ask. The rate
 ## is held to the def's sides, never below what the facility could spare (-C, the critical rate)
 ## and at least C where the facility must take. Quotes lean off the reference price toward the
-## facility's local price, as far as the def's [code]lean[/code] times the gap as a share of the
-## larger of |D| and |C| over the window; a quote takes a standing order on the other side that is
-## better than it, and a bid stays within the facility's reservation price.
+## facility's local price, as far as the def's [code]lean[/code] times the gap as a share of what it
+## would contract, and a quote takes a standing order on the other side that is better than it.
 func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary) -> void:
 	var buys: bool = def.get(&"buy", false)
 	var sells: bool = def.get(&"sell", false)
@@ -373,6 +375,7 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary) ->
 	var current_quarter := proxy.ordinal_qtr
 	var first := _plan_keys.size()
 	var gap := 0.0 # trade units
+	var target := 0.0 # trade units, either side
 	var quarter := current_quarter
 	var start := now
 	while start < end and quarter < current_quarter + TraderProxy.MAX_FORWARD_QUARTERS:
@@ -384,39 +387,40 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary) ->
 					PackedFloat64Array())
 			var want := roundi(rate * held / multiplier - (position[0] if position else 0.0))
 			gap += want
+			target += absf(rate * held / multiplier)
 			_plan_keys.append(key)
 			_plan_asks.append(maxi(-want, 0))
 			_plan_bids.append(maxi(want, 0))
 			_plan_defs.append(def)
 		start = quarter_end
 		quarter += 1
-	var scale := maxf(absf(desired), absf(critical)) * window
-	var gap_share := clampf(gap * multiplier / scale, -1.0, 1.0) if scale > 0.0 else 0.0
+	# A gap as a share of what it would contract: scaled to an unbounded desired rate, a seller held
+	# to the little it could spare leaned next to nothing, and one stale ask held a market at many
+	# times what every facility valued it.
+	var gap_share := clampf(gap / maxf(target, absf(gap)), -1.0, 1.0) if gap else 0.0
 	# The facility's own price says how far the market's stands from where the facility would trade
 	# no more: a fixed step took years to close seeds ten or a hundred times off. A buyer leans up
-	# only where its facility prices the resource above the market, a seller down only below.
-	var own_price := _facility.get_inventory_local_price(resource_type) * multiplier
+	# only where its facility prices the resource above the market, a seller down only below; one
+	# that prices it at nothing leans toward the floor.
+	var own_price := maxf(_facility.get_inventory_local_price(resource_type) * multiplier,
+			OWN_PRICE_FLOOR * reference_price)
 	var lean := 0.0
-	if own_price > 0.0:
-		var price_gap := log(own_price / reference_price)
-		if price_gap * gap_share > 0.0:
-			lean = def.get(&"lean", LEAN) * absf(gap_share) * price_gap
+	var price_gap := log(own_price / reference_price)
+	if price_gap * gap_share > 0.0:
+		lean = def.get(&"lean", LEAN) * absf(gap_share) * price_gap
 	var limit_price := reference_price * exp(lean)
-	var bid_cap := _cap_bid_price(resource_type, maxi(floori(limit_price), 1))
-	var ask_floor := maxi(ceili(limit_price), 1)
+	var bid_limit := maxi(floori(limit_price), 1)
+	var ask_limit := maxi(ceili(limit_price), 1)
 	for i in range(first, _plan_keys.size()):
 		var key := _plan_keys[i]
-		var bid_price := bid_cap
+		var bid_price := bid_limit
 		var best_ask := market.get_instrument_ask_unit_price(resource_type, key[1])
 		if best_ask > 0 and best_ask < bid_price and !_asks.has(key):
 			bid_price = best_ask # takes the better ask, not one of our own
-		var ask_price := ask_floor
+		var ask_price := ask_limit
 		var best_bid := market.get_instrument_bid_unit_price(resource_type, key[1])
 		if best_bid > ask_price and !_bids.has(key):
 			ask_price = best_bid # takes the better bid, not one of our own
-		if bid_price < 1: # the facility's operations can pay nothing for it
-			_plan_bids[i] = 0
-			bid_price = 1 # placeholder: the proxy rejects price <= 0 even for a cancel
 		_plan_ask_prices.append(ask_price)
 		_plan_bid_prices.append(bid_price)
 
@@ -558,17 +562,6 @@ func _is_quote_stale(orders: Dictionary[PackedInt32Array, PackedInt64Array],
 		return true
 	var have := orders[instrument]
 	return _needs_requote(have[0], have[1], want_quantity, want_price, price_tol, qty_tol)
-
-
-## Returns [param bid_price] (trade units) capped at the facility's reservation price
-## for [param resource_type] (see [method FacilityProxy.get_inventory_reservation_price]).
-## Returns 0 when its operations can pay nothing for the resource.
-func _cap_bid_price(resource_type: int, bid_price: int) -> int:
-	var cap := (_facility.get_inventory_reservation_price(resource_type)
-			* _trade_unit_multipliers[resource_type])
-	if cap >= bid_price: # INF too: nothing here with revenue consumes it
-		return bid_price
-	return floori(cap)
 
 
 # Resolves which market an order for [param resource_type] routes to: the cyber market
