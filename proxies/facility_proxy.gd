@@ -504,36 +504,10 @@ func get_flags() -> int:
 @abstract func get_inventory_curtailed_rates() -> PackedFloat64Array
 
 
-## Returns the most this facility's traders will pay per unit of [param resource_type],
-## in [method MarketProxy.get_price] units: what the operations consuming it could pay
-## and still clear their margin floors, set by the marginal one (see TRADE_MODEL.md,
-## "Price discovery"). INF when nothing here with revenue consumes it.
-@abstract func get_inventory_reservation_price(resource_type: int) -> float
-
-
-## Returns the per-resource reservation prices array. Return is proxy array
-## reference; read only!
-@abstract func get_inventory_reservation_prices() -> PackedFloat64Array
-
-
-## Returns the least a unit of [param resource_type] must fetch, in
-## [method MarketProxy.get_price] units, for this facility's cheapest producing operation
-## to clear its margin floor: the floor of a market maker's price where storage carries the
-## flows (see TRADE_MODEL.md, "Market makers"). 0.0 when an operation here clears its floor
-## even giving it away; INF when nothing here produces it at known prices.
-@abstract func get_inventory_production_breakeven(resource_type: int) -> float
-
-
-## Returns the per-resource production break-evens array. Return is proxy array
-## reference; read only!
-@abstract func get_inventory_production_breakevens() -> PackedFloat64Array
-
-
 ## Returns the most this facility's most tolerant consuming operation could pay per unit
 ## of [param resource_type], in [method MarketProxy.get_price] units, and still clear its
-## margin floor: the ceiling of a market maker's price (see TRADE_MODEL.md, "Market
-## makers"). Unlike [method get_inventory_reservation_price], it counts operations
-## already priced below their floor. INF when nothing here with revenue consumes it.
+## margin floor, counting operations already priced below their floor. INF when nothing here
+## with revenue consumes it.
 @abstract func get_inventory_consumption_breakeven(resource_type: int) -> float
 
 
@@ -544,9 +518,9 @@ func get_flags() -> int:
 
 ## Returns what a unit of [param resource_type] must fetch, in
 ## [method MarketProxy.get_price] units, for the costliest unit of production still making
-## it here to clear its margin floor, as of the last interval: the floor of a market maker's
-## price where storage can't carry the flows (see TRADE_MODEL.md, "Market makers"). Where nothing here made it, the price at which the
-## cheapest unit would start. Only operations whose margin floors set their runs count (see
+## it here to clear its margin floor, as of the last interval: its merit-order price. Where
+## nothing here made it, the price at which the cheapest unit would start. Only operations whose
+## margin floors set their runs count (see
 ## PRODUCTION_MODEL.md, "What the facility publishes"). 0.0 when that unit clears its floor
 ## giving it away; INF when no such operation here produces it at known prices.
 @abstract func get_inventory_marginal_production_breakeven(resource_type: int) -> float
