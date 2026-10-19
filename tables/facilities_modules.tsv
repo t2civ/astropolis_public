@@ -104,5 +104,8 @@ HOSPITALS_CLINICS	3.66e6	8.89e5	4.75e6	3.98e6	2.19e6	1.03e6	9.55e6
 SCHOOLS_UNIVERSITIES	1.69e6	7.73e5	1.75e6	2.45e6	9.35e5	6.33e5	7.55e6											
 CIVIC_GOVERNMENT_BUILDINGS	3.38e6	5.79e5	2.31e6	3.16e6	6.56e5	7.76e5	7.71e6											
 UTILITY_SANITATION_NETWORKS	1.13e6	1.66e5	1.18e6	8.78e5	4.55e5	2.24e5	2.92e6											
+TANK_FARMS				5.26e7		3.7e7												
+CRYOGENIC_TANKS				2.07e7														
+DRY_CASK_STORES	75800	18700		25900	8990	23900	15600											
 # transposed on import to:																		
 # table[facility_type][operation_type]																		
