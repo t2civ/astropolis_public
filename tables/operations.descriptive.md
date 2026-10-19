@@ -197,6 +197,7 @@ Notes:
 - **Cryogenic Storage** — Keeping liquefied gases in insulated tanks: the space of the cryogenic class, made by the handling a store needs and the power that reliquefies what boils off. Consumes labor and electricity.
 - **Special-Handling Storage** — Keeping what is dear or fragile in vaults and controlled stores: the space of the special-handling class, made by the guards and the climate control a store needs. Consumes labor and electricity.
 - **Perishables Storage** — Keeping what spoils in cold stores: the space of the perishables class, made by the handling a store needs and the power that keeps it cold. Consumes labor and electricity.
+- **Electricity Storage** — Keeping power in battery banks held in reserve rather than cycled each day: the space of the electricity class, four megawatt-hours a unit. A battery bank's units move between it and Battery Storage over a month. What the cells lose standing, about 2% a month, is left out, as no store loses what it holds. Consumes labor.
 - **Retail Services** — Sale and last-mile distribution of goods to consumers, moving consumer goods to end users.
 - **Hospitality** — Provision of lodging, food service, and travel accommodation. Consumes prepared food and consumer goods.
 - **Entertainment** — Provision of in-person leisure and recreation at venues and events.
