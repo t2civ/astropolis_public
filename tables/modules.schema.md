@@ -7,7 +7,7 @@ Modules are described in `modules.descriptive.md`.
 
 - name (1st column) — Module name per data table instructions. For extraction modules, the name is constructed with the `stratum_group` value as a prefix, e.g., `CONT_SURFACE_MINES`, `OCEAN_DESALINATION_PLANTS`, `ATMOSPHERE_PROCESSORS`.
 - op_class — GUI only category for operations display.
-- storage — Quantifies associated resource storage capacities, both on- and off-site. Array elements correspond to classes in `storage_classes.tsv`, in its order; a class past the end of the array holds nothing here (`PURE_FLOW`, the last, is held by no module).
+- storage — Storage capacity a module carries, by class in `storage_classes.tsv`'s order; a class past the end of the array holds nothing here. Blank in every row: no module carries storage (note 4).
 - reconfig_time — Required time in days (d) to fully reconfigure a module from one operation (100%) to another (100%).
 - reconfig_cost — What fully reconfiguring a module from one operation (100%) to another (100%) costs, as a share of what building it costs at the same prices (default 0.06). A share holds at whatever resources cost at a later stage of the game, where a sum of money would not.
 - biological_crew — The module provides life support for this number of human personnel (CREW_SYSTEMS only), the facility's staff, who work its operations (`POPULATION_MODEL.md`, "Staff and crew"). 
