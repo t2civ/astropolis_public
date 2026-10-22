@@ -72,8 +72,10 @@ var cyber_market: MarketProxy ## The one system-wide cyber market (self if this 
 
 ## Top-of-book per instrument, keyed by [resource_type, ordinal_quarter] (delivery
 ## at this market's body). Value is [lowest_ask_price, lowest_ask_quantity,
-## highest_bid_price, highest_bid_quantity] in trade units; an empty side reads 0.
-## An instrument is present only while it has at least one resting order. Server-set;
+## highest_bid_price, highest_bid_quantity, price] in trade units; an empty side reads 0.
+## The price is the published price for the current quarter, and a later quarter's own (see
+## [method get_instrument_unit_price]). An instrument is present while it has a resting
+## order or a price of its own. Server-set;
 ## read-only here. WARNING: resizable container maintained on the proxy thread —
 ## access on the proxy thread only (directly or via the
 ## [code]get_instrument_*[/code] getters).
@@ -148,3 +150,10 @@ func get_market() -> MarketProxy:
 ## Returns the quantity in trade units at the highest resting bid for the
 ## instrument [param type] at [param ordinal_quarter], or 0 if no resting bid.
 @abstract func get_instrument_bid_unit_quantity(type: int, ordinal_quarter: int) -> int
+
+
+## Returns the price in trade units of the instrument [param type] at [param ordinal_quarter]:
+## for the current quarter [method get_unit_price], and for a later one its own last trade, held
+## inside its book, or where it has none the price of the quarter before it as its book opened.
+## 0 where it has none, nor any order (TRADE_MODEL.md, "Price discovery").
+@abstract func get_instrument_unit_price(type: int, ordinal_quarter: int) -> int
