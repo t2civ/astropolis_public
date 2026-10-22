@@ -56,13 +56,6 @@ func _init() -> void:
 	IVCoreInitializer.program_refcounteds.erase(&"TableCompositionBuilder")
 	IVCoreInitializer.tree_program_nodes.append(&"AstropolisGUI")
 	
-	# translations
-	var path_format := "res://public/text/%s.translation"
-	IVTranslationImporter.translations.append(path_format % "entities.en")
-	IVTranslationImporter.translations.append(path_format % "gui.en")
-	IVTranslationImporter.translations.append(path_format % "hints.en")
-	IVTranslationImporter.translations.append(path_format % "text.en")
-	
 	# Units plugin
 	IVQFormat.exponent_str = "e"
 	
