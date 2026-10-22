@@ -505,21 +505,21 @@ class RowItem extends HBoxContainer:
 		elif power == INF:
 			power_label.text = "?"
 		else:
-			power_label.text = IVQFormat.number(power, 2)
+			power_label.text = IVQFormat.metric_number(power)
 			
 		if is_nan(flow):
 			flow_label.text = " "
 		elif flow == INF:
 			flow_label.text = "?"
 		else:
-			flow_label.text = IVQFormat.number(flow, 2)
+			flow_label.text = IVQFormat.metric_number(flow)
 			
 		if is_nan(revenue):
 			revenue_label.text = " "
 		elif revenue == INF:
 			revenue_label.text = "?"
 		else:
-			revenue_label.text = IVQFormat.number(revenue, 2)
+			revenue_label.text = IVQFormat.metric_number(revenue)
 			
 		if is_nan(margin):
 			margin_label.text = " "

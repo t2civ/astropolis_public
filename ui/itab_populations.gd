@@ -433,7 +433,7 @@ func _get_demography_lines(data: PopulationsData) -> Array[LineData]:
 	var lines: Array[LineData] = []
 	var heads := _make_line("Heads")
 	for column in columns:
-		_add_cell(heads, _format_prefixed(column.number), _format_named(column.number))
+		_add_cell(heads, IVQFormat.metric_number(column.number), _format_named(column.number))
 	lines.append(heads)
 	for stage in Enums.LifeStages.size():
 		var line := _make_line(STAGE_TEXTS[stage] + " (%)")
@@ -544,14 +544,15 @@ func _get_means_lines(data: PopulationsData) -> Array[LineData]:
 		var work_resource := _get_work_resource(column.population_type, data.types)
 		var multiplier := (_trade_unit_multipliers[work_resource] if work_resource != -1
 				else 1.0)
-		_add_cell(wealth, _format_money(column.wealth), "$" + _format_named(column.wealth))
+		_add_cell(wealth, _format_money(column.wealth),
+				"$" + _format_named(column.wealth / IVUnits.USD))
 		_add_cell(wealth_per_head, _format_money(_get_ratio(column.wealth, column.number)))
 		_add_cell(years, _format_value(column.years_of_wants)
 				if _has_any_want(column.population_type, data.types) else NOT_APPLICABLE)
 		_add_cell(inequality, _format_gini(column.spread)
 				if _has_any_want(column.population_type, data.types) else NOT_APPLICABLE)
 		_add_cell(participation, _format_percent(column.participation))
-		_add_cell(offered, _format_prefixed(column.offered_hours * IVUnits.DAY / multiplier))
+		_add_cell(offered, IVQFormat.metric_number(column.offered_hours * IVUnits.DAY / multiplier))
 		_add_cell(worked, _format_percent(_get_ratio(column.worked_hours, column.offered_hours)))
 		_add_cell(wage, _format_price(column.wage * multiplier))
 		_add_cell(price_level, _format_value(column.price_level))
@@ -694,16 +695,13 @@ func _get_ratio(numerator: float, denominator: float) -> float:
 	return numerator / denominator if denominator > 0.0 else NAN
 
 
-func _format_prefixed(number: float) -> String:
-	return IVQFormat.prefixed_unit(number, &"").strip_edges()
-
-
-func _format_money(dollars: float) -> String:
-	if is_nan(dollars):
+# Formats [param money] in dollars.
+func _format_money(money: float) -> String:
+	if is_nan(money):
 		return NO_VALUE
-	if !dollars:
+	if !money:
 		return "0"
-	return IVQFormat.prefixed_unit(dollars, &"").strip_edges()
+	return IVQFormat.metric_number(money / IVUnits.USD)
 
 
 func _format_named(number: float) -> String:
@@ -718,7 +716,7 @@ func _format_value(value: float, is_signed := false) -> String:
 		return NO_VALUE
 	if !value:
 		return "0"
-	var text := IVQFormat.number(value, 3)
+	var text := IVQFormat.metric_number(value)
 	return "+" + text if is_signed and value > 0.0 else text
 
 
@@ -751,17 +749,18 @@ func _format_gini(spread: float) -> String:
 	return "%.2f" % (1.0 - series * exp(-x * x))
 
 
-func _format_price(unit_price: float) -> String:
-	if !(unit_price > 0.0):
+# Formats [param price], money per trade unit, in dollars.
+func _format_price(price: float) -> String:
+	if !(price > 0.0):
 		return NO_VALUE
-	return IVQFormat.number(unit_price, 3)
+	return IVQFormat.metric_number(price / IVUnits.USD)
 
 
 # Formats [param rate], in sim units per second, as trade units per day.
 func _format_rate(rate: float, multiplier: float) -> String:
 	if !rate:
 		return "0"
-	return IVQFormat.number(rate * IVUnits.DAY / multiplier, 2)
+	return IVQFormat.metric_number(rate * IVUnits.DAY / multiplier)
 
 
 # ****************************** INNER CLASSES ********************************

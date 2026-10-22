@@ -23,7 +23,8 @@ extends MarginContainer
 ## display unit; the "<" / ">" buttons shift the visible quarter window. Display
 ## values are scaled on the fly so most land in the 1–999 range.
 ##
-## Subtab indices follow [code]Enums.StatementTypes[/code].
+## Subtab indices follow [code]Enums.StatementTypes[/code], with placeholder
+## funding, grants and R & D subtabs after them.
 
 const SCENE := "res://public/ui/itab_budget.tscn"  ## Scene file for instancing.
 
@@ -40,6 +41,23 @@ const SUBTOTAL_TAX := 10
 const USD_MIN_EXPONENT := 1
 const USD_MAX_EXPONENT := 6
 
+# Placeholder subtabs after the statements: [tab title, text].
+const PLACEHOLDER_TABS := [
+	["Funding", """WIP
+
+Adjust overall funding levels here. Prioritize, de-prioritize
+or cancel specific projects. (Note: Agencies may be
+constrained here by law.)"""],
+	["Grants", """WIP
+
+You can assist and (to some degree) influence the
+R & D of your home nation here. (Mainly for agencies.)"""],
+	["R & D", """WIP
+
+Set R & D priorities for your own facilities here.
+Pursue specific advancement in three broad categories:
+Theory, Technology and Engineering."""],
+]
 
 const PERSIST_MODE := IVGlobal.PERSIST_PROCEDURAL  ## Save/load mode (procedural node).
 ## Member names persisted by save/load.
@@ -222,6 +240,14 @@ func _build_ui() -> void:
 		_footers[statement] = footer
 		_empty_labels[statement] = empty_label
 
+	for placeholder: Array in PLACEHOLDER_TABS:
+		var placeholder_label := Label.new()
+		placeholder_label.name = placeholder[0]
+		placeholder_label.text = placeholder[1]
+		placeholder_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		placeholder_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_tab_container.add_child(placeholder_label)
+
 	_tab_container.tab_changed.connect(_select_tab)
 
 
@@ -256,6 +282,9 @@ func _get_proxy_data(target_name: StringName) -> void:
 		return
 
 	var tab := current_tab
+	if tab >= _statement_keys.size():
+		_show_placeholder.call_deferred()
+		return
 	var ordinal_qtr := proxy.ordinal_qtr
 	var groups := []
 	var footer := []
@@ -431,6 +460,11 @@ func _subtract_series(a: PackedFloat64Array, b: PackedFloat64Array) -> PackedFlo
 
 
 # ******************************** MAIN THREAD ********************************
+
+func _show_placeholder() -> void:
+	_no_budget_label.hide()
+	_tab_container.show()
+
 
 func _update_tab_display(target_name: StringName, tab: int, ordinal_qtr: int,
 		groups: Array, footer: Array) -> void:

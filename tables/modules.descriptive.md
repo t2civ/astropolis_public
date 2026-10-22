@@ -25,7 +25,7 @@ Notes:
 - **D-³He Fusion Plants** — Deuterium–helium-3 fusion power stations producing substantially fewer neutrons than D-T designs. May provide facility or district heat.
 - **³He-³He Fusion Plants** — Helium-3 fusion power stations producing no neutrons but requiring the highest ignition temperature of practical fusion cycles. May provide facility or district heat.
 - **Radioisotope Generators** — Radioisotope thermoelectric or Stirling generator units using plutonium-238 or strontium-90. Low power density but extreme reliability and longevity; critical for deep outer solar system installations. May provide facility heat.
-- **Battery Banks** — Grid-scale battery storage: containerized lithium-ion cells with their inverters and transformers, charged while the sun shines and discharged in the dark; on a station, the batteries that carry it through eclipse.
+- **Battery Banks** — Grid-scale battery storage: containerized lithium-ion cells with their inverters and transformers, charged while the sun shines and discharged in the dark; on a station, the batteries that carry it through eclipse. Units can instead be held in reserve, the electricity class's store, moving between the two over a month.
 
 
 ## Extraction
@@ -133,6 +133,13 @@ Notes:
 - **Research Laboratories** — Scientific and engineering research establishments: laboratories, test beds, prototyping shops, observatories, and experimental facilities across the physical, biological, and computational sciences.
 - **Exchanges** — Organized marketplaces and clearing houses where commodities and contracts are traded, settlement is guaranteed, and deliveries are coordinated for dispatch.
 - **Transport & Logistics Hubs** — Freight and passenger infrastructure: warehouses, depots, freight terminals, transit stations, ports, and spaceport surface operations that move goods and people within a body.
+- **Dry-Cask Stores** — Independent installations for spent nuclear fuel and radioactive waste: welded steel canisters in concrete overpacks on shielded pads, passively cooled, with the transfer casks and cranes that load them and the staff who watch them. A unit holds a tonne; its space is what it sells.
+- **Warehouses & Silos** — General stores for solid goods: steel sheds and bins on concrete slabs, silos and open stockyards, with the conveyors, stackers and forklifts that fill and empty them. A unit holds a tonne of the bulk class; its space is what it sells.
+- **Volatile Tanks** — Sealed tanks for water and volatile gases at ambient temperature: covered tanks and reservoirs for water, and pressure vessels for carbon dioxide and sulfur dioxide. A unit holds a tonne of the ice and volatile class; its space is what it sells.
+- **Tank Farms** — Fields of welded steel tanks for liquids at ambient temperature, in bunded yards with their pumps, piping and fire systems. A unit holds a tonne of the liquid class; its space is what it sells.
+- **Cryogenic Tanks** — Insulated tanks for liquefied gases: double-walled vessels of nickel steel in concrete, with the compressors that reliquefy what boils off. A unit holds a tonne of the cryogenic class; its space is what it sells.
+- **Vaults** — Secure, climate-controlled stores for what is dear, fragile or hazardous: bonded warehouses, cleanrooms and vaults, guarded and watched. A unit holds a tonne of the special-handling class; its space is what it sells.
+- **Cold Stores** — Refrigerated warehouses for what spoils: insulated halls held chilled or frozen by their refrigeration plant. A unit holds a tonne of the perishables class; its space is what it sells.
 - **Retail & Commercial Centers** — Consumer-facing establishments: shops and markets, hotels and restaurants, entertainment venues, and personal-service businesses. The commercial fabric of a settlement.
 - **Hospitals & Clinics** — Medical establishments: hospitals, clinics, surgeries, diagnostic centers, and pharmacies, equipped for diagnosis, treatment, and care.
 - **Schools & Universities** — Educational establishments: schools, colleges, universities, and vocational and training institutions.

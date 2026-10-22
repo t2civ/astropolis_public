@@ -413,7 +413,6 @@ func _get_facility_rows(facility: FacilityProxy, resource_types: PackedInt32Arra
 		row.stock = stock
 		row.in_transit = facility.get_inventory_in_transit(resource_type)
 		row.outbound = facility.get_inventory_outbound(resource_type)
-		row.buffer_stock = facility.get_inventory_buffer_stock(resource_type)
 		row.critical_level = facility.get_inventory_critical_level(resource_type)
 		row.desired_level = facility.get_inventory_desired_level(resource_type)
 		row.unmet_rate = facility.get_inventory_unmet_rate(resource_type)
@@ -789,11 +788,10 @@ func _get_stock_tooltip(row: RowData, multiplier: float, unit: String) -> String
 	var outflow := row.use + row.sold_rate
 	var cover_text := UNBOUNDED if !outflow else IVQFormat.number(
 			row.stock / outflow / IVUnits.DAY, 2)
-	return "Stock %s\nIn transit %s, outbound %s\nBuffer stock %s\nCover %s d" % [
+	return "Stock %s\nIn transit %s, outbound %s\nCover %s d" % [
 			_format_quantity(row.stock, multiplier, unit),
 			_format_quantity(row.in_transit, multiplier, unit),
 			_format_quantity(row.outbound, multiplier, unit),
-			_format_quantity(row.buffer_stock, multiplier, unit),
 			cover_text]
 
 
@@ -827,10 +825,11 @@ func _get_cover_share(quantity: float, horizon_need: float) -> float:
 	return INF if quantity > 0.0 else NAN
 
 
-func _format_price(unit_price: float) -> String:
-	if !(unit_price > 0.0):
+# Formats [param price], money per trade unit, in dollars.
+func _format_price(price: float) -> String:
+	if !(price > 0.0):
 		return NO_VALUE
-	return IVQFormat.number(unit_price, 3)
+	return IVQFormat.metric_number(price / IVUnits.USD)
 
 
 # Formats [param rate], in sim units per second, as trade units per day.
@@ -841,7 +840,7 @@ func _format_rate(rate: float, multiplier: float, is_signed := false) -> String:
 func _format_per_day(per_day: float, is_signed := false) -> String:
 	if !per_day:
 		return "0"
-	var text := IVQFormat.number(per_day, 2)
+	var text := IVQFormat.metric_number(per_day)
 	return "+" + text if is_signed and per_day > 0.0 else text
 
 
@@ -851,7 +850,7 @@ func _format_quantity(quantity: float, multiplier: float, unit: String) -> Strin
 
 
 func _format_amount(trade_quantity: float, unit: String) -> String:
-	return ("0" if !trade_quantity else IVQFormat.number(trade_quantity, 3)) + unit
+	return ("0" if !trade_quantity else IVQFormat.metric_number(trade_quantity)) + unit
 
 
 func _format_percent(share: float) -> String:
@@ -870,8 +869,7 @@ func _format_spread(bid_unit_price: int, ask_unit_price: int) -> String:
 
 
 func _format_book(bid_unit_price: int, ask_unit_price: int) -> String:
-	return "Bid %s / ask %s" % [str(bid_unit_price) if bid_unit_price else NO_VALUE,
-			str(ask_unit_price) if ask_unit_price else NO_VALUE]
+	return "Bid %s / ask %s" % [_format_price(bid_unit_price), _format_price(ask_unit_price)]
 
 
 func _format_horizon(horizon: float) -> String:
@@ -895,7 +893,7 @@ func _format_quarter(ordinal_qtr: int) -> String:
 
 class RowData extends RefCounted:
 	# One resource's values, gathered on the proxy thread. Rates are sim units per second,
-	# quantities sim units, local price sim units, unit prices $ per trade unit, and the window
+	# quantities sim units, local price sim units, unit prices money per trade unit, and the window
 	# sums trade units.
 	var resource_type: int
 	var is_tradable: bool
@@ -912,7 +910,6 @@ class RowData extends RefCounted:
 	var stock: float
 	var in_transit: float
 	var outbound: float
-	var buffer_stock: float
 	var critical_level: float
 	var desired_level: float
 	var unmet_rate: float

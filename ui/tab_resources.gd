@@ -362,7 +362,7 @@ class StratumFoldable extends FoldableContainer:
 				has_dispersion = true
 			var deposits_text := ""
 			if discovered:
-				deposits_text = IVQFormat.number(discovered, 2)
+				deposits_text = IVQFormat.metric_number(discovered)
 				has_deposit = true
 
 			# set resource texts
