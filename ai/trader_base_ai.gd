@@ -353,7 +353,8 @@ func process_ai_interval(_delta: float) -> void:
 ## trader contracts the coming window, the def's [code]contract_horizons[/code] of its facility's
 ## time horizon, and the rest of the current quarter at least, toward the desired rate D: each
 ## quarter the window spans wants D's flow, read off its curve over price at that quarter's own
-## price, times the part of the window it holds, and the current quarter D's step besides, once,
+## price, times what its facility foresees of the part of the window it holds, and the current
+## quarter D's step besides, once,
 ## net of the position there, as a bid or an ask. Each quarter's target is held to the def's sides,
 ## never below what the facility could spare (-C, the critical rate, its flow and step alike) and
 ## at least C where the facility must take. Each quarter's quotes lean off its own price (see
@@ -383,7 +384,8 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 	var critical_flow := _facility.get_inventory_critical_flow(resource_type)
 	var critical := _facility.get_inventory_critical_rate(resource_type)
 	var contract_horizons: float = def.get(&"contract_horizons", CONTRACT_HORIZONS)
-	var window := maxf(_facility.time_horizon * contract_horizons, 0.0)
+	var horizon := _facility.time_horizon
+	var window := maxf(horizon * contract_horizons, 0.0)
 	_windows[resource_type] = window
 	var multiplier := _trade_unit_multipliers[resource_type]
 	var spare := maxf(-critical, 0.0) # the most its facility could spare
@@ -404,6 +406,14 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 		var held := minf(end, quarter_end) - start
 		var key := PackedInt32Array([resource_type, quarter])
 		var is_current := quarter == current_quarter
+		# A buyer takes all it contracted, and a need contracted at once for a year held a spike
+		# of a month's use for all of it. What a later quarter holds counts as far as its facility
+		# foresees it; the current quarter, which settlement paces over the time left in it,
+		# counts whole.
+		var foreseen := held
+		if !is_current and held > 0.0:
+			foreseen = (_get_foreseen(start + held - now, horizon)
+					- _get_foreseen(start - now, horizon))
 		start = quarter_end
 		quarter += 1
 		if held <= 0.0:
@@ -419,8 +429,8 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 		# Each quarter wants what its facility's flow would be at that quarter's price: at the
 		# current quarter's, a later quarter's price moved and no quantity answered it.
 		var factor := quarter_price / multiplier / curve_price
-		var wanted := FacilityProxy.get_curve_value(desired_flows, factor) * held
-		var must := critical_flow * held
+		var wanted := FacilityProxy.get_curve_value(desired_flows, factor) * foreseen
+		var must := critical_flow * foreseen
 		if is_current:
 			wanted += desired_step
 			must += critical_step
@@ -652,6 +662,14 @@ func _is_quote_stale(orders: Dictionary[PackedInt32Array, PackedInt64Array],
 		return true
 	var have := orders[instrument]
 	return _needs_requote(have[0], have[1], want_quantity, want_price, price_tol, qty_tol)
+
+
+# How much of the span from now to [param ahead] a facility with time horizon [param horizon]
+# foresees: all of it within the horizon, and past it each moment the horizon over the time ahead.
+func _get_foreseen(ahead: float, horizon: float) -> float:
+	if !(horizon > 0.0) or ahead <= horizon:
+		return ahead
+	return horizon * (1.0 + log(ahead / horizon))
 
 
 # Resolves which market an order for [param resource_type] routes to: the cyber market
