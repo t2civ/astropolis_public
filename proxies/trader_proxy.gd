@@ -68,6 +68,18 @@ func _clear_for_destruction() -> void:
 	market = null
 
 
+# ********************************** STATIC ***********************************
+
+## How much of the span from now to [param ahead] a facility with time horizon [param horizon]
+## foresees: all of it within the horizon, and past it each moment the horizon over the time ahead.
+## A trader contracts a quarter for what its facility foresees of it, and settlement paces the
+## current quarter's position over what is foreseen of the time left in it.
+static func get_foreseen_span(ahead: float, horizon: float) -> float:
+	if !(horizon > 0.0) or ahead <= horizon:
+		return ahead
+	return horizon * (1.0 + log(ahead / horizon))
+
+
 # ***************************** THREAD-SAFE READ ******************************
 
 ## Returns this trader's [MarketProxy]. Mutable but always exists after init.

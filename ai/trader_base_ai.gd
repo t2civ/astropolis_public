@@ -242,8 +242,8 @@ var _cyber_market_id := -1
 # facility trader ([resource, quarter]), 3 for a transport trader ([resource, quarter,
 # body_id]). Set in ai_init.
 var _key_width := 2
-# Per resource, how far ahead this interval's quotes contract it, in sim time; 0.0 where it isn't
-# traded.
+# Per resource, the span of its flow this interval's quotes contract, what its facility foresees of
+# how far ahead they reach, in sim time; 0.0 where it isn't traded.
 var _windows: PackedFloat64Array
 # This interval's quotes, one entry per instrument: its key, the ask and the bid its gap wants and
 # those a two-sided posture keeps standing on the other side (trade units), the ask's and the bid's
@@ -386,7 +386,6 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 	var contract_horizons: float = def.get(&"contract_horizons", CONTRACT_HORIZONS)
 	var horizon := _facility.time_horizon
 	var window := maxf(horizon * contract_horizons, 0.0)
-	_windows[resource_type] = window
 	var multiplier := _trade_unit_multipliers[resource_type]
 	var spare := maxf(-critical, 0.0) # the most its facility could spare
 	var min_lot: int = def.get(&"min_lot", MIN_LOT)
@@ -396,6 +395,7 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 	# Settlement delivers a current quarter's position over the time left in it, so the window holds
 	# that time whole and what deliveries draw from it falls out of the target with them.
 	var end := maxf(now + window, Utils.get_time_at_ordinal_quarter(current_quarter + 1))
+	_windows[resource_type] = TraderProxy.get_foreseen_span(end - now, horizon)
 	var local_price := _facility.get_inventory_local_price(resource_type) * multiplier
 	var lean_share: float = def.get(&"lean", LEAN)
 	var quarter_price := reference_price # this quarter's own, or the quarter before it's
@@ -407,13 +407,13 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 		var key := PackedInt32Array([resource_type, quarter])
 		var is_current := quarter == current_quarter
 		# A buyer takes all it contracted, and a need contracted at once for a year held a spike
-		# of a month's use for all of it. What a later quarter holds counts as far as its facility
-		# foresees it; the current quarter, which settlement paces over the time left in it,
-		# counts whole.
+		# of a month's use for all of it. What a quarter holds counts as far as its facility
+		# foresees it, and settlement paces the current quarter's position over what is foreseen
+		# of the time left in it.
 		var foreseen := held
-		if !is_current and held > 0.0:
-			foreseen = (_get_foreseen(start + held - now, horizon)
-					- _get_foreseen(start - now, horizon))
+		if held > 0.0:
+			foreseen = (TraderProxy.get_foreseen_span(start + held - now, horizon)
+					- TraderProxy.get_foreseen_span(start - now, horizon))
 		start = quarter_end
 		quarter += 1
 		if held <= 0.0:
@@ -662,14 +662,6 @@ func _is_quote_stale(orders: Dictionary[PackedInt32Array, PackedInt64Array],
 		return true
 	var have := orders[instrument]
 	return _needs_requote(have[0], have[1], want_quantity, want_price, price_tol, qty_tol)
-
-
-# How much of the span from now to [param ahead] a facility with time horizon [param horizon]
-# foresees: all of it within the horizon, and past it each moment the horizon over the time ahead.
-func _get_foreseen(ahead: float, horizon: float) -> float:
-	if !(horizon > 0.0) or ahead <= horizon:
-		return ahead
-	return horizon * (1.0 + log(ahead / horizon))
 
 
 # Resolves which market an order for [param resource_type] routes to: the cyber market
