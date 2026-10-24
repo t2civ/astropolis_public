@@ -176,6 +176,10 @@ enum OperationStrategies {
 const SWING_HORIZONS := 1.0
 ## How long a market maker's reckoning of its prices' swings remembers them.
 const SWING_MEMORY := IVUnits.YEAR
+## The research share an agency's facilities spend in place of their posture's, of their polity's
+## income since they house no one: about what space agencies spend on research and development,
+## which is most of what they make (see [method FacilityProxy.set_inventory_research_share]).
+const AGENCY_RESEARCH_SHARE := 0.0004
 
 ## Short alias for the per-resource strategy enum, used by the authoring helpers.
 const _RS := FacilityResourceStrategies
@@ -201,9 +205,9 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 ## share, which the server holds below one; a negative value winds capacity down at that
 ## rate; and an omitted key (NAN) holds. The [code]research_spending_share[/code] key is the
 ## share of the owners' income it spends on research and development, on each resource tagged
-## [code]research[/code] (see [method FacilityProxy.set_inventory_research_share]); an omitted
-## key spends none. Postures never selected by [method _reconcile_facility_strategy] are left
-## empty.
+## [code]research[/code] (see [method FacilityProxy.set_inventory_research_share]), an agency's
+## [constant AGENCY_RESEARCH_SHARE] where it spends any; an omitted key spends none. Postures
+## never selected by [method _reconcile_facility_strategy] are left empty.
 static var facility_strategy_defs: Array[Dictionary] = [
 	{}, # NEUTRAL
 	{&"buildout_spending_share": 0.25, &"research_spending_share": 0.02}, # GROWTH
@@ -534,8 +538,8 @@ func _reconcile_facility_strategy() -> int:
 
 ## Translates the posture's def into the BUILDOUT operation's target spending share
 ## (the share of facility profit past what wears out the yards spend on growth; NAN holds), and
-## into the research share of each resource tagged [code]research[/code]. Both are resolved by
-## tag, so no table entity name is referenced here.
+## into the research share of each resource tagged [code]research[/code], an agency's its own.
+## Both are resolved by tag, so no table entity name is referenced here.
 func _apply_facility_knobs(strategy: int) -> void:
 	var def := facility_strategy_defs[strategy]
 	var share: float = def.get(&"buildout_spending_share", NAN)
@@ -543,6 +547,8 @@ func _apply_facility_knobs(strategy: int) -> void:
 	for operation_type in buildout_ops:
 		proxy.set_operations_target_spending_share(operation_type, share)
 	var research_share: float = def.get(&"research_spending_share", 0.0)
+	if research_share > 0.0 and proxy.get_player_class() == Enums.PlayerClasses.PLAYER_CLASS_AGENCY:
+		research_share = AGENCY_RESEARCH_SHARE
 	var research_resources: PackedInt32Array = _tag_resources.get(&"research",
 			PackedInt32Array())
 	for resource_type in research_resources:
