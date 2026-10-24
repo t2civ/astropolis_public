@@ -21,8 +21,8 @@ extends MarginContainer
 ## resource lists its quarters: forward prices and what is contracted for each. Header tooltips
 ## define the columns.[br][br]
 ##
-## The desired rate is read at the body market's price, which stands at its seed until trade
-## returns (PRODUCTION_MODEL.md, "A facility's flows with the market").[br][br]
+## The desired rate is read at the body market's price, which stands at its seed where nothing
+## trades (PRODUCTION_MODEL.md, "A facility's flows with the market").[br][br]
 ##
 ## Tab indices follow row enumerations in [code]resource_classes.tsv[/code], with a
 ## placeholder transport tab after them.
