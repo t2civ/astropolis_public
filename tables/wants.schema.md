@@ -14,7 +14,7 @@ want with its share of the want's `spending_share` of what is left, the input's 
 value at the facility's long prices, its local prices averaged over a decade ("Work and pay" in
 `POPULATION_MODEL.md`). What they buy of each input is a draw of its own in the facility's
 clear, shared in a shortage with the operations', and what they give off follows what they drew
-(P11 there).
+("The residents' draw, as built" there).
 
 
 ## Table Data
@@ -54,7 +54,7 @@ clear, shared in a shortage with the operations', and what they give off follows
    ("Base humans' wants"): the food, water, air, goods, private cars and household
    electricity of the basket `URBAN_OPERATIONS` drew per person before the model; healthcare
    and education at the flat of R20's cross-section, where more stops buying longer lives or
-   fewer births (P13 in `POPULATION_MODEL.md`); and the other services at the USA's seeded
+   fewer births (`POPULATION_MODEL.md`, "Needs"); and the other services at the USA's seeded
    output per head.
 4. Base humans' spending shares are each want's value per head at start prices, over the
    world's life stages in 2015, as a share of all but their existence want's.
