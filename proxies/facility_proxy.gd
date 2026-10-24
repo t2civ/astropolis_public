@@ -740,7 +740,8 @@ func get_market() -> MarketProxy:
 
 ## Sets the share of its owners' income, past what its maintenance buys, that the facility
 ## spends on [param type] each interval as research and development, an operating expense, before
-## its builds take their share of what is left: 0.0 spends none. What it buys raises nothing yet:
+## its builds take their share of what is left: 0.0 spends none. It buys only what the facility
+## can trade or make. What it buys raises nothing yet:
 ## a patch until the technology model, in which research raises what operations make (ROADMAP.md,
 ## "Technology"). Proxy-authoritative: this change flows proxy -> server. No-op on an
 ## out-of-range index or a value outside [0.0, 1.0].
