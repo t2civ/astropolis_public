@@ -53,7 +53,7 @@ clear, shared in a shortage with the operations', and what they give off follows
 3. The rates are sizing, recorded in the development repository's `EARTH_CALIBRATION.md`
    ("Base humans' wants"): the food, water, air, goods, private cars and household
    electricity of the basket `URBAN_OPERATIONS` drew per person before the model; healthcare
-   and education at the flat of R20's cross-section, where more stops buying longer lives or
+   and education at the flat of the cross-section of countries, where more stops buying longer lives or
    fewer births (`POPULATION_MODEL.md`, "Needs"); and the other services at the USA's seeded
    output per head.
 4. Base humans' spending shares are each want's value per head at start prices, over the

@@ -215,7 +215,8 @@ func get_development_biomass() -> float:
 	return 0.0
 
 
-## Returns the development "biodiversity" metric (0.0–1.0).
+## Returns the development "biodiversity" metric: the effective number of species, exp(H'),
+## at least 1.
 func get_development_biodiversity() -> float:
 	return 0.0
 
