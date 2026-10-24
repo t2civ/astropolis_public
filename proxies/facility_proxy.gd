@@ -391,6 +391,11 @@ func get_flags() -> int:
 @abstract func get_inventory_level_levers() -> PackedFloat64Array
 
 
+## Returns the share of its owners' income the facility spends on [param resource_type] as
+## research and development (see [method set_inventory_research_share]).
+@abstract func get_inventory_research_share(resource_type: int) -> float
+
+
 ## Returns the net flow rate of [param resource_type] averaged over the time horizon (positive
 ## = the facility made more than it used, negative = it used more than it made).
 @abstract func get_inventory_expected_rate(resource_type: int) -> float
@@ -731,3 +736,12 @@ func get_market() -> MarketProxy:
 ## [method get_inventory_desired_level]). Proxy-authoritative: this change flows proxy ->
 ## server. No-op on an out-of-range index or invalid value.
 @abstract func set_inventory_level_lever(type: int, value: float) -> void
+
+
+## Sets the share of its owners' income, past what its maintenance buys, that the facility
+## spends on [param type] each interval as research and development, an operating expense, before
+## its builds take their share of what is left: 0.0 spends none. What it buys raises nothing yet:
+## a patch until the technology model, in which research raises what operations make (ROADMAP.md,
+## "Technology"). Proxy-authoritative: this change flows proxy -> server. No-op on an
+## out-of-range index or a value outside [0.0, 1.0].
+@abstract func set_inventory_research_share(type: int, value: float) -> void

@@ -13,4 +13,4 @@ footprint books into; for a non-unitary facility the class is descriptive (it bo
   (ISS / Tiangong slices).
 - revenue_type — `line_items.tsv` line item this class's revenue books into. Empty for none.
 - cogs_type — `line_items.tsv` line item this class's cost books into. R&D facilities use
-  `RESEARCH_DEVELOPMENT` (treated as a cost of goods for now). Empty for none.
+  `RESEARCH_COGS`. Empty for none.
