@@ -392,8 +392,8 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 	var use := _facility.get_inventory_use(resource_type) if standing else 0.0
 	var now := _last_interval
 	var current_quarter := proxy.ordinal_qtr
-	# Settlement delivers a current quarter's position over the time left in it, so the window holds
-	# that time whole and what deliveries draw from it falls out of the target with them.
+	# Settlement delivers a current quarter's position by the quarter's end, so the window holds that
+	# time whole and what deliveries draw from it falls out of the target with them.
 	var end := maxf(now + window, Utils.get_time_at_ordinal_quarter(current_quarter + 1))
 	_windows[resource_type] = TraderProxy.get_foreseen_span(end - now, horizon)
 	var local_price := _facility.get_inventory_local_price(resource_type) * multiplier
@@ -408,8 +408,7 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 		var is_current := quarter == current_quarter
 		# A buyer takes all it contracted, and a need contracted at once for a year held a spike
 		# of a month's use for all of it. What a quarter holds counts as far as its facility
-		# foresees it, and settlement paces the current quarter's position over what is foreseen
-		# of the time left in it.
+		# foresees it.
 		var foreseen := held
 		if held > 0.0:
 			foreseen = (TraderProxy.get_foreseen_span(start + held - now, horizon)
