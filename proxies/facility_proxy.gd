@@ -225,6 +225,18 @@ static func get_curve_value(curve: PackedFloat64Array, factor: float, start := 0
 	return lerpf(curve[start + k - 1], curve[start + k], t)
 
 
+## Returns how much what a curve of [constant FLOW_CURVE_FACTORS] points, starting at
+## [param start] in [param curve], gives changes per unit of the log of price, at [param factor]
+## times the price it was read at: the slope of the stretch between two points that holds it, or
+## of the end stretch past either end.
+static func get_curve_slope(curve: PackedFloat64Array, factor: float, start := 0) -> float:
+	const FACTORS := FLOW_CURVE_FACTORS
+	var k := 1
+	while k < FACTORS.size() - 1 and FACTORS[k] < factor:
+		k += 1
+	return (curve[start + k] - curve[start + k - 1]) / log(FACTORS[k] / FACTORS[k - 1])
+
+
 # ***************************** THREAD-SAFE READ ******************************
 
 func has_development() -> bool:

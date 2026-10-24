@@ -133,6 +133,11 @@ const OWN_PRICE_FLOOR := 0.001
 ## Earth, further for one resupplied seldom, as far as [constant TraderProxy.MAX_FORWARD_QUARTERS]
 ## reaches. The current quarter is always held whole.
 const CONTRACT_HORIZONS := 12.0
+## Share of the price a trader pays above its facility's curve, or takes below it, for each share
+## of its facility's own flow of a resource, what it uses or makes, by which it keeps its contracted
+## flow from changing from one quarter to the next (def key [code]flow_stability[/code] overrides
+## per resource strategy); nothing follows the curve as it moves.
+const FLOW_STABILITY := 1.0
 ## Share of its owners' means a trader may commit: what its open longs and resting bids will cost
 ## less what its open shorts will earn (def key [code]credit_share[/code] overrides per posture).
 const CREDIT_SHARE := 0.5
@@ -191,6 +196,7 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"resource_strategies",
 	&"_asks",
 	&"_bids",
+	&"_contract_flows",
 ]
 
 
@@ -223,6 +229,11 @@ var _asks: Dictionary[PackedInt32Array, PackedInt64Array] = {}
 ## Memory of open bids, keyed like [member _asks] with values [unit_quantity, unit_price]
 ## in trade units.
 var _bids: Dictionary[PackedInt32Array, PackedInt64Array] = {}
+
+## Per resource, the flow the trader keeps its contracts near from one quarter to the next, moved
+## toward its facility's curve over a quarter (see [constant FLOW_STABILITY]), in sim units; NAN
+## until it first trades the resource.
+var _contract_flows: PackedFloat64Array
 
 # *****************************************************************************
 
@@ -279,6 +290,8 @@ func _init() -> void:
 	super()
 	var n_resources: int = _table_n_rows[&"resources"]
 	resource_strategies.resize(n_resources)
+	_contract_flows.resize(n_resources)
+	_contract_flows.fill(NAN)
 	_windows.resize(n_resources)
 	if _is_cyber_resource.is_empty():
 		const TRADE_CLASS_CYBER := Enums.TradeClasses.TRADE_CLASS_CYBER
@@ -327,7 +340,7 @@ func ai_init() -> void:
 ## strategy's def directs, a two-sided posture quoting both sides of each one its facility deals in
 ## (see [method _plan_resource]); cuts what it would bid to what its owners' means allow (see
 ## [method _bound_commitments]); then places the quotes and cancels any order resting outside them.
-func process_ai_interval(_delta: float) -> void:
+func process_ai_interval(delta: float) -> void:
 	const TRADABLE := FacilityProxy.InventoryFlags.TRADABLE
 	var market := proxy.market
 	if !market or !_facility:
@@ -344,7 +357,7 @@ func process_ai_interval(_delta: float) -> void:
 		if !(flags & TRADABLE):
 			continue
 		var def := resource_strategy_defs[resource_strategies[resource_type]]
-		_plan_resource(resource_type, market, def, two_sided and is_market_resource(flags))
+		_plan_resource(resource_type, market, def, two_sided and is_market_resource(flags), delta)
 	_bound_commitments(posture_def)
 	_place_quotes()
 
@@ -353,9 +366,11 @@ func process_ai_interval(_delta: float) -> void:
 ## trader contracts the coming window, the def's [code]contract_horizons[/code] of its facility's
 ## time horizon, and the rest of the current quarter at least, toward the desired rate D: each
 ## quarter the window spans wants D's flow, read off its curve over price at that quarter's own
-## price, times what its facility foresees of the part of the window it holds, and the current
-## quarter D's step besides, once,
-## net of the position there, as a bid or an ask. Each quarter's target is held to the def's sides,
+## price and kept near the flow of the quarter before as the def's [code]flow_stability[/code]
+## would pay to keep it (see [constant FLOW_STABILITY]), times what its facility foresees of the
+## part of the window it holds, and the current quarter D's step besides, once,
+## net of the position there, as a bid or an ask. The flow the current quarter is kept near moves
+## toward the current quarter's over a quarter, [param delta] the interval since the last. Each quarter's target is held to the def's sides,
 ## never below what the facility could spare (-C, the critical rate, its flow and step alike) and
 ## at least C where the facility must take. Each quarter's quotes lean off its own price (see
 ## [method MarketProxy.get_instrument_unit_price]) toward the facility's local price, as far as the
@@ -368,8 +383,8 @@ func process_ai_interval(_delta: float) -> void:
 ## where it uses one. Toward the facility's price it leans the def's whole lean, and on the far side
 ## it stands at that price, so its market always has a price, and one that follows its facilities
 ## (TRADE_MODEL.md, "Market makers").
-func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, standing: bool
-		) -> void:
+func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, standing: bool,
+		delta: float) -> void:
 	var buys: bool = def.get(&"buy", false)
 	var sells: bool = def.get(&"sell", false)
 	var desired_step := _facility.get_inventory_desired_step(resource_type)
@@ -398,6 +413,15 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 	_windows[resource_type] = TraderProxy.get_foreseen_span(end - now, horizon)
 	var local_price := _facility.get_inventory_local_price(resource_type) * multiplier
 	var lean_share: float = def.get(&"lean", LEAN)
+	var stability: float = def.get(&"flow_stability", FLOW_STABILITY)
+	var own_flow := maxf(_facility.get_inventory_use(resource_type),
+			_facility.get_inventory_production_rate(resource_type))
+	var contract_flow := _contract_flows[resource_type]
+	if is_nan(contract_flow):
+		contract_flow = FacilityProxy.get_curve_value(desired_flows,
+				reference_price / multiplier / curve_price)
+	var kept_flow := contract_flow # the flow of the quarter before
+	var current_flow := contract_flow
 	var quarter_price := reference_price # this quarter's own, or the quarter before it's
 	var quarter := current_quarter
 	var start := now
@@ -428,9 +452,11 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 		# Each quarter wants what its facility's flow would be at that quarter's price: at the
 		# current quarter's, a later quarter's price moved and no quantity answered it.
 		var factor := quarter_price / multiplier / curve_price
-		var wanted := FacilityProxy.get_curve_value(desired_flows, factor) * foreseen
+		kept_flow = _get_kept_flow(desired_flows, factor, kept_flow, own_flow, stability)
+		var wanted := kept_flow * foreseen
 		var must := critical_flow * foreseen
 		if is_current:
+			current_flow = kept_flow
 			wanted += desired_step
 			must += critical_step
 		if !buys:
@@ -499,6 +525,10 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 		_plan_ask_prices.append(ask_price)
 		_plan_bid_prices.append(bid_price)
 		_plan_defs.append(def)
+	var quarter_length := (Utils.get_time_at_ordinal_quarter(current_quarter + 1)
+			- Utils.get_time_at_ordinal_quarter(current_quarter))
+	_contract_flows[resource_type] = (contract_flow
+			+ (current_flow - contract_flow) * minf(delta / quarter_length, 1.0))
 
 
 ## Cuts this interval's planned bids in proportion so that what the trader commits, its open
@@ -737,6 +767,22 @@ func _needs_requote(have_quantity: int, have_price: int, want_quantity: int, wan
 	if absf(float(want_quantity - have_quantity) / have_quantity) > qty_tol:
 		return true
 	return false
+
+
+## The flow a trader contracts where its facility's [param curve] (see
+## [method FacilityProxy.get_curve_value]) wants one at [param factor] and it contracted
+## [param kept] the quarter before: as far toward the curve's as the price the curve puts on the
+## flow departs from the quarter's by [param stability] times the change, as a share of the larger
+## of [param own_flow], what the facility uses or makes, and the two flows.
+static func _get_kept_flow(curve: PackedFloat64Array, factor: float, kept: float,
+		own_flow: float, stability: float) -> float:
+	var wanted := FacilityProxy.get_curve_value(curve, factor)
+	var scale := maxf(maxf(own_flow, absf(kept)), absf(wanted))
+	if !(stability > 0.0 and scale > 0.0):
+		return wanted
+	# TRADE_MODEL.md, "The facility trader", stability across quarters.
+	var keep := stability * absf(FacilityProxy.get_curve_slope(curve, factor)) / scale
+	return (wanted + keep * kept) / (1.0 + keep)
 
 
 # ********************************* LISTENERS *********************************
