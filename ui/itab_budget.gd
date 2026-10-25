@@ -291,9 +291,10 @@ func _get_proxy_data(target_name: StringName) -> void:
 
 	if tab == _income_statement:
 		# Income waterfall: gross profit and operating income render as leafless
-		# subtotal lines; the tax group (signed like SUBTOTAL_TAX) sits below operating
-		# income, and net income is the bottom-line footer. The opex and tax groups are
-		# summed from their leaves (no tracked-subtotal history getter).
+		# subtotal lines; the opex group (a gain subtracting) and the tax group (signed
+		# like SUBTOTAL_TAX) sit above and below operating income, and net income is the
+		# bottom-line footer. The opex and tax groups are summed from their leaves (no
+		# tracked-subtotal history getter).
 		var subtotals := proxy.get_financials_subtotals()
 		var accountings := proxy.get_financials_accountings().duplicate()
 		var revenue_history := proxy.get_financials_revenue_history()
@@ -306,13 +307,14 @@ func _get_proxy_data(target_name: StringName) -> void:
 		var cogs_series := _make_series(cogs_history, subtotals[SUBTOTAL_COST_OF_GOODS])
 		var gross_profit_series := _subtract_series(revenue_series, cogs_series)
 		groups.append(["SUBTOTAL_GROSS_PROFIT", gross_profit_series, []])
-		var opex_group := _collect_summed_group(proxy, accountings, _income_statement,
-				_item_subtotals, SUBTOTAL_OPERATING_EXPENSE, "SUBTOTAL_OPERATING_EXPENSE")
+		var opex_group := _collect_signed_group(proxy, accountings, SUBTOTAL_OPERATING_EXPENSE,
+				"SUBTOTAL_OPERATING_EXPENSE", false)
 		groups.append(opex_group)
 		var opex_series: PackedFloat64Array = opex_group[1]
 		var operating_income_series := _subtract_series(gross_profit_series, opex_series)
 		groups.append(["SUBTOTAL_OPERATING_INCOME", operating_income_series, []])
-		var tax_group := _collect_tax_group(proxy, accountings)
+		var tax_group := _collect_signed_group(proxy, accountings, SUBTOTAL_TAX, "SUBTOTAL_TAX",
+				true)
 		groups.append(tax_group)
 		var tax_series: PackedFloat64Array = tax_group[1]
 		var net_income_series := operating_income_series.duplicate()
@@ -367,9 +369,8 @@ func _collect_group(proxy: Proxy, accountings: Dictionary[int, float], subtotal:
 func _collect_summed_group(proxy: Proxy, accountings: Dictionary[int, float], statement: int,
 		classifier: PackedInt32Array, class_value: int, title: String) -> Array:
 	# Like _collect_group, but the group series is summed from its leaf series
-	# rather than read from a tracked subtotal. Used for the operating-expense group
-	# (classifier _item_subtotals), cash-flow direction groups (classifier
-	# _item_subtotals, where only the net is a tracked subtotal), and balance-sheet
+	# rather than read from a tracked subtotal. Used for cash-flow direction groups
+	# (classifier _item_subtotals, where only the net is a tracked subtotal) and balance-sheet
 	# groups (classifier _item_balance_classes). Leaves in table order, matching this
 	# statement and classifier value, with any nonzero quarter.
 	var rows := []
@@ -388,26 +389,29 @@ func _collect_summed_group(proxy: Proxy, accountings: Dictionary[int, float], st
 	return [title, group_series, rows]
 
 
-func _collect_tax_group(proxy: Proxy, accountings: Dictionary[int, float]) -> Array:
-	# Like _collect_summed_group, but signs each is_tax income leaf into the group the
-	# way SUBTOTAL_TAX does (TAX_REVENUE adds, INCOME_TAX subtracts) — the net tax
-	# effect on net income. Each displayed leaf keeps its raw magnitude.
+func _collect_signed_group(proxy: Proxy, accountings: Dictionary[int, float], subtotal: int,
+		title: String, revenue_adds: bool) -> Array:
+	# Like _collect_summed_group over the income leaves of one subtotal, but signs each
+	# leaf into the group the way the subtotal does: a revenue leaf adds where
+	# revenue_adds and a cost subtracts (the tax group, TAX_REVENUE less
+	# INCOME_TAX, the net tax effect on net income), or the reverse (the opex group, its
+	# costs less its gains). Each displayed leaf keeps its raw magnitude.
 	var item_revenue: Array[bool] = _db_tables[&"line_items"][&"revenue"]
 	var rows := []
 	var group_series := PackedFloat64Array()
 	for item in _n_line_items:
-		if _item_statements[item] != _income_statement or _item_subtotals[item] != SUBTOTAL_TAX:
+		if _item_statements[item] != _income_statement or _item_subtotals[item] != subtotal:
 			continue
 		var current_value: float = accountings.get(item, 0.0)
 		var leaf_series := _make_series(proxy.get_financials_accounting_history(item), current_value)
-		if item_revenue[item]:
+		if item_revenue[item] == revenue_adds:
 			_add_series(group_series, leaf_series)
 		else:
 			_subtract_into_series(group_series, leaf_series)
 		if !_has_nonzero(leaf_series):
 			continue
 		rows.append([_item_keys[item], leaf_series])
-	return ["SUBTOTAL_TAX", group_series, rows]
+	return [title, group_series, rows]
 
 
 func _append_balance_group(groups: Array, proxy: Proxy, accountings: Dictionary[int, float],
