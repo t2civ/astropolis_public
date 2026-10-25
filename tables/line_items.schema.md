@@ -35,7 +35,7 @@ balances. An event that can go either way books its size to one of a pair by its
   FALSE for resale/transfer/tax/trading lines (e.g. `TRADING_GAINS` is real revenue but not
   production).
 - operating_expense — for an `INCOME` leaf, TRUE routes it into the `OPERATING_EXPENSE` subtotal, below gross
-  profit, instead of `COST_OF_GOODS` or `REVENUE`: a cost no operation's run weighs, such as maintenance, wear and
+  profit, instead of `COST_OF_GOODS` or `REVENUE`: a cost no operation's run weighs, such as maintenance, administration, wear and
   research (`FINANCIAL_MODEL.md`, principle 6). Signed like `is_tax`: a cost leaf adds, and a revenue leaf, a gain
   such as `DISPOSAL_GAINS`, subtracts. Operating income is the derived `gross profit − operating expense`. Unused for
   cash-flow and balance leaves.
