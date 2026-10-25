@@ -205,3 +205,4 @@ Notes:
 - **Education** — Delivery of in-person teaching and training across primary, tertiary, and vocational levels.
 - **Public/Gov Services** — Provision of administration, security, justice, defense, and civic services.
 - **Utilities/Env Services** — Distribution of water, power, and gas to premises and the collection and processing of waste. Consumes water and electricity for delivery and handles waste streams from settlements.
+- **Services by Hand** — Each service that draws computing can also be done in the same premises without it: ledgers, paper records, switchboards, manual scheduling and more people. The same work takes about a third more working hours.
