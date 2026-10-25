@@ -162,7 +162,6 @@ Notes:
 - **Architecture & Engineering** — Design and technical specification of buildings, structures, vehicles, and systems — the design product itself, distinct from the construction or fabrication that realizes it.
 - **Research & Development** — Systematic scientific and engineering investigation yielding new knowledge, designs, materials, and processes. Compute- and instrument-intensive; the wellspring of technological advancement.
 - **Exchange Services** — Operation of trading venues and central clearing: matching buyers and sellers of commodities and contracts, guaranteeing settlement, and coordinating the load-out of traded goods for delivery.
-- **Wholesale & Logistics** — Bulk distribution and freight movement of goods within a body: warehousing, wholesaling, and surface and regional shipping.
 - **Passenger Services** — Movement of people within a body: transit systems, regional carriers, taxis, and mobility services.
 - **Retail Services** — Sale and last-mile distribution of goods to end consumers through storefronts, markets, and direct fulfillment.
 - **Hospitality** — Lodging, food service, and tourism: hotels, restaurants, and travel accommodation.
