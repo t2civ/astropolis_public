@@ -738,12 +738,12 @@ func get_market() -> MarketProxy:
 @abstract func set_inventory_level_lever(type: int, value: float) -> void
 
 
-## Sets the share of its owners' income, past what its maintenance buys, that the facility
-## spends on [param type] each interval as research and development, an operating expense, before
-## its builds take their share of what is left: 0.0 spends none. A facility that houses no one, an
-## agency, spends it of its polity's income instead, and its builds keep its own. It buys only
-## what the facility can trade or make. What it buys raises nothing yet:
-## a patch until the technology model, in which research raises what operations make (ROADMAP.md,
-## "Technology"). Proxy-authoritative: this change flows proxy -> server. No-op on an
-## out-of-range index or a value outside [0.0, 1.0].
+## Sets the share of its owners' income, past what its maintenance and administration buy, that the
+## facility spends on [param type] each interval as research and development, an operating expense,
+## before its builds take their share of what is left: 0.0 spends none. A facility that houses no
+## one, an agency, spends it of its polity's income instead, and its builds keep its own. It buys
+## only what the facility can trade or make. What it buys raises nothing yet: a patch until the
+## technology model, in which research raises what operations make (ROADMAP.md, "Technology").
+## Proxy-authoritative: this change flows proxy -> server. No-op on an out-of-range index or a value
+## outside [0.0, 1.0].
 @abstract func set_inventory_research_share(type: int, value: float) -> void
