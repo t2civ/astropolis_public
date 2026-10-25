@@ -35,7 +35,7 @@ balances. An event that can go either way books its size to one of a pair by its
   FALSE for resale/transfer/tax/trading lines (e.g. `TRADING_GAINS` is real revenue but not
   production).
 - operating_expense — for an `INCOME` cost leaf, TRUE routes it into the `OPERATING_EXPENSE` subtotal
-  (a fixed/overhead cost, below gross profit) instead of `COST_OF_GOODS`; operating income is the derived
+  (selling, administration or research, below gross profit) instead of `COST_OF_GOODS`; operating income is the derived
   `gross profit − operating expense`. Unused for revenue, cash-flow, and balance leaves.
 - balance_class — for a `BALANCE` leaf, its `Enums.BalanceClasses` member (prefix `BALANCE_CLASS_`):
   `ASSET`, `LIABILITY`, or `EQUITY`. Routes the leaf into the assets, liabilities, or equity subtotal.
