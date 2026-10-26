@@ -167,7 +167,7 @@ Notes:
 - **Retail Services** — Sale and last-mile distribution of goods to end consumers through storefronts, markets, and direct fulfillment.
 - **Hospitality** — Lodging, food service, and tourism: hotels, restaurants, and travel accommodation.
 - **Live Entertainment** — Leisure and recreation with the audience or player present: venues, live events, sports, parks, attractions, and gaming halls.
-- **Virtual Worlds** — Games, hosted worlds, and virtual events: interactive leisure run on servers for each hour played.
+- **Metaverse** — Persistent shared worlds at the full fidelity of the senses, where people play, meet, and gather. Each hour spent in one takes a great deal of accelerated computing; for a mind that lives in computing, it is much of what leisure is.
 - **Personal Services** — Direct services to individuals: grooming, fitness, childcare, domestic help, and repair of personal goods.
 - **Clinical Care** — Care that needs the patient present: examination, treatment, surgery, nursing, and a bed. Equipment- and supply-intensive; central to population welfare in every settlement.
 - **Telemedicine** — Consultation, diagnosis, and monitoring at a distance, which stands in for part of clinical care.

@@ -171,7 +171,7 @@ Notes:
 - **Telecommunications** — Switching, routing, and relaying of voice and data between endpoints. Consumes computing and network capacity and electrical power; produces transmission independent of the content carried.
 - **Cybersecurity** — Defense of information systems: monitoring, threat detection, cryptographic protection, and incident response. Draws heavily on computing, including accelerated compute for threat analysis.
 - **Broadcast & Streaming** — Production, encoding, and distribution of audiovisual content to audiences. Rides on telecommunications for delivery and draws on computing for production and serving.
-- **Virtual Worlds** — Games, hosted worlds, and virtual events run on servers for their players, made by studios and their networks. Draws accelerated compute for each hour played.
+- **Metaverse** — Hosting persistent shared worlds for their occupants, built and run by studios and their networks. Draws heavy accelerated compute for each hour spent in them.
 - **Marketing & Advertising** — Market research and the creation and placement of advertising. Draws on broadcast and streaming channels to reach audiences and on accelerated compute for targeting.
 - **Business Services** — Provision of outsourced administrative and back-office operations: contact centers, transaction processing, and remote support. Compute- and communications-intensive.
 - **Accounting Services** — Provision of bookkeeping, audit, tax, and financial-reporting work.
