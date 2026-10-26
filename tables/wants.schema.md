@@ -29,8 +29,8 @@ clear, shared in a shortage with the operations', and what they give off follows
   it spends on this want, none past the want. Blank for an existence want, which comes
   first. The shares are relative: a type's are scaled to sum to one.
 - spread — FLOAT, how readily its substitution group's members stand in for one another: the
-  share of what the group costs, for what it fills, over which their shares change e-fold. Wide
-  where one form stands in for another only in part. Blank: 0.2.
+  share of what its cheapest member costs, for what it fills, over which their shares change
+  e-fold. Wide where one form stands in for another only in part. Blank: 0.2.
 - in_inventory, in_inventory_rates, in_inventory_groups, in_inventory_mixes — What it draws from
   inventory, at per-individual rates, and its substitution group: its members, each at the rate
   that fills the want alone and so standing in for the others at what it costs for what it fills,
