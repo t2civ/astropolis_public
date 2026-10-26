@@ -8,6 +8,15 @@ sharers draw before the clear, which takes each resource on its own, and values 
 all who share it (`PRODUCTION_MODEL.md` in the development repository, "What a facility is", shared
 recipes).
 
+The recipes are written by `tests/calibration/seed_services.py`, each with its first member at 1, so
+a sharer's size is what it draws of that member:
+- `ADMIN_*` — what an organization of a kind keeps itself with, its members its shares of the
+  buyer's gross output: industry, utilities, farms, the makers that sell to households, the local
+  services, government, media, the professional offices and finance.
+- `MAINTENANCE_*` — the parts a kind of plant wears, and the field engineering that inspects and
+  overhauls it; `MAINTENANCE_COMPUTE`, the cybersecurity that keeps compute running.
+- `UPKEEP_*` — what a kind of structure needs for being there.
+
 ## Fields
 
 - in_inventory — The resources the recipe draws.
