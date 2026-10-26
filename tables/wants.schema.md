@@ -11,8 +11,8 @@ with its target lists and none of its driver lists. Each of the residents' class
 at local prices from its spending, up to its share of their head count in each life stage
 times `stage_weights`: its existence wants first, as one bundle, then each input of each other
 want with its share of the want's `spending_share` of what is left, the input's share by its
-value at the facility's long prices, its local prices averaged over a decade ("Work and pay" in
-`POPULATION_MODEL.md`). What they buy of each input is a draw of its own in the facility's
+value at the facility's long prices, its local prices averaged over a decade, and its substitution
+group one input, valued at its members' soft minimum ("Work and pay" in `POPULATION_MODEL.md`). What they buy of each input is a draw of its own in the facility's
 clear, shared in a shortage with the operations', and what they give off follows what they drew
 ("The residents' draw, as built" there).
 
@@ -28,11 +28,15 @@ clear, shared in a shortage with the operations', and what they give off follows
 - spending_share — FLOAT, the share of what a class has left after its existence wants that
   it spends on this want, none past the want. Blank for an existence want, which comes
   first. The shares are relative: a type's are scaled to sum to one.
-- in_inventory, in_inventory_rates, in_inventory_groups — What it draws from inventory, at
-  per-individual rates, and its substitution group: members one for one, each at the rate that
-  fills the want alone, split among them by their local prices, a member taking none where the
-  cheapest is a fifth below its own price. A want has one group at most, and only an
-  existence want has one. The rates default to
+- spread — FLOAT, how readily its substitution group's members stand in for one another: the
+  share of their mean price, for what each fills, over which their shares change e-fold. Wide
+  where one form stands in for another only in part. Blank: 0.2.
+- in_inventory, in_inventory_rates, in_inventory_groups, in_inventory_mixes — What it draws from
+  inventory, at per-individual rates, and its substitution group: its members, each at the rate
+  that fills the want alone and so standing in for the others at what it costs for what it fills,
+  split among them by those costs over the want's `spread`, each weighed by its mix where they
+  cost alike (`POPULATION_MODEL.md`, "Services, in person and virtual"). A blank mix is 1. A want
+  has one group at most, its members in one unit. The rates default to
   `t/y`; a resource that is not mass carries its unit (`h/y` for a service, `h/h` for
   habitation, `MW` for electricity).
 - in_atmos, in_atmos_rates — What it draws from the atmosphere, free where there is one and
