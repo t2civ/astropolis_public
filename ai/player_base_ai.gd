@@ -277,6 +277,7 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"player_facility_strategies",
 	&"body_strategies",
 	&"counterparty_strategies",
+	&"is_budget_seeded",
 ]
 
 
@@ -302,6 +303,9 @@ var body_strategies: Dictionary[int, int]
 ## Per-counterparty strategies keyed by [member PlayerProxy.player_id]. Absent
 ## is the same as "NEUTRAL". See [enum CounterpartyStrategies].
 var counterparty_strategies: Dictionary[int, int]
+## True once its treasuries' budget lines are seeded from the game-start tables (see
+## [method _seed_budget_shares]).
+var is_budget_seeded := false
 
 # *****************************************************************************
 
@@ -327,4 +331,46 @@ func ai_init() -> void:
 
 
 func process_ai_interval(_delta: float) -> void:
-	pass
+	if !is_budget_seeded and !proxy.facilities.is_empty():
+		_seed_budget_shares()
+		is_budget_seeded = true
+
+
+# ***************************** INTERNAL PRIVATE ******************************
+
+# Seeds its treasuries' budget lines from the game-start tables (FINANCIAL_MODEL.md, "Budgets"): a
+# polity's appropriation of each of its agencies, the agency's appropriation_share in players.tsv,
+# and its funding of each of its facilities from each treasury that owns it, the facility's
+# funding_share in facilities.tsv. A line no table seeds funds all its counterparty lacks.
+func _seed_budget_shares() -> void:
+	const PLAYER_CLASS_AGENCY := Enums.PlayerClasses.PLAYER_CLASS_AGENCY
+	const PLAYER_CLASS_COMPANY := Enums.PlayerClasses.PLAYER_CLASS_COMPANY
+	var appropriations_paid := IVTableData.db_find(&"line_items", &"unique_type",
+			Enums.UniqueLineItems.APPROPRIATIONS_PAID)
+	var appropriation_shares: Array[float] = IVTableData.db_tables[&"players"][&"appropriation_share"]
+	for agency in Proxy.proxy_bus.player_proxies:
+		if agency == proxy or agency.polity != proxy or agency.player_class != PLAYER_CLASS_AGENCY:
+			continue
+		var player_type := IVTableData.get_row(agency.name)
+		if player_type != -1 and appropriation_shares[player_type] >= 0.0:
+			proxy.set_budget_share(Utils.get_line_item_key(appropriations_paid, agency.player_id),
+					appropriation_shares[player_type])
+	var funding_items: Array[int] = [
+		IVTableData.db_find(&"line_items", &"unique_type",
+				Enums.UniqueLineItems.GOVERNMENT_FUNDING_PAID),
+		IVTableData.db_find(&"line_items", &"unique_type",
+				Enums.UniqueLineItems.CORPORATE_FUNDING_PAID),
+	]
+	var funding_shares: Array[float] = IVTableData.db_tables[&"facilities"][&"funding_share"]
+	for facility in proxy.facilities:
+		var facility_type := IVTableData.get_row(facility.name)
+		if facility_type == -1 or !(funding_shares[facility_type] >= 0.0):
+			continue
+		var facility_proxy := facility as FacilityProxy
+		var is_government := proxy.player_class != PLAYER_CLASS_COMPANY
+		var is_corporate := (proxy.player_class != PLAYER_CLASS_AGENCY
+				and facility_proxy.public_sector < 1.0)
+		for account in funding_items.size():
+			if (is_government if account == Enums.Accounts.ACCOUNT_GOVERNMENT else is_corporate):
+				proxy.set_budget_share(Utils.get_line_item_key(funding_items[account],
+						facility_proxy.facility_id), funding_shares[facility_type])

@@ -202,9 +202,8 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 ## rate; and an omitted key (NAN) holds. The [code]research_spending_share[/code] key is the
 ## share of the owners' income it spends on research and development, on each resource tagged
 ## [code]research[/code] (see [method FacilityProxy.set_inventory_research_share]); at an agency,
-## where it spends any, the [code]appropriation_share[/code] its row in [code]players.tsv[/code]
-## gives, a share of its polity's income. An omitted key spends none. Postures never selected by
-## [method _reconcile_facility_strategy] are left empty.
+## where it spends any, all its funding leaves past its upkeep. An omitted key spends none.
+## Postures never selected by [method _reconcile_facility_strategy] are left empty.
 static var facility_strategy_defs: Array[Dictionary] = [
 	{}, # NEUTRAL
 	{&"buildout_spending_share": 0.25, &"research_spending_share": 0.02}, # GROWTH
@@ -535,7 +534,8 @@ func _reconcile_facility_strategy() -> int:
 
 ## Translates the posture's def into the BUILDOUT operation's target spending share
 ## (the share of facility profit past what wears out the yards spend on growth; NAN holds), and
-## into the research share of each resource tagged [code]research[/code], an agency's its own.
+## into the research share of each resource tagged [code]research[/code], at an agency all its
+## funding leaves.
 ## Both are resolved by tag, so no table entity name is referenced here.
 func _apply_facility_knobs(strategy: int) -> void:
 	var def := facility_strategy_defs[strategy]
@@ -545,21 +545,11 @@ func _apply_facility_knobs(strategy: int) -> void:
 		proxy.set_operations_target_spending_share(operation_type, share)
 	var research_share: float = def.get(&"research_spending_share", 0.0)
 	if research_share > 0.0 and proxy.get_player_class() == Enums.PlayerClasses.PLAYER_CLASS_AGENCY:
-		research_share = _get_appropriation_share()
+		research_share = 1.0
 	var research_resources: PackedInt32Array = _tag_resources.get(&"research",
 			PackedInt32Array())
 	for resource_type in research_resources:
 		proxy.set_inventory_research_share(resource_type, research_share)
-
-
-# The share of its polity's income an agency's polity grants it, its row's
-# appropriation_share in players.tsv; 0.0 where it gives none.
-func _get_appropriation_share() -> float:
-	var player_type := IVTableData.get_row(proxy.get_player_name())
-	if player_type == -1:
-		return 0.0
-	var shares: Array[float] = IVTableData.db_tables[&"players"][&"appropriation_share"]
-	return shares[player_type] if shares[player_type] > 0.0 else 0.0
 
 
 ## Sets [member trader_strategy], emitting [signal trader_strategy_changed] only on
