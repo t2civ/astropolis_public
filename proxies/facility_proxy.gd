@@ -175,8 +175,9 @@ var cash_reserve := 0.0
 ## Its owners' funding line; INF, all it lacks, by default. Use [method set_funding_limit].
 var funding_limit := INF
 ## What the facility may spend past what it holds before anything draws on its owners' residents:
-## its cash less its debt, plus its line, and the same of each treasury that funds it, as of its
-## last interval (FINANCIAL_MODEL.md, "Credit"). Its trader's commitments are bound by it.
+## its cash less its debt, plus its line where its owners don't fund all it lacks, and the same of
+## each treasury that funds it, as of its last interval (FINANCIAL_MODEL.md, "Credit"). Its
+## trader's commitments are bound by it.
 var credit := 0.0
 
 # *****************************************************************************
