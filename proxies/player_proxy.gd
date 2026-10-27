@@ -33,6 +33,17 @@ var tax_rate := 0.0 ## Income-tax rate applied to this player's facilities.
 ## a share of its polity's income for now. A line with no share funds all its counterparty lacks.
 ## Resizable container — not threadsafe! Use [method set_budget_share].
 var budget_shares: Dictionary[int, float] = {}
+## What each of its treasuries has to spend a year past what its committed lines take, what its
+## discretionary lines share, by [code]Enums.Accounts[/code], as of its administrative center's last
+## interval (FINANCIAL_MODEL.md, "Budgets"); empty where it has none. Server-authoritative.
+## Resizable container — not threadsafe! Use [method get_budget].
+var budgets := PackedFloat64Array()
+## Its treasuries' lines a year, as of its administrative center's last interval, each kept under
+## the key of the line item that books its use (see [method Utils.get_line_item_key]): each
+## treasury's interest, a committed line, and its funding by facility and appropriation by agency,
+## INF where a line funds all its counterparty lacks. Server-authoritative.
+## Resizable container — not threadsafe! Use [method get_budget_line].
+var budget_lines: Dictionary[int, float] = {}
 
 # *****************************************************************************
 # persisted
@@ -82,6 +93,21 @@ func get_facilities() -> Array[Proxy]:
 ## INF where it has none and funds all its counterparty lacks. proxy thread only!
 func get_budget_share(key: int) -> float:
 	return budget_shares.get(key, INF)
+
+
+## Returns what the treasury [param account], an [code]Enums.Accounts[/code], has to spend a year
+## past its committed lines (see [member budgets]), or NAN where the player has no treasuries.
+## proxy thread only!
+func get_budget(account: int) -> float:
+	if account < 0 or account >= budgets.size():
+		return NAN
+	return budgets[account]
+
+
+## Returns the line a year kept under [param key] (see [member budget_lines]): INF where it funds
+## all its counterparty lacks, and NAN where there is none. proxy thread only!
+func get_budget_line(key: int) -> float:
+	return budget_lines.get(key, NAN)
 
 
 # ******************************** AI METHODS *********************************

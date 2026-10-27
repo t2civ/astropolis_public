@@ -9,7 +9,8 @@ class_name ITabBudget
 extends MarginContainer
 
 ## "Budget" tab subpanel for [InfoPanel]. Shows the selected entity's chart of
-## accounts as one subtab per financial statement (income, cash flow, balance).
+## accounts as one subtab per financial statement (income, cash flow, balance), and
+## its budgets in the Funding subtab.
 ##
 ## The income statement is a waterfall: revenue and cost-of-goods groups, a
 ## derived gross-profit line, an operating-expense group, a derived
@@ -27,8 +28,15 @@ extends MarginContainer
 ## display unit; the "<" / ">" buttons shift the visible quarter window. Display
 ## values are scaled on the fly so most land in the 1–999 range.
 ##
-## Subtab indices follow [code]Enums.StatementTypes[/code], with placeholder
-## funding, grants and R & D subtabs after them.
+## The Funding subtab shows, at an administrative center or for a player, each of its player's
+## treasuries' budgets as a bar graph of its lines (FINANCIAL_MODEL.md, "Budgets"): its committed
+## lines as shares of what it has to spend a year, and its discretionary lines as shares of what
+## they leave, the rest of its budget last. Each bar is filled to what was drawn of its line last
+## quarter, and a line that funds all its counterparty lacks spans the width, filled to what it drew
+## of the budget. Elsewhere it shows the facility's lines from its owners. It is read-only.
+##
+## Subtab indices follow [code]Enums.StatementTypes[/code], then the Funding subtab, with
+## placeholder grants and R & D subtabs after it.
 
 const SCENE := "res://public/ui/itab_budget.tscn"  ## Scene file for instancing.
 
@@ -45,13 +53,11 @@ const SUBTOTAL_TAX := 10
 const USD_MIN_EXPONENT := 1
 const USD_MAX_EXPONENT := 6
 
-# Placeholder subtabs after the statements: [tab title, text].
-const PLACEHOLDER_TABS := [
-	["Funding", """WIP
+const NO_VALUE := "—" ## Applies, but has no value now.
+const UNBOUNDED := "∞" ## A line that funds all its counterparty lacks.
 
-Adjust overall funding levels here. Prioritize, de-prioritize
-or cancel specific projects. (Note: Agencies may be
-constrained here by law.)"""],
+# Placeholder subtabs after the Funding subtab: [tab title, text].
+const PLACEHOLDER_TABS := [
 	["Grants", """WIP
 
 You can assist and (to some degree) influence the
@@ -81,6 +87,7 @@ var n_visible_quarters := 6  ## Number of quarter columns shown at once.
 var arrow_width := 24.0  ## Min width of the "<" / ">" shift buttons and matching row gutters.
 var foldable_indent := 20.0  ## Foldable title left-lead (fold-icon + style-box margin); aligns the header's unit label with group titles.
 var scroll_correction := 7.0  ## Trailing spacer on the out-of-scroll header; offsets its columns to match the in-scroll content past the vertical scrollbar.
+var bar_width := 120.0  ## Min width of the Funding subtab's bars.
 
 # table indexing
 var _db_tables := IVTableData.db_tables
@@ -92,6 +99,7 @@ var _account_keys := Enums.Accounts.keys()
 var _income_statement := Enums.StatementTypes.STATEMENT_INCOME
 var _cash_flow_statement := Enums.StatementTypes.STATEMENT_CASH_FLOW
 var _balance_statement := Enums.StatementTypes.STATEMENT_BALANCE
+var _funding_tab := _statement_keys.size()
 var _usd_inv: float = 1.0 / IVUnits.unit_multipliers[&"$"]
 
 # line_items entity-name keys for leaf rows, rendered via Label auto-translation
@@ -99,13 +107,21 @@ var _usd_inv: float = 1.0 / IVUnits.unit_multipliers[&"$"]
 # (SUBTOTAL_REVENUE, SUBTOTAL_COST_OF_GOODS, SUBTOTAL_OPERATING_EXPENSE, or
 # SUBTOTAL_TAX); _item_balance_classes maps each balance leaf to its
 # Enums.BalanceClasses; _item_accounts maps each leaf to its Enums.Accounts, -1 for the
-# facility's own; _item_keyed_bys maps each to its Enums.Counterparties, -1 for one kept once.
-# All cached so proxy-thread reads stay safe.
+# facility's own; _item_keyed_bys maps each to its Enums.Counterparties, -1 for one kept once;
+# _item_returns maps each that books a budget line's use to the one that books what came back of
+# it, -1 for none. All cached so proxy-thread reads stay safe.
 var _item_keys: Array[String] = []
 var _item_subtotals := PackedInt32Array()
 var _item_balance_classes := PackedInt32Array()
 var _item_accounts := PackedInt32Array()
 var _item_keyed_bys := PackedInt32Array()
+var _item_returns := PackedInt32Array()
+var _committed_items := PackedInt32Array() # a treasury's committed lines
+var _funding_items := PackedInt32Array() # a treasury's funding of a facility, by Enums.Accounts
+var _item_transfers_paid := -1
+var _item_dividends_paid := -1
+var _item_appropriations_paid := -1
+var _item_funding_received := -1
 
 var _selection_manager: AstroSelectionManager
 var _suppress_tab_listener := true
@@ -122,6 +138,7 @@ var _display_account_groups: Array = []  # a treasury's leaves per group, as _di
 var _display_unit := ""  # localized USD magnitude-unit label
 var _display_scale := 1.0  # internal-value -> display multiplier (USD inverse / 1000^exponent)
 var _window_offset := 0  # quarters scrolled back from newest; 0 shows the current quarter
+var _funding_scale := 1.0  # the Funding subtab's internal-value -> display multiplier
 
 # Blank icon used as the fold-arrow override for a group with no leaves; keeps
 # the title's left lead while hiding the (non-functional) arrow.
@@ -136,6 +153,10 @@ var _scrolls: Array[ScrollContainer] = []
 var _headers: Array[BudgetHeaderRow] = []
 var _footers: Array[BudgetGroup] = []  # net-income / net-cash-flow line, a leafless foldable
 var _empty_labels: Array[Label] = []
+var _funding_header: FundingHeaderRow
+var _funding_scroll: ScrollContainer
+var _funding_rows: VBoxContainer
+var _funding_empty_label: Label
 
 @warning_ignore("unsafe_property_access")
 @onready var _memory: Dictionary = get_parent().memory # group open states
@@ -188,6 +209,28 @@ func _precompute_display_names() -> void:
 		else:
 			_item_subtotals[item] = SUBTOTAL_REVENUE if item_revenue[item] else SUBTOTAL_COST_OF_GOODS
 		_item_balance_classes[item] = item_balance_classes[item]
+	_item_returns.resize(_n_line_items)
+	_item_returns.fill(-1)
+	var funding_paid := _find_item(Enums.UniqueLineItems.GOVERNMENT_FUNDING_PAID)
+	var corporate_funding_paid := _find_item(Enums.UniqueLineItems.CORPORATE_FUNDING_PAID)
+	_item_appropriations_paid = _find_item(Enums.UniqueLineItems.APPROPRIATIONS_PAID)
+	_item_returns[funding_paid] = _find_item(Enums.UniqueLineItems.GOVERNMENT_PAYOUTS_RECEIVED)
+	_item_returns[corporate_funding_paid] = _find_item(
+			Enums.UniqueLineItems.CORPORATE_PAYOUTS_RECEIVED)
+	_item_returns[_item_appropriations_paid] = _find_item(
+			Enums.UniqueLineItems.APPROPRIATIONS_RECEIVED)
+	_funding_items = PackedInt32Array([funding_paid, corporate_funding_paid])
+	_committed_items = PackedInt32Array([
+		_find_item(Enums.UniqueLineItems.GOVERNMENT_INTEREST_PAID),
+		_find_item(Enums.UniqueLineItems.CORPORATE_INTEREST_PAID),
+	])
+	_item_transfers_paid = _find_item(Enums.UniqueLineItems.TRANSFERS_PAID)
+	_item_dividends_paid = _find_item(Enums.UniqueLineItems.DIVIDENDS_PAID)
+	_item_funding_received = _find_item(Enums.UniqueLineItems.FUNDING_RECEIVED)
+
+
+func _find_item(unique_type: int) -> int:
+	return IVTableData.db_find(&"line_items", &"unique_type", unique_type)
 
 
 func _build_ui() -> void:
@@ -261,6 +304,26 @@ func _build_ui() -> void:
 		_footers[statement] = footer
 		_empty_labels[statement] = empty_label
 
+	var funding_tab := VBoxContainer.new()
+	funding_tab.name = "TAB_FUNDING"  # node name auto-translates as tab title (gui.csv)
+	_tab_container.add_child(funding_tab)
+	_funding_header = FundingHeaderRow.new(column_width, bar_width, scroll_correction)
+	_funding_header.hide()
+	funding_tab.add_child(_funding_header)
+	_funding_scroll = ScrollContainer.new()
+	_funding_scroll.size_flags_horizontal = SIZE_EXPAND_FILL
+	_funding_scroll.size_flags_vertical = SIZE_EXPAND_FILL
+	_funding_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	funding_tab.add_child(_funding_scroll)
+	_funding_rows = VBoxContainer.new()
+	_funding_rows.size_flags_horizontal = SIZE_EXPAND_FILL
+	_funding_scroll.add_child(_funding_rows)
+	_funding_empty_label = Label.new()
+	_funding_empty_label.text = "No funding lines for this selection."
+	_funding_empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_funding_empty_label.hide()
+	funding_tab.add_child(_funding_empty_label)
+
 	for placeholder: Array in PLACEHOLDER_TABS:
 		var placeholder_label := Label.new()
 		placeholder_label.name = placeholder[0]
@@ -303,6 +366,9 @@ func _get_proxy_data(target_name: StringName) -> void:
 		return
 
 	var tab := current_tab
+	if tab == _funding_tab:
+		_update_funding_display.call_deferred(_collect_funding(proxy))
+		return
 	if tab >= _statement_keys.size():
 		_show_placeholder.call_deferred()
 		return
@@ -475,26 +541,14 @@ func _get_leaves(proxy: Proxy, accountings: Dictionary[int, float], item: int) -
 	# [[name, series], ...] for line item [param item]: one leaf where it is kept once, its name a
 	# translation key, and one per counterparty where it is kept per counterparty, its name a pair
 	# of the item's key and the counterparty's name, translated on the main thread.
-	var keyed_by := _item_keyed_bys[item]
-	if keyed_by == -1:
+	if _item_keyed_bys[item] == -1:
 		var current_value: float = accountings.get(item, 0.0)
 		return [[_item_keys[item], _make_series(proxy.get_financials_accounting_history(item),
 				current_value)]]
-	var counterparties: Array = Proxy.proxy_bus.facility_proxies
-	if keyed_by == Enums.Counterparties.COUNTERPARTY_PLAYER:
-		counterparties = Proxy.proxy_bus.player_proxies
 	var leaves := []
 	for key in proxy.get_financials_counterparty_keys(item):
-		var counterparty_id := Utils.get_line_item_counterparty(key)
-		var counterparty_name := str(counterparty_id)
-		var counterparty: Proxy = null
-		if counterparty_id < counterparties.size():
-			counterparty = counterparties[counterparty_id]
-		if counterparty:
-			counterparty_name = counterparty.gui_name if counterparty.gui_name else String(
-					counterparty.name)
 		var key_value: float = accountings.get(key, 0.0)
-		leaves.append([[_item_keys[item], counterparty_name],
+		leaves.append([_get_line_name(item, key),
 				_make_series(proxy.get_financials_accounting_history(key), key_value)])
 	return leaves
 
@@ -535,6 +589,144 @@ func _subtract_series(a: PackedFloat64Array, b: PackedFloat64Array) -> PackedFlo
 		var bv := b[q] if q < b.size() else 0.0
 		result[q] = av - bv
 	return result
+
+
+func _collect_funding(proxy: Proxy) -> Array:
+	# [[title, total, committed_rows, discretionary_rows], ...], each row [name, share, line, drawn,
+	# fill]: at an administrative center or for a player, each of the player's treasuries that has a
+	# budget or a line; elsewhere the facility's lines from its owners.
+	var player: PlayerProxy
+	var facility: FacilityProxy
+	if proxy is PlayerProxy:
+		player = proxy
+	elif proxy is FacilityProxy:
+		facility = proxy
+		player = facility.player
+	if !player or !player.administrative_center:
+		return []
+	var center := player.administrative_center
+	if facility and facility != center:
+		return _collect_owner_lines(facility, player, center)
+	var keys: Array[int] = []
+	keys.assign(player.budget_lines.keys())
+	keys.sort_custom(_is_key_before)
+	var panels := []
+	for account in player.budgets.size():
+		var panel := _collect_treasury(player, center, account, keys)
+		if !panel.is_empty():
+			panels.append(panel)
+	return panels
+
+
+func _collect_treasury(player: PlayerProxy, center: FacilityProxy, account: int,
+		keys: Array[int]) -> Array:
+	# A treasury's budget, or empty where it has neither a budget nor a line. Its committed lines'
+	# shares are of what it has to spend, and its discretionary lines' of what they leave, which its
+	# rest, transfers or dividends, or at an agency what goes back to its polity, takes last.
+	var budget := player.budgets[account]
+	var committed_rows := []
+	var discretionary_rows := []
+	var committed := 0.0
+	var share_sum := 0.0
+	for key in keys:
+		var item := Utils.get_line_item_type(key)
+		if _item_accounts[item] != account:
+			continue
+		var line: float = player.budget_lines[key]
+		var drawn := _get_drawn(center, key, true)
+		if _committed_items.has(item):
+			committed += line
+			committed_rows.append([_get_line_name(item, key), NAN, line, drawn,
+					_get_fill(drawn, line)])
+			continue
+		var share := line / budget if budget > 0.0 else NAN
+		if is_finite(share):
+			share_sum += share
+		var fill := _get_fill(drawn, line if is_finite(line) else budget)
+		discretionary_rows.append([_get_line_name(item, key), share, line, drawn, fill])
+	if !(budget > 0.0) and committed_rows.is_empty() and discretionary_rows.is_empty():
+		return []
+	var total := budget + committed
+	for row: Array in committed_rows:
+		var line: float = row[2]
+		row[1] = line / total if total > 0.0 else NAN
+	var rest_key := _item_dividends_paid
+	if account == Enums.Accounts.ACCOUNT_GOVERNMENT:
+		rest_key = _item_transfers_paid
+		if player.player_class == Enums.PlayerClasses.PLAYER_CLASS_AGENCY:
+			rest_key = Utils.get_line_item_key(_item_appropriations_paid, player.polity.player_id)
+	var rest_share := maxf(1.0 - share_sum, 0.0) if budget > 0.0 else NAN
+	var rest := rest_share * budget
+	var rest_drawn := _get_drawn(center, rest_key, false)
+	discretionary_rows.append([_get_line_name(Utils.get_line_item_type(rest_key), rest_key),
+			rest_share, rest, rest_drawn, _get_fill(rest_drawn, rest)])
+	return [_account_keys[account], total, committed_rows, discretionary_rows]
+
+
+func _collect_owner_lines(facility: FacilityProxy, player: PlayerProxy,
+		center: FacilityProxy) -> Array:
+	# The lines of [param facility]'s owners' treasuries that fund it, as one panel.
+	var rows := []
+	for account in player.budgets.size():
+		var key := Utils.get_line_item_key(_funding_items[account], facility.facility_id)
+		var line := player.get_budget_line(key)
+		if is_nan(line):
+			continue
+		var budget := player.budgets[account]
+		var share := line / budget if budget > 0.0 else NAN
+		var drawn := _get_drawn(center, key, true)
+		var fill := _get_fill(drawn, line if is_finite(line) else budget)
+		rows.append([[_account_keys[account], player.gui_name], share, line, drawn, fill])
+	if rows.is_empty():
+		return []
+	return [[_item_keys[_item_funding_received], NAN, [], rows]]
+
+
+# What was drawn last quarter of the line kept under [param key] at [param center], net of what came
+# back of it where [param is_net], as a rate a year; NAN before a quarter has ended.
+func _get_drawn(center: FacilityProxy, key: int, is_net: bool) -> float:
+	var history := center.get_financials_accounting_history(key)
+	if history.is_empty():
+		return NAN
+	var drawn := history[-1]
+	var returned_item := _item_returns[Utils.get_line_item_type(key)]
+	if is_net and returned_item != -1:
+		var returned_key := Utils.get_line_item_key(returned_item,
+				Utils.get_line_item_counterparty(key))
+		drawn -= center.get_financials_accounting_history(returned_key)[-1]
+	return drawn * IVUnits.YEAR / Utils.get_ordinal_quarter_duration(center.ordinal_qtr - 1)
+
+
+# What of [param line] [param drawn] is, or NAN where either has no value.
+func _get_fill(drawn: float, line: float) -> float:
+	if !is_finite(drawn) or !(line > 0.0) or is_inf(line):
+		return NAN
+	return drawn / line
+
+
+# A line's name, as _get_leaf_name takes it: [param item]'s translation key where it is kept once,
+# or that and its counterparty's name where it is kept per counterparty.
+func _get_line_name(item: int, key: int) -> Variant:
+	var keyed_by := _item_keyed_bys[item]
+	if keyed_by == -1:
+		return _item_keys[item]
+	var counterparties: Array = Proxy.proxy_bus.facility_proxies
+	if keyed_by == Enums.Counterparties.COUNTERPARTY_PLAYER:
+		counterparties = Proxy.proxy_bus.player_proxies
+	var counterparty_id := Utils.get_line_item_counterparty(key)
+	var counterparty_name := str(counterparty_id)
+	if counterparty_id < counterparties.size():
+		var counterparty: Proxy = counterparties[counterparty_id]
+		if counterparty:
+			counterparty_name = counterparty.gui_name if counterparty.gui_name else String(
+					counterparty.name)
+	return [_item_keys[item], counterparty_name]
+
+
+func _is_key_before(a: int, b: int) -> bool:
+	var type_a := Utils.get_line_item_type(a)
+	var type_b := Utils.get_line_item_type(b)
+	return type_a < type_b or (type_a == type_b and a < b)
 
 
 # ******************************** MAIN THREAD ********************************
@@ -718,6 +910,92 @@ func _format_quarter(ordinal_qtr: int) -> String:
 		var year := ordinal_qtr / 4
 		return "%dQ1" % year
 	return "Q%d" % quarter
+
+
+func _update_funding_display(panels: Array) -> void:
+	_no_budget_label.hide()
+	_tab_container.show()
+	if panels.is_empty():
+		_funding_header.hide()
+		_funding_scroll.hide()
+		_funding_empty_label.show()
+		return
+	_funding_empty_label.hide()
+	_funding_scroll.show()
+	_funding_header.show()
+
+	# Pick the USD display unit so most values land in the 1–999 range.
+	var dollar_values := PackedFloat64Array()
+	for panel: Array in panels:
+		var total: float = panel[1]
+		dollar_values.append(total * _usd_inv)
+		for rows: Array in [panel[2], panel[3]]:
+			for row: Array in rows:
+				var line: float = row[2]
+				var drawn: float = row[3]
+				dollar_values.append(line * _usd_inv)
+				dollar_values.append(drawn * _usd_inv)
+	var exponent := clampi(Utils.get_modal_base1000_exponent(dollar_values),
+			USD_MIN_EXPONENT, USD_MAX_EXPONENT)
+	_funding_scale = _usd_inv * pow(1000.0, -float(exponent))
+	_funding_header.set_unit("%s %s" % [Utils.get_usd_unit_string(exponent), tr(&"LABEL_A_YEAR")])
+
+	var n_rows := 0
+	for panel: Array in panels:
+		var total: float = panel[1]
+		var committed_rows: Array = panel[2]
+		var discretionary_rows: Array = panel[3]
+		var is_budget := !is_nan(total)
+		_get_funding_row(n_rows).set_title(_get_leaf_name(panel[0]),
+				_format_money(total) if is_budget else "")
+		n_rows += 1
+		if !committed_rows.is_empty():
+			_get_funding_row(n_rows).set_section(tr(&"LABEL_COMMITTED"))
+			n_rows += 1
+			for row: Array in committed_rows:
+				_set_funding_line(_get_funding_row(n_rows), row)
+				n_rows += 1
+		if is_budget:
+			_get_funding_row(n_rows).set_section(tr(&"LABEL_DISCRETIONARY"))
+			n_rows += 1
+		for row: Array in discretionary_rows:
+			_set_funding_line(_get_funding_row(n_rows), row)
+			n_rows += 1
+	for i in range(n_rows, _funding_rows.get_child_count()):
+		var unused_row: Control = _funding_rows.get_child(i)
+		unused_row.hide()
+
+
+# The Funding subtab's row [param index], made where there are fewer, and shown.
+func _get_funding_row(index: int) -> FundingRow:
+	while _funding_rows.get_child_count() <= index:
+		_funding_rows.add_child(FundingRow.new(label_width, column_width, bar_width,
+				SUBGROUP_INDENT))
+	var row: FundingRow = _funding_rows.get_child(index)
+	row.show()
+	return row
+
+
+func _set_funding_line(row: FundingRow, data: Array) -> void:
+	var share: float = data[1]
+	var line: float = data[2]
+	var drawn: float = data[3]
+	var fill: float = data[4]
+	var share_text := NO_VALUE
+	if is_inf(share):
+		share_text = UNBOUNDED
+	elif !is_nan(share):
+		share_text = "%.f%%" % (share * 100.0)
+	row.set_line(_get_leaf_name(data[0]), share, fill, share_text, _format_money(line),
+			_format_money(drawn))
+
+
+func _format_money(value: float) -> String:
+	if is_nan(value):
+		return NO_VALUE
+	if is_inf(value):
+		return UNBOUNDED
+	return IVQFormat.number(value * _funding_scale)
 
 
 # ****************************** INNER CLASSES ********************************
@@ -981,6 +1259,202 @@ class BudgetRow extends HBoxContainer:
 		var cell_width := _column_width * multiplier
 		for cell in _cells:
 			cell.custom_minimum_size.x = cell_width
+
+
+	func _settings_listener(setting: StringName, value: Variant) -> void:
+		if setting == &"gui_size":
+			var gui_size: int = value
+			_resize(gui_size)
+
+
+class FundingHeaderRow extends HBoxContainer:
+	# The Funding subtab's header (outside the scroll): the USD unit label fills the left, above
+	# the bars; the column titles sit over the cells, and a trailing spacer offsets them to clear the
+	# scrollbar.
+
+	var _unit_label := Label.new()
+	var _bar_spacer := Control.new()
+	var _trailing_spacer := Control.new()
+	var _cells: Array[Label] = []
+	var _column_width: float
+	var _bar_width: float
+	var _scroll_correction: float
+
+
+	func _init(column_width: float, bar_width: float, scroll_correction: float) -> void:
+		_column_width = column_width
+		_bar_width = bar_width
+		_scroll_correction = scroll_correction
+		size_flags_horizontal = SIZE_FILL
+		add_theme_constant_override(&"separation", 0)  # explicit gutters/widths only
+		_unit_label.clip_text = true
+		_unit_label.size_flags_horizontal = SIZE_EXPAND_FILL
+		add_child(_unit_label)
+		add_child(_bar_spacer)
+		for title: StringName in [&"LABEL_SHARE", &"LABEL_LINE", &"LABEL_DRAWN"]:
+			var cell := Label.new()
+			cell.text = title
+			cell.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			cell.clip_text = true
+			add_child(cell)
+			_cells.append(cell)
+		add_child(_trailing_spacer)
+		var gui_size: int = IVSettingsManager.get_setting(&"gui_size")
+		_resize(gui_size)
+		IVSettingsManager.changed.connect(_settings_listener)
+
+
+	func set_unit(unit_text: String) -> void:
+		_unit_label.text = unit_text
+
+
+	func _resize(gui_size: int) -> void:
+		var multiplier := IVCoreSettings.gui_size_multipliers[gui_size]
+		_bar_spacer.custom_minimum_size.x = _bar_width * multiplier
+		_trailing_spacer.custom_minimum_size.x = _scroll_correction * multiplier
+		for cell in _cells:
+			cell.custom_minimum_size.x = _column_width * multiplier
+
+
+	func _settings_listener(setting: StringName, value: Variant) -> void:
+		if setting == &"gui_size":
+			var gui_size: int = value
+			_resize(gui_size)
+
+
+class FundingRow extends HBoxContainer:
+	# One row of the Funding subtab: a budget's title and what it has to spend, a section's name,
+	# or a line with its bar, share, line and what was drawn of it. The name fills the left and the
+	# cells hug the right, under the header's.
+
+	var _indent_spacer := Control.new()
+	var _name_label := Label.new()
+	var _bar: FundingBar
+	var _cells: Array[Label] = []
+	var _label_width: float
+	var _column_width: float
+	var _indent: float
+	var _row_indent := 0.0
+
+
+	func _init(label_width: float, column_width: float, bar_width: float, indent: float) -> void:
+		_label_width = label_width
+		_column_width = column_width
+		_indent = indent
+		size_flags_horizontal = SIZE_FILL
+		add_theme_constant_override(&"separation", 0)  # explicit gutters/widths only
+		add_child(_indent_spacer)
+		_name_label.clip_text = true
+		_name_label.size_flags_horizontal = SIZE_EXPAND_FILL
+		add_child(_name_label)
+		_bar = FundingBar.new(bar_width)
+		add_child(_bar)
+		for i in 3:
+			var cell := Label.new()
+			cell.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			cell.clip_text = true
+			add_child(cell)
+			_cells.append(cell)
+		var gui_size: int = IVSettingsManager.get_setting(&"gui_size")
+		_resize(gui_size)
+		IVSettingsManager.changed.connect(_settings_listener)
+
+
+	func set_title(title_text: String, total_text: String) -> void:
+		_set_texts(0.0, title_text, ["", total_text, ""])
+		_bar.hide()
+
+
+	func set_section(section_text: String) -> void:
+		_set_texts(_indent, section_text, ["", "", ""])
+		_bar.hide()
+
+
+	func set_line(name_text: String, share: float, fill: float, share_text: String,
+			line_text: String, drawn_text: String) -> void:
+		_set_texts(2.0 * _indent, name_text, [share_text, line_text, drawn_text])
+		_bar.set_bar(share, fill)
+		_bar.show()
+
+
+	func _set_texts(row_indent: float, name_text: String, cell_texts: Array[String]) -> void:
+		_name_label.text = name_text
+		for i in _cells.size():
+			_cells[i].text = cell_texts[i]
+		if row_indent != _row_indent:
+			_row_indent = row_indent
+			var gui_size: int = IVSettingsManager.get_setting(&"gui_size")
+			_resize(gui_size)
+
+
+	func _resize(gui_size: int) -> void:
+		var multiplier := IVCoreSettings.gui_size_multipliers[gui_size]
+		_indent_spacer.custom_minimum_size.x = _row_indent * multiplier
+		_name_label.custom_minimum_size.x = (_label_width - _row_indent) * multiplier
+		for cell in _cells:
+			cell.custom_minimum_size.x = _column_width * multiplier
+
+
+	func _settings_listener(setting: StringName, value: Variant) -> void:
+		if setting == &"gui_size":
+			var gui_size: int = value
+			_resize(gui_size)
+
+
+class FundingBar extends Control:
+	# A line as a horizontal bar: its share, from empty to the full width at 1.0, filled to what
+	# was drawn of it; a share past 1.0, or a fill past the line, is marked at the right end. A line
+	# that funds all its counterparty lacks is an outline across the width, filled to what it drew
+	# of its budget.
+
+	const TRACK_COLOR := Color(1.0, 1.0, 1.0, 0.08)
+	const LINE_COLOR := Color(0.62, 0.62, 0.62, 0.4)
+	const FILL_COLOR := Color(0.62, 0.62, 0.62)
+	const PAST_COLOR := Color(1.0, 0.4, 0.4)
+
+	var _share := NAN
+	var _fill := NAN
+	var _bar_width: float
+
+
+	func _init(bar_width: float) -> void:
+		_bar_width = bar_width
+		mouse_filter = MOUSE_FILTER_IGNORE
+		var gui_size: int = IVSettingsManager.get_setting(&"gui_size")
+		_resize(gui_size)
+		IVSettingsManager.changed.connect(_settings_listener)
+
+
+	func set_bar(share: float, fill: float) -> void:
+		if is_same(share, _share) and is_same(fill, _fill):
+			return
+		_share = share
+		_fill = fill
+		queue_redraw()
+
+
+	func _draw() -> void:
+		var left := size.x * 0.05
+		var span := size.x * 0.9
+		var height := size.y * 0.5
+		var top := (size.y - height) * 0.5
+		draw_rect(Rect2(left, top, span, height), TRACK_COLOR)
+		if is_nan(_share):
+			return
+		var width := span * clampf(_share, 0.0, 1.0)
+		if is_inf(_share):
+			draw_rect(Rect2(left, top, width, height), FILL_COLOR, false, 1.0)
+		else:
+			draw_rect(Rect2(left, top, width, height), LINE_COLOR)
+		if !is_nan(_fill):
+			draw_rect(Rect2(left, top, width * clampf(_fill, 0.0, 1.0), height), FILL_COLOR)
+		if _share > 1.0 or _fill > 1.0:
+			draw_rect(Rect2(left + width - 2.0, top, 2.0, height), PAST_COLOR)
+
+
+	func _resize(gui_size: int) -> void:
+		var multiplier := IVCoreSettings.gui_size_multipliers[gui_size]
+		custom_minimum_size.x = _bar_width * multiplier
 
 
 	func _settings_listener(setting: StringName, value: Variant) -> void:
