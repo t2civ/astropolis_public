@@ -726,7 +726,7 @@ func get_population_spending(_population_type := -1) -> float:
 
 ## Returns what [param _population_type]'s residents got from their facility's settlement with
 ## its owners in its last interval, or all types' if -1, in dollars per second: its dividends,
-## less what it drew from them where it was short (FINANCIAL_MODEL.md, "Ownership and money").
+## less what it drew from them where it was short (FINANCIAL_MODEL.md, "Ownership, as built").
 ## 0.0 without a population.
 func get_population_dividends(_population_type := -1) -> float:
 	return 0.0
