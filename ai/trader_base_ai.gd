@@ -15,7 +15,7 @@ extends BaseAI
 ##
 ## Traders are paired 1-to-1 with facilities. This trader contracts toward its facility's desired
 ## rate of each resource over the coming horizon, within what its facility's critical rate and its
-## owners' means allow, and leans its quotes toward its facility's own price while what it
+## credit allow, and leans its quotes toward its facility's own price while what it
 ## contracted falls short; in a two-sided posture it also keeps a quote standing on the other side
 ## (TRADE_MODEL.md, "The facility trader"). It reads its
 ## facility's rates and prices, never its stock, and trades in the posture and resource strategies
@@ -133,8 +133,9 @@ const OWN_PRICE_FLOOR := 0.001
 ## Earth, further for one resupplied seldom, as far as [constant TraderProxy.MAX_FORWARD_QUARTERS]
 ## reaches. The current quarter is always held whole.
 const CONTRACT_HORIZONS := 12.0
-## Share of its owners' means a trader may commit: what its open longs and resting bids will cost
-## less what its open shorts will earn (def key [code]credit_share[/code] overrides per posture).
+## Share of its facility's credit a trader may commit: what its open longs and resting bids will
+## cost less what its open shorts will earn (def key [code]credit_share[/code] overrides per
+## posture).
 const CREDIT_SHARE := 0.5
 ## Minimum order size in trade units; smaller wants are not quoted.
 const MIN_LOT := 1
@@ -145,7 +146,7 @@ const QTY_TOLERANCE := 0.1
 
 
 ## Trader-posture strategy definitions; index = [enum TraderStrategies] value.
-## [code]credit_share[/code] sets the share of its owners' means the trader may commit (see
+## [code]credit_share[/code] sets the share of its facility's credit the trader may commit (see
 ## [constant CREDIT_SHARE]). The [code]two_sided[/code] switch makes markets in every resource the
 ## facility deals in (see [method is_market_resource]), for which the facility AI holds stock
 ## against its market's swings: the trader keeps a quote standing on the side its gap doesn't ask
@@ -325,7 +326,7 @@ func ai_init() -> void:
 ## Each interval contracts every resource its facility flags
 ## [constant FacilityProxy.InventoryFlags.TRADABLE] toward the facility's desired rate, as its
 ## strategy's def directs, a two-sided posture quoting both sides of each one its facility deals in
-## (see [method _plan_resource]); cuts what it would bid to what its owners' means allow (see
+## (see [method _plan_resource]); cuts what it would bid to what its facility's credit allows (see
 ## [method _bound_commitments]); then places the quotes and cancels any order resting outside them.
 func process_ai_interval(_delta: float) -> void:
 	const TRADABLE := FacilityProxy.InventoryFlags.TRADABLE
@@ -503,9 +504,9 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 
 ## Cuts this interval's planned bids in proportion so that what the trader commits, its open
 ## positions net (longs to pay less shorts to be paid) and the bids, stays within its posture's
-## [code]credit_share[/code] of what its owners hold (see
-## [method FacilityProxy.get_owners_wealth]). The bids its gaps ask for come first; the standing
-## bids of a two-sided posture take what room they leave.
+## [code]credit_share[/code] of its facility's credit (see [member FacilityProxy.credit]). The bids
+## its gaps ask for come first; the standing bids of a two-sided posture take what room they
+## leave.
 func _bound_commitments(posture_def: Dictionary) -> void:
 	var payable := 0.0
 	for key in _positions_by_instrument:
@@ -519,7 +520,7 @@ func _bound_commitments(posture_def: Dictionary) -> void:
 	if !(bid_value + standing_value > 0.0):
 		return
 	var credit_share: float = posture_def.get(&"credit_share", CREDIT_SHARE)
-	var room := credit_share * _facility.get_owners_wealth() - payable
+	var room := credit_share * _facility.credit - payable
 	if bid_value + standing_value <= room:
 		return
 	var share := 1.0

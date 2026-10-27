@@ -7,14 +7,15 @@ are derived from these leaves in code
 (hard-coded `SUBTOTAL_*` constants in the financials components), not stored as rows. See
 `FINANCIAL_MODEL.md` for the model.
 
-A leaf holds one direction and never goes negative, except the `CASH`, `GOVERNMENT_CASH`,
-`CORPORATE_CASH` and `TRADE_RECEIVABLES` balances. An event that can go either way books its size
-to one of a pair by its sign: `TRADING_GAINS` / `TRADING_LOSSES`, `DISPOSAL_GAINS` /
+A leaf holds one direction and never goes negative, except `TRADE_RECEIVABLES` and the cash
+balances, `CASH`, `GOVERNMENT_CASH` and `CORPORATE_CASH`, which may run below nothing between an
+account's settlements, where what it is short is booked as its debt (`DEBT`, `GOVERNMENT_DEBT`,
+`CORPORATE_DEBT`). An event that can go either way books its size to one of a pair by its sign: `TRADING_GAINS` / `TRADING_LOSSES`, `DISPOSAL_GAINS` /
 `DISPOSAL_LOSSES`, `EXCHANGE_CLEARING_GAINS` / `EXCHANGE_TAKE_COGS`, and on the cash-flow
 statement `PL_SETTLEMENTS` / `PL_PAYMENTS`, `EXCHANGE_TAKE_RECEIVED` / `EXCHANGE_TAKE_PAID`,
 `PAYOUTS_PAID` / `FUNDING_RECEIVED` and each treasury's side of them,
-`APPROPRIATIONS_RECEIVED` / `APPROPRIATIONS_PAID`, `TRANSFERS_PAID` / `LEVIES_RECEIVED` and
-`DIVIDENDS_PAID` / `CAPITAL_PAID_IN`.
+`APPROPRIATIONS_RECEIVED` / `APPROPRIATIONS_PAID`, `TRANSFERS_PAID` / `LEVIES_RECEIVED`,
+`DIVIDENDS_PAID` / `CAPITAL_PAID_IN`, and `BORROWED` / `REPAID` and each treasury's.
 
 ## Fields
 

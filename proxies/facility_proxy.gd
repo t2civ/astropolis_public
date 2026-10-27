@@ -166,6 +166,18 @@ var region: StringName
 ## server-authoritative; FROM_PROXY bits are proxy-authoritative. Use
 ## [method set_flags] to modify the proxy half.
 var flags := 0
+## Cash the facility keeps: it pays its owners what it holds past it, its debt counted, at the end
+## of each interval (FINANCIAL_MODEL.md, "Facilities as subsidiaries"). Its owners' payout policy;
+## 0.0 by default. Use [method set_cash_reserve].
+var cash_reserve := 0.0
+## The most a year its owners fund of what it lacks of [member cash_reserve]: what it lacks past
+## that it owes, and past its line they fund it whatever this is (FINANCIAL_MODEL.md, "Credit").
+## Its owners' funding line; INF, all it lacks, by default. Use [method set_funding_limit].
+var funding_limit := INF
+## What the facility may spend past what it holds before anything draws on its owners' residents:
+## its cash less its debt, plus its line, and the same of each treasury that funds it, as of its
+## last interval (FINANCIAL_MODEL.md, "Credit"). Its trader's commitments are bound by it.
+var credit := 0.0
 
 # *****************************************************************************
 # persisted
@@ -654,11 +666,6 @@ func get_market() -> MarketProxy:
 	return market
 
 
-## Returns what its polity's residents hold, who own its treasuries: the money its trader's
-## commitments are paid from (FINANCIAL_MODEL.md, "Ownership, as built"). 0.0 where it has no owners.
-@abstract func get_owners_wealth() -> float
-
-
 # ******************************** AI METHODS *********************************
 
 ## Sets [member gui_name] and marks the proxy dirty. Reverse-flow:
@@ -671,6 +678,16 @@ func get_market() -> MarketProxy:
 ## [code]FROM_SERVER_MASK[/code] bits. Proxy-authoritative: this change
 ## flows proxy -> server.
 @abstract func set_flags(value: int) -> void
+
+
+## Sets [member cash_reserve] (>= 0.0), in money. Proxy-authoritative: this change flows
+## proxy -> server. No-op on a negative value or NAN.
+@abstract func set_cash_reserve(value: float) -> void
+
+
+## Sets [member funding_limit] (>= 0.0, INF for all it lacks), in money a unit of time.
+## Proxy-authoritative: this change flows proxy -> server. No-op on a negative value or NAN.
+@abstract func set_funding_limit(value: float) -> void
 
 
 ## Sets the [code]FROM_PROXY_MASK[/code] bits of operations flags for
