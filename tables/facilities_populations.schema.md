@@ -33,9 +33,9 @@ The rates carry an inline `/y`, and the wealth an inline `$`. A cell must be pre
 
 1. The table is generated, not hand-edited: `tests/calibration/seed_demography.py` derives
    it from UN World Population Prospects 2024 for 2015, reading the type's buckets and birth
-   weights from `populations.tsv`, so it follows them when they change. An inequality is the
-   spread among an aggregate's countries in the World Bank's ICP 2017, and zero for a single
-   country (`EARTH_CALIBRATION.md`, "Population"). A wealth is a year of what the polity's
+   weights from `populations.tsv`, so it follows them when they change. An inequality is a
+   lognormal's with the polity's survey Gini, a polity of many countries its countries' combined
+   by the Theil index with their consumption per head (`EARTH_CALIBRATION.md`, "Population"). A wealth is a year of what the polity's
    residents drew per head in their first interval at start prices, measured once. The
    participation is written by `tests/calibration/seed_labor.py`, from 2015 employment and
    hours from recall, and `seed_demography.py` keeps it.
