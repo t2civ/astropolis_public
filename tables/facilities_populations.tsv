@@ -13,7 +13,7 @@ MOD_AMPHIBIOUS
 @TRANSPOSE																		
 # written by tests/calibration/seed_demography.py																		
 # each cell: the eight bucket shares; the eight death rates, per year;																		
-# the fertility, per year; the spread; the wealth per head, $;																		
+# the fertility, per year; the inequality; the wealth per head, $;																		
 # the participation (tests/calibration/seed_labor.py)																		
 # transposed on import to:																		
 # table[facility_type][population_type]																		

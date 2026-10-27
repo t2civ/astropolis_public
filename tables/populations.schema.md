@@ -36,8 +36,8 @@ The next columns are the type's three slow responses (`POPULATION_MODEL.md`, "De
 moves a population's rates toward what its satisfaction of its needs implies: the rate it has
 when they are met, times each satisfaction to the power of minus an elasticity, flat at the
 want and steepest far below it. A positive elasticity raises the rate as the need goes short,
-and a negative one lowers it. A population whose people are served unevenly (its spread,
-`facilities_populations.tsv`) takes the average over its classes.
+and a negative one lowers it. A population whose people hold their means unevenly (its
+inequality, `facilities_populations.tsv`) takes the average over its classes.
 
 - mortality_need — TABLE_ROW `needs.tsv`, the need whose satisfaction sets the death rates.
   Blank holds them at their seeds.
@@ -90,10 +90,10 @@ and a negative one lowers it. A population whose people are served unevenly (its
 
 1. The number of age buckets, eight, is the model's and not a type's (`POPULATION_MODEL.md`,
    "Demographics"). What a type sets is where its buckets fall in its own lifetime.
-2. A population's own death rates, fertility, spread, wealth and participation are state,
+2. A population's own death rates, fertility, inequality, wealth and participation are state,
    seeded per facility in `facilities_populations.tsv`. The death rates, fertility and
-   participation then move as above, and the wealth only with the head count, a death taking
-   its share and a birth bringing the average; nothing moves the spread yet.
+   participation then move as above, and the wealth stays as it is through births and deaths,
+   a death leaving its share to the survivors; nothing moves the inequality yet.
 3. Base humans' response columns are fitted on the 2017 cross-section of countries by
    `tests/calibration/seed_demography.py --fit` (`EARTH_CALIBRATION.md`, "Population"). The
    floors and response times are not fitted, and neither are the fertility's response to
