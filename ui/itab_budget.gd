@@ -16,7 +16,10 @@ extends MarginContainer
 ## operating-income line, a tax group, and a derived net-income line; each
 ## group expands to its leaves. The cash-flow statement shows inflow and
 ## outflow groups (by per-leaf direction) plus a derived net-cash-flow line.
-## The balance statement shows asset, liability, and equity groups.
+## The balance statement shows asset, liability, and equity groups. Each statement
+## shows the facility's own account above its bottom line; a player's treasuries,
+## booked at its administrative center, follow it, each as one group of its own
+## (FINANCIAL_MODEL.md, "The accounts").
 ##
 ## Each statement is a grid of recent quarters, newest at right. A header row
 ## labels the quarters ("2025Q1", ...) and its leftmost cell names the USD
@@ -84,6 +87,7 @@ var _n_line_items: int = IVTableData.table_n_rows[&"line_items"]
 var _item_names: Array[StringName] = _db_tables[&"line_items"][&"name"]
 var _item_statements: Array[int] = _db_tables[&"line_items"][&"statement"]
 var _statement_keys := Enums.StatementTypes.keys()
+var _account_keys := Enums.Accounts.keys()
 var _income_statement := Enums.StatementTypes.STATEMENT_INCOME
 var _cash_flow_statement := Enums.StatementTypes.STATEMENT_CASH_FLOW
 var _balance_statement := Enums.StatementTypes.STATEMENT_BALANCE
@@ -93,10 +97,12 @@ var _usd_inv: float = 1.0 / IVUnits.unit_multipliers[&"$"]
 # (entities.csv). _item_subtotals maps each income leaf to its base subtotal index
 # (SUBTOTAL_REVENUE, SUBTOTAL_COST_OF_GOODS, SUBTOTAL_OPERATING_EXPENSE, or
 # SUBTOTAL_TAX); _item_balance_classes maps each balance leaf to its
-# Enums.BalanceClasses. All cached so proxy-thread reads stay safe.
+# Enums.BalanceClasses; _item_accounts maps each leaf to its Enums.Accounts, -1 for the
+# facility's own. All cached so proxy-thread reads stay safe.
 var _item_keys: Array[String] = []
 var _item_subtotals := PackedInt32Array()
 var _item_balance_classes := PackedInt32Array()
+var _item_accounts := PackedInt32Array()
 
 var _selection_manager: AstroSelectionManager
 var _suppress_tab_listener := true
@@ -109,6 +115,7 @@ var _display_tab := -1
 var _display_ordinal_qtr := -1
 var _display_groups: Array = []  # [[title, subtotal_series, [[leaf_key, leaf_series], ...]], ...]
 var _display_footer: Array = []  # [name, series] or []
+var _display_account_groups: Array = []  # a treasury's leaves per group, as _display_groups
 var _display_unit := ""  # localized USD magnitude-unit label
 var _display_scale := 1.0  # internal-value -> display multiplier (USD inverse / 1000^exponent)
 var _window_offset := 0  # quarters scrolled back from newest; 0 shows the current quarter
@@ -121,6 +128,7 @@ var _fold_icon_substitute := MeshTexture.new()
 var _tab_container: TabContainer
 var _no_budget_label: Label
 var _content_vboxes: Array[VBoxContainer] = []
+var _account_vboxes: Array[VBoxContainer] = []
 var _scrolls: Array[ScrollContainer] = []
 var _headers: Array[BudgetHeaderRow] = []
 var _footers: Array[BudgetGroup] = []  # net-income / net-cash-flow line, a leafless foldable
@@ -164,6 +172,8 @@ func _precompute_display_names() -> void:
 	_item_keys.resize(_n_line_items)
 	_item_subtotals.resize(_n_line_items)
 	_item_balance_classes.resize(_n_line_items)
+	var item_accounts: Array[int] = _db_tables[&"line_items"][&"account"]
+	_item_accounts = PackedInt32Array(item_accounts)
 	for item in _n_line_items:
 		_item_keys[item] = String(_item_names[item])
 		if item_is_tax[item]:
@@ -190,6 +200,7 @@ func _build_ui() -> void:
 
 	var n_statements := _statement_keys.size()
 	_content_vboxes.resize(n_statements)
+	_account_vboxes.resize(n_statements)
 	_scrolls.resize(n_statements)
 	_headers.resize(n_statements)
 	_footers.resize(n_statements)
@@ -228,6 +239,10 @@ func _build_ui() -> void:
 		footer.hide()
 		content.add_child(footer)
 
+		var accounts_vbox := VBoxContainer.new()
+		accounts_vbox.size_flags_horizontal = SIZE_EXPAND_FILL
+		content.add_child(accounts_vbox)
+
 		var empty_label := Label.new()
 		empty_label.text = "No line items."
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -235,6 +250,7 @@ func _build_ui() -> void:
 		tab.add_child(empty_label)
 
 		_content_vboxes[statement] = groups_vbox
+		_account_vboxes[statement] = accounts_vbox
 		_scrolls[statement] = scroll
 		_headers[statement] = header
 		_footers[statement] = footer
@@ -288,6 +304,7 @@ func _get_proxy_data(target_name: StringName) -> void:
 	var ordinal_qtr := proxy.ordinal_qtr
 	var groups := []
 	var footer := []
+	var accountings := proxy.get_financials_accountings().duplicate()
 
 	if tab == _income_statement:
 		# Income waterfall: gross profit and operating income render as leafless
@@ -296,7 +313,6 @@ func _get_proxy_data(target_name: StringName) -> void:
 		# bottom-line footer. The opex and tax groups are summed from their leaves (no
 		# tracked-subtotal history getter).
 		var subtotals := proxy.get_financials_subtotals()
-		var accountings := proxy.get_financials_accountings().duplicate()
 		var revenue_history := proxy.get_financials_revenue_history()
 		var cogs_history := proxy.get_financials_cost_of_goods_sold_history()
 		groups.append(_collect_group(proxy, accountings, SUBTOTAL_REVENUE,
@@ -323,7 +339,6 @@ func _get_proxy_data(target_name: StringName) -> void:
 	elif tab == _cash_flow_statement:
 		# Inflow/outflow group series are summed from their leaf series (cash-flow
 		# direction is per-leaf; only the net is a tracked subtotal).
-		var accountings := proxy.get_financials_accountings().duplicate()
 		var inflow_group := _collect_summed_group(proxy, accountings, _cash_flow_statement,
 				_item_subtotals, SUBTOTAL_REVENUE, "CASH_INFLOWS")
 		var outflow_group := _collect_summed_group(proxy, accountings, _cash_flow_statement,
@@ -334,7 +349,6 @@ func _get_proxy_data(target_name: StringName) -> void:
 		var outflow_series: PackedFloat64Array = outflow_group[1]
 		footer = ["SUBTOTAL_NET_CASH_FLOW", _subtract_series(inflow_series, outflow_series)]
 	elif tab == _balance_statement:
-		var accountings := proxy.get_financials_accountings().duplicate()
 		# Asset / liability / equity groups (by per-leaf balance_class); a group with
 		# no nonzero leaf is dropped so unused sections stay hidden. No footer (the
 		# balancing identity is a later step).
@@ -345,7 +359,9 @@ func _get_proxy_data(target_name: StringName) -> void:
 		_append_balance_group(groups, proxy, accountings,
 				Enums.BalanceClasses.BALANCE_CLASS_EQUITY, "SUBTOTAL_EQUITY")
 
-	_update_tab_display.call_deferred(target_name, tab, ordinal_qtr, groups, footer)
+	var account_groups := _collect_account_groups(proxy, accountings, tab)
+	_update_tab_display.call_deferred(target_name, tab, ordinal_qtr, groups, footer,
+			account_groups)
 
 
 func _collect_group(proxy: Proxy, accountings: Dictionary[int, float], subtotal: int, title: String,
@@ -354,7 +370,7 @@ func _collect_group(proxy: Proxy, accountings: Dictionary[int, float], subtotal:
 	# current value drops to 0 right after rollover, so history must count too).
 	var rows := []
 	for item in _n_line_items:
-		if _item_statements[item] != _income_statement:
+		if _item_statements[item] != _income_statement or _item_accounts[item] != -1:
 			continue
 		if _item_subtotals[item] != subtotal:
 			continue
@@ -376,7 +392,7 @@ func _collect_summed_group(proxy: Proxy, accountings: Dictionary[int, float], st
 	var rows := []
 	var group_series := PackedFloat64Array()
 	for item in _n_line_items:
-		if _item_statements[item] != statement:
+		if _item_statements[item] != statement or _item_accounts[item] != -1:
 			continue
 		if classifier[item] != class_value:
 			continue
@@ -400,7 +416,8 @@ func _collect_signed_group(proxy: Proxy, accountings: Dictionary[int, float], su
 	var rows := []
 	var group_series := PackedFloat64Array()
 	for item in _n_line_items:
-		if _item_statements[item] != _income_statement or _item_subtotals[item] != subtotal:
+		if (_item_statements[item] != _income_statement or _item_accounts[item] != -1
+				or _item_subtotals[item] != subtotal):
 			continue
 		var current_value: float = accountings.get(item, 0.0)
 		var leaf_series := _make_series(proxy.get_financials_accounting_history(item), current_value)
@@ -423,6 +440,34 @@ func _append_balance_group(groups: Array, proxy: Proxy, accountings: Dictionary[
 	var rows: Array = group[2]
 	if !rows.is_empty():
 		groups.append(group)
+
+
+func _collect_account_groups(proxy: Proxy, accountings: Dictionary[int, float],
+		statement: int) -> Array:
+	# One group per treasury with any nonzero leaf in this statement, its series the net of its
+	# leaves: revenue, inflows and assets add, and the rest subtracts.
+	var item_revenue: Array[bool] = _db_tables[&"line_items"][&"revenue"]
+	var groups := []
+	for account in _account_keys.size():
+		var rows := []
+		var group_series := PackedFloat64Array()
+		for item in _n_line_items:
+			if _item_statements[item] != statement or _item_accounts[item] != account:
+				continue
+			var current_value: float = accountings.get(item, 0.0)
+			var leaf_series := _make_series(proxy.get_financials_accounting_history(item),
+					current_value)
+			var adds := (_item_balance_classes[item] == Enums.BalanceClasses.BALANCE_CLASS_ASSET
+					if statement == _balance_statement else item_revenue[item])
+			if adds:
+				_add_series(group_series, leaf_series)
+			else:
+				_subtract_into_series(group_series, leaf_series)
+			if _has_nonzero(leaf_series):
+				rows.append([_item_keys[item], leaf_series])
+		if !rows.is_empty():
+			groups.append([_account_keys[account], group_series, rows])
+	return groups
 
 
 func _add_series(into: PackedFloat64Array, add: PackedFloat64Array) -> void:
@@ -471,7 +516,7 @@ func _show_placeholder() -> void:
 
 
 func _update_tab_display(target_name: StringName, tab: int, ordinal_qtr: int,
-		groups: Array, footer: Array) -> void:
+		groups: Array, footer: Array, account_groups: Array) -> void:
 	_no_budget_label.hide()
 	_tab_container.show()
 
@@ -482,10 +527,11 @@ func _update_tab_display(target_name: StringName, tab: int, ordinal_qtr: int,
 	_display_ordinal_qtr = ordinal_qtr
 	_display_groups = groups
 	_display_footer = footer
+	_display_account_groups = account_groups
 
 	# Pick the USD display unit so most values land in the 1–999 range.
 	var dollar_values := PackedFloat64Array()
-	for group_data: Array in groups:
+	for group_data: Array in groups + account_groups:
 		var subtotal_series: PackedFloat64Array = group_data[1]
 		_gather_dollar_values(subtotal_series, dollar_values)
 		for leaf_row: Array in group_data[2]:
@@ -504,13 +550,13 @@ func _update_tab_display(target_name: StringName, tab: int, ordinal_qtr: int,
 
 func _render_current() -> void:
 	var tab := _display_tab
-	var content: VBoxContainer = _content_vboxes[tab]
 	var scroll: ScrollContainer = _scrolls[tab]
 	var header: BudgetHeaderRow = _headers[tab]
 	var footer_group: BudgetGroup = _footers[tab]
 	var empty_label: Label = _empty_labels[tab]
 
-	if _display_groups.is_empty() and _display_footer.is_empty():
+	if (_display_groups.is_empty() and _display_footer.is_empty()
+			and _display_account_groups.is_empty()):
 		header.hide()
 		scroll.hide()
 		footer_group.hide()
@@ -526,8 +572,21 @@ func _render_current() -> void:
 	header.set_header(_display_unit, _quarter_labels(total_quarters),
 			_window_offset > 0, _window_offset < max_offset)
 
-	# reuse-or-create BudgetGroups
-	var n_groups := _display_groups.size()
+	_render_groups(_content_vboxes[tab], _display_groups)
+	if _display_footer.is_empty():
+		footer_group.hide()
+	else:
+		var footer_name: String = _display_footer[0]
+		var footer_series: PackedFloat64Array = _display_footer[1]
+		footer_group.set_group(tr(footer_name), _format_cells(footer_series), [])
+		footer_group.show()
+	_render_groups(_account_vboxes[tab], _display_account_groups)
+
+
+# Shows [param groups] in [param content]'s BudgetGroups, reusing them or creating more, and
+# hides those left over.
+func _render_groups(content: VBoxContainer, groups: Array) -> void:
+	var n_groups := groups.size()
 	var n_children := content.get_child_count()
 	while n_children < n_groups:
 		content.add_child(BudgetGroup.new(_memory, label_width, column_width, arrow_width,
@@ -535,7 +594,7 @@ func _render_current() -> void:
 		n_children += 1
 	var i := 0
 	while i < n_groups:
-		var group_data: Array = _display_groups[i]
+		var group_data: Array = groups[i]
 		var title: String = group_data[0]
 		var subtotal_series: PackedFloat64Array = group_data[1]
 		var leaf_rows: Array = group_data[2]
@@ -551,14 +610,6 @@ func _render_current() -> void:
 		var unused_group: Control = content.get_child(i)
 		unused_group.hide()
 		i += 1
-
-	if _display_footer.is_empty():
-		footer_group.hide()
-	else:
-		var footer_name: String = _display_footer[0]
-		var footer_series: PackedFloat64Array = _display_footer[1]
-		footer_group.set_group(tr(footer_name), _format_cells(footer_series), [])
-		footer_group.show()
 
 
 func _shift_window(direction: int) -> void:
@@ -578,6 +629,10 @@ func _get_total_quarters() -> int:
 		return series.size()
 	if !_display_footer.is_empty():
 		var series: PackedFloat64Array = _display_footer[1]
+		return series.size()
+	if !_display_account_groups.is_empty():
+		var group_data: Array = _display_account_groups[0]
+		var series: PackedFloat64Array = group_data[1]
 		return series.size()
 	return 0
 

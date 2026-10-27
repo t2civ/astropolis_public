@@ -7,11 +7,14 @@ are derived from these leaves in code
 (hard-coded `SUBTOTAL_*` constants in the financials components), not stored as rows. See
 `FINANCIAL_MODEL.md` for the model.
 
-A leaf holds one direction and never goes negative, except the `CASH` and `TRADE_RECEIVABLES`
-balances. An event that can go either way books its size to one of a pair by its sign:
-`TRADING_GAINS` / `TRADING_LOSSES`, `DISPOSAL_GAINS` / `DISPOSAL_LOSSES`,
-`EXCHANGE_CLEARING_GAINS` / `EXCHANGE_TAKE_COGS`, and on the cash-flow statement
-`PL_SETTLEMENTS` / `PL_PAYMENTS` and `EXCHANGE_TAKE_RECEIVED` / `EXCHANGE_TAKE_PAID`.
+A leaf holds one direction and never goes negative, except the `CASH`, `GOVERNMENT_CASH`,
+`CORPORATE_CASH` and `TRADE_RECEIVABLES` balances. An event that can go either way books its size
+to one of a pair by its sign: `TRADING_GAINS` / `TRADING_LOSSES`, `DISPOSAL_GAINS` /
+`DISPOSAL_LOSSES`, `EXCHANGE_CLEARING_GAINS` / `EXCHANGE_TAKE_COGS`, and on the cash-flow
+statement `PL_SETTLEMENTS` / `PL_PAYMENTS`, `EXCHANGE_TAKE_RECEIVED` / `EXCHANGE_TAKE_PAID`,
+`PAYOUTS_PAID` / `FUNDING_RECEIVED` and each treasury's side of them,
+`APPROPRIATIONS_RECEIVED` / `APPROPRIATIONS_PAID`, `TRANSFERS_PAID` / `LEVIES_RECEIVED` and
+`DIVIDENDS_PAID` / `CAPITAL_PAID_IN`.
 
 ## Fields
 
@@ -45,6 +48,8 @@ balances. An event that can go either way books its size to one of a pair by its
 - is_tax — for an `INCOME` leaf, TRUE routes it into the `TAX` subtotal (signed: `revenue` TRUE adds,
   FALSE subtracts) below operating income, instead of `REVENUE`/`COST_OF_GOODS`; net income is the
   derived `operating income + TAX`. Unused for `CASH_FLOW`/`BALANCE` leaves (leave blank).
-- sector_applicability — `Enums.SectorApplicability` member, written in full (no prefix): blank applies
-  to both sectors, `SECTOR_PUBLIC` to public-sector entities only (e.g. `TAX_REVENUE`), `SECTOR_PRIVATE`
-  to private only (e.g. `INCOME_TAX`). Declarative; reserved for display/validation gating.
+- account — `Enums.Accounts` member (prefix `ACCOUNT_`): whose account the item is. Blank is the
+  facility's own; `GOVERNMENT` and `CORPORATE` are its player's treasuries, booked at the player's
+  administrative center but never that facility's (`FINANCIAL_MODEL.md`, "The accounts"), such as
+  `TAX_REVENUE` and `GOVERNMENT_CASH`. The subtotals sum every account booked at an entity; the Budget
+  tab shows each treasury's items apart from the facility's.

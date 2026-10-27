@@ -654,7 +654,7 @@ func get_market() -> MarketProxy:
 	return market
 
 
-## Returns what the owners this facility settles its cash with hold: the money its trader's
+## Returns what its polity's residents hold, who own its treasuries: the money its trader's
 ## commitments are paid from (FINANCIAL_MODEL.md, "Ownership, as built"). 0.0 where it has no owners.
 @abstract func get_owners_wealth() -> float
 
