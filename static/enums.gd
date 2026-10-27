@@ -210,6 +210,15 @@ enum Accounts {
 	ACCOUNT_CORPORATE,
 }
 
+## What a [code]line_items.tsv[/code] line item is kept per (its [code]keyed_by[/code] column): a
+## blank cell (−1) is kept once, and the others once per facility or player it moves money to or
+## from, each a line of its own (see [method Utils.get_line_item_key]; FINANCIAL_MODEL.md, "Line
+## items").
+enum Counterparties {
+	COUNTERPARTY_FACILITY,
+	COUNTERPARTY_PLAYER,
+}
+
 ## Random-player selection options for game start.
 enum RandomPlayer {
 	RANDOM,

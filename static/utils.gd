@@ -35,6 +35,10 @@ const BIT_INDEXES: Dictionary[int, int] = { # indexed by power-of-2s from 2^0 to
 	1 << 55 : 55, 1 << 56 : 56, 1 << 57 : 57, 1 << 58 : 58, 1 << 59 : 59,
 	1 << 60 : 60, 1 << 61 : 61, 1 << 62 : 62
 }
+## The low bits of a line item's key that hold its row (see [method get_line_item_key]).
+const LINE_ITEM_TYPE_BITS := 16
+## Masks a line item's key to its row (see [method get_line_item_type]).
+const LINE_ITEM_TYPE_MASK := (1 << LINE_ITEM_TYPE_BITS) - 1
 
 # binary
 
@@ -87,6 +91,29 @@ static func get_ordinal_quarter_duration(ordinal_quarter: int) -> float:
 		return 0.0 # guard against AI: safe default (debug assert above)
 	return (get_time_at_ordinal_quarter(ordinal_quarter + 1)
 			- get_time_at_ordinal_quarter(ordinal_quarter))
+
+
+# line items
+
+## Returns the key a financials component keeps line item [param line_item_type] under for the
+## counterparty [param counterparty_id], a [code]facility_id[/code] or [code]player_id[/code] as
+## its [code]keyed_by[/code] column says; with -1, for a line item kept once, the key is its row
+## (FINANCIAL_MODEL.md, "Line items"). Index a per-line-item array by
+## [method get_line_item_type] of a key, never by the key.
+static func get_line_item_key(line_item_type: int, counterparty_id := -1) -> int:
+	return line_item_type | ((counterparty_id + 1) << LINE_ITEM_TYPE_BITS)
+
+
+## Returns the [code]line_items.tsv[/code] row of [param key], a key of
+## [method get_line_item_key].
+static func get_line_item_type(key: int) -> int:
+	return key & LINE_ITEM_TYPE_MASK
+
+
+## Returns the [code]facility_id[/code] or [code]player_id[/code] [param key] is kept for, a key
+## of [method get_line_item_key], or -1 for a line item kept once.
+static func get_line_item_counterparty(key: int) -> int:
+	return (key >> LINE_ITEM_TYPE_BITS) - 1
 
 
 # array & dict utils

@@ -19,7 +19,8 @@ extends MarginContainer
 ## The balance statement shows asset, liability, and equity groups. Each statement
 ## shows the facility's own account above its bottom line; a player's treasuries,
 ## booked at its administrative center, follow it, each as one group of its own
-## (FINANCIAL_MODEL.md, "The accounts").
+## (FINANCIAL_MODEL.md, "The accounts"). A line item kept per counterparty, such as a treasury's
+## funding by facility, is a row for each counterparty, named by both.
 ##
 ## Each statement is a grid of recent quarters, newest at right. A header row
 ## labels the quarters ("2025Q1", ...) and its leftmost cell names the USD
@@ -98,11 +99,13 @@ var _usd_inv: float = 1.0 / IVUnits.unit_multipliers[&"$"]
 # (SUBTOTAL_REVENUE, SUBTOTAL_COST_OF_GOODS, SUBTOTAL_OPERATING_EXPENSE, or
 # SUBTOTAL_TAX); _item_balance_classes maps each balance leaf to its
 # Enums.BalanceClasses; _item_accounts maps each leaf to its Enums.Accounts, -1 for the
-# facility's own. All cached so proxy-thread reads stay safe.
+# facility's own; _item_keyed_bys maps each to its Enums.Counterparties, -1 for one kept once.
+# All cached so proxy-thread reads stay safe.
 var _item_keys: Array[String] = []
 var _item_subtotals := PackedInt32Array()
 var _item_balance_classes := PackedInt32Array()
 var _item_accounts := PackedInt32Array()
+var _item_keyed_bys := PackedInt32Array()
 
 var _selection_manager: AstroSelectionManager
 var _suppress_tab_listener := true
@@ -174,6 +177,8 @@ func _precompute_display_names() -> void:
 	_item_balance_classes.resize(_n_line_items)
 	var item_accounts: Array[int] = _db_tables[&"line_items"][&"account"]
 	_item_accounts = PackedInt32Array(item_accounts)
+	var item_keyed_bys: Array[int] = _db_tables[&"line_items"][&"keyed_by"]
+	_item_keyed_bys = PackedInt32Array(item_keyed_bys)
 	for item in _n_line_items:
 		_item_keys[item] = String(_item_names[item])
 		if item_is_tax[item]:
@@ -374,11 +379,10 @@ func _collect_group(proxy: Proxy, accountings: Dictionary[int, float], subtotal:
 			continue
 		if _item_subtotals[item] != subtotal:
 			continue
-		var current_value: float = accountings.get(item, 0.0)
-		var leaf_series := _make_series(proxy.get_financials_accounting_history(item), current_value)
-		if !_has_nonzero(leaf_series):
-			continue
-		rows.append([_item_keys[item], leaf_series])
+		for leaf: Array in _get_leaves(proxy, accountings, item):
+			var leaf_series: PackedFloat64Array = leaf[1]
+			if _has_nonzero(leaf_series):
+				rows.append(leaf)
 	return [title, _make_series(subtotal_history, subtotal_value), rows]
 
 
@@ -396,12 +400,11 @@ func _collect_summed_group(proxy: Proxy, accountings: Dictionary[int, float], st
 			continue
 		if classifier[item] != class_value:
 			continue
-		var current_value: float = accountings.get(item, 0.0)
-		var leaf_series := _make_series(proxy.get_financials_accounting_history(item), current_value)
-		_add_series(group_series, leaf_series)
-		if !_has_nonzero(leaf_series):
-			continue
-		rows.append([_item_keys[item], leaf_series])
+		for leaf: Array in _get_leaves(proxy, accountings, item):
+			var leaf_series: PackedFloat64Array = leaf[1]
+			_add_series(group_series, leaf_series)
+			if _has_nonzero(leaf_series):
+				rows.append(leaf)
 	return [title, group_series, rows]
 
 
@@ -419,15 +422,14 @@ func _collect_signed_group(proxy: Proxy, accountings: Dictionary[int, float], su
 		if (_item_statements[item] != _income_statement or _item_accounts[item] != -1
 				or _item_subtotals[item] != subtotal):
 			continue
-		var current_value: float = accountings.get(item, 0.0)
-		var leaf_series := _make_series(proxy.get_financials_accounting_history(item), current_value)
-		if item_revenue[item] == revenue_adds:
-			_add_series(group_series, leaf_series)
-		else:
-			_subtract_into_series(group_series, leaf_series)
-		if !_has_nonzero(leaf_series):
-			continue
-		rows.append([_item_keys[item], leaf_series])
+		for leaf: Array in _get_leaves(proxy, accountings, item):
+			var leaf_series: PackedFloat64Array = leaf[1]
+			if item_revenue[item] == revenue_adds:
+				_add_series(group_series, leaf_series)
+			else:
+				_subtract_into_series(group_series, leaf_series)
+			if _has_nonzero(leaf_series):
+				rows.append(leaf)
 	return [title, group_series, rows]
 
 
@@ -454,20 +456,47 @@ func _collect_account_groups(proxy: Proxy, accountings: Dictionary[int, float],
 		for item in _n_line_items:
 			if _item_statements[item] != statement or _item_accounts[item] != account:
 				continue
-			var current_value: float = accountings.get(item, 0.0)
-			var leaf_series := _make_series(proxy.get_financials_accounting_history(item),
-					current_value)
 			var adds := (_item_balance_classes[item] == Enums.BalanceClasses.BALANCE_CLASS_ASSET
 					if statement == _balance_statement else item_revenue[item])
-			if adds:
-				_add_series(group_series, leaf_series)
-			else:
-				_subtract_into_series(group_series, leaf_series)
-			if _has_nonzero(leaf_series):
-				rows.append([_item_keys[item], leaf_series])
+			for leaf: Array in _get_leaves(proxy, accountings, item):
+				var leaf_series: PackedFloat64Array = leaf[1]
+				if adds:
+					_add_series(group_series, leaf_series)
+				else:
+					_subtract_into_series(group_series, leaf_series)
+				if _has_nonzero(leaf_series):
+					rows.append(leaf)
 		if !rows.is_empty():
 			groups.append([_account_keys[account], group_series, rows])
 	return groups
+
+
+func _get_leaves(proxy: Proxy, accountings: Dictionary[int, float], item: int) -> Array:
+	# [[name, series], ...] for line item [param item]: one leaf where it is kept once, its name a
+	# translation key, and one per counterparty where it is kept per counterparty, its name a pair
+	# of the item's key and the counterparty's name, translated on the main thread.
+	var keyed_by := _item_keyed_bys[item]
+	if keyed_by == -1:
+		var current_value: float = accountings.get(item, 0.0)
+		return [[_item_keys[item], _make_series(proxy.get_financials_accounting_history(item),
+				current_value)]]
+	var counterparties: Array = Proxy.proxy_bus.facility_proxies
+	if keyed_by == Enums.Counterparties.COUNTERPARTY_PLAYER:
+		counterparties = Proxy.proxy_bus.player_proxies
+	var leaves := []
+	for key in proxy.get_financials_counterparty_keys(item):
+		var counterparty_id := Utils.get_line_item_counterparty(key)
+		var counterparty_name := str(counterparty_id)
+		var counterparty: Proxy = null
+		if counterparty_id < counterparties.size():
+			counterparty = counterparties[counterparty_id]
+		if counterparty:
+			counterparty_name = counterparty.gui_name if counterparty.gui_name else String(
+					counterparty.name)
+		var key_value: float = accountings.get(key, 0.0)
+		leaves.append([[_item_keys[item], counterparty_name],
+				_make_series(proxy.get_financials_accounting_history(key), key_value)])
+	return leaves
 
 
 func _add_series(into: PackedFloat64Array, add: PackedFloat64Array) -> void:
@@ -601,7 +630,7 @@ func _render_groups(content: VBoxContainer, groups: Array) -> void:
 		var formatted_leaves := []
 		for leaf_row: Array in leaf_rows:
 			var leaf_series: PackedFloat64Array = leaf_row[1]
-			formatted_leaves.append([leaf_row[0], _format_cells(leaf_series)])
+			formatted_leaves.append([_get_leaf_name(leaf_row[0]), _format_cells(leaf_series)])
 		var budget_group: BudgetGroup = content.get_child(i)
 		budget_group.set_group(tr(title), _format_cells(subtotal_series), formatted_leaves)
 		budget_group.show()
@@ -610,6 +639,18 @@ func _render_groups(content: VBoxContainer, groups: Array) -> void:
 		var unused_group: Control = content.get_child(i)
 		unused_group.hide()
 		i += 1
+
+
+# A leaf's name: [param leaf_name] where a translation key, which its Label translates, or the
+# item and its counterparty where a pair of them.
+func _get_leaf_name(leaf_name: Variant) -> String:
+	if leaf_name is String:
+		var translation_key: String = leaf_name
+		return translation_key
+	var pair: Array = leaf_name
+	var item_key: String = pair[0]
+	var counterparty_name: String = pair[1]
+	return "%s: %s" % [tr(item_key), tr(counterparty_name)]
 
 
 func _shift_window(direction: int) -> void:

@@ -591,14 +591,23 @@ func get_financials_subtotals() -> PackedFloat64Array:
 	return PackedFloat64Array()
 
 
-## Returns the sparse line-item dict (line_items index -> value), or empty.
+## Returns the sparse line-item dict (key -> value; see [method Utils.get_line_item_key]), or
+## empty.
 func get_financials_accountings() -> Dictionary[int, float]:
 	return {}
 
 
-## Returns the per-quarter history of line item [param _item] (oldest first), or empty.
-func get_financials_accounting_history(_item: int) -> PackedFloat64Array:
+## Returns the per-quarter history of the line item kept under [param _key] (oldest first; see
+## [method Utils.get_line_item_key]), or empty.
+func get_financials_accounting_history(_key: int) -> PackedFloat64Array:
 	return PackedFloat64Array()
+
+
+## Returns the keys of line item [param _line_item_type], one kept per counterparty, that hold a
+## value this quarter or in the history, in the order of their counterparties' ids (see
+## [method Utils.get_line_item_key]), or empty.
+func get_financials_counterparty_keys(_line_item_type: int) -> Array[int]:
+	return []
 
 
 # Population data (read-only). Default 0.0/empty; developed proxies override. A facility

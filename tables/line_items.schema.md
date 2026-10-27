@@ -54,3 +54,9 @@ statement `PL_SETTLEMENTS` / `PL_PAYMENTS`, `EXCHANGE_TAKE_RECEIVED` / `EXCHANGE
   administrative center but never that facility's (`FINANCIAL_MODEL.md`, "The accounts"), such as
   `TAX_REVENUE` and `GOVERNMENT_CASH`. The subtotals sum every account booked at an entity; the Budget
   tab shows each treasury's items apart from the facility's.
+- keyed_by — `Enums.Counterparties` member (prefix `COUNTERPARTY_`): what the item is kept per. Blank
+  is kept once; `FACILITY` and `PLAYER` keep a line of the item for each facility or player it moves
+  money to or from, such as a treasury's `GOVERNMENT_FUNDING_PAID` by the facility funded and
+  `APPROPRIATIONS_PAID` by the agency, each line coming into being with its first booking, so no row
+  names a facility or a player (`FINANCIAL_MODEL.md`, "Line items"). A line follows its item in every
+  other field.
