@@ -334,27 +334,20 @@ func process_ai_interval(_delta: float) -> void:
 
 # ***************************** INTERNAL PRIVATE ******************************
 
-# Sets its treasuries' budget lines (FINANCIAL_MODEL.md, "Budgets"): a polity's appropriation of
-# each of its agencies, the agency's appropriation_share in players.tsv, and its funding of each of
-# its facilities from each treasury that owns it, the facility's funding_share in facilities.tsv,
-# those on auto filling what its human's held lines leave, in proportion to their seeds, with the
-# treasury's residual where it has one. An agency's treasury has none, so its lines on auto fill
-# its budget. A line no table seeds funds all its counterparty lacks. TEMPORARY PATCH: each line is
-# its table seed, read again each interval so a line its human returns to auto goes back to it,
-# until the AI weighs its lines.
+# Sets its treasuries' budget lines (FINANCIAL_MODEL.md, "Budgets"): a polity's government
+# treasury's appropriation of each of its agencies, the agency's appropriation_share in
+# players.tsv, and its funding of each of its facilities from each treasury that owns it, the
+# facility's funding_share in facilities.tsv, those on auto filling what its human's held lines of
+# the same treasury leave, in proportion to their seeds, with the treasury's residual where it has
+# one. An agency's treasury has none, so its lines on auto fill its budget. A line no table seeds
+# funds all its counterparty lacks. TEMPORARY PATCH: each line is its table seed, read again each
+# interval so a line its human returns to auto goes back to it, until the AI weighs its lines.
 func _author_budget_shares() -> void:
 	const PLAYER_CLASS_AGENCY := Enums.PlayerClasses.PLAYER_CLASS_AGENCY
 	const PLAYER_CLASS_COMPANY := Enums.PlayerClasses.PLAYER_CLASS_COMPANY
 	var appropriations_paid := IVTableData.db_find(&"line_items", &"unique_type",
 			Enums.UniqueLineItems.APPROPRIATIONS_PAID)
 	var appropriation_shares: Array[float] = IVTableData.db_tables[&"players"][&"appropriation_share"]
-	for agency in Proxy.proxy_bus.player_proxies:
-		if agency == proxy or agency.polity != proxy or agency.player_class != PLAYER_CLASS_AGENCY:
-			continue
-		var player_type := IVTableData.get_row(agency.name)
-		if player_type != -1 and appropriation_shares[player_type] >= 0.0:
-			proxy.set_budget_share(Utils.get_line_item_key(appropriations_paid, agency.player_id),
-					appropriation_shares[player_type])
 	var funding_items: Array[int] = [
 		IVTableData.db_find(&"line_items", &"unique_type",
 				Enums.UniqueLineItems.GOVERNMENT_FUNDING_PAID),
@@ -366,8 +359,15 @@ func _author_budget_shares() -> void:
 	for account in funding_items.size():
 		var keys := PackedInt32Array()
 		var seeds := PackedFloat64Array()
-		var held_shares := PackedFloat64Array()
-		var is_any_held := false
+		if account == Enums.Accounts.ACCOUNT_GOVERNMENT:
+			for agency in Proxy.proxy_bus.player_proxies:
+				if (agency == proxy or agency.polity != proxy
+						or agency.player_class != PLAYER_CLASS_AGENCY):
+					continue
+				var player_type := IVTableData.get_row(agency.name)
+				if player_type != -1 and appropriation_shares[player_type] >= 0.0:
+					keys.append(Utils.get_line_item_key(appropriations_paid, agency.player_id))
+					seeds.append(appropriation_shares[player_type])
 		for facility in proxy.facilities:
 			var facility_type := IVTableData.get_row(facility.name)
 			if facility_type == -1 or !(funding_shares[facility_type] >= 0.0):
@@ -379,11 +379,13 @@ func _author_budget_shares() -> void:
 						and facility_proxy.public_sector < 1.0)
 			if !is_owner:
 				continue
-			var key := Utils.get_line_item_key(funding_items[account], facility_proxy.facility_id)
+			keys.append(Utils.get_line_item_key(funding_items[account], facility_proxy.facility_id))
+			seeds.append(funding_shares[facility_type])
+		var held_shares := PackedFloat64Array()
+		var is_any_held := false
+		for key in keys:
 			var is_held := proxy.is_budget_share_held(key)
 			is_any_held = is_any_held or is_held
-			keys.append(key)
-			seeds.append(funding_shares[facility_type])
 			held_shares.append(proxy.get_budget_share(key) if is_held else NAN)
 		var shares := seeds
 		if is_any_held:

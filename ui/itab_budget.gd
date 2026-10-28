@@ -37,9 +37,9 @@ extends MarginContainer
 ## marked on the same scale where the line drew last quarter and where its current trend, this
 ## quarter's pace, puts it; a line that funds all its counterparty lacks spans the width. The bar's
 ## tooltip gives both draws, beside a legend of its colors. A line its owner sets, a treasury's
-## funding of a facility and a facility's R&D and expansion, shows the share it is set at, a
-## facility by its short name. An agency's budgets, its treasury's and its facilities', have no
-## rest: what it is appropriated is spent.[br][br]
+## funding of a facility, a polity's appropriation of an agency and a facility's R&D and expansion,
+## shows the share it is set at, a facility by its short name. An agency's budgets, its treasury's
+## and its facilities', have no rest: what it is appropriated is spent.[br][br]
 ##
 ## Where this machine's human plays the player ([method PlayerProxy.is_local_human]), each line its
 ## owner sets has an Auto checkbox, checked while the player's AI sets it; unchecked, the line is
@@ -796,9 +796,9 @@ func _collect_treasury(player: PlayerProxy, center: FacilityProxy, account: int,
 		keys: Array[int], is_local: bool) -> Array:
 	# A treasury's budget, or empty where it has neither a budget nor a line. Its committed lines'
 	# shares are of what it has to spend, and its discretionary lines' of what they leave, its
-	# funding lines' those they are set at, which its rest, transfers or dividends, takes last; an
-	# agency's has none. Its funding lines are controls where [param is_local], and its budget too
-	# with unlimited money.
+	# funding lines' and appropriations' those they are set at, which its rest, transfers or
+	# dividends, takes last; an agency's has none. Those are controls where [param is_local], and
+	# its budget too with unlimited money.
 	var budget := player.budgets[account]
 	var committed_rows := []
 	var discretionary_rows := []
@@ -816,13 +816,13 @@ func _collect_treasury(player: PlayerProxy, center: FacilityProxy, account: int,
 			continue
 		var share := line / budget if budget > 0.0 else NAN
 		var control := []
-		if item == _funding_items[account]:
+		if _is_share_item(item, account):
 			share = player.get_budget_share(key)
 			if is_finite(share):
 				line = share * budget
 			if is_local and is_finite(share):
 				control = [Controls.CONTROL_BUDGET_SHARE, player.name, key,
-						player.is_budget_share_held(key), _get_funding_cap(player, account, key)]
+						player.is_budget_share_held(key), _get_share_cap(player, account, key)]
 		if is_finite(share):
 			share_sum += share
 		discretionary_rows.append([_get_funding_line_name(item, key), share, line, draws, budget,
@@ -865,7 +865,7 @@ func _collect_owner_lines(facility: FacilityProxy, player: PlayerProxy,
 		var control := []
 		if is_local and is_finite(share):
 			control = [Controls.CONTROL_BUDGET_SHARE, player.name, key,
-					player.is_budget_share_held(key), _get_funding_cap(player, account, key)]
+					player.is_budget_share_held(key), _get_share_cap(player, account, key)]
 		rows.append([[_get_account_name(player, account), player.gui_name], share, line,
 				_get_draws(center, key, true), player.budgets[account], control])
 	if rows.is_empty():
@@ -927,22 +927,29 @@ func _get_drawn_share(drawn: float, base: float) -> float:
 	return drawn / base
 
 
-# The keys of the treasury [param account]'s funding lines that have a share.
-func _get_funding_keys(player: PlayerProxy, account: int) -> Array[int]:
+# The keys of the treasury [param account]'s lines that have a share: its funding lines, and a
+# government treasury's appropriations.
+func _get_share_keys(player: PlayerProxy, account: int) -> Array[int]:
 	var keys: Array[int] = []
 	for key in player.budget_shares:
-		if (Utils.get_line_item_type(key) == _funding_items[account]
-				and is_finite(player.budget_shares[key])):
+		if _is_share_item(Utils.get_line_item_type(key), account) and is_finite(
+				player.budget_shares[key]):
 			keys.append(key)
 	return keys
 
 
-# The most the treasury [param account]'s funding line kept under [param key] may be set at
+# Whether [param item] is a line of the treasury [param account]'s budget set as a share of it.
+func _is_share_item(item: int, account: int) -> bool:
+	return (item == _funding_items[account]
+			or (item == _item_appropriations_paid and _item_accounts[item] == account))
+
+
+# The most the treasury [param account]'s line kept under [param key] may be set at
 # (_get_cap).
-func _get_funding_cap(player: PlayerProxy, account: int, key: int) -> float:
+func _get_share_cap(player: PlayerProxy, account: int, key: int) -> float:
 	var held_sum := 0.0
 	var is_any_auto := _has_rest(player)
-	for line_key in _get_funding_keys(player, account):
+	for line_key in _get_share_keys(player, account):
 		if line_key == key:
 			continue
 		if player.is_budget_share_held(line_key):
@@ -957,6 +964,14 @@ func _get_funding_cap(player: PlayerProxy, account: int, key: int) -> float:
 # the move, or all of it, where the other lines are taken up instead.
 static func _get_cap(held_sum: float, is_any_auto: bool) -> float:
 	return maxf(1.0 - held_sum, 0.0) if is_any_auto else 1.0
+
+
+static func _format_share(share: float) -> String:
+	var percent := share * 100.0
+	# An appropriation is a few tenths of a percent of its government's budget, or less.
+	if percent > 0.0 and percent < 1.0:
+		return "%.2f%%" % percent
+	return "%.f%%" % percent
 
 
 # Whether [param player]'s budgets have a rest, which an agency's, given its money to spend, don't.
@@ -1030,13 +1045,13 @@ func _hold_control(control: Array, value: float) -> void:
 	_update_tab.call_deferred()
 
 
-# Holds [param player]'s funding line kept under [param key] at [param share], its treasury's other
-# lines taking up the move (FINANCIAL_MODEL.md, "Budgets"): those on auto with its rest, set as its
+# Holds [param player]'s line kept under [param key] at [param share], its treasury's other lines
+# taking up the move (FINANCIAL_MODEL.md, "Budgets"): those on auto with its rest, set as its
 # AI will set them, since a paused game runs no AI, or where it has neither, every other line,
 # held where it moves.
 func _hold_budget_share(player: PlayerProxy, key: int, share: float) -> void:
-	var account := _funding_items.find(Utils.get_line_item_type(key))
-	var keys := _get_funding_keys(player, account)
+	var account := _item_accounts[Utils.get_line_item_type(key)]
+	var keys := _get_share_keys(player, account)
 	var has_rest := _has_rest(player)
 	var is_any_auto := has_rest
 	var shares := PackedFloat64Array()
@@ -1427,7 +1442,7 @@ func _set_funding_line(row: FundingRow, data: Array) -> void:
 	if is_inf(share):
 		share_text = UNBOUNDED
 	elif !is_nan(share):
-		share_text = "%.f%%" % (share * 100.0)
+		share_text = _format_share(share)
 	var control: Array = data[5]
 	row.set_line(_get_leaf_name(data[0]), share, share_text, _format_money(line), control)
 	row.set_draws(_get_drawn_share(draws[0], base), _get_drawn_share(draws[1], base),
@@ -1946,7 +1961,7 @@ class FundingRow extends HBoxContainer:
 
 
 	func _on_share_dragged(share: float) -> void:
-		_cells[0].text = "%.f%%" % (share * 100.0)
+		_cells[0].text = ITabBudget._format_share(share)
 
 
 	func _on_share_set(share: float) -> void:

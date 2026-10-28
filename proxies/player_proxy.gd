@@ -26,15 +26,22 @@ extends Proxy
 var player_id := -1 ## Index into [member ProxyBus.player_proxies].
 var player_class := -1 ## Player class index ([code]PlayerClasses[/code] enum).
 var homeworld := "" ## Name of this player's homeworld body.
-var tax_rate := 0.0 ## Income-tax rate applied to this player's facilities.
+## A polity's taxes (FINANCIAL_MODEL.md, "Taxes"): its corporate tax, a share of its facilities'
+## private operating income; its payroll tax, a share of the wages they pay; and its wealth tax, a
+## share a year of what its residents hold past [member wealth_tax_threshold], a share of their
+## mean wealth. Its agencies' and companies' facilities pay its rates.
+var corporate_tax_rate := 0.0
+var payroll_tax_rate := 0.0 ## See [member corporate_tax_rate].
+var wealth_tax_rate := 0.0 ## See [member corporate_tax_rate].
+var wealth_tax_threshold := 0.0 ## See [member corporate_tax_rate].
 ## True if a human plays this player, as set when the game started; only a playable player may be.
 ## Its AI still runs, and sets whatever its human leaves on auto. Whether this machine's human
 ## plays it is [method is_local_human].
 var human := false
 ## Its treasuries' budget lines, each kept under the key of the line item it funds by (see
-## [method Utils.get_line_item_key]; FINANCIAL_MODEL.md, "Budgets"): a facility's funding by
-## facility, a share of the treasury's budget over a year, and an agency's appropriation by agency,
-## a share of its polity's income for now. A line with no share funds all its counterparty lacks.
+## [method Utils.get_line_item_key]; FINANCIAL_MODEL.md, "Budgets"), each a share of the
+## treasury's budget over a year: a facility's funding by facility, and an agency's appropriation by
+## agency. A line with no share funds all its counterparty lacks.
 ## Resizable container — not threadsafe! Use [method set_budget_share].
 var budget_shares: Dictionary[int, float] = {}
 ## What each of its treasuries is set to spend a year past its committed lines, by

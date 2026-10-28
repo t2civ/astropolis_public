@@ -121,6 +121,9 @@ enum UniqueLineItems {
 	CORPORATE_GRANTED,
 	APPROPRIATION_LAPSES_RECEIVED,
 	APPROPRIATION_LAPSES_PAID,
+	PAYROLL_TAX_PAID,
+	PAYROLL_TAX_RECEIVED,
+	WEALTH_TAX_RECEIVED,
 }
 
 ## Trade classes group resources by handling (electricity, bulk, cryogenic,
