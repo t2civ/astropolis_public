@@ -96,9 +96,10 @@ inequality, `facilities_populations.tsv`) takes the average over its classes.
    a death leaving its share to the survivors; nothing moves the inequality yet.
 3. Base humans' response columns are fitted on the 2017 cross-section of countries by
    `tests/calibration/seed_demography.py --fit`, as a person's curve over each country's ten
-   classes at its inequality (`EARTH_CALIBRATION.md`, "Population"). The
-   floors and response times are not fitted, and neither are the fertility's response to
-   crowding and the participation's response, whose values are from recall.
+   classes, each holding what its governments pay alike and the rest at its inequality
+   (`EARTH_CALIBRATION.md`, "Population"). The floors and response times are not fitted, and
+   neither are the fertility's response to crowding and the participation's response, whose
+   values are from recall.
 4. What a type needs, and where it can live, are its wants (`wants.tsv`): room is the want of its
    shelter need, a draw on the habitation its environments' housing makes, and an individual that
    takes less room wants less of it (`POPULATION_MODEL.md`, "Where populations live").
