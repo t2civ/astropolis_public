@@ -196,13 +196,14 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 
 ## Facility-posture strategy definitions; index = [enum FacilityStrategies] value.
 ## The [code]buildout_spending_share[/code] key (read by [method _apply_facility_knobs])
-## is the share of the facility's profit, past what wears out, that its owners leave in it
-## for growth: zero or more builds, replacing what wears out first and growing within that
-## share, which the server holds below one; a negative value winds capacity down at that
-## rate; and an omitted key (NAN) holds. The [code]research_spending_share[/code] key is the
-## share of the owners' income it spends on research and development, on each resource tagged
-## [code]research[/code] (see [method FacilityProxy.set_inventory_research_share]); at an agency,
-## where it spends any, all its funding leaves past its upkeep. An omitted key spends none.
+## is the share of what the facility's budget leaves past its committed lines, what wears out
+## among them, that its owners leave in it for growth (FINANCIAL_MODEL.md, "Budgets"): zero or
+## more builds, replacing what wears out first and growing within that share, which the server
+## holds below one; a negative value winds capacity down at that rate; and an omitted key (NAN)
+## holds. The [code]research_spending_share[/code] key is the share of the same it spends on
+## research and development, on each resource tagged [code]research[/code] (see
+## [method FacilityProxy.set_inventory_research_share]); at an agency, where it spends any, all the
+## builds' share leaves, since it pays nothing out. An omitted key spends none.
 ## Postures never selected by [method _reconcile_facility_strategy] are left empty.
 static var facility_strategy_defs: Array[Dictionary] = [
 	{}, # NEUTRAL
@@ -533,9 +534,9 @@ func _reconcile_facility_strategy() -> int:
 
 
 ## Translates the posture's def into the BUILDOUT operation's target spending share
-## (the share of facility profit past what wears out the yards spend on growth; NAN holds), and
-## into the research share of each resource tagged [code]research[/code], at an agency all its
-## funding leaves.
+## (the share of the facility's budget past its committed lines the yards spend on growth; NAN
+## holds), and into the research share of each resource tagged [code]research[/code], at an agency
+## all the builds' share leaves.
 ## Both are resolved by tag, so no table entity name is referenced here.
 func _apply_facility_knobs(strategy: int) -> void:
 	var def := facility_strategy_defs[strategy]
@@ -545,7 +546,7 @@ func _apply_facility_knobs(strategy: int) -> void:
 		proxy.set_operations_target_spending_share(operation_type, share)
 	var research_share: float = def.get(&"research_spending_share", 0.0)
 	if research_share > 0.0 and proxy.get_player_class() == Enums.PlayerClasses.PLAYER_CLASS_AGENCY:
-		research_share = 1.0
+		research_share = 1.0 - share if share > 0.0 else 1.0
 	var research_resources: PackedInt32Array = _tag_resources.get(&"research",
 			PackedInt32Array())
 	for resource_type in research_resources:

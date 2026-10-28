@@ -28,12 +28,13 @@ extends MarginContainer
 ## display unit; the "<" / ">" buttons shift the visible quarter window. Display
 ## values are scaled on the fly so most land in the 1–999 range.
 ##
-## The Funding subtab shows, at an administrative center or for a player, each of its player's
-## treasuries' budgets as a bar graph of its lines (FINANCIAL_MODEL.md, "Budgets"): its committed
-## lines as shares of what it has to spend a year, and its discretionary lines as shares of what
-## they leave, the rest of its budget last. Each bar is filled to what was drawn of its line last
-## quarter, and a line that funds all its counterparty lacks spans the width, filled to what it drew
-## of the budget. Elsewhere it shows the facility's lines from its owners. It is read-only.
+## The Funding subtab shows budgets, each as a bar graph of its lines (FINANCIAL_MODEL.md,
+## "Budgets"): its committed lines as shares of what it has to spend a year, and its discretionary
+## lines as shares of what they leave, the rest of its budget last. At an administrative center or
+## for a player it shows each of its player's treasuries' budgets, and at a facility its own budget,
+## below its owners' lines for it where it isn't its player's center. Each bar is filled to what was
+## drawn of its line last quarter, and a line that funds all its counterparty lacks spans the width,
+## filled to what it drew of the budget. It is read-only.
 ##
 ## Subtab indices follow [code]Enums.StatementTypes[/code], then the Funding subtab, with
 ## placeholder grants and R & D subtabs after it.
@@ -122,6 +123,12 @@ var _item_transfers_paid := -1
 var _item_dividends_paid := -1
 var _item_appropriations_paid := -1
 var _item_funding_received := -1
+var _item_payouts_paid := -1
+var _item_interest_expense := -1
+var _item_income_tax := -1
+var _item_research_development := -1
+var _item_fixed_assets := -1
+var _upkeep_items := PackedInt32Array() # a facility's module maintenance, administration, staffing
 
 var _selection_manager: AstroSelectionManager
 var _suppress_tab_listener := true
@@ -227,6 +234,16 @@ func _precompute_display_names() -> void:
 	_item_transfers_paid = _find_item(Enums.UniqueLineItems.TRANSFERS_PAID)
 	_item_dividends_paid = _find_item(Enums.UniqueLineItems.DIVIDENDS_PAID)
 	_item_funding_received = _find_item(Enums.UniqueLineItems.FUNDING_RECEIVED)
+	_item_payouts_paid = _find_item(Enums.UniqueLineItems.PAYOUTS_PAID)
+	_item_interest_expense = _find_item(Enums.UniqueLineItems.INTEREST_EXPENSE)
+	_item_income_tax = _find_item(Enums.UniqueLineItems.INCOME_TAX)
+	_item_research_development = _find_item(Enums.UniqueLineItems.RESEARCH_DEVELOPMENT)
+	_item_fixed_assets = _find_item(Enums.UniqueLineItems.FIXED_ASSETS)
+	_upkeep_items = PackedInt32Array([
+		_find_item(Enums.UniqueLineItems.MODULE_MAINTENANCE),
+		_find_item(Enums.UniqueLineItems.ADMINISTRATION),
+		_find_item(Enums.UniqueLineItems.STAFFING),
+	])
 
 
 func _find_item(unique_type: int) -> int:
@@ -594,7 +611,8 @@ func _subtract_series(a: PackedFloat64Array, b: PackedFloat64Array) -> PackedFlo
 func _collect_funding(proxy: Proxy) -> Array:
 	# [[title, total, committed_rows, discretionary_rows], ...], each row [name, share, line, drawn,
 	# fill]: at an administrative center or for a player, each of the player's treasuries that has a
-	# budget or a line; elsewhere the facility's lines from its owners.
+	# budget or a line; at a facility its own budget, after its owners' lines for it where it isn't
+	# its player's center.
 	var player: PlayerProxy
 	var facility: FacilityProxy
 	if proxy is PlayerProxy:
@@ -602,20 +620,93 @@ func _collect_funding(proxy: Proxy) -> Array:
 	elif proxy is FacilityProxy:
 		facility = proxy
 		player = facility.player
-	if !player or !player.administrative_center:
+	if !player:
 		return []
 	var center := player.administrative_center
-	if facility and facility != center:
-		return _collect_owner_lines(facility, player, center)
-	var keys: Array[int] = []
-	keys.assign(player.budget_lines.keys())
-	keys.sort_custom(_is_key_before)
 	var panels := []
-	for account in player.budgets.size():
-		var panel := _collect_treasury(player, center, account, keys)
-		if !panel.is_empty():
-			panels.append(panel)
+	if center and (!facility or facility == center):
+		var keys: Array[int] = []
+		keys.assign(player.budget_lines.keys())
+		keys.sort_custom(_is_key_before)
+		for account in player.budgets.size():
+			var panel := _collect_treasury(player, center, account, keys)
+			if !panel.is_empty():
+				panels.append(panel)
+	if !facility:
+		return panels
+	if center and facility != center:
+		panels.append_array(_collect_owner_lines(facility, player, center))
+	var budget_panel := _collect_facility_budget(facility)
+	if !budget_panel.is_empty():
+		panels.append(budget_panel)
 	return panels
+
+
+func _collect_facility_budget(facility: FacilityProxy) -> Array:
+	# The facility's budget, or empty before its first interval: its committed lines, its
+	# operations' loss among them where its income is below nothing, as shares of what it has to
+	# spend, and its R&D and builds as shares of what they leave, its payouts last. What its builds
+	# drew is what its fixed assets gained, net of what came down.
+	const BUDGET_INCOME := FacilityProxy.BudgetLines.BUDGET_INCOME
+	const BUDGET_FUNDING := FacilityProxy.BudgetLines.BUDGET_FUNDING
+	const BUDGET_UPKEEP := FacilityProxy.BudgetLines.BUDGET_UPKEEP
+	const BUDGET_INTEREST := FacilityProxy.BudgetLines.BUDGET_INTEREST
+	const BUDGET_TAX := FacilityProxy.BudgetLines.BUDGET_TAX
+	const BUDGET_WEAR := FacilityProxy.BudgetLines.BUDGET_WEAR
+	const BUDGET_RESEARCH := FacilityProxy.BudgetLines.BUDGET_RESEARCH
+	const BUDGET_BUILDS := FacilityProxy.BudgetLines.BUDGET_BUILDS
+	var lines := facility.budget_lines
+	if lines.size() != FacilityProxy.BudgetLines.size():
+		return []
+	var income := lines[BUDGET_INCOME]
+	var total := maxf(income, 0.0) + lines[BUDGET_FUNDING]
+	# A unitary facility books only what it buys and sells, never what its upkeep or R&D draws.
+	var upkeep_drawn := NAN
+	var research_drawn := NAN
+	if !facility.is_unitary:
+		upkeep_drawn = 0.0
+		for item in _upkeep_items:
+			upkeep_drawn += _get_drawn(facility, item, false)
+		research_drawn = _get_drawn(facility, _item_research_development, false)
+	var committed_rows := []
+	var committed := 0.0
+	for row: Array in [
+		["LABEL_UPKEEP", lines[BUDGET_UPKEEP], upkeep_drawn],
+		[_item_keys[_item_interest_expense], lines[BUDGET_INTEREST],
+				_get_drawn(facility, _item_interest_expense, false)],
+		[_item_keys[_item_income_tax], lines[BUDGET_TAX],
+				_get_drawn(facility, _item_income_tax, false)],
+		["LABEL_WEAR", lines[BUDGET_WEAR], NAN],
+		["LABEL_OPERATIONS_LOSS", maxf(-income, 0.0), NAN],
+	]:
+		var line: float = row[1]
+		if !(line > 0.0):
+			continue
+		var drawn: float = row[2]
+		committed += line
+		committed_rows.append([row[0], line / total if total > 0.0 else NAN, line, drawn,
+				_get_fill(drawn, line)])
+	var left := maxf(total - committed, 0.0)
+	var research := lines[BUDGET_RESEARCH]
+	var builds := lines[BUDGET_BUILDS]
+	# Where it houses its residents its income counts their pay, so the rest reaches them as wages
+	# as well as payouts, and the ledger doesn't tell which wages its upkeep's staffing took.
+	var rest_name: String = _item_keys[_item_payouts_paid]
+	var rest_drawn := _get_drawn(facility, _item_payouts_paid, false)
+	if facility.get_population_number() > 0.0:
+		rest_name = "LABEL_PAY_AND_PAYOUTS"
+		rest_drawn = NAN
+	var discretionary_rows := []
+	for row: Array in [
+		[_item_keys[_item_research_development], research, research_drawn],
+		["LABEL_BUILDS", builds, _get_balance_change(facility, _item_fixed_assets)],
+		[rest_name, maxf(left - research - builds, 0.0), rest_drawn],
+	]:
+		var line: float = row[1]
+		var drawn: float = row[2]
+		discretionary_rows.append([row[0], line / left if left > 0.0 else NAN, line, drawn,
+				_get_fill(drawn, line)])
+	return [facility.gui_name, total, committed_rows, discretionary_rows]
 
 
 func _collect_treasury(player: PlayerProxy, center: FacilityProxy, account: int,
@@ -695,6 +786,16 @@ func _get_drawn(center: FacilityProxy, key: int, is_net: bool) -> float:
 				Utils.get_line_item_counterparty(key))
 		drawn -= center.get_financials_accounting_history(returned_key)[-1]
 	return drawn * IVUnits.YEAR / Utils.get_ordinal_quarter_duration(center.ordinal_qtr - 1)
+
+
+# What [param facility]'s balance [param item] gained last quarter, as a rate a year; NAN before
+# two quarters have ended.
+func _get_balance_change(facility: FacilityProxy, item: int) -> float:
+	var history := facility.get_financials_accounting_history(item)
+	if history.size() < 2:
+		return NAN
+	return ((history[-1] - history[-2]) * IVUnits.YEAR
+			/ Utils.get_ordinal_quarter_duration(facility.ordinal_qtr - 1))
 
 
 # What of [param line] [param drawn] is, or NAN where either has no value.

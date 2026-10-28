@@ -135,6 +135,23 @@ enum InventoryItems {
 }
 
 
+## The lines of a facility's budget in [member budget_lines], each a year (FINANCIAL_MODEL.md,
+## "Budgets"): what it has to spend, its income and what its funding lines leave it; what it
+## commits, its upkeep, interest and income tax and what wears out at its build cost; and what its
+## R&D and its builds past what wears out may spend of what those leave. Its payouts are what
+## remains.
+enum BudgetLines {
+	BUDGET_INCOME,
+	BUDGET_FUNDING,
+	BUDGET_UPKEEP,
+	BUDGET_INTEREST,
+	BUDGET_TAX,
+	BUDGET_WEAR,
+	BUDGET_RESEARCH,
+	BUDGET_BUILDS,
+}
+
+
 ## The multiples of the market's price, lowest first, that a facility's desired flow is given at
 ## (see [method get_inventory_desired_flow_curve]); the middle one is the market's price itself.
 const FLOW_CURVE_FACTORS: PackedFloat64Array = [0.5, 1.0, 2.0]
@@ -176,6 +193,9 @@ var cash_reserve := 0.0
 ## facility's funding line, as of its last interval (FINANCIAL_MODEL.md, "Credit"). Its trader's
 ## commitments are bound by it.
 var credit := 0.0
+## Its budget a year as of its last interval, by [enum BudgetLines]; empty before its first.
+## Server-authoritative. Use [method get_budget_line].
+var budget_lines := PackedFloat64Array()
 
 # *****************************************************************************
 # persisted
@@ -275,11 +295,19 @@ func get_polity_name() -> StringName:
 	return polity.name
 
 
-# Facility flags
+# Facility flags and budget
 
 ## Returns the full bidirectional flag value (see [enum FacilityFlags]).
 func get_flags() -> int:
 	return flags
+
+
+## Returns its budget's line [param line], a [enum BudgetLines], a year (see
+## [member budget_lines]), or NAN before its first interval.
+func get_budget_line(line: int) -> float:
+	if line < 0 or line >= budget_lines.size():
+		return NAN
+	return budget_lines[line]
 
 
 # Operations (facility-only). Facility-only reads, plus proxy-authoritative knobs
@@ -401,8 +429,8 @@ func get_flags() -> int:
 @abstract func get_inventory_level_levers() -> PackedFloat64Array
 
 
-## Returns the share of its owners' income the facility spends on [param resource_type] as
-## research and development (see [method set_inventory_research_share]).
+## Returns the share of what its budget's committed lines leave that the facility spends on
+## [param resource_type] as research and development (see [method set_inventory_research_share]).
 @abstract func get_inventory_research_share(resource_type: int) -> float
 
 
@@ -695,8 +723,9 @@ func get_market() -> MarketProxy:
 @abstract func set_operations_target_margin(type: int, value: float) -> void
 
 
-## Sets the target spending share for operation [param type] (fraction of facility
-## profit past what wears out, or NAN = not in effect). Proxy-authoritative; flows proxy -> server.
+## Sets the target spending share for operation [param type] (fraction of what the facility's
+## budget leaves past its committed lines, what wears out among them, or NAN = not in effect; see
+## [member budget_lines]). Proxy-authoritative; flows proxy -> server.
 @abstract func set_operations_target_spending_share(type: int, value: float) -> void
 
 
@@ -748,11 +777,10 @@ func get_market() -> MarketProxy:
 @abstract func set_inventory_level_lever(type: int, value: float) -> void
 
 
-## Sets the share of its owners' income, past what its maintenance and administration buy, that the
-## facility spends on [param type] each interval as research and development, an operating expense,
-## before its builds take their share of what is left: 0.0 spends none. A facility that houses no
-## one, an agency, spends it of its polity's income instead, and its builds keep its own. It buys
-## only what the facility can trade or make. What it buys raises nothing yet: a patch until the
+## Sets the share of what its budget leaves past its committed lines (see [member budget_lines])
+## that the facility spends on [param type] each interval as research and development, an operating
+## expense, before its builds take their share of the same: 0.0 spends none. It buys only what the
+## facility can trade or make. What it buys raises nothing yet: a patch until the
 ## technology model, in which research raises what operations make (ROADMAP.md, "Technology").
 ## Proxy-authoritative: this change flows proxy -> server. No-op on an out-of-range index or a value
 ## outside [0.0, 1.0].
