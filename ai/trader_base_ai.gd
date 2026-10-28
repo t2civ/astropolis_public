@@ -198,7 +198,7 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 static var _table_n_rows := IVTableData.table_n_rows
 static var _trade_unit_multipliers := ThreadsafeGlobal.resource_trade_unit_multipliers
 ## Per-resource 0/1; trade_class == CYBER (orders route to the cyber market). Built once.
-static var _is_cyber_resource: PackedByteArray
+static var _cyber_resource: PackedByteArray
 
 
 var proxy: TraderProxy
@@ -281,13 +281,13 @@ func _init() -> void:
 	var n_resources: int = _table_n_rows[&"resources"]
 	resource_strategies.resize(n_resources)
 	_windows.resize(n_resources)
-	if _is_cyber_resource.is_empty():
+	if _cyber_resource.is_empty():
 		const TRADE_CLASS_CYBER := Enums.TradeClasses.TRADE_CLASS_CYBER
 		var resources_table: Dictionary[StringName, Array] = IVTableData.db_tables[&"resources"]
 		var trade_classes := PackedInt32Array(resources_table[&"trade_class"])
-		_is_cyber_resource.resize(trade_classes.size())
+		_cyber_resource.resize(trade_classes.size())
 		for resource_type in trade_classes.size():
-			_is_cyber_resource[resource_type] = 1 if trade_classes[resource_type] == TRADE_CLASS_CYBER else 0
+			_cyber_resource[resource_type] = 1 if trade_classes[resource_type] == TRADE_CLASS_CYBER else 0
 
 
 func _clear_for_destruction() -> void:
@@ -667,7 +667,7 @@ func _is_quote_stale(orders: Dictionary[PackedInt32Array, PackedInt64Array],
 # Resolves which market an order for [param resource_type] routes to: the cyber market
 # for a cyber resource, else this facility trader's home body market.
 func _delivery_market_id(resource_type: int) -> int:
-	return _cyber_market_id if _is_cyber_resource[resource_type] else proxy.market_id
+	return _cyber_market_id if _cyber_resource[resource_type] else proxy.market_id
 
 
 # Resolves the delivery body of [param market_id], for a transport trader's 3-element

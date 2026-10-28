@@ -162,7 +162,7 @@ var facility_class := -1  ## Facility class index. Not implemented yet.
 ## Public-sector share of this facility, often 0.0 or 1.0, sometimes mixed.
 var public_sector: float
 ## True if this is a small focused activity (affects stats and tax treatment).
-var is_unitary: bool
+var unitary: bool
 ## True if this facility makes its body's market, warehousing stock and keeping a bid
 ## and an ask standing (see TRADE_MODEL.md, "Market makers").
 var market_maker: bool

@@ -52,7 +52,7 @@ func _pin_info_panel(info_panel: InfoPanel) -> void:
 	var panel_clone: InfoPanel = IVFiles.make_object_or_scene(InfoPanel)
 	panel_clone.clone_and_pin_requested.connect(_pin_info_panel)
 	panel_clone.selection_manager = sm_clone
-	panel_clone.is_pinned = true
+	panel_clone.pinned = true
 
 	# build the tree
 	var astro_gui: AstropolisGUI = IVGlobal.program[&"AstropolisGUI"]

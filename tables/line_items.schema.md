@@ -40,13 +40,13 @@ statement `PL_SETTLEMENTS` / `PL_PAYMENTS`, `EXCHANGE_TAKE_RECEIVED` / `EXCHANGE
   production).
 - operating_expense — for an `INCOME` leaf, TRUE routes it into the `OPERATING_EXPENSE` subtotal, below gross
   profit, instead of `COST_OF_GOODS` or `REVENUE`: a cost no operation's run weighs, such as a module's upkeep, administration,
-  wear and research (`FINANCIAL_MODEL.md`, principle 6). Signed like `is_tax`: a cost leaf adds, and a revenue leaf, a gain
+  wear and research (`FINANCIAL_MODEL.md`, principle 6). Signed like `tax`: a cost leaf adds, and a revenue leaf, a gain
   such as `DISPOSAL_GAINS`, subtracts. Operating income is the derived `gross profit − operating expense`. Unused for
   cash-flow and balance leaves.
 - balance_class — for a `BALANCE` leaf, its `Enums.BalanceClasses` member (prefix `BALANCE_CLASS_`):
   `ASSET`, `LIABILITY`, or `EQUITY`. Routes the leaf into the assets, liabilities, or equity subtotal.
   Unused for `INCOME`/`CASH_FLOW` leaves (leave blank).
-- is_tax — for an `INCOME` leaf, TRUE routes it into the `TAX` subtotal (signed: `revenue` TRUE adds,
+- tax — for an `INCOME` leaf, TRUE routes it into the `TAX` subtotal (signed: `revenue` TRUE adds,
   FALSE subtracts) below operating income, instead of `REVENUE`/`COST_OF_GOODS`; net income is the
   derived `operating income + TAX`. Unused for `CASH_FLOW`/`BALANCE` leaves (leave blank).
 - account — `Enums.Accounts` member (prefix `ACCOUNT_`): whose account the item is. Blank is the

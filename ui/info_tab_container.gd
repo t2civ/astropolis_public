@@ -45,14 +45,14 @@ var subpanels: Array[Container]  ## All tab subpanels in display order.
 
 # not persisted
 var _timer := Timer.new()
-var _is_new := false
+var _new := false
 var _suppress_tab_listener := true
 
 
-func _init(is_new := false) -> void:
-	if !is_new:
+func _init(new_ := false) -> void:
+	if !new_:
 		return
-	_is_new = true
+	_new = true
 	itab_development = IVFiles.make_object_or_scene(ITabDevelopment)
 	itab_populations = IVFiles.make_object_or_scene(ITabPopulations)
 	itab_operations = IVFiles.make_object_or_scene(ITabOperations)
@@ -72,7 +72,7 @@ func _ready() -> void:
 	add_child(_timer)
 	_timer.wait_time = TIMER_INTERVAL
 	_timer.start()
-	if !_is_new: # loaded game
+	if !_new: # loaded game
 		IVStateManager.game_loaded.connect(_on_game_loaded, CONNECT_ONE_SHOT)
 		return
 	add_child(itab_development)

@@ -1,4 +1,4 @@
-name\Field	player_class	is_start	gui_hide	is_playable	polity	homeworld	tax_rate	appropriation_share
+name\Field	player_class	start	gui_hide	playable	polity	homeworld	tax_rate	appropriation_share
 Type	Enums.PlayerClasses	BOOL	BOOL	BOOL	TABLE_ROW	STRING_NAME	FLOAT	FLOAT
 Default		TRUE				PLANET_EARTH	0.2
 Unit

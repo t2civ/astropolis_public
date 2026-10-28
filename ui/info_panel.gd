@@ -33,7 +33,7 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"anchor_right",
 	&"anchor_bottom",
 	&"selection_manager",
-	&"is_pinned",
+	&"pinned",
 ]
 
 ## Selection manager driving this panel. Shared with the GUI for the
@@ -41,7 +41,7 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 var selection_manager: AstroSelectionManager
 ## True if this panel is a pinned clone. Pinned panels show a close button
 ## and follow their own selection.
-var is_pinned := false
+var pinned := false
 
 var _build_subpanels := false
 
@@ -57,7 +57,7 @@ func _ready() -> void:
 	
 	IVStateManager.about_to_free_procedural_nodes.connect(_clear_procedural)
 	($TRButtons/Pin as Button).pressed.connect(_clone_and_pin)
-	if is_pinned:
+	if pinned:
 		($TRButtons/Close as Button).pressed.connect(_close)
 		_init_after_system()
 	else:

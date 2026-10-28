@@ -198,7 +198,7 @@ func timer_update() -> void:
 func _precompute_display_names() -> void:
 	var item_revenue: Array[bool] = _db_tables[&"line_items"][&"revenue"]
 	var item_operating_expense: Array[bool] = _db_tables[&"line_items"][&"operating_expense"]
-	var item_is_tax: Array[bool] = _db_tables[&"line_items"][&"is_tax"]
+	var item_is_tax: Array[bool] = _db_tables[&"line_items"][&"tax"]
 	var item_balance_classes: Array[int] = _db_tables[&"line_items"][&"balance_class"]
 	_item_keys.resize(_n_line_items)
 	_item_subtotals.resize(_n_line_items)
@@ -663,7 +663,7 @@ func _collect_facility_budget(facility: FacilityProxy) -> Array:
 	# A unitary facility books only what it buys and sells, never what its upkeep or R&D draws.
 	var upkeep_drawn := NAN
 	var research_drawn := NAN
-	if !facility.is_unitary:
+	if !facility.unitary:
 		upkeep_drawn = 0.0
 		for item in _upkeep_items:
 			upkeep_drawn += _get_drawn(facility, item, false)
@@ -1213,7 +1213,7 @@ class BudgetGroup extends FoldableContainer:
 	var _arrow_width: float
 	var _n_columns: int
 	var _memory_key: String
-	var _is_singular: bool
+	var _singular: bool
 
 
 	func _init(memory: Dictionary, label_width: float, column_width: float, arrow_width: float,
@@ -1253,11 +1253,11 @@ class BudgetGroup extends FoldableContainer:
 		_memory_key = title_text
 		if leaf_rows.is_empty():
 			add_theme_icon_override(&"folded_arrow", _fold_icon_substitute)
-			_is_singular = true
+			_singular = true
 			folded = true
 		else:
 			remove_theme_icon_override(&"folded_arrow")
-			_is_singular = false
+			_singular = false
 			folded = _memory.get(_memory_key, true)  # start closed
 
 		var n_rows := leaf_rows.size()
@@ -1282,7 +1282,7 @@ class BudgetGroup extends FoldableContainer:
 
 
 	func _on_folding_changed(is_folded_: bool) -> void:
-		if !_is_singular:
+		if !_singular:
 			_memory[_memory_key] = is_folded_
 			return
 		if !is_folded_:  # a no-leaf group can't be unfolded

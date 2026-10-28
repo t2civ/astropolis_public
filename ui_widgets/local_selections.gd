@@ -31,7 +31,7 @@ var _system: Array[String] = []
 var _section_content: Array[Array] = [_polities, _agencies, _companies, _offworld, _system]
 var _n_sections := _section_content.size()
 
-var _is_busy := false # don't update if getting data on ai thread (cheap mutex)
+var _busy := false # don't update if getting data on ai thread (cheap mutex)
 
 @onready var _scroll_container: ScrollContainer = $ScrollContainer
 @onready var _no_facilities: Label = $NoFacilities
@@ -61,7 +61,7 @@ func _ready() -> void:
 
 
 func _clear_procedural() -> void:
-	_is_busy = false # a dispatch in flight at teardown loses its channel callback
+	_busy = false # a dispatch in flight at teardown loses its channel callback
 	if _selection_manager:
 		_selection_manager.selection_changed.disconnect(_update_selection)
 		_selection_manager = null
@@ -76,13 +76,13 @@ func _connect_selection_manager(_dummy := false) -> void:
 
 func _update_selection(_dummy := false) -> void:
 	# Main thread
-	if _is_busy:
+	if _busy:
 		return
 	if not _selection_manager.has_selection():
 		return
 	if !IVStateManager.is_threads_allowed():
 		return # don't dispatch into the non-draining proxy channel while threads stopped
-	_is_busy = true
+	_busy = true
 	var body_name := _selection_manager.get_body_name()
 	MainThreadGlobal.call_proxy_thread(_set_selections_on_proxy_thread.bind(body_name))
 
@@ -100,7 +100,7 @@ func _set_selections_on_proxy_thread(body_name: StringName) -> void:
 	
 	var body: BodyProxy = Proxy.get_proxy_by_name(body_name)
 	if !body:
-		_is_busy = false
+		_busy = false
 		return
 	var is_star := bool(body.body_flags & BODYFLAGS_STAR)
 	_set_selections_recursive(body, is_star, true)
@@ -164,7 +164,7 @@ func _update_foldables() -> void:
 			_section_foldables[i].hide()
 	_scroll_container.visible = has_facilities
 	_no_facilities.visible = !has_facilities
-	_is_busy = false # safe to call again
+	_busy = false # safe to call again
 
 
 func _update_foldable(index: int) -> void:

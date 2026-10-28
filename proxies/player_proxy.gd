@@ -14,7 +14,7 @@ extends Proxy
 ##
 ## Server-side Player aggregates component data from facilities and pushes
 ## changes to PlayerProxy. Players are never removed during a game; an "alive"
-## player is one with [member is_facilities] true.
+## player is one with [member has_facilities] true.
 ##
 ## To modify AI, see [BaseAI] and the [code]*_base_ai.gd[/code] files.
 ##
@@ -51,7 +51,7 @@ var budget_lines: Dictionary[int, float] = {}
 var polity: PlayerProxy ## Self if [member player_class] == [code]PLAYER_CLASS_POLITY[/code].
 ## This player's treasury facility (its homeworld facility at game start; may be null).
 var administrative_center: FacilityProxy
-var is_facilities := true ## True while this player owns at least one facility ("alive" test).
+var has_facilities := true ## True while this player owns at least one facility ("alive" test).
 ## Facilities owned by this player. Resizable container — not threadsafe!
 var facilities: Array[Proxy] = []
 
@@ -116,7 +116,7 @@ func get_budget_line(key: int) -> float:
 @abstract func add_facility(facility: Proxy) -> void
 
 
-## Removes [param facility] from this player. Updates [member is_facilities]
+## Removes [param facility] from this player. Updates [member has_facilities]
 ## to reflect whether the player still owns any facilities.
 @abstract func remove_facility(facility: Proxy) -> void
 

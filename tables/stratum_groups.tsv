@@ -1,4 +1,4 @@
-	is_atmosphere	is_surface	is_deposits
+	atmosphere	surface	deposits
 Type	BOOL	BOOL	BOOL
 Prefix/STRATUM_GROUP_			
 # common/reused			

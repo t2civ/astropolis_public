@@ -1,4 +1,4 @@
-name\Field	resource_class	unique_type	ai_tags	convert_extraction	trade_class	storage_class	trade_unit	start_price	is_extraction	is_volatile	disposal_sink	waste_form	sort_override	mass_err_mult	shade_form	in_house	in_house_rate
+name\Field	resource_class	unique_type	ai_tags	convert_extraction	trade_class	storage_class	trade_unit	start_price	extraction	volatile	disposal_sink	waste_form	sort_override	mass_err_mult	shade_form	in_house	in_house_rate
 Type	TABLE_ROW	Enums.UniqueResources	ARRAY[STRING_NAME]	TABLE_ROW	Enums.TradeClasses	TABLE_ROW	STRING_NAME	FLOAT	BOOL	BOOL	Enums.DisposalSinks	TABLE_ROW	INT	FLOAT	TABLE_ROW	TABLE_ROW	FLOAT
 Unit								$									
 Default								0					0	1			
@@ -135,4 +135,4 @@ CRYOGENIC_STORAGE	SERVICES					PURE_FLOW	t y	1
 RADIOACTIVE_STORAGE	SERVICES					PURE_FLOW	t y	1									
 SPECIAL_HANDLING_STORAGE	SERVICES					PURE_FLOW	t y	1									
 PERISHABLES_STORAGE	SERVICES					PURE_FLOW	t y	1									
-# max is_extraction 63																	
+# max extraction 63																	

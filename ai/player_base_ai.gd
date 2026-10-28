@@ -277,7 +277,7 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"player_facility_strategies",
 	&"body_strategies",
 	&"counterparty_strategies",
-	&"is_budget_seeded",
+	&"budget_seeded",
 ]
 
 
@@ -305,7 +305,7 @@ var body_strategies: Dictionary[int, int]
 var counterparty_strategies: Dictionary[int, int]
 ## True once its treasuries' budget lines are seeded from the game-start tables (see
 ## [method _seed_budget_shares]).
-var is_budget_seeded := false
+var budget_seeded := false
 
 # *****************************************************************************
 
@@ -331,9 +331,9 @@ func ai_init() -> void:
 
 
 func process_ai_interval(_delta: float) -> void:
-	if !is_budget_seeded and !proxy.facilities.is_empty():
+	if !budget_seeded and !proxy.facilities.is_empty():
 		_seed_budget_shares()
-		is_budget_seeded = true
+		budget_seeded = true
 
 
 # ***************************** INTERNAL PRIVATE ******************************
