@@ -10,7 +10,8 @@ extends MarginContainer
 
 ## "Budget" tab subpanel for [InfoPanel]. Shows the selected entity's chart of
 ## accounts as one subtab per financial statement (income, cash flow, balance), and
-## its budgets in the Funding subtab.
+## its budgets in the Funding subtab. A selected body shows links to the facilities
+## at it instead.
 ##
 ## The income statement is a waterfall: revenue and cost-of-goods groups, a
 ## derived gross-profit line, an operating-expense group, a derived
@@ -25,8 +26,8 @@ extends MarginContainer
 ##
 ## Each statement is a grid of recent quarters, newest at right. A header row
 ## labels the quarters ("2025Q1", ...) and its leftmost cell names the USD
-## display unit; the "<" / ">" buttons shift the visible quarter window. Display
-## values are scaled on the fly so most land in the 1–999 range.
+## display unit; the "<" / ">" buttons shift the visible quarter window. Values
+## show with SI prefixes ("55.5k").
 ##
 ## The Funding subtab shows budgets, each as a bar graph of its lines (FINANCIAL_MODEL.md,
 ## "Budgets"): its committed lines as shares of what it has to spend a year, and its discretionary
@@ -36,8 +37,8 @@ extends MarginContainer
 ## drawn of its line last quarter, and a line that funds all its counterparty lacks spans the width,
 ## filled to what it drew of the budget. It is read-only.
 ##
-## Subtab indices follow [code]Enums.StatementTypes[/code], then the Funding subtab, with
-## placeholder grants and R & D subtabs after it.
+## The Funding subtab comes first, then placeholder grants and R&D subtabs, then the
+## statements' subtabs in [code]Enums.StatementTypes[/code] order.
 
 const SCENE := "res://public/ui/itab_budget.tscn"  ## Scene file for instancing.
 
@@ -50,12 +51,10 @@ const SUBTOTAL_COST_OF_GOODS := 1
 const SUBTOTAL_OPERATING_EXPENSE := 8
 const SUBTOTAL_TAX := 10
 
-# Bounds of the available LABEL_USD_* magnitude units (thousands..quintillions).
-const USD_MIN_EXPONENT := 1
-const USD_MAX_EXPONENT := 6
-
 const NO_VALUE := "—" ## Applies, but has no value now.
 const UNBOUNDED := "∞" ## A line that funds all its counterparty lacks.
+
+const FUNDING_TAB := 0
 
 # Placeholder subtabs after the Funding subtab: [tab title, text].
 const PLACEHOLDER_TABS := [
@@ -63,7 +62,7 @@ const PLACEHOLDER_TABS := [
 
 You can assist and (to some degree) influence the
 R & D of your home nation here. (Mainly for agencies.)"""],
-	["R & D", """WIP
+	["R&D", """WIP
 
 Set R & D priorities for your own facilities here.
 Pursue specific advancement in three broad categories:
@@ -100,7 +99,7 @@ var _account_keys := Enums.Accounts.keys()
 var _income_statement := Enums.StatementTypes.STATEMENT_INCOME
 var _cash_flow_statement := Enums.StatementTypes.STATEMENT_CASH_FLOW
 var _balance_statement := Enums.StatementTypes.STATEMENT_BALANCE
-var _funding_tab := _statement_keys.size()
+var _first_statement_tab := 1 + PLACEHOLDER_TABS.size()
 var _usd_inv: float = 1.0 / IVUnits.unit_multipliers[&"$"]
 
 # line_items entity-name keys for leaf rows, rendered via Label auto-translation
@@ -137,15 +136,12 @@ var _suppress_tab_listener := true
 # without another proxy-thread round trip. Series are per-quarter, oldest first,
 # with the current (incomplete) quarter last.
 var _display_name := &""
-var _display_tab := -1
+var _display_statement := -1
 var _display_ordinal_qtr := -1
 var _display_groups: Array = []  # [[title, subtotal_series, [[leaf_key, leaf_series], ...]], ...]
 var _display_footer: Array = []  # [name, series] or []
 var _display_account_groups: Array = []  # a treasury's leaves per group, as _display_groups
-var _display_unit := ""  # localized USD magnitude-unit label
-var _display_scale := 1.0  # internal-value -> display multiplier (USD inverse / 1000^exponent)
 var _window_offset := 0  # quarters scrolled back from newest; 0 shows the current quarter
-var _funding_scale := 1.0  # the Funding subtab's internal-value -> display multiplier
 
 # Blank icon used as the fold-arrow override for a group with no leaves; keeps
 # the title's left lead while hiding the (non-functional) arrow.
@@ -154,6 +150,7 @@ var _fold_icon_substitute := MeshTexture.new()
 # built in code (see _build_ui)
 var _tab_container: TabContainer
 var _no_budget_label: Label
+var _local_selections: LocalSelections
 var _content_vboxes: Array[VBoxContainer] = []
 var _account_vboxes: Array[VBoxContainer] = []
 var _scrolls: Array[ScrollContainer] = []
@@ -263,6 +260,41 @@ func _build_ui() -> void:
 	_no_budget_label.hide()
 	add_child(_no_budget_label)
 
+	var local_selections_scene: PackedScene = load(LocalSelections.SCENE)
+	_local_selections = local_selections_scene.instantiate()
+	_local_selections.local_only = true
+	_local_selections.header_text = "LABEL_FACILITIES_AT_BODY"
+	_local_selections.hide()
+	add_child(_local_selections)
+
+	var funding_tab := VBoxContainer.new()
+	funding_tab.name = "TAB_FUNDING"  # node name auto-translates as tab title (gui.csv)
+	_tab_container.add_child(funding_tab)
+	_funding_header = FundingHeaderRow.new(column_width, bar_width, scroll_correction)
+	_funding_header.hide()
+	funding_tab.add_child(_funding_header)
+	_funding_scroll = ScrollContainer.new()
+	_funding_scroll.size_flags_horizontal = SIZE_EXPAND_FILL
+	_funding_scroll.size_flags_vertical = SIZE_EXPAND_FILL
+	_funding_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	funding_tab.add_child(_funding_scroll)
+	_funding_rows = VBoxContainer.new()
+	_funding_rows.size_flags_horizontal = SIZE_EXPAND_FILL
+	_funding_scroll.add_child(_funding_rows)
+	_funding_empty_label = Label.new()
+	_funding_empty_label.text = "No funding lines for this selection."
+	_funding_empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_funding_empty_label.hide()
+	funding_tab.add_child(_funding_empty_label)
+
+	for placeholder: Array in PLACEHOLDER_TABS:
+		var placeholder_label := Label.new()
+		placeholder_label.name = placeholder[0]
+		placeholder_label.text = placeholder[1]
+		placeholder_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		placeholder_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_tab_container.add_child(placeholder_label)
+
 	var n_statements := _statement_keys.size()
 	_content_vboxes.resize(n_statements)
 	_account_vboxes.resize(n_statements)
@@ -321,34 +353,6 @@ func _build_ui() -> void:
 		_footers[statement] = footer
 		_empty_labels[statement] = empty_label
 
-	var funding_tab := VBoxContainer.new()
-	funding_tab.name = "TAB_FUNDING"  # node name auto-translates as tab title (gui.csv)
-	_tab_container.add_child(funding_tab)
-	_funding_header = FundingHeaderRow.new(column_width, bar_width, scroll_correction)
-	_funding_header.hide()
-	funding_tab.add_child(_funding_header)
-	_funding_scroll = ScrollContainer.new()
-	_funding_scroll.size_flags_horizontal = SIZE_EXPAND_FILL
-	_funding_scroll.size_flags_vertical = SIZE_EXPAND_FILL
-	_funding_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	funding_tab.add_child(_funding_scroll)
-	_funding_rows = VBoxContainer.new()
-	_funding_rows.size_flags_horizontal = SIZE_EXPAND_FILL
-	_funding_scroll.add_child(_funding_rows)
-	_funding_empty_label = Label.new()
-	_funding_empty_label.text = "No funding lines for this selection."
-	_funding_empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_funding_empty_label.hide()
-	funding_tab.add_child(_funding_empty_label)
-
-	for placeholder: Array in PLACEHOLDER_TABS:
-		var placeholder_label := Label.new()
-		placeholder_label.name = placeholder[0]
-		placeholder_label.text = placeholder[1]
-		placeholder_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		placeholder_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		_tab_container.add_child(placeholder_label)
-
 	_tab_container.tab_changed.connect(_select_tab)
 
 
@@ -363,15 +367,21 @@ func _update_tab(_dummy := false) -> void:
 	if !visible or !IVStateManager.is_threads_allowed():
 		return
 	var target_name := _selection_manager.get_name()
-	if MainThreadGlobal.has_development(target_name):
+	if target_name and target_name == _selection_manager.get_body_name():
+		_show_only(_local_selections)
+	elif MainThreadGlobal.has_development(target_name):
 		MainThreadGlobal.call_proxy_thread(_get_proxy_data.bind(target_name))
 	else:
 		_update_no_budget()
 
 
 func _update_no_budget() -> void:
-	_tab_container.hide()
-	_no_budget_label.show()
+	_show_only(_no_budget_label)
+
+
+func _show_only(view: Control) -> void:
+	for control: Control in [_tab_container, _no_budget_label, _local_selections]:
+		control.visible = control == view
 
 
 # ******************************* PROXY THREAD ********************************
@@ -383,18 +393,19 @@ func _get_proxy_data(target_name: StringName) -> void:
 		return
 
 	var tab := current_tab
-	if tab == _funding_tab:
+	if tab == FUNDING_TAB:
 		_update_funding_display.call_deferred(_collect_funding(proxy))
 		return
-	if tab >= _statement_keys.size():
+	if tab < _first_statement_tab:
 		_show_placeholder.call_deferred()
 		return
+	var statement := tab - _first_statement_tab
 	var ordinal_qtr := proxy.ordinal_qtr
 	var groups := []
 	var footer := []
 	var accountings := proxy.get_financials_accountings().duplicate()
 
-	if tab == _income_statement:
+	if statement == _income_statement:
 		# Income waterfall: gross profit and operating income render as leafless
 		# subtotal lines; the opex group (a gain subtracting) and the tax group (signed
 		# like SUBTOTAL_TAX) sit above and below operating income, and net income is the
@@ -424,7 +435,7 @@ func _get_proxy_data(target_name: StringName) -> void:
 		var net_income_series := operating_income_series.duplicate()
 		_add_series(net_income_series, tax_series)
 		footer = ["SUBTOTAL_NET_INCOME", net_income_series]
-	elif tab == _cash_flow_statement:
+	elif statement == _cash_flow_statement:
 		# Inflow/outflow group series are summed from their leaf series (cash-flow
 		# direction is per-leaf; only the net is a tracked subtotal).
 		var inflow_group := _collect_summed_group(proxy, accountings, _cash_flow_statement,
@@ -436,7 +447,7 @@ func _get_proxy_data(target_name: StringName) -> void:
 		var inflow_series: PackedFloat64Array = inflow_group[1]
 		var outflow_series: PackedFloat64Array = outflow_group[1]
 		footer = ["SUBTOTAL_NET_CASH_FLOW", _subtract_series(inflow_series, outflow_series)]
-	elif tab == _balance_statement:
+	elif statement == _balance_statement:
 		# Asset / liability / equity groups (by per-leaf balance_class); a group with
 		# no nonzero leaf is dropped so unused sections stay hidden. No footer (the
 		# balancing identity is a later step).
@@ -447,8 +458,8 @@ func _get_proxy_data(target_name: StringName) -> void:
 		_append_balance_group(groups, proxy, accountings,
 				Enums.BalanceClasses.BALANCE_CLASS_EQUITY, "SUBTOTAL_EQUITY")
 
-	var account_groups := _collect_account_groups(proxy, accountings, tab)
-	_update_tab_display.call_deferred(target_name, tab, ordinal_qtr, groups, footer,
+	var account_groups := _collect_account_groups(proxy, accountings, statement)
+	_update_tab_display.call_deferred(target_name, statement, ordinal_qtr, groups, footer,
 			account_groups)
 
 
@@ -833,49 +844,31 @@ func _is_key_before(a: int, b: int) -> bool:
 # ******************************** MAIN THREAD ********************************
 
 func _show_placeholder() -> void:
-	_no_budget_label.hide()
-	_tab_container.show()
+	_show_only(_tab_container)
 
 
-func _update_tab_display(target_name: StringName, tab: int, ordinal_qtr: int,
+func _update_tab_display(target_name: StringName, statement: int, ordinal_qtr: int,
 		groups: Array, footer: Array, account_groups: Array) -> void:
-	_no_budget_label.hide()
-	_tab_container.show()
+	_show_only(_tab_container)
 
-	if target_name != _display_name or tab != _display_tab:
+	if target_name != _display_name or statement != _display_statement:
 		_window_offset = 0
 	_display_name = target_name
-	_display_tab = tab
+	_display_statement = statement
 	_display_ordinal_qtr = ordinal_qtr
 	_display_groups = groups
 	_display_footer = footer
 	_display_account_groups = account_groups
 
-	# Pick the USD display unit so most values land in the 1–999 range.
-	var dollar_values := PackedFloat64Array()
-	for group_data: Array in groups + account_groups:
-		var subtotal_series: PackedFloat64Array = group_data[1]
-		_gather_dollar_values(subtotal_series, dollar_values)
-		for leaf_row: Array in group_data[2]:
-			var leaf_series: PackedFloat64Array = leaf_row[1]
-			_gather_dollar_values(leaf_series, dollar_values)
-	if !footer.is_empty():
-		var footer_series: PackedFloat64Array = footer[1]
-		_gather_dollar_values(footer_series, dollar_values)
-	var exponent := clampi(Utils.get_modal_base1000_exponent(dollar_values),
-			USD_MIN_EXPONENT, USD_MAX_EXPONENT)
-	_display_scale = _usd_inv * pow(1000.0, -float(exponent))
-	_display_unit = Utils.get_usd_unit_string(exponent)
-
 	_render_current()
 
 
 func _render_current() -> void:
-	var tab := _display_tab
-	var scroll: ScrollContainer = _scrolls[tab]
-	var header: BudgetHeaderRow = _headers[tab]
-	var footer_group: BudgetGroup = _footers[tab]
-	var empty_label: Label = _empty_labels[tab]
+	var statement := _display_statement
+	var scroll: ScrollContainer = _scrolls[statement]
+	var header: BudgetHeaderRow = _headers[statement]
+	var footer_group: BudgetGroup = _footers[statement]
+	var empty_label: Label = _empty_labels[statement]
 
 	if (_display_groups.is_empty() and _display_footer.is_empty()
 			and _display_account_groups.is_empty()):
@@ -891,10 +884,10 @@ func _render_current() -> void:
 	var total_quarters := _get_total_quarters()
 	var max_offset := maxi(0, total_quarters - n_visible_quarters)
 	_window_offset = clampi(_window_offset, 0, max_offset)
-	header.set_header(_display_unit, _quarter_labels(total_quarters),
+	header.set_header(tr(&"LABEL_USD"), _quarter_labels(total_quarters),
 			_window_offset > 0, _window_offset < max_offset)
 
-	_render_groups(_content_vboxes[tab], _display_groups)
+	_render_groups(_content_vboxes[statement], _display_groups)
 	if _display_footer.is_empty():
 		footer_group.hide()
 	else:
@@ -902,7 +895,7 @@ func _render_current() -> void:
 		var footer_series: PackedFloat64Array = _display_footer[1]
 		footer_group.set_group(tr(footer_name), _format_cells(footer_series), [])
 		footer_group.show()
-	_render_groups(_account_vboxes[tab], _display_account_groups)
+	_render_groups(_account_vboxes[statement], _display_account_groups)
 
 
 # Shows [param groups] in [param content]'s BudgetGroups, reusing them or creating more, and
@@ -951,11 +944,6 @@ func _shift_window(direction: int) -> void:
 	_render_current()
 
 
-func _gather_dollar_values(series: PackedFloat64Array, into: PackedFloat64Array) -> void:
-	for value in series:
-		into.append(value * _usd_inv)
-
-
 func _get_total_quarters() -> int:
 	if !_display_groups.is_empty():
 		var group_data: Array = _display_groups[0]
@@ -986,7 +974,7 @@ func _format_cells(series: PackedFloat64Array) -> PackedStringArray:
 	cells.resize(n_visible_quarters)
 	for column in n_visible_quarters:
 		var index := _column_series_index(column, total_quarters)
-		cells[column] = IVQFormat.number(series[index] * _display_scale) if index != -1 else ""
+		cells[column] = IVQFormat.metric_number(series[index] * _usd_inv) if index != -1 else ""
 	return cells
 
 
@@ -1014,8 +1002,7 @@ func _format_quarter(ordinal_qtr: int) -> String:
 
 
 func _update_funding_display(panels: Array) -> void:
-	_no_budget_label.hide()
-	_tab_container.show()
+	_show_only(_tab_container)
 	if panels.is_empty():
 		_funding_header.hide()
 		_funding_scroll.hide()
@@ -1025,21 +1012,7 @@ func _update_funding_display(panels: Array) -> void:
 	_funding_scroll.show()
 	_funding_header.show()
 
-	# Pick the USD display unit so most values land in the 1–999 range.
-	var dollar_values := PackedFloat64Array()
-	for panel: Array in panels:
-		var total: float = panel[1]
-		dollar_values.append(total * _usd_inv)
-		for rows: Array in [panel[2], panel[3]]:
-			for row: Array in rows:
-				var line: float = row[2]
-				var drawn: float = row[3]
-				dollar_values.append(line * _usd_inv)
-				dollar_values.append(drawn * _usd_inv)
-	var exponent := clampi(Utils.get_modal_base1000_exponent(dollar_values),
-			USD_MIN_EXPONENT, USD_MAX_EXPONENT)
-	_funding_scale = _usd_inv * pow(1000.0, -float(exponent))
-	_funding_header.set_unit("%s %s" % [Utils.get_usd_unit_string(exponent), tr(&"LABEL_A_YEAR")])
+	_funding_header.set_unit("%s %s" % [tr(&"LABEL_USD"), tr(&"LABEL_A_YEAR")])
 
 	var n_rows := 0
 	for panel: Array in panels:
@@ -1096,7 +1069,7 @@ func _format_money(value: float) -> String:
 		return NO_VALUE
 	if is_inf(value):
 		return UNBOUNDED
-	return IVQFormat.number(value * _funding_scale)
+	return IVQFormat.metric_number(value * _usd_inv)
 
 
 # ****************************** INNER CLASSES ********************************

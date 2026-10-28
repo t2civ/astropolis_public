@@ -17,7 +17,16 @@ extends MarginContainer
 ## • System Facilities (star selection only; → all orbit/satellite bodies)
 ##
 ## Each section is a [code]FoldableContainer[/code]. Buttons fire selections
-## through the parent [AstroSelectionManager].
+## through the parent [AstroSelectionManager].[br][br]
+##
+## Set [member local_only] and [member header_text] before adding it to the tree.
+
+const SCENE := "res://public/ui_widgets/local_selections.tscn"  ## Scene file for instancing.
+
+## Lists only the facilities at the selected body: no offworld or system sections.
+@export var local_only := false
+## Text shown above the list where it lists any facilities; none if empty.
+@export var header_text := ""
 
 var _selection_manager: AstroSelectionManager
 var _selection_lookup: Dictionary[String, StringName] = {} # item text -> selection name
@@ -52,7 +61,12 @@ var _busy := false # don't update if getting data on ai thread (cheap mutex)
 
 
 func _ready() -> void:
-	
+	if header_text:
+		var header := Label.new()
+		header.text = header_text
+		var vbox: VBoxContainer = $ScrollContainer/VBox
+		vbox.add_child(header)
+		vbox.move_child(header, 0)
 	IVGlobal.ui_dirty.connect(_update_selection)
 	IVStateManager.about_to_free_procedural_nodes.connect(_clear_procedural)
 	IVStateManager.about_to_start_simulator.connect(_connect_selection_manager)
@@ -137,6 +151,9 @@ func _set_selections_recursive(body: BodyProxy, is_star: bool, root_call := fals
 		elif player.homeworld == body.name: # has precedence over any others
 			_selection_lookup[player_gui_name] = facility.name
 	
+	if local_only:
+		return
+
 	# add "offworld" or "system" bodies that have facilities
 	if !root_call and body.has_development():
 		# add body
