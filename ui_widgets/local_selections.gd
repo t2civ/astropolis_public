@@ -97,7 +97,9 @@ func _clear_procedural() -> void:
 
 
 func _connect_selection_manager(_dummy := false) -> void:
-	# every sim start
+	# every sim start; one built during a load is connected in _ready, before the load's start
+	if _selection_manager:
+		return
 	_selection_manager = IVSelectionManager.get_selection_manager(self)
 	assert(_selection_manager, "Did not find valid 'selection_manager' above this node")
 	_selection_manager.selection_changed.connect(_update_selection)

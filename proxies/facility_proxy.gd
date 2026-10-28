@@ -207,6 +207,12 @@ var trader: TraderProxy  ## Paired [TraderProxy]; set when TraderProxy registers
 var trader_id := -1  ## [member TraderProxy.trader_id] of [member trader].
 var joins: Array[JoinProxy] = []  ## [JoinProxy] aggregates this facility belongs to.
 var market: MarketProxy  ## Set after init. Lives on markets thread!
+## The operations' target spending shares held off auto, by operation type, each at its share (see
+## [method hold_operations_target_spending_share]). Resizable container — not threadsafe!
+var held_target_spending_shares: Dictionary[int, float] = {}
+## The resources' research shares held off auto, by resource type, each at its share (see
+## [method hold_inventory_research_share]). Resizable container — not threadsafe!
+var held_research_shares: Dictionary[int, float] = {}
 
 # *****************************************************************************
 
@@ -343,6 +349,12 @@ func get_budget_line(line: int) -> float:
 @abstract func get_operations_target_spending_share(operation_type: int) -> float
 
 
+## Returns true if operation [param operation_type]'s target spending share is held off auto (see
+## [method hold_operations_target_spending_share]). proxy thread only!
+func is_operations_target_spending_share_held(operation_type: int) -> bool:
+	return held_target_spending_shares.has(operation_type)
+
+
 ## Returns the AI/player-set target run rate of operation [param operation_type]
 ## (NAN = not in effect).
 @abstract func get_operations_target_run_rate(operation_type: int) -> float
@@ -432,6 +444,12 @@ func get_budget_line(line: int) -> float:
 ## Returns the share of what its budget's committed lines leave that the facility spends on
 ## [param resource_type] as research and development (see [method set_inventory_research_share]).
 @abstract func get_inventory_research_share(resource_type: int) -> float
+
+
+## Returns true if [param resource_type]'s research share is held off auto (see
+## [method hold_inventory_research_share]). proxy thread only!
+func is_inventory_research_share_held(resource_type: int) -> bool:
+	return held_research_shares.has(resource_type)
 
 
 ## Returns the net flow rate of [param resource_type] averaged over the time horizon (positive
@@ -725,8 +743,21 @@ func get_market() -> MarketProxy:
 
 ## Sets the target spending share for operation [param type] (fraction of what the facility's
 ## budget leaves past its committed lines, what wears out among them, or NAN = not in effect; see
-## [member budget_lines]). Proxy-authoritative; flows proxy -> server.
+## [member budget_lines]). Proxy-authoritative; flows proxy -> server. No-op where the share is
+## held (see [method hold_operations_target_spending_share]).
 @abstract func set_operations_target_spending_share(type: int, value: float) -> void
+
+
+## Holds the target spending share of operation [param type] off auto at [param value], as
+## [method set_operations_target_spending_share] takes it, until
+## [method release_operations_target_spending_share]. No-op on an out-of-range index.
+@abstract func hold_operations_target_spending_share(type: int, value: float) -> void
+
+
+## Returns the target spending share of operation [param type] to auto, where
+## [method set_operations_target_spending_share] sets it again. It keeps its share until then.
+func release_operations_target_spending_share(type: int) -> void:
+	held_target_spending_shares.erase(type)
 
 
 ## Sets the target run rate for operation [param type] (absolute rate, or NAN = not
@@ -783,5 +814,17 @@ func get_market() -> MarketProxy:
 ## facility can trade or make. What it buys raises nothing yet: a patch until the
 ## technology model, in which research raises what operations make (ROADMAP.md, "Technology").
 ## Proxy-authoritative: this change flows proxy -> server. No-op on an out-of-range index or a value
-## outside [0.0, 1.0].
+## outside [0.0, 1.0], or where the share is held (see [method hold_inventory_research_share]).
 @abstract func set_inventory_research_share(type: int, value: float) -> void
+
+
+## Holds the research share of [param type] off auto at [param value], as
+## [method set_inventory_research_share] takes it, until [method release_inventory_research_share].
+## No-op on an out-of-range index or a value outside [0.0, 1.0].
+@abstract func hold_inventory_research_share(type: int, value: float) -> void
+
+
+## Returns the research share of [param type] to auto, where [method set_inventory_research_share]
+## sets it again. It keeps its share until then.
+func release_inventory_research_share(type: int) -> void:
+	held_research_shares.erase(type)

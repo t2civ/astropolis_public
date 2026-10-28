@@ -8,7 +8,7 @@
 class_name TraderBaseAI
 extends BaseAI
 
-## Default AI for traders the local player owns.
+## Default AI for every trader.
 ##
 ## To implement a custom trader AI, extend this class and add
 ## [code]const OVERRIDE_AI := true[/code].[br][br]

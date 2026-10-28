@@ -8,7 +8,8 @@
 class_name FacilityBaseAI
 extends BaseAI
 
-## Default AI for facilities the local player owns.
+## Default AI for every facility. A human player's facilities run it too, and it sets whatever
+## their human leaves on auto (see [Proxy]).
 ##
 ## To implement a custom facility AI, extend this class and add
 ## [code]const OVERRIDE_AI := true[/code].[br][br]
@@ -342,6 +343,8 @@ func ai_init() -> void:
 func process_ai_interval(delta: float) -> void:
 	_update_price_swings(delta)
 	_author_resource_strategies()
+	# Its human may have returned a knob to auto since the quarter's authoring.
+	_apply_facility_knobs(facility_strategy)
 
 
 ## Strategic, forward-looking reassessment of sticky policy. Same authoring pass;
@@ -536,7 +539,7 @@ func _reconcile_facility_strategy() -> int:
 ## Translates the posture's def into the BUILDOUT operation's target spending share
 ## (the share of the facility's budget past its committed lines the yards spend on growth; NAN
 ## holds), and into the research share of each resource tagged [code]research[/code], at an agency
-## all the builds' share leaves.
+## all the builds' share leaves, the share its human holds where held. Leaves what is held alone.
 ## Both are resolved by tag, so no table entity name is referenced here.
 func _apply_facility_knobs(strategy: int) -> void:
 	var def := facility_strategy_defs[strategy]
@@ -544,6 +547,7 @@ func _apply_facility_knobs(strategy: int) -> void:
 	var buildout_ops: PackedInt32Array = _tag_operations.get(&"buildout", PackedInt32Array())
 	for operation_type in buildout_ops:
 		proxy.set_operations_target_spending_share(operation_type, share)
+		share = proxy.get_operations_target_spending_share(operation_type)
 	var research_share: float = def.get(&"research_spending_share", 0.0)
 	if research_share > 0.0 and proxy.get_player_class() == Enums.PlayerClasses.PLAYER_CLASS_AGENCY:
 		research_share = 1.0 - share if share > 0.0 else 1.0

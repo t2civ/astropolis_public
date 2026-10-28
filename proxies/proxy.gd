@@ -16,6 +16,12 @@ extends RefCounted
 ## [JoinProxy], [TraderProxy], [MarketProxy]) declare the
 ## API. Sync plumbing and concrete instantiation live on server-side entities.
 ##
+## A value its AI sets through a proxy setter may be [i]held[/i] off auto, as a human player's
+## GUI holds what its human moves: its [code]hold_*[/code] method sets the value, the setter then
+## leaves it alone, and its [code]release_*[/code] method returns it to auto, for the AI to set
+## again. The proxy keeps and persists each held value. A held value is one a human can set, so an
+## AI must set it too, since on auto nothing else does.
+##
 ## WARNING: Lives on the proxy thread. Containers and many methods are not
 ## threadsafe; accessing non-container properties is safe.
 
@@ -53,8 +59,9 @@ const INTERVAL := 7.0 * IVUnits.DAY ## AI tick interval. See [constant BaseAI.IN
 ## components and scalar fields all re-flow from the server entity via
 ## _set_network_init() + dirty-sync. A subclass DOES persist its cross-proxy
 ## references (and the few relationship scalars a peer sets), so save/load relinks
-## the proxy graph directly instead of re-resolving it; list those in the
-## subclass's PERSIST_PROPERTIES. Never persist a Net component or entity data.
+## the proxy graph directly instead of re-resolving it, and the values held off
+## auto; list those in the subclass's PERSIST_PROPERTIES. Never persist a Net
+## component or entity data.
 const PERSIST_MODE := IVGlobal.PERSIST_PROCEDURAL
 
 

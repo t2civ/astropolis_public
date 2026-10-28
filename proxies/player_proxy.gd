@@ -27,12 +27,20 @@ var player_id := -1 ## Index into [member ProxyBus.player_proxies].
 var player_class := -1 ## Player class index ([code]PlayerClasses[/code] enum).
 var homeworld := "" ## Name of this player's homeworld body.
 var tax_rate := 0.0 ## Income-tax rate applied to this player's facilities.
+## True if a human plays this player, as set when the game started; only a playable player may be.
+## Its AI still runs, and sets whatever its human leaves on auto. Whether this machine's human
+## plays it is [method is_local_human].
+var human := false
 ## Its treasuries' budget lines, each kept under the key of the line item it funds by (see
 ## [method Utils.get_line_item_key]; FINANCIAL_MODEL.md, "Budgets"): a facility's funding by
 ## facility, a share of the treasury's budget over a year, and an agency's appropriation by agency,
 ## a share of its polity's income for now. A line with no share funds all its counterparty lacks.
 ## Resizable container — not threadsafe! Use [method set_budget_share].
 var budget_shares: Dictionary[int, float] = {}
+## What each of its treasuries is set to spend a year past its committed lines, by
+## [code]Enums.Accounts[/code], NAN where it spends what its revenue gives it (see
+## [member budgets]). Resizable container — not threadsafe! Use [method set_budget_target].
+var budget_targets := PackedFloat64Array()
 ## What each of its treasuries has to spend a year past what its committed lines take, what its
 ## discretionary lines share, by [code]Enums.Accounts[/code], as of its administrative center's last
 ## interval (FINANCIAL_MODEL.md, "Budgets"); empty where it has none. Server-authoritative.
@@ -54,6 +62,12 @@ var administrative_center: FacilityProxy
 var has_facilities := true ## True while this player owns at least one facility ("alive" test).
 ## Facilities owned by this player. Resizable container — not threadsafe!
 var facilities: Array[Proxy] = []
+## The budget lines held off auto, by key, each at its share (see [method hold_budget_share]).
+## Resizable container — not threadsafe!
+var held_budget_shares: Dictionary[int, float] = {}
+## The budget targets held off auto, by [code]Enums.Accounts[/code], each at its target (see
+## [method hold_budget_target]). Resizable container — not threadsafe!
+var held_budget_targets: Dictionary[int, float] = {}
 
 # *****************************************************************************
 
@@ -84,6 +98,12 @@ func get_polity_name() -> StringName:
 	return polity.name
 
 
+## Returns true if this machine's human plays this player, and so may adjust it in the GUI: in a
+## single-player game, a [member human] player.
+func is_local_human() -> bool:
+	return human
+
+
 ## Returns this player's [member facilities]. proxy thread only!
 func get_facilities() -> Array[Proxy]:
 	return facilities
@@ -110,6 +130,27 @@ func get_budget_line(key: int) -> float:
 	return budget_lines.get(key, NAN)
 
 
+## Returns what the treasury [param account], an [code]Enums.Accounts[/code], is set to spend a
+## year past its committed lines (see [member budget_targets]), or NAN where it spends what its
+## revenue gives it. proxy thread only!
+func get_budget_target(account: int) -> float:
+	if account < 0 or account >= budget_targets.size():
+		return NAN
+	return budget_targets[account]
+
+
+## Returns true if the budget line kept under [param key] is held off auto (see
+## [method hold_budget_share]). proxy thread only!
+func is_budget_share_held(key: int) -> bool:
+	return held_budget_shares.has(key)
+
+
+## Returns true if the budget target of the treasury [param account] is held off auto (see
+## [method hold_budget_target]). proxy thread only!
+func is_budget_target_held(account: int) -> bool:
+	return held_budget_targets.has(account)
+
+
 # ******************************** AI METHODS *********************************
 
 ## Registers [param facility] under this player. Marks the player "alive".
@@ -123,5 +164,38 @@ func get_budget_line(key: int) -> float:
 
 ## Sets the share of the budget line kept under [param key] (see [member budget_shares]) to
 ## [param value] (>= 0.0), or INF to fund all its counterparty lacks.
-## Proxy-authoritative: this change flows proxy -> server. No-op on a negative value or NAN.
+## Proxy-authoritative: this change flows proxy -> server. No-op on a negative value or NAN, or
+## where the line is held (see [method hold_budget_share]).
 @abstract func set_budget_share(key: int, value: float) -> void
+
+
+## Holds the budget line kept under [param key] off auto at the share [param value], as
+## [method set_budget_share] takes it, until [method release_budget_share]. No-op on a negative
+## value or NAN.
+@abstract func hold_budget_share(key: int, value: float) -> void
+
+
+## Returns the budget line kept under [param key] to auto, where [method set_budget_share] sets it
+## again. It keeps its share until then.
+func release_budget_share(key: int) -> void:
+	held_budget_shares.erase(key)
+
+
+## Sets what the treasury [param account], an [code]Enums.Accounts[/code], spends a year past its
+## committed lines to [param value] (>= 0.0), or NAN to have it spend what its revenue gives it
+## (the default). Its discretionary lines are shares of it. Proxy-authoritative: this change flows
+## proxy -> server. No-op on an out-of-range account or a negative value, or where the target is
+## held (see [method hold_budget_target]).
+@abstract func set_budget_target(account: int, value: float) -> void
+
+
+## Holds the budget target of the treasury [param account] off auto at [param value], as
+## [method set_budget_target] takes it, until [method release_budget_target]. No-op on an
+## out-of-range account or a negative value.
+@abstract func hold_budget_target(account: int, value: float) -> void
+
+
+## Returns the budget target of the treasury [param account] to auto, where
+## [method set_budget_target] sets it again. It keeps its target until then.
+func release_budget_target(account: int) -> void:
+	held_budget_targets.erase(account)

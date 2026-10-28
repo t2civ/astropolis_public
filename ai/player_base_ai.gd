@@ -8,7 +8,8 @@
 class_name PlayerBaseAI
 extends BaseAI
 
-## Default AI for the local player.
+## Default AI for every player. A human player's runs too, and sets whatever its human leaves on
+## auto (see [Proxy]).
 ##
 ## To implement a custom player AI, extend this class and add
 ## [code]const OVERRIDE_AI := true[/code].[br][br]
@@ -277,7 +278,6 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"player_facility_strategies",
 	&"body_strategies",
 	&"counterparty_strategies",
-	&"budget_seeded",
 ]
 
 
@@ -303,9 +303,6 @@ var body_strategies: Dictionary[int, int]
 ## Per-counterparty strategies keyed by [member PlayerProxy.player_id]. Absent
 ## is the same as "NEUTRAL". See [enum CounterpartyStrategies].
 var counterparty_strategies: Dictionary[int, int]
-## True once its treasuries' budget lines are seeded from the game-start tables (see
-## [method _seed_budget_shares]).
-var budget_seeded := false
 
 # *****************************************************************************
 
@@ -331,18 +328,19 @@ func ai_init() -> void:
 
 
 func process_ai_interval(_delta: float) -> void:
-	if !budget_seeded and !proxy.facilities.is_empty():
-		_seed_budget_shares()
-		budget_seeded = true
+	_author_budget_shares()
+	_author_budget_targets()
 
 
 # ***************************** INTERNAL PRIVATE ******************************
 
-# Seeds its treasuries' budget lines from the game-start tables (FINANCIAL_MODEL.md, "Budgets"): a
-# polity's appropriation of each of its agencies, the agency's appropriation_share in players.tsv,
-# and its funding of each of its facilities from each treasury that owns it, the facility's
-# funding_share in facilities.tsv. A line no table seeds funds all its counterparty lacks.
-func _seed_budget_shares() -> void:
+# Sets its treasuries' budget lines (FINANCIAL_MODEL.md, "Budgets"): a polity's appropriation of
+# each of its agencies, the agency's appropriation_share in players.tsv, and its funding of each of
+# its facilities from each treasury that owns it, the facility's funding_share in facilities.tsv. A
+# line no table seeds funds all its counterparty lacks. TEMPORARY PATCH: each line is its table
+# seed, read again each interval so a line its human returns to auto goes back to it, until the AI
+# weighs its lines.
+func _author_budget_shares() -> void:
 	const PLAYER_CLASS_AGENCY := Enums.PlayerClasses.PLAYER_CLASS_AGENCY
 	const PLAYER_CLASS_COMPANY := Enums.PlayerClasses.PLAYER_CLASS_COMPANY
 	var appropriations_paid := IVTableData.db_find(&"line_items", &"unique_type",
@@ -374,3 +372,9 @@ func _seed_budget_shares() -> void:
 			if (is_government if account == Enums.Accounts.ACCOUNT_GOVERNMENT else is_corporate):
 				proxy.set_budget_share(Utils.get_line_item_key(funding_items[account],
 						facility_proxy.facility_id), funding_shares[facility_type])
+
+
+# Has each of its treasuries spend what its revenue gives it (see PlayerProxy.set_budget_target).
+func _author_budget_targets() -> void:
+	for account in Enums.Accounts.size():
+		proxy.set_budget_target(account, NAN)
