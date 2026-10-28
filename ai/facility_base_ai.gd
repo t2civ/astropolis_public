@@ -196,26 +196,26 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 
 
 ## Facility-posture strategy definitions; index = [enum FacilityStrategies] value.
-## The [code]buildout_spending_share[/code] key (read by [method _apply_facility_knobs])
-## is the share of what the facility's budget leaves past its committed lines, what wears out
-## among them, that its owners leave in it for growth (FINANCIAL_MODEL.md, "Budgets"): zero or
-## more builds, replacing what wears out first and growing within that share, which the server
-## holds below one; a negative value winds capacity down at that rate; and an omitted key (NAN)
-## holds. The [code]research_spending_share[/code] key is the share of the same it spends on
-## research and development, on each resource tagged [code]research[/code] (see
-## [method FacilityProxy.set_inventory_research_share]); at an agency, where it spends any, all the
-## builds' share leaves, since it pays nothing out. An omitted key spends none.
-## Postures never selected by [method _reconcile_facility_strategy] are left empty.
+## The [code]expansion_spending_share[/code] key (read by [method _apply_facility_knobs])
+## is the share of what the facility's budget leaves past its committed lines, its replacement of
+## what wears out among them, that its owners leave in it for expansion (FINANCIAL_MODEL.md,
+## "Budgets"): zero or more builds, the yards replacing what wears out first and expanding within
+## that share, which the server holds below one; a negative value winds capacity down at that rate;
+## and an omitted key (NAN) holds. The [code]research_spending_share[/code] key is the share of the
+## same it spends on research and development, shared among the resources tagged
+## [code]research[/code] (see [method FacilityProxy.set_inventory_research_share]); at an agency,
+## where it spends any, all expansion's share leaves, since it pays nothing out. An omitted key
+## spends none. Postures never selected by [method _reconcile_facility_strategy] are left empty.
 static var facility_strategy_defs: Array[Dictionary] = [
 	{}, # NEUTRAL
-	{&"buildout_spending_share": 0.25, &"research_spending_share": 0.02}, # GROWTH
-	{&"buildout_spending_share": 0.13, &"research_spending_share": 0.02}, # PROFITABILITY
+	{&"expansion_spending_share": 0.25, &"research_spending_share": 0.02}, # GROWTH
+	{&"expansion_spending_share": 0.13, &"research_spending_share": 0.02}, # PROFITABILITY
 	{}, # DIVERSIFICATION
 	{}, # SPECIALIZATION
-	{&"buildout_spending_share": 0.05, &"research_spending_share": 0.02}, # STRATEGIC_OUTPOST
+	{&"expansion_spending_share": 0.05, &"research_spending_share": 0.02}, # STRATEGIC_OUTPOST
 	{}, # DEVELOPMENT
-	{&"buildout_spending_share": 0.08, &"research_spending_share": 0.02}, # STEADY_STATE
-	{&"buildout_spending_share": -0.5}, # DECOMMISSIONING (negative = wind-down)
+	{&"expansion_spending_share": 0.08, &"research_spending_share": 0.02}, # STEADY_STATE
+	{&"expansion_spending_share": -0.5}, # DECOMMISSIONING (negative = wind-down)
 	{}, # EMERGENCY
 ]
 
@@ -536,25 +536,41 @@ func _reconcile_facility_strategy() -> int:
 	return FS.GROWTH # NEUTRAL and any add-on directive: autonomous growth
 
 
-## Translates the posture's def into the BUILDOUT operation's target spending share
-## (the share of the facility's budget past its committed lines the yards spend on growth; NAN
-## holds), and into the research share of each resource tagged [code]research[/code], at an agency
-## all the builds' share leaves, the share its human holds where held. Leaves what is held alone.
-## Both are resolved by tag, so no table entity name is referenced here.
+## Translates the posture's def into the BUILDOUT operation's target spending share, its expansion
+## share (the share of the facility's budget past its committed lines the yards spend on
+## expansion; NAN holds), and into the research shares of the resources tagged
+## [code]research[/code], at an agency all expansion's share leaves. Where its human holds one,
+## the other, with the payouts that are their residual where it isn't an agency's, fills what the
+## held one leaves, in proportion to their shares (FINANCIAL_MODEL.md, "Budgets"). Leaves what is
+## held alone. Both are resolved by tag, so no table entity name is referenced here.
 func _apply_facility_knobs(strategy: int) -> void:
 	var def := facility_strategy_defs[strategy]
-	var share: float = def.get(&"buildout_spending_share", NAN)
-	var buildout_ops: PackedInt32Array = _tag_operations.get(&"buildout", PackedInt32Array())
-	for operation_type in buildout_ops:
-		proxy.set_operations_target_spending_share(operation_type, share)
-		share = proxy.get_operations_target_spending_share(operation_type)
+	var expansion_share: float = def.get(&"expansion_spending_share", NAN)
 	var research_share: float = def.get(&"research_spending_share", 0.0)
-	if research_share > 0.0 and proxy.get_player_class() == Enums.PlayerClasses.PLAYER_CLASS_AGENCY:
-		research_share = 1.0 - share if share > 0.0 else 1.0
+	var is_agency := proxy.get_player_class() == Enums.PlayerClasses.PLAYER_CLASS_AGENCY
+	if research_share > 0.0 and is_agency:
+		research_share = 1.0 - expansion_share if expansion_share > 0.0 else 1.0
+	var buildout_ops: PackedInt32Array = _tag_operations.get(&"buildout", PackedInt32Array())
 	var research_resources: PackedInt32Array = _tag_resources.get(&"research",
 			PackedInt32Array())
+	if expansion_share >= 0.0 and !buildout_ops.is_empty() and !research_resources.is_empty():
+		var held_shares := PackedFloat64Array([NAN, NAN])
+		if proxy.is_operations_target_spending_share_held(buildout_ops[0]):
+			held_shares[0] = proxy.get_operations_target_spending_share(buildout_ops[0])
+		for resource_type in research_resources:
+			if proxy.is_inventory_research_share_held(resource_type):
+				held_shares[1] = (0.0 if is_nan(held_shares[1]) else held_shares[1]) + maxf(
+						proxy.get_inventory_research_share(resource_type), 0.0)
+		if !is_nan(held_shares[0]) or !is_nan(held_shares[1]):
+			var shares := Utils.get_filled_budget_shares(
+					PackedFloat64Array([expansion_share, research_share]), held_shares, !is_agency)
+			expansion_share = shares[0]
+			research_share = shares[1]
+	for operation_type in buildout_ops:
+		proxy.set_operations_target_spending_share(operation_type, expansion_share)
 	for resource_type in research_resources:
-		proxy.set_inventory_research_share(resource_type, research_share)
+		proxy.set_inventory_research_share(resource_type,
+				research_share / research_resources.size())
 
 
 ## Sets [member trader_strategy], emitting [signal trader_strategy_changed] only on

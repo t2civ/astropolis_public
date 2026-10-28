@@ -137,18 +137,18 @@ enum InventoryItems {
 
 ## The lines of a facility's budget in [member budget_lines], each a year (FINANCIAL_MODEL.md,
 ## "Budgets"): what it has to spend, its income and what its funding lines leave it; what it
-## commits, its upkeep, interest and income tax and what wears out at its build cost; and what its
-## R&D and its builds past what wears out may spend of what those leave. Its payouts are what
-## remains.
+## commits, its upkeep, interest and income tax and its replacement, what wears out at its build
+## cost; and what its R&D and its expansion may spend of what those leave. Its payouts are what
+## remains, except at an agency's facility, which pays nothing out.
 enum BudgetLines {
 	BUDGET_INCOME,
 	BUDGET_FUNDING,
 	BUDGET_UPKEEP,
 	BUDGET_INTEREST,
 	BUDGET_TAX,
-	BUDGET_WEAR,
+	BUDGET_REPLACEMENT,
 	BUDGET_RESEARCH,
-	BUDGET_BUILDS,
+	BUDGET_EXPANSION,
 }
 
 

@@ -116,6 +116,34 @@ static func get_line_item_counterparty(key: int) -> int:
 	return (key >> LINE_ITEM_TYPE_BITS) - 1
 
 
+# budgets
+
+## Returns [param shares], a budget's discretionary lines, with each held line at its share in
+## [param held_shares] and those on auto, NAN there, scaled in proportion to their shares to fill
+## what the held lines leave (FINANCIAL_MODEL.md, "Budgets"). Where [param has_residual], the
+## residual, what [param shares] leave of one, scales with those on auto and is what the result
+## leaves of one; where not, the result sums to one wherever a line is on auto.
+static func get_filled_budget_shares(shares: PackedFloat64Array, held_shares: PackedFloat64Array,
+		has_residual: bool) -> PackedFloat64Array:
+	var held_sum := 0.0
+	var auto_sum := 0.0
+	var share_sum := 0.0
+	for i in shares.size():
+		share_sum += shares[i]
+		if is_nan(held_shares[i]):
+			auto_sum += shares[i]
+		else:
+			held_sum += held_shares[i]
+	if has_residual:
+		auto_sum += maxf(1.0 - share_sum, 0.0)
+	var scale := maxf(1.0 - held_sum, 0.0) / auto_sum if auto_sum > 0.0 else 0.0
+	var filled := PackedFloat64Array()
+	filled.resize(shares.size())
+	for i in shares.size():
+		filled[i] = shares[i] * scale if is_nan(held_shares[i]) else held_shares[i]
+	return filled
+
+
 # array & dict utils
 
 

@@ -336,10 +336,12 @@ func process_ai_interval(_delta: float) -> void:
 
 # Sets its treasuries' budget lines (FINANCIAL_MODEL.md, "Budgets"): a polity's appropriation of
 # each of its agencies, the agency's appropriation_share in players.tsv, and its funding of each of
-# its facilities from each treasury that owns it, the facility's funding_share in facilities.tsv. A
-# line no table seeds funds all its counterparty lacks. TEMPORARY PATCH: each line is its table
-# seed, read again each interval so a line its human returns to auto goes back to it, until the AI
-# weighs its lines.
+# its facilities from each treasury that owns it, the facility's funding_share in facilities.tsv,
+# those on auto filling what its human's held lines leave, in proportion to their seeds, with the
+# treasury's residual where it has one. An agency's treasury has none, so its lines on auto fill
+# its budget. A line no table seeds funds all its counterparty lacks. TEMPORARY PATCH: each line is
+# its table seed, read again each interval so a line its human returns to auto goes back to it,
+# until the AI weighs its lines.
 func _author_budget_shares() -> void:
 	const PLAYER_CLASS_AGENCY := Enums.PlayerClasses.PLAYER_CLASS_AGENCY
 	const PLAYER_CLASS_COMPANY := Enums.PlayerClasses.PLAYER_CLASS_COMPANY
@@ -360,18 +362,34 @@ func _author_budget_shares() -> void:
 				Enums.UniqueLineItems.CORPORATE_FUNDING_PAID),
 	]
 	var funding_shares: Array[float] = IVTableData.db_tables[&"facilities"][&"funding_share"]
-	for facility in proxy.facilities:
-		var facility_type := IVTableData.get_row(facility.name)
-		if facility_type == -1 or !(funding_shares[facility_type] >= 0.0):
-			continue
-		var facility_proxy := facility as FacilityProxy
-		var is_government := proxy.player_class != PLAYER_CLASS_COMPANY
-		var is_corporate := (proxy.player_class != PLAYER_CLASS_AGENCY
-				and facility_proxy.public_sector < 1.0)
-		for account in funding_items.size():
-			if (is_government if account == Enums.Accounts.ACCOUNT_GOVERNMENT else is_corporate):
-				proxy.set_budget_share(Utils.get_line_item_key(funding_items[account],
-						facility_proxy.facility_id), funding_shares[facility_type])
+	var has_residual := proxy.player_class != PLAYER_CLASS_AGENCY
+	for account in funding_items.size():
+		var keys := PackedInt32Array()
+		var seeds := PackedFloat64Array()
+		var held_shares := PackedFloat64Array()
+		var is_any_held := false
+		for facility in proxy.facilities:
+			var facility_type := IVTableData.get_row(facility.name)
+			if facility_type == -1 or !(funding_shares[facility_type] >= 0.0):
+				continue
+			var facility_proxy := facility as FacilityProxy
+			var is_owner := proxy.player_class != PLAYER_CLASS_COMPANY
+			if account == Enums.Accounts.ACCOUNT_CORPORATE:
+				is_owner = (proxy.player_class != PLAYER_CLASS_AGENCY
+						and facility_proxy.public_sector < 1.0)
+			if !is_owner:
+				continue
+			var key := Utils.get_line_item_key(funding_items[account], facility_proxy.facility_id)
+			var is_held := proxy.is_budget_share_held(key)
+			is_any_held = is_any_held or is_held
+			keys.append(key)
+			seeds.append(funding_shares[facility_type])
+			held_shares.append(proxy.get_budget_share(key) if is_held else NAN)
+		var shares := seeds
+		if is_any_held:
+			shares = Utils.get_filled_budget_shares(seeds, held_shares, has_residual)
+		for i in keys.size():
+			proxy.set_budget_share(keys[i], shares[i])
 
 
 # Has each of its treasuries spend what its revenue gives it (see PlayerProxy.set_budget_target).
