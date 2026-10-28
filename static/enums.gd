@@ -119,6 +119,8 @@ enum UniqueLineItems {
 	CORPORATE_INTEREST_PAID,
 	GOVERNMENT_GRANTED,
 	CORPORATE_GRANTED,
+	APPROPRIATION_RETURNS_RECEIVED,
+	APPROPRIATION_RETURNS_PAID,
 }
 
 ## Trade classes group resources by handling (electricity, bulk, cryogenic,

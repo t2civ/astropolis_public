@@ -158,7 +158,10 @@ const FLOW_CURVE_FACTORS: PackedFloat64Array = [0.5, 1.0, 2.0]
 
 
 var facility_id := -1  ## Index into [member ProxyBus.facility_proxies].
-var facility_class := -1  ## Facility class index. Not implemented yet.
+## Its name among its player's facilities, as in its owners' budget lines: its body's name, unless
+## the game start names it otherwise.
+var short_name := ""
+var facility_class := -1  ## [code]facility_classes.tsv[/code] row index.
 ## Public-sector share of this facility, often 0.0 or 1.0, sometimes mixed.
 var public_sector: float
 ## True if this is a small focused activity (affects stats and tax treatment).

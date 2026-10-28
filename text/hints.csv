@@ -40,9 +40,3 @@ HINT_SANDBOX_FREE_BUILDS,"Your players found new facilities for free. (Nothing f
 HINT_SANDBOX_UNLIMITED_MONEY,Your players' treasuries are never short; you set what each spends a year
 HINT_SANDBOX_ACCESS_ALL_PLAYERS,You play every playable player
 HINT_AUTO,Auto; uncheck to set
-HINT_BAR_BUDGET,Its budget: the full width is all of it
-HINT_BAR_LINE,The line's share of its budget
-HINT_BAR_DRAWN,What it drew last quarter
-HINT_BAR_UNBOUNDED,No limit: it funds all that is lacked; filled to what it drew
-HINT_BAR_PAST,Past the budget's end or drawn past its line
-HINT_BAR_HELD,Off auto: drag to set
