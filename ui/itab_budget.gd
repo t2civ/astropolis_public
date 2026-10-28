@@ -34,8 +34,8 @@ extends MarginContainer
 ## lines as shares of what they leave, the rest of its budget last. At an administrative center or
 ## for a player it shows each of its player's treasuries' budgets, and at a facility its own budget,
 ## below its owners' lines for it where it isn't its player's center. Each bar is its line's share,
-## marked on the same scale where the line drew last quarter and where this quarter's pace puts it,
-## red past the share; a line that funds all its counterparty lacks spans the width. The bar's
+## marked on the same scale where the line drew last quarter and where its current trend, this
+## quarter's pace, puts it; a line that funds all its counterparty lacks spans the width. The bar's
 ## tooltip gives both draws, beside a legend of its colors. A line its owner sets, a treasury's
 ## funding of a facility and a facility's R&D and builds, shows the share it is set at, a facility
 ## by its short name.[br][br]
@@ -1802,9 +1802,9 @@ class FundingRow extends HBoxContainer:
 
 	# Marks the line's bar where it drew last quarter and where this quarter's pace puts it, each a
 	# share on the bar's scale, and names both in its tooltip.
-	func set_draws(last_share: float, actual_share: float, last_text: String,
-			actual_text: String) -> void:
-		_bar.set_draws(last_share, actual_share, last_text, actual_text)
+	func set_draws(last_share: float, trend_share: float, last_text: String,
+			trend_text: String) -> void:
+		_bar.set_draws(last_share, trend_share, last_text, trend_text)
 
 
 	func _set_control(control: Array) -> void:
@@ -1863,8 +1863,8 @@ class FundingRow extends HBoxContainer:
 
 class FundingBar extends Control:
 	# A line as a horizontal bar: its share, from empty to the full width at 1.0, marked on the same
-	# scale where it drew last quarter and where this quarter's pace puts it, that mark red past the
-	# share. A line that funds all its counterparty lacks is an outline across the width. A
+	# scale where it drew last quarter and where its current trend, this quarter's pace, puts it. A
+	# line that funds all its counterparty lacks is an outline across the width. A
 	# draggable bar's share follows the mouse, up to its cap, while a button is held, and is set on
 	# release. Its tooltip is a legend of its colors with both draws.
 
@@ -1874,17 +1874,16 @@ class FundingBar extends Control:
 	const TRACK_COLOR := Color(1.0, 1.0, 1.0, 0.08)
 	const SET_COLOR := Color(0.75, 0.75, 0.75)
 	const LAST_COLOR := Color(0.42, 0.42, 0.42)
-	const ACTUAL_COLOR := Color(1.0, 0.75, 0.2)
-	const PAST_COLOR := Color(1.0, 0.3, 0.3)
+	const TREND_COLOR := Color(1.0, 0.75, 0.2)
 	const DRAGGABLE_COLOR := Color(0.53, 0.81, 0.98, 0.6)
 	const LAST_WIDTH := 2.0
-	const ACTUAL_WIDTH := 3.0
+	const TREND_WIDTH := 3.0
 
 	var _share := NAN
 	var _last_share := NAN
-	var _actual_share := NAN
+	var _trend_share := NAN
 	var _last_text := ""
-	var _actual_text := ""
+	var _trend_text := ""
 	var _bar_width: float
 	var _cap := NAN
 	var _is_dragging := false
@@ -1906,14 +1905,14 @@ class FundingBar extends Control:
 		queue_redraw()
 
 
-	func set_draws(last_share: float, actual_share: float, last_text: String,
-			actual_text: String) -> void:
+	func set_draws(last_share: float, trend_share: float, last_text: String,
+			trend_text: String) -> void:
 		_last_text = last_text
-		_actual_text = actual_text
-		if is_same(last_share, _last_share) and is_same(actual_share, _actual_share):
+		_trend_text = trend_text
+		if is_same(last_share, _last_share) and is_same(trend_share, _trend_share):
 			return
 		_last_share = last_share
-		_actual_share = actual_share
+		_trend_share = trend_share
 		queue_redraw()
 
 
@@ -1935,8 +1934,7 @@ class FundingBar extends Control:
 		for item: Array in [
 			[SET_COLOR, 24.0, tr(&"LABEL_SET")],
 			[LAST_COLOR, LAST_WIDTH, "%s: %s" % [tr(&"LABEL_LAST_QUARTER"), _last_text]],
-			[ACTUAL_COLOR, ACTUAL_WIDTH, "%s: %s" % [tr(&"LABEL_ACTUAL"), _actual_text]],
-			[PAST_COLOR, ACTUAL_WIDTH, tr(&"LABEL_ACTUAL_PAST_SET")],
+			[TREND_COLOR, TREND_WIDTH, "%s: %s" % [tr(&"LABEL_CURRENT_TREND"), _trend_text]],
 		]:
 			var style := StyleBoxFlat.new()
 			style.bg_color = item[0]
@@ -1990,12 +1988,10 @@ class FundingBar extends Control:
 		var height := size.y * 0.5
 		var top := (size.y - height) * 0.5
 		draw_rect(Rect2(left, top, span, height), TRACK_COLOR)
-		var set_width := span
 		if is_inf(_share):
 			draw_rect(Rect2(left, top, span, height), SET_COLOR, false, 1.0)
 		elif !is_nan(_share):
-			set_width = span * clampf(_share, 0.0, 1.0)
-			draw_rect(Rect2(left, top, set_width, height), SET_COLOR)
+			draw_rect(Rect2(left, top, span * clampf(_share, 0.0, 1.0), height), SET_COLOR)
 		if mouse_filter == MOUSE_FILTER_STOP:
 			draw_rect(Rect2(left, top, span, height), DRAGGABLE_COLOR, false, 1.0)
 		var marker_top := size.y * 0.15
@@ -2004,12 +2000,10 @@ class FundingBar extends Control:
 			var x := left + span * clampf(_last_share, 0.0, 1.0)
 			draw_rect(Rect2(x - LAST_WIDTH * 0.5, marker_top, LAST_WIDTH, marker_height),
 					LAST_COLOR)
-		if !is_nan(_actual_share):
-			# Red only where it shows past the share: a line set at nothing that drew a rounding's worth
-			# would mark its start.
-			var x := left + span * clampf(_actual_share, 0.0, 1.0)
-			var color := PAST_COLOR if x >= left + set_width + 1.0 else ACTUAL_COLOR
-			draw_rect(Rect2(x - ACTUAL_WIDTH * 0.5, marker_top, ACTUAL_WIDTH, marker_height), color)
+		if !is_nan(_trend_share):
+			var x := left + span * clampf(_trend_share, 0.0, 1.0)
+			draw_rect(Rect2(x - TREND_WIDTH * 0.5, marker_top, TREND_WIDTH, marker_height),
+					TREND_COLOR)
 
 
 	func _resize(gui_size: int) -> void:
