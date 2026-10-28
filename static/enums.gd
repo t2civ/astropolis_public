@@ -124,6 +124,8 @@ enum UniqueLineItems {
 	PAYROLL_TAX_PAID,
 	PAYROLL_TAX_RECEIVED,
 	WEALTH_TAX_RECEIVED,
+	PUBLIC_PROVISION_RECEIPTS,
+	PUBLIC_PROVISION_PAID,
 }
 
 ## Trade classes group resources by handling (electricity, bulk, cryogenic,

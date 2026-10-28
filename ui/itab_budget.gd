@@ -37,8 +37,8 @@ extends MarginContainer
 ## marked on the same scale where the line drew last quarter and where its current trend, this
 ## quarter's pace, puts it; a line that funds all its counterparty lacks spans the width. The bar's
 ## tooltip gives both draws, beside a legend of its colors. A line its owner sets, a treasury's
-## funding of a facility, a polity's appropriation of an agency and a facility's R&D and expansion,
-## shows the share it is set at, a facility by its short name. An agency's budgets, its treasury's
+## funding of a facility, a polity's appropriation of an agency and its public provision and a
+## facility's R&D and expansion, shows the share it is set at, a facility by its short name. An agency's budgets, its treasury's
 ## and its facilities', have no rest: what it is appropriated is spent.[br][br]
 ##
 ## Where this machine's human plays the player ([method PlayerProxy.is_local_human]), each line its
@@ -143,6 +143,7 @@ var _funding_items := PackedInt32Array() # a treasury's funding of a facility, b
 var _item_transfers_paid := -1
 var _item_dividends_paid := -1
 var _item_appropriations_paid := -1
+var _item_public_provision_paid := -1
 var _item_funding_received := -1
 var _item_payouts_paid := -1
 var _item_interest_expense := -1
@@ -243,6 +244,7 @@ func _precompute_display_names() -> void:
 	var funding_paid := _find_item(Enums.UniqueLineItems.GOVERNMENT_FUNDING_PAID)
 	var corporate_funding_paid := _find_item(Enums.UniqueLineItems.CORPORATE_FUNDING_PAID)
 	_item_appropriations_paid = _find_item(Enums.UniqueLineItems.APPROPRIATIONS_PAID)
+	_item_public_provision_paid = _find_item(Enums.UniqueLineItems.PUBLIC_PROVISION_PAID)
 	_item_returns[funding_paid] = _find_item(Enums.UniqueLineItems.GOVERNMENT_PAYOUTS_RECEIVED)
 	_item_returns[corporate_funding_paid] = _find_item(
 			Enums.UniqueLineItems.CORPORATE_PAYOUTS_RECEIVED)
@@ -796,8 +798,8 @@ func _collect_treasury(player: PlayerProxy, center: FacilityProxy, account: int,
 		keys: Array[int], is_local: bool) -> Array:
 	# A treasury's budget, or empty where it has neither a budget nor a line. Its committed lines'
 	# shares are of what it has to spend, and its discretionary lines' of what they leave, its
-	# funding lines' and appropriations' those they are set at, which its rest, transfers or
-	# dividends, takes last; an agency's has none. Those are controls where [param is_local], and
+	# funding lines', appropriations' and provision's those they are set at, which its rest,
+	# transfers or dividends, takes last; an agency's has none. Those are controls where [param is_local], and
 	# its budget too with unlimited money.
 	var budget := player.budgets[account]
 	var committed_rows := []
@@ -928,7 +930,7 @@ func _get_drawn_share(drawn: float, base: float) -> float:
 
 
 # The keys of the treasury [param account]'s lines that have a share: its funding lines, and a
-# government treasury's appropriations.
+# government treasury's appropriations and public provision.
 func _get_share_keys(player: PlayerProxy, account: int) -> Array[int]:
 	var keys: Array[int] = []
 	for key in player.budget_shares:
@@ -941,7 +943,8 @@ func _get_share_keys(player: PlayerProxy, account: int) -> Array[int]:
 # Whether [param item] is a line of the treasury [param account]'s budget set as a share of it.
 func _is_share_item(item: int, account: int) -> bool:
 	return (item == _funding_items[account]
-			or (item == _item_appropriations_paid and _item_accounts[item] == account))
+			or ((item == _item_appropriations_paid or item == _item_public_provision_paid)
+			and _item_accounts[item] == account))
 
 
 # The most the treasury [param account]'s line kept under [param key] may be set at

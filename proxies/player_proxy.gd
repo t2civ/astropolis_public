@@ -40,8 +40,9 @@ var wealth_tax_threshold := 0.0 ## See [member corporate_tax_rate].
 var human := false
 ## Its treasuries' budget lines, each kept under the key of the line item it funds by (see
 ## [method Utils.get_line_item_key]; FINANCIAL_MODEL.md, "Budgets"), each a share of the
-## treasury's budget over a year: a facility's funding by facility, and an agency's appropriation by
-## agency. A line with no share funds all its counterparty lacks.
+## treasury's budget over a year: a facility's funding by facility, an agency's appropriation by
+## agency, and a polity's public provision. A line with no share funds all its counterparty lacks,
+## but provision, which a budget with no share for it doesn't buy.
 ## Resizable container — not threadsafe! Use [method set_budget_share].
 var budget_shares: Dictionary[int, float] = {}
 ## What each of its treasuries is set to spend a year past its committed lines, by
@@ -55,8 +56,8 @@ var budget_targets := PackedFloat64Array()
 var budgets := PackedFloat64Array()
 ## Its treasuries' lines a year, as of its administrative center's last interval, each kept under
 ## the key of the line item that books its use (see [method Utils.get_line_item_key]): each
-## treasury's interest, a committed line, and its funding by facility and appropriation by agency,
-## INF where a line funds all its counterparty lacks. Server-authoritative.
+## treasury's interest, a committed line, its funding by facility and appropriation by agency, and
+## a polity's public provision, INF where a line funds all its counterparty lacks. Server-authoritative.
 ## Resizable container — not threadsafe! Use [method get_budget_line].
 var budget_lines: Dictionary[int, float] = {}
 
