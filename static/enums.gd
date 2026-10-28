@@ -56,6 +56,9 @@ enum UniqueOperations {
 enum UniqueLineItems {
 	OPERATION_MAINTENANCE,
 	MODULE_MAINTENANCE,
+	ADMINISTRATION,
+	STAFFING,
+	RESEARCH_DEVELOPMENT,
 	TRADING_GAINS,
 	TRADING_LOSSES,
 	EXCHANGE_FEES,
@@ -86,10 +89,38 @@ enum UniqueLineItems {
 	TAX_RECEIVED,
 	RESIDENT_RECEIPTS,
 	WAGES_PAID,
+	PAYOUTS_PAID,
+	GOVERNMENT_PAYOUTS_RECEIVED,
+	FUNDING_RECEIVED,
+	GOVERNMENT_FUNDING_PAID,
+	GOVERNMENT_CASH,
+	CORPORATE_CASH,
+	CORPORATE_PAYOUTS_RECEIVED,
+	CORPORATE_FUNDING_PAID,
+	APPROPRIATIONS_RECEIVED,
+	APPROPRIATIONS_PAID,
+	TRANSFERS_PAID,
+	LEVIES_RECEIVED,
 	DIVIDENDS_PAID,
-	DIVIDENDS_RECEIVED,
-	OWNER_FUNDING,
-	FUNDING_PAID,
+	CAPITAL_PAID_IN,
+	DEBT,
+	BORROWED,
+	REPAID,
+	INTEREST_PAID,
+	INTEREST_EXPENSE,
+	GOVERNMENT_DEBT,
+	GOVERNMENT_BORROWED,
+	GOVERNMENT_REPAID,
+	GOVERNMENT_INTEREST_PAID,
+	INTEREST_RECEIVED,
+	CORPORATE_DEBT,
+	CORPORATE_BORROWED,
+	CORPORATE_REPAID,
+	CORPORATE_INTEREST_PAID,
+	GOVERNMENT_GRANTED,
+	CORPORATE_GRANTED,
+	APPROPRIATION_RETURNS_RECEIVED,
+	APPROPRIATION_RETURNS_PAID,
 }
 
 ## Trade classes group resources by handling (electricity, bulk, cryogenic,
@@ -175,13 +206,21 @@ enum BalanceClasses {
 	BALANCE_CLASS_EQUITY,
 }
 
-## Sector a [code]line_items.tsv[/code] line item applies to: a blank cell (−1)
-## applies to both sectors, [code]SECTOR_PUBLIC[/code] to public-sector entities
-## only, [code]SECTOR_PRIVATE[/code] to private only. Declarative; reserved for
-## display/validation gating (the tax math uses facility [code]public_sector[/code]).
-enum SectorApplicability {
-	SECTOR_PUBLIC,
-	SECTOR_PRIVATE,
+## Account a [code]line_items.tsv[/code] line item belongs to: a blank cell (−1) is
+## the facility's own, and the others a player's treasuries, booked at its
+## administrative center (FINANCIAL_MODEL.md, "The accounts").
+enum Accounts {
+	ACCOUNT_GOVERNMENT,
+	ACCOUNT_CORPORATE,
+}
+
+## What a [code]line_items.tsv[/code] line item is kept per (its [code]keyed_by[/code] column): a
+## blank cell (−1) is kept once, and the others once per facility or player it moves money to or
+## from, each a line of its own (see [method Utils.get_line_item_key]; FINANCIAL_MODEL.md, "Line
+## items").
+enum Counterparties {
+	COUNTERPARTY_FACILITY,
+	COUNTERPARTY_PLAYER,
 }
 
 ## Random-player selection options for game start.

@@ -8,14 +8,14 @@
 class_name TraderBaseAI
 extends BaseAI
 
-## Default AI for traders the local player owns.
+## Default AI for every trader.
 ##
 ## To implement a custom trader AI, extend this class and add
 ## [code]const OVERRIDE_AI := true[/code].[br][br]
 ##
 ## Traders are paired 1-to-1 with facilities. This trader contracts toward its facility's desired
 ## rate of each resource over the coming horizon, within what its facility's critical rate and its
-## owners' means allow, and leans its quotes toward its facility's own price while what it
+## credit allow, and leans its quotes toward its facility's own price while what it
 ## contracted falls short; in a two-sided posture it also keeps a quote standing on the other side
 ## (TRADE_MODEL.md, "The facility trader"). It reads its
 ## facility's rates and prices, never its stock, and trades in the posture and resource strategies
@@ -129,10 +129,13 @@ const LEAN := 0.5
 ## that prices a resource at nothing would give it away.
 const OWN_PRICE_FLOOR := 0.001
 ## How many of its facility's time horizons ahead a trader contracts (def key
-## [code]contract_horizons[/code] overrides per resource strategy).
-const CONTRACT_HORIZONS := 1.0
-## Share of its owners' means a trader may commit: what its open longs and resting bids will cost
-## less what its open shorts will earn (def key [code]credit_share[/code] overrides per posture).
+## [code]contract_horizons[/code] overrides per resource strategy): about a year for a facility on
+## Earth, further for one resupplied seldom, as far as [constant TraderProxy.MAX_FORWARD_QUARTERS]
+## reaches. The current quarter is always held whole.
+const CONTRACT_HORIZONS := 12.0
+## Share of its facility's credit a trader may commit: what its open longs and resting bids will
+## cost less what its open shorts will earn (def key [code]credit_share[/code] overrides per
+## posture).
 const CREDIT_SHARE := 0.5
 ## Minimum order size in trade units; smaller wants are not quoted.
 const MIN_LOT := 1
@@ -143,7 +146,7 @@ const QTY_TOLERANCE := 0.1
 
 
 ## Trader-posture strategy definitions; index = [enum TraderStrategies] value.
-## [code]credit_share[/code] sets the share of its owners' means the trader may commit (see
+## [code]credit_share[/code] sets the share of its facility's credit the trader may commit (see
 ## [constant CREDIT_SHARE]). The [code]two_sided[/code] switch makes markets in every resource the
 ## facility deals in (see [method is_market_resource]), for which the facility AI holds stock
 ## against its market's swings: the trader keeps a quote standing on the side its gap doesn't ask
@@ -195,7 +198,7 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 static var _table_n_rows := IVTableData.table_n_rows
 static var _trade_unit_multipliers := ThreadsafeGlobal.resource_trade_unit_multipliers
 ## Per-resource 0/1; trade_class == CYBER (orders route to the cyber market). Built once.
-static var _is_cyber_resource: PackedByteArray
+static var _cyber_resource: PackedByteArray
 
 
 var proxy: TraderProxy
@@ -240,8 +243,8 @@ var _cyber_market_id := -1
 # facility trader ([resource, quarter]), 3 for a transport trader ([resource, quarter,
 # body_id]). Set in ai_init.
 var _key_width := 2
-# Per resource, how far ahead this interval's quotes contract it, in sim time; 0.0 where it isn't
-# traded.
+# Per resource, the span of its flow this interval's quotes contract, what its facility foresees of
+# how far ahead they reach, in sim time; 0.0 where it isn't traded.
 var _windows: PackedFloat64Array
 # This interval's quotes, one entry per instrument: its key, the ask and the bid its gap wants and
 # those a two-sided posture keeps standing on the other side (trade units), the ask's and the bid's
@@ -278,13 +281,13 @@ func _init() -> void:
 	var n_resources: int = _table_n_rows[&"resources"]
 	resource_strategies.resize(n_resources)
 	_windows.resize(n_resources)
-	if _is_cyber_resource.is_empty():
+	if _cyber_resource.is_empty():
 		const TRADE_CLASS_CYBER := Enums.TradeClasses.TRADE_CLASS_CYBER
 		var resources_table: Dictionary[StringName, Array] = IVTableData.db_tables[&"resources"]
 		var trade_classes := PackedInt32Array(resources_table[&"trade_class"])
-		_is_cyber_resource.resize(trade_classes.size())
+		_cyber_resource.resize(trade_classes.size())
 		for resource_type in trade_classes.size():
-			_is_cyber_resource[resource_type] = 1 if trade_classes[resource_type] == TRADE_CLASS_CYBER else 0
+			_cyber_resource[resource_type] = 1 if trade_classes[resource_type] == TRADE_CLASS_CYBER else 0
 
 
 func _clear_for_destruction() -> void:
@@ -323,7 +326,7 @@ func ai_init() -> void:
 ## Each interval contracts every resource its facility flags
 ## [constant FacilityProxy.InventoryFlags.TRADABLE] toward the facility's desired rate, as its
 ## strategy's def directs, a two-sided posture quoting both sides of each one its facility deals in
-## (see [method _plan_resource]); cuts what it would bid to what its owners' means allow (see
+## (see [method _plan_resource]); cuts what it would bid to what its facility's credit allows (see
 ## [method _bound_commitments]); then places the quotes and cancels any order resting outside them.
 func process_ai_interval(_delta: float) -> void:
 	const TRADABLE := FacilityProxy.InventoryFlags.TRADABLE
@@ -348,13 +351,17 @@ func process_ai_interval(_delta: float) -> void:
 
 
 ## Plans this interval's quotes for [param resource_type] under its strategy's [param def]. The
-## trader contracts the coming window, its facility's horizon times the def's
-## [code]contract_horizons[/code], toward the desired rate D: each quarter the window spans wants D
-## times the part of the window it holds, net of the position there, as a bid or an ask. The rate
-## is held to the def's sides, never below what the facility could spare (-C, the critical rate)
-## and at least C where the facility must take. Quotes lean off the reference price toward the
-## facility's local price, as far as the def's [code]lean[/code] times the gap as a share of what it
-## would contract, each side quoting that limit.[br][br]
+## trader contracts the coming window, the def's [code]contract_horizons[/code] of its facility's
+## time horizon, and the rest of the current quarter at least, toward the desired rate D: each
+## quarter the window spans wants D's flow, read off its curve over price at that quarter's own
+## price, times what its facility foresees of the part of the window it holds, and the current
+## quarter D's step besides, once,
+## net of the position there, as a bid or an ask. Each quarter's target is held to the def's sides,
+## never below what the facility could spare (-C, the critical rate, its flow and step alike) and
+## at least C where the facility must take. Each quarter's quotes lean off its own price (see
+## [method MarketProxy.get_instrument_unit_price]) toward the facility's local price, as far as the
+## def's [code]lean[/code] times the quarter's gap as a share of what it would contract there, each
+## side quoting that limit.[br][br]
 ##
 ## With [param standing], a two-sided posture's, each quarter also keeps a lot (the def's
 ## [code]min_lot[/code]) standing on the side its gap doesn't ask for, where the def trades that
@@ -366,117 +373,140 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 		) -> void:
 	var buys: bool = def.get(&"buy", false)
 	var sells: bool = def.get(&"sell", false)
-	var desired := _facility.get_inventory_desired_rate(resource_type)
+	var desired_step := _facility.get_inventory_desired_step(resource_type)
 	var reference_price := market.get_unit_price(resource_type)
-	if !(buys or sells) or is_nan(desired) or reference_price <= 0:
+	if !(buys or sells) or is_nan(desired_step) or reference_price <= 0:
 		return # not traded: any order resting on it is cancelled with the unplanned
-	var critical := _facility.get_inventory_critical_rate(resource_type)
-	var window: float = _facility.time_horizon * def.get(&"contract_horizons", CONTRACT_HORIZONS)
-	if !(window > 0.0):
+	var critical_step := _facility.get_inventory_critical_step(resource_type)
+	var curve_price := _facility.get_inventory_curve_price(resource_type)
+	if !(curve_price > 0.0):
 		return
-	_windows[resource_type] = window
+	var desired_flows := _facility.get_inventory_desired_flow_curve(resource_type)
+	var critical_flow := _facility.get_inventory_critical_flow(resource_type)
+	var critical := _facility.get_inventory_critical_rate(resource_type)
+	var contract_horizons: float = def.get(&"contract_horizons", CONTRACT_HORIZONS)
+	var horizon := _facility.time_horizon
+	var window := maxf(horizon * contract_horizons, 0.0)
 	var multiplier := _trade_unit_multipliers[resource_type]
 	var spare := maxf(-critical, 0.0) # the most its facility could spare
-	var rate := desired
-	if !buys:
-		rate = minf(rate, 0.0)
-	if !sells:
-		rate = maxf(rate, 0.0)
-	rate = maxf(rate, -spare)
-	if buys:
-		rate = maxf(rate, critical) # takes at least what its facility must
 	var min_lot: int = def.get(&"min_lot", MIN_LOT)
 	var use := _facility.get_inventory_use(resource_type) if standing else 0.0
 	var now := _last_interval
-	var end := now + window
 	var current_quarter := proxy.ordinal_qtr
-	var first := _plan_keys.size()
-	var gap := 0.0 # trade units
-	var target := 0.0 # trade units, either side
+	# Settlement delivers a current quarter's position by the quarter's end, so the window holds that
+	# time whole and what deliveries draw from it falls out of the target with them.
+	var end := maxf(now + window, Utils.get_time_at_ordinal_quarter(current_quarter + 1))
+	_windows[resource_type] = TraderProxy.get_foreseen_span(end - now, horizon)
+	var local_price := _facility.get_inventory_local_price(resource_type) * multiplier
+	var lean_share: float = def.get(&"lean", LEAN)
+	var quarter_price := reference_price # this quarter's own, or the quarter before it's
 	var quarter := current_quarter
 	var start := now
 	while start < end and quarter < current_quarter + TraderProxy.MAX_FORWARD_QUARTERS:
 		var quarter_end := Utils.get_time_at_ordinal_quarter(quarter + 1)
 		var held := minf(end, quarter_end) - start
+		var key := PackedInt32Array([resource_type, quarter])
+		var is_current := quarter == current_quarter
+		# A buyer takes all it contracted, and a need contracted at once for a year held a spike
+		# of a month's use for all of it. What a quarter holds counts as far as its facility
+		# foresees it.
+		var foreseen := held
 		if held > 0.0:
-			var key := PackedInt32Array([resource_type, quarter])
-			var position: PackedFloat64Array = _positions_by_instrument.get(key,
-					PackedFloat64Array())
-			var position_quantity := position[0] if position else 0.0
-			var want := roundi(rate * held / multiplier - position_quantity)
-			gap += want
-			target += absf(rate * held / multiplier)
-			var ask := maxi(-want, 0)
-			var bid := maxi(want, 0)
-			var standing_ask := 0
-			var standing_bid := 0
-			# A lot gives the market its price: quotes sized to the facility's flow traded on the
-			# gap between prices as much as on the desired rate. A bid where the facility uses
-			# nothing is demand nobody has, which held a good nobody used at whatever its makers
-			# last traded it among themselves.
-			if standing:
-				if (sells and ask < min_lot
-						and position_quantity + spare * held / multiplier >= min_lot):
-					standing_ask = min_lot
-					ask = 0
-				if buys and bid < min_lot and use * held / multiplier >= min_lot:
-					standing_bid = min_lot
-					bid = 0
-			_plan_keys.append(key)
-			_plan_asks.append(ask)
-			_plan_bids.append(bid)
-			_plan_standing_asks.append(standing_ask)
-			_plan_standing_bids.append(standing_bid)
-			_plan_defs.append(def)
+			foreseen = (TraderProxy.get_foreseen_span(start + held - now, horizon)
+					- TraderProxy.get_foreseen_span(start - now, horizon))
 		start = quarter_end
 		quarter += 1
-	# A gap as a share of what it would contract: scaled to an unbounded desired rate, a seller held
-	# to the little it could spare leaned next to nothing, and one stale ask held a market at many
-	# times what every facility valued it.
-	var gap_share := clampf(gap / maxf(target, absf(gap)), -1.0, 1.0) if gap else 0.0
-	# The facility's own price says how far the market's stands from where the facility would trade
-	# no more: a fixed step took years to close seeds ten or a hundred times off. A buyer leans up
-	# only where its facility prices the resource above the market, a seller down only below; one
-	# that prices it at nothing leans toward the floor.
-	var own_price := maxf(_facility.get_inventory_local_price(resource_type) * multiplier,
-			OWN_PRICE_FLOOR * reference_price)
-	var price_gap := log(own_price / reference_price)
-	var full_lean: float = def.get(&"lean", LEAN) * price_gap
-	var lean := 0.0
-	if price_gap * gap_share > 0.0:
-		lean = absf(gap_share) * full_lean
-	var limit_price := reference_price * exp(lean)
-	var bid_limit := maxi(floori(limit_price), 1)
-	var ask_limit := maxi(ceili(limit_price), 1)
-	# Quoted off the reference alone, a market whose traders' gaps had closed held its last trade's
-	# price while every facility's own moved away from it.
-	var leaned_price := reference_price * exp(full_lean)
-	var standing_ask_price := ceili(maxf(own_price, leaned_price))
-	var standing_bid_price := floori(minf(own_price, leaned_price))
-	# Each quotes its own limit, and a cross matches at the midpoint (TRADE_MODEL.md, "The price").
-	# A standing quote stays clear of the trader's own on the other side, which wouldn't trade.
-	for i in range(first, _plan_keys.size()):
-		var ask_price := ask_limit
-		var bid_price := bid_limit
-		if _plan_standing_asks[i]:
-			ask_price = maxi(standing_ask_price,
-					(bid_limit if _plan_bids[i] else standing_bid_price) + 1)
-		if _plan_standing_bids[i]:
+		if held <= 0.0:
+			continue
+		# What a later quarter trades is its own price: priced off the current quarter's, a book a
+		# quarter ahead moved no price at all.
+		if !is_current:
+			var own := market.get_instrument_unit_price(resource_type, key[1])
+			if own > 0:
+				quarter_price = own
+		var position: PackedFloat64Array = _positions_by_instrument.get(key, PackedFloat64Array())
+		var position_quantity := position[0] if position else 0.0
+		# Each quarter wants what its facility's flow would be at that quarter's price: at the
+		# current quarter's, a later quarter's price moved and no quantity answered it.
+		var factor := quarter_price / multiplier / curve_price
+		var wanted := FacilityProxy.get_curve_value(desired_flows, factor) * foreseen
+		var must := critical_flow * foreseen
+		if is_current:
+			wanted += desired_step
+			must += critical_step
+		if !buys:
+			wanted = minf(wanted, 0.0)
+		if !sells:
+			wanted = maxf(wanted, 0.0)
+		wanted = maxf(wanted, minf(must, 0.0)) # gives no more than its facility could spare
+		if buys:
+			wanted = maxf(wanted, must) # takes at least what its facility must
+		var want := roundi(wanted / multiplier - position_quantity)
+		var ask := maxi(-want, 0)
+		var bid := maxi(want, 0)
+		var standing_ask := 0
+		var standing_bid := 0
+		# A lot gives the market its price: quotes sized to the facility's flow traded on the gap
+		# between prices as much as on the desired rate. A bid where the facility uses nothing is
+		# demand nobody has, which held a good nobody used at whatever its makers last traded it
+		# among themselves.
+		if standing:
+			if (sells and ask < min_lot
+					and position_quantity + spare * held / multiplier >= min_lot):
+				standing_ask = min_lot
+				ask = 0
+			if buys and bid < min_lot and use * held / multiplier >= min_lot:
+				standing_bid = min_lot
+				bid = 0
+		# A gap as a share of what it would contract: scaled to an unbounded desired rate, a seller
+		# held to the little it could spare leaned next to nothing, and one stale ask held a market
+		# at many times what every facility valued it.
+		var target := absf(wanted / multiplier)
+		var gap_share := clampf(want / maxf(target, absi(want)), -1.0, 1.0) if want else 0.0
+		# The facility's own price says how far the market's stands from where the facility would
+		# trade no more: a fixed step took years to close seeds ten or a hundred times off. A buyer
+		# leans up only where its facility prices the resource above the market, a seller down only
+		# below; one that prices it at nothing leans toward the floor.
+		var own_price := maxf(local_price, OWN_PRICE_FLOOR * quarter_price)
+		var price_gap := log(own_price / quarter_price)
+		var full_lean := lean_share * price_gap
+		var lean := 0.0
+		if price_gap * gap_share > 0.0:
+			lean = absf(gap_share) * full_lean
+		var limit_price := quarter_price * exp(lean)
+		var bid_price := maxi(floori(limit_price), 1)
+		var ask_price := maxi(ceili(limit_price), 1)
+		# Quoted off the reference alone, a market whose traders' gaps had closed held its last
+		# trade's price while every facility's own moved away from it. Each quotes its own limit,
+		# and a cross matches at the midpoint (TRADE_MODEL.md, "The price"). A standing quote stays
+		# clear of the trader's own on the other side, which wouldn't trade.
+		var leaned_price := quarter_price * exp(full_lean)
+		var standing_bid_price := floori(minf(own_price, leaned_price))
+		if standing_ask:
+			ask_price = maxi(ceili(maxf(own_price, leaned_price)),
+					(bid_price if bid else standing_bid_price) + 1)
+		if standing_bid:
 			bid_price = standing_bid_price
-			if _plan_asks[i] or _plan_standing_asks[i]:
+			if ask or standing_ask:
 				bid_price = mini(bid_price, ask_price - 1)
 			if bid_price < 1:
-				_plan_standing_bids[i] = 0
-				bid_price = bid_limit
+				standing_bid = 0
+				bid_price = maxi(floori(limit_price), 1)
+		_plan_keys.append(key)
+		_plan_asks.append(ask)
+		_plan_bids.append(bid)
+		_plan_standing_asks.append(standing_ask)
+		_plan_standing_bids.append(standing_bid)
 		_plan_ask_prices.append(ask_price)
 		_plan_bid_prices.append(bid_price)
+		_plan_defs.append(def)
 
 
 ## Cuts this interval's planned bids in proportion so that what the trader commits, its open
 ## positions net (longs to pay less shorts to be paid) and the bids, stays within its posture's
-## [code]credit_share[/code] of what its owners hold (see
-## [method FacilityProxy.get_owners_wealth]). The bids its gaps ask for come first; the standing
-## bids of a two-sided posture take what room they leave.
+## [code]credit_share[/code] of its facility's credit (see [member FacilityProxy.credit]). The bids
+## its gaps ask for come first; the standing bids of a two-sided posture take what room they
+## leave.
 func _bound_commitments(posture_def: Dictionary) -> void:
 	var payable := 0.0
 	for key in _positions_by_instrument:
@@ -490,7 +520,7 @@ func _bound_commitments(posture_def: Dictionary) -> void:
 	if !(bid_value + standing_value > 0.0):
 		return
 	var credit_share: float = posture_def.get(&"credit_share", CREDIT_SHARE)
-	var room := credit_share * _facility.get_owners_wealth() - payable
+	var room := credit_share * _facility.credit - payable
 	if bid_value + standing_value <= room:
 		return
 	var share := 1.0
@@ -637,7 +667,7 @@ func _is_quote_stale(orders: Dictionary[PackedInt32Array, PackedInt64Array],
 # Resolves which market an order for [param resource_type] routes to: the cyber market
 # for a cyber resource, else this facility trader's home body market.
 func _delivery_market_id(resource_type: int) -> int:
-	return _cyber_market_id if _is_cyber_resource[resource_type] else proxy.market_id
+	return _cyber_market_id if _cyber_resource[resource_type] else proxy.market_id
 
 
 # Resolves the delivery body of [param market_id], for a transport trader's 3-element

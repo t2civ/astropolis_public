@@ -51,8 +51,8 @@ var solar_irradiance := 1.0  ## Solar irradiance at this body, normalized to 1.0
 # *****************************************************************************
 # persisted
 
-var is_satellites := false  ## True while this body has at least one satellite.
-var is_facilities := false  ## True while this body hosts at least one facility.
+var has_satellites := false  ## True while this body has at least one satellite.
+var has_facilities := false  ## True while this body hosts at least one facility.
 ## Parent body, or null for the top body only.
 var parent: BodyProxy
 ## Direct satellite bodies, keyed by name. Resizable container — not threadsafe!
@@ -83,7 +83,7 @@ func _clear_for_destruction() -> void:
 # ***************************** THREAD-SAFE READ ******************************
 
 func has_development() -> bool:
-	return is_facilities
+	return has_facilities
 
 
 func get_body_name() -> StringName:
@@ -239,22 +239,22 @@ func get_market() -> MarketProxy:
 
 
 ## Returns true if the stratum at [param index] is the body's atmosphere.
-@abstract func get_stratum_is_atmosphere(index: int) -> bool
+@abstract func get_stratum_atmosphere(index: int) -> bool
 
 
 # ******************************** AI METHODS *********************************
 
-## Registers [param satellite] under this body. Updates [member is_satellites].
+## Registers [param satellite] under this body. Updates [member has_satellites].
 @abstract func add_satellite(satellite: BodyProxy) -> void
 
 
-## Removes [param satellite] from this body. Updates [member is_satellites].
+## Removes [param satellite] from this body. Updates [member has_satellites].
 @abstract func remove_satellite(satellite: BodyProxy) -> void
 
 
-## Registers [param facility] at this body. Updates [member is_facilities].
+## Registers [param facility] at this body. Updates [member has_facilities].
 @abstract func add_facility(facility: Proxy) -> void
 
 
-## Removes [param facility] from this body. Updates [member is_facilities].
+## Removes [param facility] from this body. Updates [member has_facilities].
 @abstract func remove_facility(facility: Proxy) -> void

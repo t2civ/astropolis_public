@@ -1,4 +1,4 @@
-	is_total	majority_offworld_type	offworld_population	population	energy
+	total	majority_offworld_type	offworld_population	population	energy
 Type	BOOL	STRING_NAME	FLOAT	FLOAT	FLOAT
 Default	TRUE				
 Unit					W

@@ -159,17 +159,20 @@ Notes:
 - **Legal Services** — Counsel, representation, contracting, dispute resolution, and regulatory and compliance work.
 - **Financial Services** — Banking, lending, payments, and investment and asset management — the allocation of capital.
 - **Insurance & Risk** — Underwriting and risk transfer: coverage against loss in exchange for premiums, including actuarial assessment and reinsurance. Used to hedge exposures across operations, transport, and trade.
-- **Architecture & Engineering** — Design and technical specification of buildings, structures, vehicles, and systems — the design product itself, distinct from the construction or fabrication that realizes it.
+- **Engineering Design** — Design, analysis, and planning of buildings, structures, vehicles, and systems — the design product itself, done wherever the designers are, distinct from the construction or fabrication that realizes it.
+- **Field Engineering** — Engineering where the work is: site surveys, adapting a design to local conditions, supervision, inspection and testing, commissioning, and overhaul.
 - **Research & Development** — Systematic scientific and engineering investigation yielding new knowledge, designs, materials, and processes. Compute- and instrument-intensive; the wellspring of technological advancement.
 - **Exchange Services** — Operation of trading venues and central clearing: matching buyers and sellers of commodities and contracts, guaranteeing settlement, and coordinating the load-out of traded goods for delivery.
-- **Wholesale & Logistics** — Bulk distribution and freight movement of goods within a body: warehousing, wholesaling, and surface and regional shipping.
 - **Passenger Services** — Movement of people within a body: transit systems, regional carriers, taxis, and mobility services.
 - **Retail Services** — Sale and last-mile distribution of goods to end consumers through storefronts, markets, and direct fulfillment.
 - **Hospitality** — Lodging, food service, and tourism: hotels, restaurants, and travel accommodation.
-- **Entertainment** — In-person leisure and recreation: venues, live events, sports, attractions, and gaming.
+- **Live Entertainment** — Leisure and recreation with the audience or player present: venues, live events, sports, parks, attractions, and gaming halls.
+- **Metaverse** — Persistent shared worlds at the full fidelity of the senses, where people play, meet, and gather. Each hour spent in one takes a great deal of accelerated computing; for a mind that lives in computing, it is much of what leisure is.
 - **Personal Services** — Direct services to individuals: grooming, fitness, childcare, domestic help, and repair of personal goods.
-- **Healthcare** — Medical and health services: diagnosis, treatment, surgery, nursing, public health, and pharmacy. Equipment- and supply-intensive; central to population welfare in every settlement.
-- **Education** — In-person teaching and training, from primary schooling through tertiary and vocational instruction.
+- **Clinical Care** — Care that needs the patient present: examination, treatment, surgery, nursing, and a bed. Equipment- and supply-intensive; central to population welfare in every settlement.
+- **Telemedicine** — Consultation, diagnosis, and monitoring at a distance, which stands in for part of clinical care.
+- **Schooling** — A seat with a teacher, from primary school through university and vocational training.
+- **Online Learning** — Courses, references, and tutors over the network, from open encyclopedias to accredited programs.
 - **Public/Gov Services** — Administration, security, justice, defense, and civic services provided by governing bodies.
 - **Utilities/Env Services** — Delivered utilities and sanitation: water at the tap, power and gas distribution to premises, and waste collection, recycling, and environmental remediation — distinct from the generation, extraction, and treatment upstream.
 - **Human Habitation** — Room to live in shirt-sleeve space — pressurized, breathable and temperate — counted as places occupied over time: one individual housed for an hour is one hour. Made by housing modules and drawn by the residents' shelter need; it cannot be stored or traded, and carries no price until households pay rent.

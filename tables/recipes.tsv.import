@@ -1,0 +1,14 @@
+[remap]
+
+importer="ivoyager.tables"
+type="IVTableResource"
+uid="uid://cxlu0n64epsc1"
+path="res://.godot/imported/recipes.tsv-5561ca8e32e2fa13ed21c24ed9d0a799.tres"
+
+[deps]
+
+source_file="res://public/tables/recipes.tsv"
+dest_files=["res://.godot/imported/recipes.tsv-5561ca8e32e2fa13ed21c24ed9d0a799.tres"]
+
+[params]
+

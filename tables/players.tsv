@@ -1,5 +1,5 @@
-name\Field	player_class	is_start	gui_hide	is_playable	polity	homeworld	tax_rate
-Type	Enums.PlayerClasses	BOOL	BOOL	BOOL	TABLE_ROW	STRING_NAME	FLOAT
+name\Field	player_class	start	gui_hide	playable	polity	homeworld	tax_rate	appropriation_share
+Type	Enums.PlayerClasses	BOOL	BOOL	BOOL	TABLE_ROW	STRING_NAME	FLOAT	FLOAT
 Default		TRUE				PLANET_EARTH	0.2
 Unit
 Prefix/PLAYER_	PLAYER_CLASS_				PLAYER_
@@ -10,10 +10,10 @@ EU	POLITY				EU
 INDIA	POLITY				INDIA
 JAPAN	POLITY				JAPAN
 OTHER	POLITY		x		OTHER
-NASA	AGENCY			x	USA
-ROSCOSMOS	AGENCY			x	RUSSIA
-CNSA	AGENCY			x	CHINA
-ESA	AGENCY			x	EU
-ISRO	AGENCY			x	INDIA
-JAXA	AGENCY			x	JAPAN
+NASA	AGENCY			x	USA			8.74e-4
+ROSCOSMOS	AGENCY			x	RUSSIA			5.44e-4
+CNSA	AGENCY			x	CHINA			1.12e-4
+ESA	AGENCY			x	EU			1.80e-4
+ISRO	AGENCY			x	INDIA			5.18e-5
+JAXA	AGENCY			x	JAPAN			2.07e-4
 # game start

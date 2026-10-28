@@ -22,15 +22,14 @@ extends Node
 
 ## Replacement IVUnits singleton
 ##
-## This file replaces the plugin template file at addons/ivoyager_units/units.gd.
-## Sim scale ([constant METER]) is changed and game units have been added.[br][br]
-##
-## WARNING: Lighting and shadows are EXTREMELY sensitive to scale, and the
-## specific issues (and best setting) vary with Godot versions. See class file
-## comments in the Planetarium's 
+## This file replaces the Units plugin's template file at
+## [code]addons/ivoyager_units/units.gd[/code], as set in
+## [code]res://ivoyager_override.cfg[/code], to add the game's units: computation,
+## biodiversity and money ([constant USD]). The template's units are unchanged.
+## The Planetarium's
 ## [url=https://github.com/ivoyager/planetarium/blob/master/planetarium/units.gd]
-## units.gd[/url] for a running record of issues and the current recommended
-## METER value.[br][br]
+## units.gd[/url] records the lighting and shadow trouble that scale
+## ([constant METER]) gave before Godot 4.7.[br][br]
 ##
 ## See [IVQConvert] for unit quantity conversion API. In short, unit strings are
 ## first tested in [member unit_multipliers] and then in [member unit_lambdas].
@@ -53,9 +52,9 @@ const CANDELA := 1.0
 const DEG := PI / 180.0 # radians
 const MINUTE := 60.0 * SECOND
 const HOUR := 3600.0 * SECOND
-const DAY := 86400.0 * SECOND # exact Julian day
-const YEAR := 365.25 * DAY # exact Julian year
-const CENTURY := 36525.0 * DAY
+const DAY := 86400.0 * SECOND ## Exact Julian day.
+const YEAR := 365.25 * DAY ## Exact Julian year.
+const CENTURY := 36525.0 * DAY ## Julian century.
 const MM := 1e-3 * METER
 const CM := 1e-2 * METER
 const KM := 1e3 * METER
@@ -65,7 +64,7 @@ const SPEED_OF_LIGHT := 299792458.0 * METER / SECOND
 const LIGHT_YEAR := SPEED_OF_LIGHT * YEAR
 const STANDARD_GRAVITY := 9.80665 * METER / SECOND ** 2
 const GRAM := 1e-3 * KG
-const TONNE := 1e3 * KG
+const TONNE := 1e3 * KG ## Metric tonne.
 const HECTARE := 1e4 * METER ** 2
 const LITER := 1e-3 * METER ** 3
 const NEWTON := KG * METER / SECOND ** 2
@@ -84,13 +83,31 @@ const GRAVITATIONAL_CONSTANT := 6.67430e-11 * METER ** 3 / (KG * SECOND ** 2)
 # *********** Astropolis additions ***********
 
 const BIT := 1.0 # TODO: Backport to I, Voyager and use in unit_multipliers
-const FLOP := 1.0 # Time integral of FLOPS
-const FLOPS := FLOP / SECOND # Same as real-world FLOPS except FP32-equivilant
-const SPP := 1.0 # biodiversity (effective species)
-const USD := 100.0 # The sim counts money in cents, a market's integer price tick.
+const FLOP := 1.0 ## Time integral of [constant FLOPS].
+const FLOPS := FLOP / SECOND ## Same as real-world FLOPS except FP32-equivalent.
+const SPP := 1.0 ## Biodiversity (effective species).
+const USD := 100.0 ## The sim counts money in cents, a market's integer price tick.
 const Q := 1e6 # Short for the QSNINDC ;)
 
 # ********************************************
+
+## Unit constants an automation client may read to convert to and from the
+## simulator's internal units: a length in meters is [code]length / METER[/code].
+const AUTOMATION_PROPERTIES: Array[StringName] = [
+	&"SECOND",
+	&"METER",
+	&"KG",
+	&"DEG",
+	&"MINUTE",
+	&"HOUR",
+	&"DAY",
+	&"YEAR",
+	&"KM",
+	&"AU",
+	&"LIGHT_YEAR",
+	&"PARSEC",
+	&"USD", # Astropolis addition
+]
 
 
 ## Conversion multipliers for units that are linear with zero-intersect.
@@ -100,9 +117,6 @@ const Q := 1e6 # Short for the QSNINDC ;)
 ## Default units are mostly (but not all) SI units that follow:
 ## [url]https://en.wikipedia.org/wiki/International_System_of_Units[/url].
 var unit_multipliers: Dictionary[StringName, float] = {
-	# Duplicated symbols have leading underscore.
-	# See IVQFormat for unit display strings.
-	
 	# time
 	&"s" : SECOND,
 	&"min" : MINUTE,
@@ -128,7 +142,7 @@ var unit_multipliers: Dictionary[StringName, float] = {
 	&"t" : TONNE,
 	# angle
 	&"rad" : 1.0,
-	&"deg" : DEG,
+	&"deg" : DEG, # IVQFormat displays as °
 	&"°" : DEG,
 	# temperature
 	&"K" : KELVIN,
@@ -150,7 +164,7 @@ var unit_multipliers: Dictionary[StringName, float] = {
 	&"c" : SPEED_OF_LIGHT,
 	# acceleration/gravity
 	&"m/s^2" : METER / SECOND ** 2,
-	&"g0" : STANDARD_GRAVITY,
+	&"g0" : STANDARD_GRAVITY, # IVQFormat displays as g
 	# angular velocity
 	&"rad/s" : 1.0 / SECOND, 
 	&"deg/d" : DEG / DAY,

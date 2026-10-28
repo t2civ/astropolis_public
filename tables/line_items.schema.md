@@ -7,11 +7,16 @@ are derived from these leaves in code
 (hard-coded `SUBTOTAL_*` constants in the financials components), not stored as rows. See
 `FINANCIAL_MODEL.md` for the model.
 
-A leaf holds one direction and never goes negative, except the `CASH` and `TRADE_RECEIVABLES`
-balances. An event that can go either way books its size to one of a pair by its sign:
-`TRADING_GAINS` / `TRADING_LOSSES`, `DISPOSAL_GAINS` / `DISPOSAL_LOSSES`,
-`EXCHANGE_CLEARING_GAINS` / `EXCHANGE_TAKE_COGS`, and on the cash-flow statement
-`PL_SETTLEMENTS` / `PL_PAYMENTS` and `EXCHANGE_TAKE_RECEIVED` / `EXCHANGE_TAKE_PAID`.
+A leaf holds one direction and never goes negative, except `TRADE_RECEIVABLES` and the cash
+balances, `CASH`, `GOVERNMENT_CASH` and `CORPORATE_CASH`, which may run below nothing between an
+account's settlements, where what it is short is booked as its debt (`DEBT`, `GOVERNMENT_DEBT`,
+`CORPORATE_DEBT`). An event that can go either way books its size to one of a pair by its sign: `TRADING_GAINS` / `TRADING_LOSSES`, `DISPOSAL_GAINS` /
+`DISPOSAL_LOSSES`, `EXCHANGE_CLEARING_GAINS` / `EXCHANGE_TAKE_COGS`, and on the cash-flow
+statement `PL_SETTLEMENTS` / `PL_PAYMENTS`, `EXCHANGE_TAKE_RECEIVED` / `EXCHANGE_TAKE_PAID`,
+`PAYOUTS_PAID` / `FUNDING_RECEIVED` and each treasury's side of them,
+at an agency `APPROPRIATIONS_RECEIVED` / `APPROPRIATION_RETURNS_PAID` and at its polity
+`APPROPRIATION_RETURNS_RECEIVED` / `APPROPRIATIONS_PAID`, `TRANSFERS_PAID` / `LEVIES_RECEIVED`,
+`DIVIDENDS_PAID` / `CAPITAL_PAID_IN`, and `BORROWED` / `REPAID` and each treasury's.
 
 ## Fields
 
@@ -34,15 +39,25 @@ balances. An event that can go either way books its size to one of a pair by its
 - gross_output — TRUE if this (producer) revenue counts toward the `GROSS_OUTPUT` economic measure;
   FALSE for resale/transfer/tax/trading lines (e.g. `TRADING_GAINS` is real revenue but not
   production).
-- operating_expense — for an `INCOME` cost leaf, TRUE routes it into the `OPERATING_EXPENSE` subtotal
-  (a fixed/overhead cost, below gross profit) instead of `COST_OF_GOODS`; operating income is the derived
-  `gross profit − operating expense`. Unused for revenue, cash-flow, and balance leaves.
+- operating_expense — for an `INCOME` leaf, TRUE routes it into the `OPERATING_EXPENSE` subtotal, below gross
+  profit, instead of `COST_OF_GOODS` or `REVENUE`: a cost no operation's run weighs, such as a module's upkeep, administration,
+  wear and research (`FINANCIAL_MODEL.md`, principle 6). Signed like `tax`: a cost leaf adds, and a revenue leaf, a gain
+  such as `DISPOSAL_GAINS`, subtracts. Operating income is the derived `gross profit − operating expense`. Unused for
+  cash-flow and balance leaves.
 - balance_class — for a `BALANCE` leaf, its `Enums.BalanceClasses` member (prefix `BALANCE_CLASS_`):
   `ASSET`, `LIABILITY`, or `EQUITY`. Routes the leaf into the assets, liabilities, or equity subtotal.
   Unused for `INCOME`/`CASH_FLOW` leaves (leave blank).
-- is_tax — for an `INCOME` leaf, TRUE routes it into the `TAX` subtotal (signed: `revenue` TRUE adds,
+- tax — for an `INCOME` leaf, TRUE routes it into the `TAX` subtotal (signed: `revenue` TRUE adds,
   FALSE subtracts) below operating income, instead of `REVENUE`/`COST_OF_GOODS`; net income is the
   derived `operating income + TAX`. Unused for `CASH_FLOW`/`BALANCE` leaves (leave blank).
-- sector_applicability — `Enums.SectorApplicability` member, written in full (no prefix): blank applies
-  to both sectors, `SECTOR_PUBLIC` to public-sector entities only (e.g. `TAX_REVENUE`), `SECTOR_PRIVATE`
-  to private only (e.g. `INCOME_TAX`). Declarative; reserved for display/validation gating.
+- account — `Enums.Accounts` member (prefix `ACCOUNT_`): whose account the item is. Blank is the
+  facility's own; `GOVERNMENT` and `CORPORATE` are its player's treasuries, booked at the player's
+  administrative center but never that facility's (`FINANCIAL_MODEL.md`, "The accounts"), such as
+  `TAX_REVENUE` and `GOVERNMENT_CASH`. The subtotals sum every account booked at an entity; the Budget
+  tab shows each treasury's items apart from the facility's.
+- keyed_by — `Enums.Counterparties` member (prefix `COUNTERPARTY_`): what the item is kept per. Blank
+  is kept once; `FACILITY` and `PLAYER` keep a line of the item for each facility or player it moves
+  money to or from, such as a treasury's `GOVERNMENT_FUNDING_PAID` by the facility funded and
+  `APPROPRIATIONS_PAID` by the agency, each line coming into being with its first booking, so no row
+  names a facility or a player (`FINANCIAL_MODEL.md`, "Line items"). A line follows its item in every
+  other field.

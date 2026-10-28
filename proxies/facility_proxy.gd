@@ -135,12 +135,37 @@ enum InventoryItems {
 }
 
 
+## The lines of a facility's budget in [member budget_lines], each a year (FINANCIAL_MODEL.md,
+## "Budgets"): what it has to spend, its income and what its funding lines leave it; what it
+## commits, its upkeep, interest and income tax and what wears out at its build cost; and what its
+## R&D and its builds past what wears out may spend of what those leave. Its payouts are what
+## remains.
+enum BudgetLines {
+	BUDGET_INCOME,
+	BUDGET_FUNDING,
+	BUDGET_UPKEEP,
+	BUDGET_INTEREST,
+	BUDGET_TAX,
+	BUDGET_WEAR,
+	BUDGET_RESEARCH,
+	BUDGET_BUILDS,
+}
+
+
+## The multiples of the market's price, lowest first, that a facility's desired flow is given at
+## (see [method get_inventory_desired_flow_curve]); the middle one is the market's price itself.
+const FLOW_CURVE_FACTORS: PackedFloat64Array = [0.5, 1.0, 2.0]
+
+
 var facility_id := -1  ## Index into [member ProxyBus.facility_proxies].
-var facility_class := -1  ## Facility class index. Not implemented yet.
+## Its name among its player's facilities, as in its owners' budget lines: its body's name, unless
+## the game start names it otherwise.
+var short_name := ""
+var facility_class := -1  ## [code]facility_classes.tsv[/code] row index.
 ## Public-sector share of this facility, often 0.0 or 1.0, sometimes mixed.
 var public_sector: float
 ## True if this is a small focused activity (affects stats and tax treatment).
-var is_unitary: bool
+var unitary: bool
 ## True if this facility makes its body's market, warehousing stock and keeping a bid
 ## and an ask standing (see TRADE_MODEL.md, "Market makers").
 var market_maker: bool
@@ -161,6 +186,22 @@ var region: StringName
 ## server-authoritative; FROM_PROXY bits are proxy-authoritative. Use
 ## [method set_flags] to modify the proxy half.
 var flags := 0
+## Cash the facility keeps: it pays its owners what it holds past it, its debt counted, at the end
+## of each interval (FINANCIAL_MODEL.md, "Facilities as subsidiaries"). Its owners' payout policy;
+## 0.0 by default. Use [method set_cash_reserve].
+var cash_reserve := 0.0
+## What the facility may spend past what it holds before anything draws on its owners' residents:
+## its cash less its debt, plus its line where its owners don't fund all it lacks, and what each
+## treasury that funds it holds less what it owes, and its line, as far as what is left of the
+## facility's funding line, as of its last interval (FINANCIAL_MODEL.md, "Credit"). Its trader's
+## commitments are bound by it.
+var credit := 0.0
+## Its budget a year as of its last interval, by [enum BudgetLines]; empty before its first.
+## Server-authoritative. Use [method get_budget_line].
+var budget_lines := PackedFloat64Array()
+## The game time of the last interval its ledger is booked through, -INF before its first: what it
+## booked this quarter, over the time from the quarter's start to this, is the pace it is on.
+var interval_time := -INF
 
 # *****************************************************************************
 # persisted
@@ -172,6 +213,12 @@ var trader: TraderProxy  ## Paired [TraderProxy]; set when TraderProxy registers
 var trader_id := -1  ## [member TraderProxy.trader_id] of [member trader].
 var joins: Array[JoinProxy] = []  ## [JoinProxy] aggregates this facility belongs to.
 var market: MarketProxy  ## Set after init. Lives on markets thread!
+## The operations' target spending shares held off auto, by operation type, each at its share (see
+## [method hold_operations_target_spending_share]). Resizable container — not threadsafe!
+var held_target_spending_shares: Dictionary[int, float] = {}
+## The resources' research shares held off auto, by resource type, each at its share (see
+## [method hold_inventory_research_share]). Resizable container — not threadsafe!
+var held_research_shares: Dictionary[int, float] = {}
 
 # *****************************************************************************
 
@@ -199,6 +246,25 @@ func remove() -> void:
 	body.remove_facility(self)
 	player.remove_facility(self)
 	super.remove()
+
+
+# ********************************** STATIC ***********************************
+
+## Returns what a curve of [constant FLOW_CURVE_FACTORS] points, starting at [param start] in
+## [param curve], gives at [param factor] times the price it was read at: linear in the log of
+## price between the points, and the end point's value past either end.
+static func get_curve_value(curve: PackedFloat64Array, factor: float, start := 0) -> float:
+	const FACTORS := FLOW_CURVE_FACTORS
+	var last := FACTORS.size() - 1
+	if !(factor > FACTORS[0]):
+		return curve[start]
+	if factor >= FACTORS[last]:
+		return curve[start + last]
+	var k := 1
+	while FACTORS[k] < factor:
+		k += 1
+	var t := log(factor / FACTORS[k - 1]) / log(FACTORS[k] / FACTORS[k - 1])
+	return lerpf(curve[start + k - 1], curve[start + k], t)
 
 
 # ***************************** THREAD-SAFE READ ******************************
@@ -241,11 +307,19 @@ func get_polity_name() -> StringName:
 	return polity.name
 
 
-# Facility flags
+# Facility flags and budget
 
 ## Returns the full bidirectional flag value (see [enum FacilityFlags]).
 func get_flags() -> int:
 	return flags
+
+
+## Returns its budget's line [param line], a [enum BudgetLines], a year (see
+## [member budget_lines]), or NAN before its first interval.
+func get_budget_line(line: int) -> float:
+	if line < 0 or line >= budget_lines.size():
+		return NAN
+	return budget_lines[line]
 
 
 # Operations (facility-only). Facility-only reads, plus proxy-authoritative knobs
@@ -279,6 +353,12 @@ func get_flags() -> int:
 ## Returns the AI/player-set target spending share of operation [param operation_type]
 ## (NAN = not in effect).
 @abstract func get_operations_target_spending_share(operation_type: int) -> float
+
+
+## Returns true if operation [param operation_type]'s target spending share is held off auto (see
+## [method hold_operations_target_spending_share]). proxy thread only!
+func is_operations_target_spending_share_held(operation_type: int) -> bool:
+	return held_target_spending_shares.has(operation_type)
 
 
 ## Returns the AI/player-set target run rate of operation [param operation_type]
@@ -367,6 +447,17 @@ func get_flags() -> int:
 @abstract func get_inventory_level_levers() -> PackedFloat64Array
 
 
+## Returns the share of what its budget's committed lines leave that the facility spends on
+## [param resource_type] as research and development (see [method set_inventory_research_share]).
+@abstract func get_inventory_research_share(resource_type: int) -> float
+
+
+## Returns true if [param resource_type]'s research share is held off auto (see
+## [method hold_inventory_research_share]). proxy thread only!
+func is_inventory_research_share_held(resource_type: int) -> bool:
+	return held_research_shares.has(resource_type)
+
+
 ## Returns the net flow rate of [param resource_type] averaged over the time horizon (positive
 ## = the facility made more than it used, negative = it used more than it made).
 @abstract func get_inventory_expected_rate(resource_type: int) -> float
@@ -400,6 +491,41 @@ func get_flags() -> int:
 
 ## Returns the per-resource desired rates array. Return is proxy array reference; read only!
 @abstract func get_inventory_desired_rates() -> PackedFloat64Array
+
+
+## Returns the flow in the critical rate of [param resource_type] at the market's price: the rate
+## without its step to the critical level (see [method get_inventory_critical_step]), so what the
+## facility must have over a span longer than its horizon is this flow over the span plus that
+## step, once. Smoothed over the time horizon as the rate is.
+@abstract func get_inventory_critical_flow(resource_type: int) -> float
+
+
+## Returns the step in the critical rate of [param resource_type]: what the facility's stock must
+## gain to reach its critical level at the market's price, a quantity, negative for what it holds
+## past it. Smoothed over the time horizon as the rate is.
+@abstract func get_inventory_critical_step(resource_type: int) -> float
+
+
+## Returns the step in the desired rate of [param resource_type]: what the facility's holder would
+## add to its stock at the market's price, a quantity, negative for what it would give. Smoothed
+## over the time horizon as the rate is. NAN where the market has no price.
+@abstract func get_inventory_desired_step(resource_type: int) -> float
+
+
+## Returns the flow in the desired rate of [param resource_type], the rate without its step toward
+## the desired levels (see [method get_inventory_desired_step]), as a curve over price: at each of
+## [constant FLOW_CURVE_FACTORS] times [method get_inventory_curve_price], smoothed over the time
+## horizon. What the facility wants over a span longer than its horizon is this flow over the span
+## plus that step, once; a trader contracting a quarter ahead reads it at that quarter's price (see
+## [method get_curve_value]). NANs where the market has no price; empty for an index out of
+## range.
+@abstract func get_inventory_desired_flow_curve(resource_type: int) -> PackedFloat64Array
+
+
+## Returns the market's price of [param resource_type], in [method MarketProxy.get_price] units,
+## that the flow curves were last read at (see [method get_inventory_desired_flow_curve]). NAN
+## where the market has no price.
+@abstract func get_inventory_curve_price(resource_type: int) -> float
 
 
 ## Returns what the facility used of [param resource_type] per unit time, averaged over its
@@ -590,11 +716,6 @@ func get_market() -> MarketProxy:
 	return market
 
 
-## Returns what the owners this facility settles its cash with hold: the money its trader's
-## commitments are paid from (FINANCIAL_MODEL.md, "The settlement"). 0.0 where it has no owners.
-@abstract func get_owners_wealth() -> float
-
-
 # ******************************** AI METHODS *********************************
 
 ## Sets [member gui_name] and marks the proxy dirty. Reverse-flow:
@@ -609,6 +730,11 @@ func get_market() -> MarketProxy:
 @abstract func set_flags(value: int) -> void
 
 
+## Sets [member cash_reserve] (>= 0.0), in money. Proxy-authoritative: this change flows
+## proxy -> server. No-op on a negative value or NAN.
+@abstract func set_cash_reserve(value: float) -> void
+
+
 ## Sets the [code]FROM_PROXY_MASK[/code] bits of operations flags for
 ## [param operation_type] to [param value]. Proxy-authoritative: this
 ## change flows proxy -> server. No-op on an out-of-range index.
@@ -621,9 +747,23 @@ func get_market() -> MarketProxy:
 @abstract func set_operations_target_margin(type: int, value: float) -> void
 
 
-## Sets the target spending share for operation [param type] (fraction of facility
-## profit past what wears out, or NAN = not in effect). Proxy-authoritative; flows proxy -> server.
+## Sets the target spending share for operation [param type] (fraction of what the facility's
+## budget leaves past its committed lines, what wears out among them, or NAN = not in effect; see
+## [member budget_lines]). Proxy-authoritative; flows proxy -> server. No-op where the share is
+## held (see [method hold_operations_target_spending_share]).
 @abstract func set_operations_target_spending_share(type: int, value: float) -> void
+
+
+## Holds the target spending share of operation [param type] off auto at [param value], as
+## [method set_operations_target_spending_share] takes it, until
+## [method release_operations_target_spending_share]. No-op on an out-of-range index.
+@abstract func hold_operations_target_spending_share(type: int, value: float) -> void
+
+
+## Returns the target spending share of operation [param type] to auto, where
+## [method set_operations_target_spending_share] sets it again. It keeps its share until then.
+func release_operations_target_spending_share(type: int) -> void:
+	held_target_spending_shares.erase(type)
 
 
 ## Sets the target run rate for operation [param type] (absolute rate, or NAN = not
@@ -672,3 +812,25 @@ func get_market() -> MarketProxy:
 ## [method get_inventory_desired_level]). Proxy-authoritative: this change flows proxy ->
 ## server. No-op on an out-of-range index or invalid value.
 @abstract func set_inventory_level_lever(type: int, value: float) -> void
+
+
+## Sets the share of what its budget leaves past its committed lines (see [member budget_lines])
+## that the facility spends on [param type] each interval as research and development, an operating
+## expense, before its builds take their share of the same: 0.0 spends none. It buys only what the
+## facility can trade or make. What it buys raises nothing yet: a patch until the
+## technology model, in which research raises what operations make (ROADMAP.md, "Technology").
+## Proxy-authoritative: this change flows proxy -> server. No-op on an out-of-range index or a value
+## outside [0.0, 1.0], or where the share is held (see [method hold_inventory_research_share]).
+@abstract func set_inventory_research_share(type: int, value: float) -> void
+
+
+## Holds the research share of [param type] off auto at [param value], as
+## [method set_inventory_research_share] takes it, until [method release_inventory_research_share].
+## No-op on an out-of-range index or a value outside [0.0, 1.0].
+@abstract func hold_inventory_research_share(type: int, value: float) -> void
+
+
+## Returns the research share of [param type] to auto, where [method set_inventory_research_share]
+## sets it again. It keeps its share until then.
+func release_inventory_research_share(type: int) -> void:
+	held_research_shares.erase(type)

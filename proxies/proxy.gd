@@ -16,6 +16,12 @@ extends RefCounted
 ## [JoinProxy], [TraderProxy], [MarketProxy]) declare the
 ## API. Sync plumbing and concrete instantiation live on server-side entities.
 ##
+## A value its AI sets through a proxy setter may be [i]held[/i] off auto, as a human player's
+## GUI holds what its human moves: its [code]hold_*[/code] method sets the value, the setter then
+## leaves it alone, and its [code]release_*[/code] method returns it to auto, for the AI to set
+## again. The proxy keeps and persists each held value. A held value is one a human can set, so an
+## AI must set it too, since on auto nothing else does.
+##
 ## WARNING: Lives on the proxy thread. Containers and many methods are not
 ## threadsafe; accessing non-container properties is safe.
 
@@ -53,8 +59,9 @@ const INTERVAL := 7.0 * IVUnits.DAY ## AI tick interval. See [constant BaseAI.IN
 ## components and scalar fields all re-flow from the server entity via
 ## _set_network_init() + dirty-sync. A subclass DOES persist its cross-proxy
 ## references (and the few relationship scalars a peer sets), so save/load relinks
-## the proxy graph directly instead of re-resolving it; list those in the
-## subclass's PERSIST_PROPERTIES. Never persist a Net component or entity data.
+## the proxy graph directly instead of re-resolving it, and the values held off
+## auto; list those in the subclass's PERSIST_PROPERTIES. Never persist a Net
+## component or entity data.
 const PERSIST_MODE := IVGlobal.PERSIST_PROCEDURAL
 
 
@@ -215,7 +222,8 @@ func get_development_biomass() -> float:
 	return 0.0
 
 
-## Returns the development "biodiversity" metric (0.0–1.0).
+## Returns the development "biodiversity" metric: the effective number of species, exp(H'),
+## at least 1.
 func get_development_biodiversity() -> float:
 	return 0.0
 
@@ -590,14 +598,23 @@ func get_financials_subtotals() -> PackedFloat64Array:
 	return PackedFloat64Array()
 
 
-## Returns the sparse line-item dict (line_items index -> value), or empty.
+## Returns the sparse line-item dict (key -> value; see [method Utils.get_line_item_key]), or
+## empty.
 func get_financials_accountings() -> Dictionary[int, float]:
 	return {}
 
 
-## Returns the per-quarter history of line item [param _item] (oldest first), or empty.
-func get_financials_accounting_history(_item: int) -> PackedFloat64Array:
+## Returns the per-quarter history of the line item kept under [param _key] (oldest first; see
+## [method Utils.get_line_item_key]), or empty.
+func get_financials_accounting_history(_key: int) -> PackedFloat64Array:
 	return PackedFloat64Array()
+
+
+## Returns the keys of line item [param _line_item_type], one kept per counterparty, that hold a
+## value this quarter or in the history, in the order of their counterparties' ids (see
+## [method Utils.get_line_item_key]), or empty.
+func get_financials_counterparty_keys(_line_item_type: int) -> Array[int]:
+	return []
 
 
 # Population data (read-only). Default 0.0/empty; developed proxies override. A facility
@@ -687,13 +704,13 @@ func get_population_years_of_wants(_population_type := -1) -> float:
 	return 0.0
 
 
-## Returns how unevenly [param population_type]'s people hold their means, their wealth measured
+## Returns [param population_type]'s inequality, how unevenly its people hold their means, their wealth measured
 ## in years of their wants, or all types' people if -1: the standard deviation of the log of
-## their means, 0.0 if all hold alike. A facility's type holds them as unevenly as its people
-## are served. Where facilities or types are combined it is the spread whose Theil index is
+## their means, 0.0 if all hold alike. A facility's type holds its own. Where facilities or
+## types are combined it is the inequality whose Theil index is
 ## theirs, which counts how far their means differ as well. NAN where no one's means are known;
 ## 0.0 without a population.
-func get_population_spread(_population_type := -1) -> float:
+func get_population_inequality(_population_type := -1) -> float:
 	return 0.0
 
 
@@ -723,10 +740,10 @@ func get_population_spending(_population_type := -1) -> float:
 	return 0.0
 
 
-## Returns what [param _population_type]'s residents got from their facility's settlement with
-## its owners in its last interval, or all types' if -1, in dollars per second: its dividends,
-## less what it drew from them where it was short (FINANCIAL_MODEL.md, "Ownership and money").
-## 0.0 without a population.
+## Returns what [param _population_type]'s residents got from their treasuries in their last
+## interval, or all types' if -1, in dollars per second: the government's transfers and the
+## corporate dividends, less what either drew from them where it was short (FINANCIAL_MODEL.md,
+## "Ownership, as built"). 0.0 without a population.
 func get_population_dividends(_population_type := -1) -> float:
 	return 0.0
 

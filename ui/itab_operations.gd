@@ -375,7 +375,7 @@ class ModuleFoldable extends FoldableContainer:
 
 	var _foldable_vbox := VBoxContainer.new()
 	var _module_hdr: RowItem
-	var _is_singular: bool
+	var _singular: bool
 	var _memory: Dictionary
 	var _base_column_width: float
 	var _memory_key: String
@@ -403,11 +403,11 @@ class ModuleFoldable extends FoldableContainer:
 		if operations_data:
 			module_state = MODULE_OPEN if !folded else MODULE_CLOSED
 			remove_theme_icon_override(&"folded_arrow")
-			_is_singular = false
+			_singular = false
 		else:
 			module_state = MODULE_SINGULAR
 			add_theme_icon_override(&"folded_arrow", _fold_icon_substitute)
-			_is_singular = true
+			_singular = true
 		var row_name: StringName = module_data[0]
 		title = row_name
 		_module_hdr.set_row(module_data, module_state)
@@ -435,7 +435,7 @@ class ModuleFoldable extends FoldableContainer:
 	
 	
 	func _on_folding_changed(is_folded_: bool) -> void:
-		if !_is_singular:
+		if !_singular:
 			_memory[_memory_key] = is_folded_
 			return
 		if !is_folded_:
@@ -445,7 +445,7 @@ class ModuleFoldable extends FoldableContainer:
 
 class RowItem extends HBoxContainer:
 	
-	var ops_label: Label # if _is_module == false
+	var ops_label: Label # if _module == false
 	var utilization_label := Label.new()
 	var power_label := Label.new()
 	var flow_label := Label.new()
@@ -453,11 +453,11 @@ class RowItem extends HBoxContainer:
 	var margin_label := Label.new()
 	var controler := Control.new() # TODO
 	
-	var _is_module: bool
+	var _module: bool
 	var _base_column_width: float
 
 	func _init(is_module: bool, base_column_width: float) -> void:
-		_is_module = is_module
+		_module = is_module
 		_base_column_width = base_column_width
 		size_flags_horizontal = SIZE_FILL
 
@@ -489,7 +489,7 @@ class RowItem extends HBoxContainer:
 		# NAN, blank
 		# INF, "?"
 
-		if !_is_module:
+		if !_module:
 			var row_name: StringName = data[0]
 			ops_label.text = row_name
 		var utilization: float = data[1]

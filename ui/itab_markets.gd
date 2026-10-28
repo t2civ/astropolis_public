@@ -21,8 +21,8 @@ extends MarginContainer
 ## resource lists its quarters: forward prices and what is contracted for each. Header tooltips
 ## define the columns.[br][br]
 ##
-## The desired rate is read at the body market's price, which stands at its seed until trade
-## returns (PRODUCTION_MODEL.md, "A facility's flows with the market").[br][br]
+## The desired rate is read at the body market's price, which stands at its seed where nothing
+## trades (PRODUCTION_MODEL.md, "A facility's flows with the market").[br][br]
 ##
 ## Tab indices follow row enumerations in [code]resource_classes.tsv[/code], with a
 ## placeholder transport tab after them.
@@ -378,7 +378,7 @@ func _get_proxy_data(target_name: StringName) -> void:
 	var facility := proxy as FacilityProxy
 	if facility:
 		_get_facility_rows(facility, resource_types, time, rows)
-		var kind := KIND_UNITARY if facility.is_unitary else KIND_FACILITY
+		var kind := KIND_UNITARY if facility.unitary else KIND_FACILITY
 		_update_tab_display.call_deferred(tab, kind, facility.time_horizon, rows)
 		return
 	_get_aggregate_rows(proxy, resource_types, time, rows)
@@ -399,8 +399,8 @@ func _get_facility_rows(facility: FacilityProxy, resource_types: PackedInt32Arra
 			continue
 		var row := RowData.new()
 		row.resource_type = resource_type
-		row.is_tradable = bool(flags & TRADABLE)
-		row.has_market_price = row.is_tradable and market != null
+		row.tradable = bool(flags & TRADABLE)
+		row.has_market_price = row.tradable and market != null
 		row.local_price = facility.get_inventory_local_price(resource_type)
 		if row.has_market_price:
 			row.unit_price = market.get_unit_price(resource_type)
@@ -479,7 +479,7 @@ func _add_facility_quarters(row: RowData, market: MarketProxy, resource_position
 		var contracted: float = resource_positions[later_qtr]
 		quarter.position = contracted
 		quarter.has_positions = true
-		quarter.is_beyond_horizon = true
+		quarter.beyond_horizon = true
 		row.quarters.append(quarter)
 
 
@@ -498,10 +498,10 @@ func _get_aggregate_rows(proxy: Proxy, resource_types: PackedInt32Array, time: f
 			continue
 		var row := RowData.new()
 		row.resource_type = resource_type
-		row.is_tradable = _trade_classes[resource_type] != -1
+		row.tradable = _trade_classes[resource_type] != -1
 		var is_cyber := _trade_classes[resource_type] == TRADE_CLASS_CYBER
 		var row_market := cyber_market if is_cyber else market
-		row.has_market_price = row.is_tradable and row_market != null
+		row.has_market_price = row.tradable and row_market != null
 		if row.has_market_price:
 			row.unit_price = row_market.get_unit_price(resource_type)
 			row.bid_unit_price = row_market.get_bid_unit_price(resource_type)
@@ -649,7 +649,7 @@ func _set_group(group: MarketsGroup, row: RowData, columns: Array[int], horizon:
 			quarter_tooltips.append(tooltip)
 			quarter_tones.append(TONE_NORMAL)
 		var label := _format_quarter(quarter.ordinal_qtr)
-		if quarter.is_beyond_horizon:
+		if quarter.beyond_horizon:
 			label += "  ›H"
 		quarter_rows.append([label, quarter_cells, quarter_tooltips, quarter_tones])
 	var memory_key := "MKT_" + _resource_names[row.resource_type]
@@ -668,7 +668,7 @@ func _get_row_cell(column: int, row: RowData, horizon: float) -> Array:
 			return [_format_price(row.local_price * multiplier), _get_local_tooltip(row, unit),
 					TONE_NORMAL]
 		COLUMN_PRICE:
-			if !row.is_tradable:
+			if !row.tradable:
 				return [NOT_APPLICABLE, "Not traded: it can't be carried.", TONE_NORMAL]
 			var count_text := _get_market_count_text(row.market_count)
 			if !row.has_market_price:
@@ -678,32 +678,32 @@ func _get_row_cell(column: int, row: RowData, horizon: float) -> Array:
 					_format_book(row.bid_unit_price, row.ask_unit_price) + "\n" + count_text,
 					TONE_NORMAL]
 		COLUMN_SPREAD:
-			if !row.is_tradable:
+			if !row.tradable:
 				return [NOT_APPLICABLE, "", TONE_NORMAL]
 			if !row.has_market_price:
 				return ["", "", TONE_NORMAL]
 			return [_format_spread(row.bid_unit_price, row.ask_unit_price),
 					_format_book(row.bid_unit_price, row.ask_unit_price), TONE_NORMAL]
 		COLUMN_TRADE:
-			if !row.is_tradable:
+			if !row.tradable:
 				return [NOT_APPLICABLE, "", TONE_NORMAL]
 			return [_format_rate(row.bought_rate - row.sold_rate, multiplier, true),
 					"Bought %s/d, sold %s/d" % [_format_rate(row.bought_rate, multiplier) + unit,
 					_format_rate(row.sold_rate, multiplier) + unit], TONE_NORMAL]
 		COLUMN_MARKET:
-			if !row.is_tradable:
+			if !row.tradable:
 				return [NOT_APPLICABLE, "", TONE_NORMAL]
 			return [_format_rate(row.bought_rate, multiplier), "", TONE_NORMAL]
 		COLUMN_INTERNAL:
 			return [_format_rate(row.internal_volume, multiplier), "", TONE_NORMAL]
 		COLUMN_DESIRED_RATE:
-			if !row.is_tradable:
+			if !row.tradable:
 				return [NOT_APPLICABLE, "", TONE_NORMAL]
 			if is_nan(row.desired_rate):
 				return [NO_VALUE, "No market price.", TONE_NORMAL]
 			return [_format_rate(row.desired_rate, multiplier, true), "", TONE_NORMAL]
 		COLUMN_CRITICAL_RATE:
-			if !row.is_tradable:
+			if !row.tradable:
 				return [NOT_APPLICABLE, "", TONE_NORMAL]
 			return [_format_rate(row.critical_rate, multiplier, true), "",
 					TONE_WARNING if row.critical_rate > 0.0 else TONE_NORMAL]
@@ -726,7 +726,7 @@ func _get_row_cell(column: int, row: RowData, horizon: float) -> Array:
 					"Desired level " + _format_quantity(row.desired_level, multiplier, unit),
 					TONE_NORMAL]
 		COLUMN_HEDGED:
-			if !row.is_tradable:
+			if !row.tradable:
 				return [NOT_APPLICABLE, "", TONE_NORMAL]
 			var wanted := row.desired_rate * horizon / multiplier # trade units
 			var hedged := NAN
@@ -768,7 +768,7 @@ func _get_quarter_cell(column: int, row: RowData, quarter: QuarterData) -> Array
 func _get_local_tooltip(row: RowData, unit: String) -> String:
 	var multiplier := _trade_unit_multipliers[row.resource_type]
 	var lines := PackedStringArray()
-	if !row.is_tradable:
+	if !row.tradable:
 		lines.append("Not traded: it can't be carried.")
 	elif !row.has_market_price:
 		lines.append("No market price.")
@@ -896,7 +896,7 @@ class RowData extends RefCounted:
 	# quantities sim units, local price sim units, unit prices money per trade unit, and the window
 	# sums trade units.
 	var resource_type: int
-	var is_tradable: bool
+	var tradable: bool
 	var has_market_price: bool
 	var local_price: float
 	var unit_price: int
@@ -925,7 +925,7 @@ class RowData extends RefCounted:
 class QuarterData extends RefCounted:
 	# One quarter of a resource's forward market; positions are in trade units (+ long).
 	var ordinal_qtr: int
-	var is_beyond_horizon := false
+	var beyond_horizon := false
 	var has_positions := false
 	var days: float
 	var unit_price: float # NAN without a price
@@ -1030,7 +1030,7 @@ class MarketsGroup extends FoldableContainer:
 	var _column_width: float
 	var _cell_gutter: float
 	var _memory_key: String
-	var _is_singular: bool
+	var _singular: bool
 
 
 	func _init(memory: Dictionary, column_width: float, cell_gutter: float,
@@ -1063,11 +1063,11 @@ class MarketsGroup extends FoldableContainer:
 		_memory_key = memory_key
 		if quarter_rows.is_empty():
 			add_theme_icon_override(&"folded_arrow", _fold_icon_substitute)
-			_is_singular = true
+			_singular = true
 			folded = true
 		else:
 			remove_theme_icon_override(&"folded_arrow")
-			_is_singular = false
+			_singular = false
 			folded = _memory.get(_memory_key, true)  # start closed
 
 		var n_rows := quarter_rows.size()
@@ -1090,7 +1090,7 @@ class MarketsGroup extends FoldableContainer:
 
 
 	func _on_folding_changed(is_folded_: bool) -> void:
-		if !_is_singular:
+		if !_singular:
 			_memory[_memory_key] = is_folded_
 			return
 		if !is_folded_:  # a resource with no quarters can't be unfolded

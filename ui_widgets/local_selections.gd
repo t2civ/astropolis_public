@@ -17,7 +17,20 @@ extends MarginContainer
 ## • System Facilities (star selection only; → all orbit/satellite bodies)
 ##
 ## Each section is a [code]FoldableContainer[/code]. Buttons fire selections
-## through the parent [AstroSelectionManager].
+## through the parent [AstroSelectionManager].[br][br]
+##
+## Set [member local_only], [member header_text] and [member centered] before adding it to the
+## tree.
+
+const SCENE := "res://public/ui_widgets/local_selections.tscn"  ## Scene file for instancing.
+const HEADER_SPACING := 10.0
+
+## Lists only the facilities at the selected body: no offworld or system sections.
+@export var local_only := false
+## Text shown above the list where it lists any facilities; none if empty.
+@export var header_text := ""
+## Centers the list and its header in the widget's width.
+@export var centered := false
 
 var _selection_manager: AstroSelectionManager
 var _selection_lookup: Dictionary[String, StringName] = {} # item text -> selection name
@@ -31,7 +44,7 @@ var _system: Array[String] = []
 var _section_content: Array[Array] = [_polities, _agencies, _companies, _offworld, _system]
 var _n_sections := _section_content.size()
 
-var _is_busy := false # don't update if getting data on ai thread (cheap mutex)
+var _busy := false # don't update if getting data on ai thread (cheap mutex)
 
 @onready var _scroll_container: ScrollContainer = $ScrollContainer
 @onready var _no_facilities: Label = $NoFacilities
@@ -52,7 +65,23 @@ var _is_busy := false # don't update if getting data on ai thread (cheap mutex)
 
 
 func _ready() -> void:
-	
+	var vbox: VBoxContainer = $ScrollContainer/VBox
+	if centered: # a ScrollContainer ignores its child's shrink-center flag
+		var center := CenterContainer.new()
+		center.size_flags_horizontal = SIZE_EXPAND_FILL
+		_scroll_container.remove_child(vbox)
+		center.add_child(vbox)
+		_scroll_container.add_child(center)
+	if header_text:
+		var header := Label.new()
+		header.text = header_text
+		header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var spacer := Control.new()
+		spacer.custom_minimum_size.y = HEADER_SPACING
+		vbox.add_child(header)
+		vbox.move_child(header, 0)
+		vbox.add_child(spacer)
+		vbox.move_child(spacer, 1)
 	IVGlobal.ui_dirty.connect(_update_selection)
 	IVStateManager.about_to_free_procedural_nodes.connect(_clear_procedural)
 	IVStateManager.about_to_start_simulator.connect(_connect_selection_manager)
@@ -61,14 +90,16 @@ func _ready() -> void:
 
 
 func _clear_procedural() -> void:
-	_is_busy = false # a dispatch in flight at teardown loses its channel callback
+	_busy = false # a dispatch in flight at teardown loses its channel callback
 	if _selection_manager:
 		_selection_manager.selection_changed.disconnect(_update_selection)
 		_selection_manager = null
 
 
 func _connect_selection_manager(_dummy := false) -> void:
-	# every sim start
+	# every sim start; one built during a load is connected in _ready, before the load's start
+	if _selection_manager:
+		return
 	_selection_manager = IVSelectionManager.get_selection_manager(self)
 	assert(_selection_manager, "Did not find valid 'selection_manager' above this node")
 	_selection_manager.selection_changed.connect(_update_selection)
@@ -76,13 +107,13 @@ func _connect_selection_manager(_dummy := false) -> void:
 
 func _update_selection(_dummy := false) -> void:
 	# Main thread
-	if _is_busy:
+	if _busy:
 		return
 	if not _selection_manager.has_selection():
 		return
 	if !IVStateManager.is_threads_allowed():
 		return # don't dispatch into the non-draining proxy channel while threads stopped
-	_is_busy = true
+	_busy = true
 	var body_name := _selection_manager.get_body_name()
 	MainThreadGlobal.call_proxy_thread(_set_selections_on_proxy_thread.bind(body_name))
 
@@ -100,7 +131,7 @@ func _set_selections_on_proxy_thread(body_name: StringName) -> void:
 	
 	var body: BodyProxy = Proxy.get_proxy_by_name(body_name)
 	if !body:
-		_is_busy = false
+		_busy = false
 		return
 	var is_star := bool(body.body_flags & BODYFLAGS_STAR)
 	_set_selections_recursive(body, is_star, true)
@@ -137,6 +168,9 @@ func _set_selections_recursive(body: BodyProxy, is_star: bool, root_call := fals
 		elif player.homeworld == body.name: # has precedence over any others
 			_selection_lookup[player_gui_name] = facility.name
 	
+	if local_only:
+		return
+
 	# add "offworld" or "system" bodies that have facilities
 	if !root_call and body.has_development():
 		# add body
@@ -164,7 +198,7 @@ func _update_foldables() -> void:
 			_section_foldables[i].hide()
 	_scroll_container.visible = has_facilities
 	_no_facilities.visible = !has_facilities
-	_is_busy = false # safe to call again
+	_busy = false # safe to call again
 
 
 func _update_foldable(index: int) -> void:

@@ -20,9 +20,9 @@ const MIN_DISCOVERED_BOOST := 1.1
 
 
 var _db_tables := IVTableData.db_tables
-var _is_extraction_resources: PackedInt32Array = PackedInt32Array(IVTableData.get_db_true_rows(
-		&"resources", &"is_extraction"))
-var _n_is_extraction_resources := _is_extraction_resources.size()
+var _extraction_resources: PackedInt32Array = PackedInt32Array(IVTableData.get_db_true_rows(
+		&"resources", &"extraction"))
+var _n_extraction_resources := _extraction_resources.size()
 var _stratum_names: Array[StringName] = _db_tables[&"stratum_groups"][&"name"]
 var _survey_names: Array[StringName] = _db_tables[&"surveys"][&"name"]
 var _survey_substring: Array[StringName] = _db_tables[&"surveys"][&"substring"]
@@ -99,11 +99,11 @@ func _get_proxy_data(body_name: StringName, selection_name: StringName) -> void:
 
 		var resources_data := []
 		# Stratum resource indexes must be converted to resource_type.
-		for j in _n_is_extraction_resources:
+		for j in _n_extraction_resources:
 			var mass: float = masses[j]
 			if mass == 0.0:
 				continue
-			var resource_type: int = _is_extraction_resources[j]
+			var resource_type: int = _extraction_resources[j]
 			var distribution_data := body_proxy.get_stratum_resource_data(i, resource_type)
 			var resource_data := [resource_type, distribution_data]
 			resources_data.append(resource_data)

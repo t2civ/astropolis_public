@@ -320,7 +320,7 @@ func _get_proxy_data(target_name: StringName, tab: int, chosen_type: int) -> voi
 	data.types.sort_custom(func(a: int, b: int) -> bool:
 		return proxy.get_population_number(a) > proxy.get_population_number(b))
 	var facility := proxy as FacilityProxy
-	data.is_facility = facility != null
+	data.at_facility = facility != null
 	if data.types.has(chosen_type) or data.types.size() == 1:
 		var shown_type := chosen_type if data.types.has(chosen_type) else data.types[0]
 		data.columns.append(_get_column(proxy, shown_type, data.types))
@@ -353,7 +353,7 @@ func _get_column(proxy: Proxy, type: int, types: Array[int]) -> ColumnData:
 				if _has_want(type, types, need) else NAN)
 	column.wealth = proxy.get_population_wealth(type)
 	column.years_of_wants = proxy.get_population_years_of_wants(type)
-	column.spread = proxy.get_population_spread(type)
+	column.inequality = proxy.get_population_inequality(type)
 	column.participation = proxy.get_population_participation(type)
 	column.offered_hours = proxy.get_population_offered_hours(type)
 	column.worked_hours = proxy.get_population_worked_hours(type)
@@ -388,7 +388,7 @@ func _update_tab_display(tab: int, data: PopulationsData) -> void:
 		headers.append(_get_type_header(type))
 		tooltips.append(_get_type_text(type) + "\n" + TYPE_COLUMN_TOOLTIPS[tab]
 				+ (COMBINED_TOOLTIP if type == -1 else ""))
-	if tab == TAB_NEEDS and is_single and data.is_facility:
+	if tab == TAB_NEEDS and is_single and data.at_facility:
 		headers.append_array(SATISFIER_HEADERS)
 		tooltips.append_array(SATISFIER_TOOLTIPS)
 	var lines: Array[LineData]
@@ -473,11 +473,11 @@ func _get_demography_lines(data: PopulationsData) -> Array[LineData]:
 func _get_needs_lines(data: PopulationsData) -> Array[LineData]:
 	var columns := data.columns
 	var is_single := columns.size() == 1
-	var is_satisfiers_shown := is_single and data.is_facility
+	var is_satisfiers_shown := is_single and data.at_facility
 	var lines: Array[LineData] = []
 	for tier in TIER_TEXTS.size():
 		var section := _make_line(TIER_TEXTS[tier], TIER_TOOLTIPS[tier])
-		section.is_section = true
+		section.heading = true
 		lines.append(section)
 		for need in _n_needs:
 			if _need_tiers[need] != tier:
@@ -549,7 +549,7 @@ func _get_means_lines(data: PopulationsData) -> Array[LineData]:
 		_add_cell(wealth_per_head, _format_money(_get_ratio(column.wealth, column.number)))
 		_add_cell(years, _format_value(column.years_of_wants)
 				if _has_any_want(column.population_type, data.types) else NOT_APPLICABLE)
-		_add_cell(inequality, _format_gini(column.spread)
+		_add_cell(inequality, _format_gini(column.inequality)
 				if _has_any_want(column.population_type, data.types) else NOT_APPLICABLE)
 		_add_cell(participation, _format_percent(column.participation))
 		_add_cell(offered, IVQFormat.metric_number(column.offered_hours * IVUnits.DAY / multiplier))
@@ -736,13 +736,13 @@ func _format_percent(share: float) -> String:
 	return "%.f" % (share * 100.0)
 
 
-# Formats [param spread], the standard deviation of the log of a lognormal, as its Gini
-# coefficient, erf(spread / 2).
-func _format_gini(spread: float) -> String:
-	if is_nan(spread):
+# Formats [param inequality], the standard deviation of the log of a lognormal, as its Gini
+# coefficient, erf(inequality / 2).
+func _format_gini(inequality: float) -> String:
+	if is_nan(inequality):
 		return NO_VALUE
 	# Abramowitz and Stegun 7.1.26, within 1.5e-7.
-	var x := absf(spread) / 2.0
+	var x := absf(inequality) / 2.0
 	var t := 1.0 / (1.0 + 0.3275911 * x)
 	var series := t * (0.254829592 + t * (-0.284496736 + t * (1.421413741
 			+ t * (-1.453152027 + t * 1.061405429))))
@@ -772,7 +772,7 @@ func _format_rate(rate: float, multiplier: float) -> String:
 class PopulationsData extends RefCounted:
 	# What the selection shows, gathered on the proxy thread. Rates are sim units per second,
 	# prices sim units.
-	var is_facility := false
+	var at_facility := false
 	var types: Array[int] = [] # present, most populous first
 	var columns: Array[ColumnData] = []
 	var unmet_rates: Dictionary[int, float] = {} # by satisfier resource
@@ -792,7 +792,7 @@ class ColumnData extends RefCounted:
 	var satisfactions := PackedFloat64Array() # by need; NAN where the type has no want for it
 	var wealth: float
 	var years_of_wants: float
-	var spread: float # of the log of the means
+	var inequality: float # the standard deviation of the log of the means
 	var participation: float
 	var offered_hours: float
 	var worked_hours: float
@@ -807,7 +807,7 @@ class LineData extends RefCounted:
 	var title: String
 	var title_tooltip := ""
 	var memory_key := "" # "" for a line that doesn't unfold
-	var is_section := false
+	var heading := false
 	var share := NAN # the bar's fill; NAN shows none
 	var bar_tone: int = TONE_NORMAL
 	var cells := PackedStringArray()
@@ -914,7 +914,7 @@ class PopulationsLine extends FoldableContainer:
 	var _bar_width: float
 	var _cell_gutter: float
 	var _memory_key: String
-	var _is_singular: bool
+	var _singular: bool
 
 
 	func _init(memory: Dictionary, column_width: float, bar_width: float, cell_gutter: float,
@@ -946,7 +946,7 @@ class PopulationsLine extends FoldableContainer:
 	func set_line(line: LineData, is_bar_shown: bool) -> void:
 		title = line.title
 		tooltip_text = line.title_tooltip
-		if line.is_section:
+		if line.heading:
 			add_theme_color_override(&"font_color", SECTION_COLOR)
 			add_theme_color_override(&"collapsed_font_color", SECTION_COLOR)
 		else:
@@ -958,11 +958,11 @@ class PopulationsLine extends FoldableContainer:
 		_memory_key = line.memory_key
 		if line.rows.is_empty():
 			add_theme_icon_override(&"folded_arrow", _fold_icon_substitute)
-			_is_singular = true
+			_singular = true
 			folded = true
 		else:
 			remove_theme_icon_override(&"folded_arrow")
-			_is_singular = false
+			_singular = false
 			folded = _memory.get(_memory_key, true)  # start closed
 
 		var n_rows := line.rows.size()
@@ -981,7 +981,7 @@ class PopulationsLine extends FoldableContainer:
 
 
 	func _on_folding_changed(is_folded_: bool) -> void:
-		if !_is_singular:
+		if !_singular:
 			_memory[_memory_key] = is_folded_
 			return
 		if !is_folded_:  # a line with no rows can't be unfolded

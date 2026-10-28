@@ -179,7 +179,7 @@ The table has game start entities only. We have one 'homeworld' facility for eac
 
 Fields:
 * `public_sector` Fraction of facility that is public sector. For small facilities, generally 1.0 for space agencies and 0.0 for private companies. Larger facilities may be intermediate.
-* `is_unitary` True for small focused facilities (e.g., a research station or asteroid mine). False for larger settlements, habitats or spaceports. If true, we treat all operations as a single economic activity for the purpose of economy stats and taxation (e.g., we don't tax the asteroid mine for its solar panel generation). If false, each operation is treated like a separate buisness (here we assume that any power generators are selling into the grid).
+* `unitary` True for small focused facilities (e.g., a research station or asteroid mine). False for larger settlements, habitats or spaceports. If true, we treat all operations as a single economic activity for the purpose of economy stats and taxation (e.g., we don't tax the asteroid mine for its solar panel generation). If false, each operation is treated like a separate buisness (here we assume that any power generators are selling into the grid).
 * `construction_mass` Total mass of all constructions. For 'homeworld' facilities this value is total anthropogenic mass.
 * `biomass` Total biomass (dry weight, =2x C value).
 * `bioproductivity` [Dev temp value; see below] Total bioproductivity (dry weight, =2x C value).

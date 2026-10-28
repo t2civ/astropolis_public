@@ -14,7 +14,6 @@ Notes:
    - Populations consume food and goods and generate Biowaste and Municipal Waste.
    - Natural systems convert resources outside of "operations". This includes Earth's water cycle and limited processing of waste streams.
 
-
 ## Energy
 
 - **Solar Power** — Photovoltaic and concentrated solar thermal electricity generation. No fuel input; output scales with solar flux and collector area. Primary power source for inner solar system operations.
@@ -41,7 +40,6 @@ Notes:
 - **Radioisotope Power** — Electricity and heat from radioactive decay in radioisotope thermoelectric generators (RTGs) and Stirling radioisotope generators. Uses plutonium-238 or strontium-90 produced in reactor operations. Low power density but extreme reliability and longevity; critical for deep outer solar system probes and surface stations with limited sunlight.
 - **Battery Storage** — Charging batteries with power while the sun shines and discharging them at night or in eclipse, a share of it lost on the round trip.
 
-
 ## Extraction
 
 - **Atmosphere Separation** — Cryogenic distillation, pressure-swing adsorption, membrane separation, or centrifugal processing of planetary atmospheres. On terrestrial worlds, separates oxygen, nitrogen, carbon dioxide, argon, and noble gases. On gas giants, atmospheric skimming or balloon-based systems harvest hydrogen, helium, helium-3, and methane from the upper atmosphere.
@@ -66,7 +64,6 @@ Notes:
 - **Volatiles Extraction** — Thermal processing, sublimation trapping, or mechanical extraction of volatile species from ice-bearing strata, regolith, permafrost, and brine reservoirs. Target products depend on source composition and include water, carbon dioxide, carbon monoxide, ammonia, methane, sulfur dioxide, helium-3 (from solar-wind-implanted regolith), and other trapped volatiles. Applicable to polar ice deposits, cometary bodies, icy moon shells, and subsurface oceans.
 - **Hydrocarbon Separation** — Collection and separation of liquid hydrocarbons from surface bodies, principally Titan's methane–ethane seas. Yields methane, ethane, and dissolved nitrogen. Distinct from gas drilling (subsurface reservoirs) and atmosphere separation (gaseous phases).
 
-
 ## Refining
 
 - **Oil Refining** — Fractional distillation, catalytic cracking, and hydroprocessing of crude oil. Primary products are liquid fuels, petrochemical naphtha for polymer feedstock, and industrial solvents. Hydrodesulfurization recovers elemental sulfur as a co-product. Earth-dominated.
@@ -87,7 +84,6 @@ Notes:
 - **Industrial Recycling & Incineration** — Processing of end-of-life equipment, manufacturing scrap, process residues, spent catalysts, and mixed industrial waste streams. Mechanical shredding, magnetic and eddy-current separation, pyrometallurgical smelting, hydrometallurgical leaching, and chemical dissolution recover ferrous and non-ferrous metals, precious metals, rare earths, and reusable alloy fractions. Non-recoverable residual is treated by high-temperature incineration or plasma gasification with energy recovery; vitrified slag is disposable or usable as aggregate. Essential for mass-closure in space habitats and off-Earth settlements where resupply is constrained.
 - **Uranium Fuel Reprocessing** — Aqueous (PUREX) or pyrochemical separation of irradiated LEU and HEU fuel assemblies to recover uranium and transuranic actinides for re-fabrication into fresh fuel. Concentrates fission products into vitrified high-level waste. Extends fissile resource utilization by an order of magnitude or more.
 - **Thorium Fuel Reprocessing** — Aqueous (THOREX) or pyrochemical separation of irradiated thorium-cycle fuel assemblies to recover bred ²³³U and residual thorium for re-fabrication. Concentrates fission products into high-level waste. Requires remote handling due to hard-gamma ²³²U contamination.
-
 
 ## Conversions/Synthesis
 
@@ -118,7 +114,6 @@ Notes:
 - **Solid Fuel Production** — Mixing, casting, and curing of solid rocket propellant from ammonium perchlorate oxidizer, aluminium powder, and polymer binder, including grain geometry design for thrust profiling.
 - **Fertilizer Production** — Compounding and granulation of ammonia, phosphate rock, potash, sulfur-derived acids, and micronutrients into blended NPK and specialty fertilizer products.
 
-
 ## Manufacturing
 
 - **Construction** — On-site assembly, installation, and finishing of fixed structures: buildings, roads, bridges, tunnels, landing pads, launch infrastructure, power distribution networks, pipelines, life-support systems, radiation shielding, and pressurized habitats.
@@ -142,7 +137,6 @@ Notes:
 - **Neuromorphic Processor Fabrication** — Fabrication of programmable neuromorphic computing hardware using advanced semiconductor and novel device architectures. Speculative at production scale; input profile similar to tensor processors.
 - **Consumer Goods Manufacturing** — Mass production of furniture, clothing, housewares, paper products, hygiene products, and building finishes from polymers, steel, textiles, wood products, and glass.
 - **Specialty Goods Manufacturing** — Production of high-value, low-mass items: premium personal electronics, jewelry, art objects, luxury fashion, and recreational equipment.
-
 
 ## Biological
 
@@ -168,7 +162,6 @@ Notes:
 - **Biogas Production** — Anaerobic digestion of organic waste: biowaste, crop residues, and sewage sludge decomposed by microbial consortia to produce methane-rich biogas and nutrient-dense digestate. Biogas is upgraded to pipeline-grade methane or used directly for power generation; digestate is recoverable as fertilizer. Critical waste-processing and energy-recovery pathway for closed-loop off-Earth habitats.
 - **Biowaste Treatment** — Collection and processing of sewage, greywater, food waste, and mixed organic waste from population centers and habitats. Primary treatment via screening and settling; secondary treatment via aerobic or anaerobic biological processes; tertiary treatment via membrane filtration, UV disinfection, and chemical polishing. Nutrient recovery extracts nitrogen and phosphorus compounds for fertilizer production. Produces reclaimed water and concentrated biosolids; biosolids serve as feedstock for downstream biogas production, soil conditioning, or biomass conversion. Critical water- and mass-closure operation for space habitats and off-Earth settlements; major municipal and industrial infrastructure on Earth.
 
-
 ## Services
 
 - **Scalar Processing** — Execution of general-purpose computation on CPU-class hardware: business systems, databases, transaction and control workloads, and modeling. Draws large, steady electrical loads; output measured in floating-point operations.
@@ -178,6 +171,7 @@ Notes:
 - **Telecommunications** — Switching, routing, and relaying of voice and data between endpoints. Consumes computing and network capacity and electrical power; produces transmission independent of the content carried.
 - **Cybersecurity** — Defense of information systems: monitoring, threat detection, cryptographic protection, and incident response. Draws heavily on computing, including accelerated compute for threat analysis.
 - **Broadcast & Streaming** — Production, encoding, and distribution of audiovisual content to audiences. Rides on telecommunications for delivery and draws on computing for production and serving.
+- **Metaverse** — Hosting persistent shared worlds for their occupants, built and run by studios and their networks. Draws heavy accelerated compute for each hour spent in them.
 - **Marketing & Advertising** — Market research and the creation and placement of advertising. Draws on broadcast and streaming channels to reach audiences and on accelerated compute for targeting.
 - **Business Services** — Provision of outsourced administrative and back-office operations: contact centers, transaction processing, and remote support. Compute- and communications-intensive.
 - **Accounting Services** — Provision of bookkeeping, audit, tax, and financial-reporting work.
@@ -185,10 +179,10 @@ Notes:
 - **Legal Services** — Provision of legal counsel, representation, contracting, and compliance work.
 - **Financial Services** — Banking, lending, payments, and investment and asset management. Compute- and information-intensive.
 - **Insurance & Risk** — Underwriting of risk and provision of coverage against loss, including actuarial assessment and reinsurance. Accelerated-compute-intensive for risk modeling.
-- **Architecture & Engineering** — Design and technical specification of structures, vehicles, and systems. Compute- and simulation-intensive; its design output is taken up by construction and fabrication.
+- **Engineering Design** — Design and technical specification of structures, vehicles, and systems. Compute- and simulation-intensive; its design output is taken up by construction and fabrication.
+- **Field Engineering** — Engineers and inspectors on site: surveys, supervision, inspection, testing, and overhaul. Consumes instruments.
 - **Research & Development** — Scientific and engineering investigation: experimentation, modeling, design, and prototyping. Intensive in computing — increasingly accelerated and AI compute — and in instruments and specialized materials; yields new knowledge and designs.
 - **Exchange Operations** — Operation of trading venues and central clearing: order matching, settlement guarantee, and coordination of delivery load-out for traded goods. Compute- and communications-intensive.
-- **Wholesale & Logistics** — Bulk distribution and freight movement of goods within a body. Consumes transport vehicles and energy.
 - **Passenger Services** — Movement of people within a body via transit and carriers. Consumes transport vehicles and energy.
 - **Radioactive Storage** — Keeping spent fuel and radioactive waste in dry casks: the space of the radioactive class, made by the watch and handling a store needs. Consumes labor.
 - **Bulk Storage** — Keeping solid goods in warehouses, silos and stockyards: the space of the bulk class, made by the handling a store needs. Consumes labor.
@@ -200,9 +194,12 @@ Notes:
 - **Electricity Storage** — Keeping power in battery banks held in reserve rather than cycled each day: the space of the electricity class, four megawatt-hours a unit. A battery bank's units move between it and Battery Storage over a month. What the cells lose standing, about 2% a month, is left out, as no store loses what it holds. Consumes labor.
 - **Retail Services** — Sale and last-mile distribution of goods to consumers, moving consumer goods to end users.
 - **Hospitality** — Provision of lodging, food service, and travel accommodation. Consumes prepared food and consumer goods.
-- **Entertainment** — Provision of in-person leisure and recreation at venues and events.
+- **Live Entertainment** — Provision of leisure and recreation at venues and events, the audience present.
 - **Personal Services** — Provision of direct services to individuals: grooming, fitness, childcare, domestic help, and personal-goods repair.
-- **Healthcare** — Delivery of medical and health services: diagnosis, treatment, surgery, and care. Consumes pharmaceuticals and medical equipment; increasingly draws on accelerated compute for diagnostics.
-- **Education** — Delivery of in-person teaching and training across primary, tertiary, and vocational levels.
+- **Clinical Care** — Delivery of care with the patient present: diagnosis, treatment, surgery, and nursing. Consumes pharmaceuticals and medical equipment.
+- **Telemedicine** — Remote consultation, diagnosis, and monitoring by clinicians from their hospitals and clinics. Draws on accelerated compute for diagnostics.
+- **Schooling** — Delivery of teaching and training in classrooms, labs, and lecture halls across primary, tertiary, and vocational levels.
+- **Online Learning** — Courses, references, and tutoring served over the network by schools, universities, and publishers. Content made once and served to many, with compute for its hosting and its tutors.
 - **Public/Gov Services** — Provision of administration, security, justice, defense, and civic services.
 - **Utilities/Env Services** — Distribution of water, power, and gas to premises and the collection and processing of waste. Consumes water and electricity for delivery and handles waste streams from settlements.
+

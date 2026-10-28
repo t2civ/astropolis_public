@@ -8,7 +8,8 @@
 class_name FacilityBaseAI
 extends BaseAI
 
-## Default AI for facilities the local player owns.
+## Default AI for every facility. A human player's facilities run it too, and it sets whatever
+## their human leaves on auto (see [Proxy]).
 ##
 ## To implement a custom facility AI, extend this class and add
 ## [code]const OVERRIDE_AI := true[/code].[br][br]
@@ -196,20 +197,24 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 
 ## Facility-posture strategy definitions; index = [enum FacilityStrategies] value.
 ## The [code]buildout_spending_share[/code] key (read by [method _apply_facility_knobs])
-## is the share of the facility's profit, past what wears out, that its owners leave in it
-## for growth: zero or more builds, replacing what wears out first and growing within that
-## share, which the server holds below one; a negative value winds capacity down at that
-## rate; and an omitted key (NAN) holds. Postures never selected by
-## [method _reconcile_facility_strategy] are left empty.
+## is the share of what the facility's budget leaves past its committed lines, what wears out
+## among them, that its owners leave in it for growth (FINANCIAL_MODEL.md, "Budgets"): zero or
+## more builds, replacing what wears out first and growing within that share, which the server
+## holds below one; a negative value winds capacity down at that rate; and an omitted key (NAN)
+## holds. The [code]research_spending_share[/code] key is the share of the same it spends on
+## research and development, on each resource tagged [code]research[/code] (see
+## [method FacilityProxy.set_inventory_research_share]); at an agency, where it spends any, all the
+## builds' share leaves, since it pays nothing out. An omitted key spends none.
+## Postures never selected by [method _reconcile_facility_strategy] are left empty.
 static var facility_strategy_defs: Array[Dictionary] = [
 	{}, # NEUTRAL
-	{&"buildout_spending_share": 0.25}, # GROWTH
-	{&"buildout_spending_share": 0.13}, # PROFITABILITY
+	{&"buildout_spending_share": 0.25, &"research_spending_share": 0.02}, # GROWTH
+	{&"buildout_spending_share": 0.13, &"research_spending_share": 0.02}, # PROFITABILITY
 	{}, # DIVERSIFICATION
 	{}, # SPECIALIZATION
-	{&"buildout_spending_share": 0.05}, # STRATEGIC_OUTPOST
+	{&"buildout_spending_share": 0.05, &"research_spending_share": 0.02}, # STRATEGIC_OUTPOST
 	{}, # DEVELOPMENT
-	{&"buildout_spending_share": 0.08}, # STEADY_STATE
+	{&"buildout_spending_share": 0.08, &"research_spending_share": 0.02}, # STEADY_STATE
 	{&"buildout_spending_share": -0.5}, # DECOMMISSIONING (negative = wind-down)
 	{}, # EMERGENCY
 ]
@@ -338,6 +343,8 @@ func ai_init() -> void:
 func process_ai_interval(delta: float) -> void:
 	_update_price_swings(delta)
 	_author_resource_strategies()
+	# Its human may have returned a knob to auto since the quarter's authoring.
+	_apply_facility_knobs(facility_strategy)
 
 
 ## Strategic, forward-looking reassessment of sticky policy. Same authoring pass;
@@ -530,14 +537,24 @@ func _reconcile_facility_strategy() -> int:
 
 
 ## Translates the posture's def into the BUILDOUT operation's target spending share
-## (the share of facility profit past what wears out the yards spend on growth; NAN holds). The
-## BUILDOUT op is resolved by tag, so no table entity name is referenced here.
+## (the share of the facility's budget past its committed lines the yards spend on growth; NAN
+## holds), and into the research share of each resource tagged [code]research[/code], at an agency
+## all the builds' share leaves, the share its human holds where held. Leaves what is held alone.
+## Both are resolved by tag, so no table entity name is referenced here.
 func _apply_facility_knobs(strategy: int) -> void:
 	var def := facility_strategy_defs[strategy]
 	var share: float = def.get(&"buildout_spending_share", NAN)
 	var buildout_ops: PackedInt32Array = _tag_operations.get(&"buildout", PackedInt32Array())
 	for operation_type in buildout_ops:
 		proxy.set_operations_target_spending_share(operation_type, share)
+		share = proxy.get_operations_target_spending_share(operation_type)
+	var research_share: float = def.get(&"research_spending_share", 0.0)
+	if research_share > 0.0 and proxy.get_player_class() == Enums.PlayerClasses.PLAYER_CLASS_AGENCY:
+		research_share = 1.0 - share if share > 0.0 else 1.0
+	var research_resources: PackedInt32Array = _tag_resources.get(&"research",
+			PackedInt32Array())
+	for resource_type in research_resources:
+		proxy.set_inventory_research_share(resource_type, research_share)
 
 
 ## Sets [member trader_strategy], emitting [signal trader_strategy_changed] only on
