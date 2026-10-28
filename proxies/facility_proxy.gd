@@ -199,6 +199,9 @@ var credit := 0.0
 ## Its budget a year as of its last interval, by [enum BudgetLines]; empty before its first.
 ## Server-authoritative. Use [method get_budget_line].
 var budget_lines := PackedFloat64Array()
+## The game time of the last interval its ledger is booked through, -INF before its first: what it
+## booked this quarter, over the time from the quarter's start to this, is the pace it is on.
+var interval_time := -INF
 
 # *****************************************************************************
 # persisted

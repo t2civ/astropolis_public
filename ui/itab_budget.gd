@@ -33,11 +33,12 @@ extends MarginContainer
 ## "Budgets"): its committed lines as shares of what it has to spend a year, and its discretionary
 ## lines as shares of what they leave, the rest of its budget last. At an administrative center or
 ## for a player it shows each of its player's treasuries' budgets, and at a facility its own budget,
-## below its owners' lines for it where it isn't its player's center. Each bar shows its line's
-## share, and within it what the line drew last quarter on the same scale, red past the share; a line
-## that funds all its counterparty lacks spans the width. A line its owner sets, a treasury's funding
-## of a facility and a facility's R&D and builds, shows the share it is set at, a facility by its
-## short name, and the bar's tooltip is a legend of its colors.[br][br]
+## below its owners' lines for it where it isn't its player's center. Each bar is its line's share,
+## marked on the same scale where the line drew last quarter and where this quarter's pace puts it,
+## red past the share; a line that funds all its counterparty lacks spans the width. The bar's
+## tooltip gives both draws, beside a legend of its colors. A line its owner sets, a treasury's
+## funding of a facility and a facility's R&D and builds, shows the share it is set at, a facility
+## by its short name.[br][br]
 ##
 ## Where this machine's human plays the player ([method PlayerProxy.is_local_human]), each line its
 ## owner sets has an Auto checkbox, checked while the player's AI sets it; unchecked, the line is
@@ -62,6 +63,7 @@ const SUBTOTAL_TAX := 10
 
 const NO_VALUE := "—" ## Applies, but has no value now.
 const UNBOUNDED := "∞" ## A line that funds all its counterparty lacks, or unlimited money.
+const NO_DRAWS: PackedFloat64Array = [NAN, NAN] # a line's draws where the ledger has none
 
 const FUNDING_TAB := 0
 
@@ -662,12 +664,14 @@ func _subtract_series(a: PackedFloat64Array, b: PackedFloat64Array) -> PackedFlo
 
 func _collect_funding(proxy: Proxy) -> Array:
 	# [[title, total, committed_rows, discretionary_rows, control], ...], each row [name, share,
-	# line, drawn, drawn share, control], its drawn share what it drew on the scale of its share: at an administrative center or for a player, each of the player's
-	# treasuries that has a budget or a line; at a facility its own budget, after its owners' lines
-	# for it where it isn't its player's center. A control is empty where this machine's human can't
-	# set the line or budget, and else [Controls, proxy name, index, is held, limit], its index a
-	# budget line's key, a treasury's account or the build share's operation, and its limit the most
-	# a line's share may be set at or a budget's total now.
+	# line, draws, base, control], its draws what it drew last quarter and this quarter's pace, as
+	# rates a year (_get_draws), and its base what its share is of: at an administrative center
+	# or for a player, each of the player's treasuries that has a budget or a line; at a facility
+	# its own budget, after its owners' lines for it where it isn't its player's center. A control
+	# is empty where this machine's human can't set the line or budget, and else [Controls, proxy
+	# name, index, is held, limit], its index a budget line's key, a treasury's account or the
+	# build share's operation, and its limit the most a line's share may be set at or a budget's
+	# total now.
 	var player: PlayerProxy
 	var facility: FacilityProxy
 	if proxy is PlayerProxy:
@@ -718,31 +722,32 @@ func _collect_facility_budget(facility: FacilityProxy, is_local: bool) -> Array:
 	var income := lines[BUDGET_INCOME]
 	var total := maxf(income, 0.0) + lines[BUDGET_FUNDING]
 	# A unitary facility books only what it buys and sells, never what its upkeep or R&D draws.
-	var upkeep_drawn := NAN
-	var research_drawn := NAN
+	var upkeep_draws := NO_DRAWS
+	var research_draws := NO_DRAWS
 	if !facility.unitary:
-		upkeep_drawn = 0.0
+		upkeep_draws = PackedFloat64Array([0.0, 0.0])
 		for item in _upkeep_items:
-			upkeep_drawn += _get_drawn(facility, item, false)
-		research_drawn = _get_drawn(facility, _item_research_development, false)
+			var item_draws := _get_draws(facility, item, false)
+			upkeep_draws[0] += item_draws[0]
+			upkeep_draws[1] += item_draws[1]
+		research_draws = _get_draws(facility, _item_research_development, false)
 	var committed_rows := []
 	var committed := 0.0
 	for row: Array in [
-		["LABEL_UPKEEP", lines[BUDGET_UPKEEP], upkeep_drawn],
+		["LABEL_UPKEEP", lines[BUDGET_UPKEEP], upkeep_draws],
 		[_item_keys[_item_interest_expense], lines[BUDGET_INTEREST],
-				_get_drawn(facility, _item_interest_expense, false)],
+				_get_draws(facility, _item_interest_expense, false)],
 		[_item_keys[_item_income_tax], lines[BUDGET_TAX],
-				_get_drawn(facility, _item_income_tax, false)],
-		["LABEL_WEAR", lines[BUDGET_WEAR], NAN],
-		["LABEL_OPERATIONS_LOSS", maxf(-income, 0.0), NAN],
+				_get_draws(facility, _item_income_tax, false)],
+		["LABEL_WEAR", lines[BUDGET_WEAR], NO_DRAWS],
+		["LABEL_OPERATIONS_LOSS", maxf(-income, 0.0), NO_DRAWS],
 	]:
 		var line: float = row[1]
 		if !(line > 0.0):
 			continue
-		var drawn: float = row[2]
 		committed += line
-		committed_rows.append([row[0], line / total if total > 0.0 else NAN, line, drawn,
-				_get_drawn_share(drawn, total), []])
+		committed_rows.append([row[0], line / total if total > 0.0 else NAN, line, row[2], total,
+				[]])
 	var left := maxf(total - committed, 0.0)
 	var research := lines[BUDGET_RESEARCH]
 	var builds := lines[BUDGET_BUILDS]
@@ -760,23 +765,22 @@ func _collect_facility_budget(facility: FacilityProxy, is_local: bool) -> Array:
 	# Where it houses its residents its income counts their pay, so the rest reaches them as wages
 	# as well as payouts, and the ledger doesn't tell which wages its upkeep's staffing took.
 	var rest_name: String = _item_keys[_item_payouts_paid]
-	var rest_drawn := _get_drawn(facility, _item_payouts_paid, false)
+	var rest_draws := _get_draws(facility, _item_payouts_paid, false)
 	if facility.get_population_number() > 0.0:
 		rest_name = "LABEL_PAY_AND_PAYOUTS"
-		rest_drawn = NAN
+		rest_draws = NO_DRAWS
+	# NOTE: "Builds" names the build share past what wears out, but what its fixed assets gained
+	# counts what replaced worn plant too (FINANCIAL_MODEL.md, "Budgets, as built").
 	var discretionary_rows := []
 	for row: Array in [
-		[_item_keys[_item_research_development], research_share, research, research_drawn,
+		[_item_keys[_item_research_development], research_share, research, research_draws,
 				research_control],
-		["LABEL_BUILDS", builds_share, builds, _get_balance_change(facility, _item_fixed_assets),
+		["LABEL_BUILDS", builds_share, builds, _get_balance_gains(facility, _item_fixed_assets),
 				builds_control],
 		[rest_name, maxf(1.0 - research_share - builds_share, 0.0),
-				maxf(left - research - builds, 0.0), rest_drawn, []],
+				maxf(left - research - builds, 0.0), rest_draws, []],
 	]:
-		var line: float = row[2]
-		var drawn: float = row[3]
-		discretionary_rows.append([row[0], row[1], line, drawn, _get_drawn_share(drawn, left),
-				row[4]])
+		discretionary_rows.append([row[0], row[1], row[2], row[3], left, row[4]])
 	return [facility.gui_name, total, committed_rows, discretionary_rows, []]
 
 
@@ -798,10 +802,10 @@ func _collect_treasury(player: PlayerProxy, center: FacilityProxy, account: int,
 		if _item_accounts[item] != account:
 			continue
 		var line: float = player.budget_lines[key]
-		var drawn := _get_drawn(center, key, true)
+		var draws := _get_draws(center, key, true)
 		if _committed_items.has(item):
 			committed += line
-			committed_rows.append([_get_line_name(item, key), NAN, line, drawn, NAN, []])
+			committed_rows.append([_get_line_name(item, key), NAN, line, draws, NAN, []])
 			continue
 		var share := line / budget if budget > 0.0 else NAN
 		var control := []
@@ -812,16 +816,15 @@ func _collect_treasury(player: PlayerProxy, center: FacilityProxy, account: int,
 						player.is_budget_share_held(key), share + funding_room]
 		if is_finite(share):
 			share_sum += share
-		discretionary_rows.append([_get_funding_line_name(item, key), share, line, drawn,
-				_get_drawn_share(drawn, budget), control])
+		discretionary_rows.append([_get_funding_line_name(item, key), share, line, draws, budget,
+				control])
 	if !(budget > 0.0) and committed_rows.is_empty() and discretionary_rows.is_empty():
 		return []
 	var total := budget + committed
 	for row: Array in committed_rows:
 		var line: float = row[2]
-		var drawn: float = row[3]
 		row[1] = line / total if total > 0.0 else NAN
-		row[4] = _get_drawn_share(drawn, total)
+		row[4] = total
 	var rest_key := _item_dividends_paid
 	if account == Enums.Accounts.ACCOUNT_GOVERNMENT:
 		rest_key = _item_transfers_paid
@@ -829,10 +832,8 @@ func _collect_treasury(player: PlayerProxy, center: FacilityProxy, account: int,
 			rest_key = Utils.get_line_item_key(_item_appropriation_returns_paid,
 					player.polity.player_id)
 	var rest_share := maxf(1.0 - share_sum, 0.0) if budget > 0.0 else NAN
-	var rest := rest_share * budget
-	var rest_drawn := _get_drawn(center, rest_key, false)
 	discretionary_rows.append([_get_line_name(Utils.get_line_item_type(rest_key), rest_key),
-			rest_share, rest, rest_drawn, _get_drawn_share(rest_drawn, budget), []])
+			rest_share, rest_share * budget, _get_draws(center, rest_key, false), budget, []])
 	var budget_control := []
 	if is_local and ThreadsafeGlobal.sandbox_unlimited_money:
 		var target := player.get_budget_target(account)
@@ -851,44 +852,64 @@ func _collect_owner_lines(facility: FacilityProxy, player: PlayerProxy,
 		var line := player.get_budget_line(key)
 		if is_nan(line):
 			continue
-		var budget := player.budgets[account]
 		var share := player.get_budget_share(key)
 		var control := []
 		if is_local and is_finite(share):
 			control = [Controls.CONTROL_BUDGET_SHARE, player.name, key,
 					player.is_budget_share_held(key),
 					share + maxf(1.0 - _get_funding_share_sum(player, account), 0.0)]
-		var drawn := _get_drawn(center, key, true)
-		rows.append([[_account_keys[account], player.gui_name], share, line, drawn,
-				_get_drawn_share(drawn, budget), control])
+		rows.append([[_account_keys[account], player.gui_name], share, line,
+				_get_draws(center, key, true), player.budgets[account], control])
 	if rows.is_empty():
 		return []
 	return [[_item_keys[_item_funding_received], NAN, [], rows, []]]
 
 
-# What was drawn last quarter of the line kept under [param key] at [param center], net of what came
-# back of it where [param is_net], as a rate a year; NAN before a quarter has ended.
-func _get_drawn(center: FacilityProxy, key: int, is_net: bool) -> float:
-	var history := center.get_financials_accounting_history(key)
-	if history.is_empty():
-		return NAN
-	var drawn := history[-1]
+# What the line kept under [param key] at [param center] drew, net of what came back of it where
+# [param is_net], as rates a year: last quarter, NAN before a quarter has ended, and this quarter's
+# pace, NAN before an interval of it has booked.
+func _get_draws(center: FacilityProxy, key: int, is_net: bool) -> PackedFloat64Array:
+	var returned_key := -1
 	var returned_item := _item_returns[Utils.get_line_item_type(key)]
 	if is_net and returned_item != -1:
-		var returned_key := Utils.get_line_item_key(returned_item,
-				Utils.get_line_item_counterparty(key))
-		drawn -= center.get_financials_accounting_history(returned_key)[-1]
-	return drawn * IVUnits.YEAR / Utils.get_ordinal_quarter_duration(center.ordinal_qtr - 1)
+		returned_key = Utils.get_line_item_key(returned_item, Utils.get_line_item_counterparty(key))
+	var draws := NO_DRAWS.duplicate()
+	var history := center.get_financials_accounting_history(key)
+	if !history.is_empty():
+		var drawn := history[-1]
+		if returned_key != -1:
+			drawn -= center.get_financials_accounting_history(returned_key)[-1]
+		draws[0] = (drawn * IVUnits.YEAR
+				/ Utils.get_ordinal_quarter_duration(center.ordinal_qtr - 1))
+	var elapsed := _get_elapsed(center)
+	if elapsed > 0.0:
+		var accountings := center.get_financials_accountings()
+		var drawn: float = accountings.get(key, 0.0)
+		if returned_key != -1:
+			drawn -= accountings.get(returned_key, 0.0)
+		draws[1] = drawn * IVUnits.YEAR / elapsed
+	return draws
 
 
-# What [param facility]'s balance [param item] gained last quarter, as a rate a year; NAN before
-# two quarters have ended.
-func _get_balance_change(facility: FacilityProxy, item: int) -> float:
+# What [param facility]'s balance [param item] gained, as rates a year: last quarter, NAN before
+# two quarters have ended, and this quarter's pace, NAN before an interval of it has booked.
+func _get_balance_gains(facility: FacilityProxy, item: int) -> PackedFloat64Array:
+	var gains := NO_DRAWS.duplicate()
 	var history := facility.get_financials_accounting_history(item)
-	if history.size() < 2:
-		return NAN
-	return ((history[-1] - history[-2]) * IVUnits.YEAR
-			/ Utils.get_ordinal_quarter_duration(facility.ordinal_qtr - 1))
+	if history.size() >= 2:
+		gains[0] = ((history[-1] - history[-2]) * IVUnits.YEAR
+				/ Utils.get_ordinal_quarter_duration(facility.ordinal_qtr - 1))
+	var elapsed := _get_elapsed(facility)
+	if elapsed > 0.0 and !history.is_empty():
+		var balance: float = facility.get_financials_accountings().get(item, 0.0)
+		gains[1] = (balance - history[-1]) * IVUnits.YEAR / elapsed
+	return gains
+
+
+# The time from the start of [param facility]'s quarter to the last interval its ledger is booked
+# through; nothing or less before one of the quarter's has.
+func _get_elapsed(facility: FacilityProxy) -> float:
+	return facility.interval_time - Utils.get_time_at_ordinal_quarter(facility.ordinal_qtr)
 
 
 # What of [param base] [param drawn] is, or NAN where either has no value.
@@ -1006,8 +1027,8 @@ func _hold_research_share(facility: FacilityProxy, share: float) -> void:
 	for resource_type in _research_resources:
 		var resource_share := share / _research_resources.size()
 		if sum > 0.0:
-			resource_share = (share * maxf(facility.get_inventory_research_share(resource_type), 0.0)
-					/ sum)
+			var current := maxf(facility.get_inventory_research_share(resource_type), 0.0)
+			resource_share = share * current / sum
 		facility.hold_inventory_research_share(resource_type, clampf(resource_share, 0.0, 1.0))
 
 
@@ -1285,16 +1306,17 @@ func _get_funding_row(index: int, has_controls: bool) -> FundingRow:
 func _set_funding_line(row: FundingRow, data: Array) -> void:
 	var share: float = data[1]
 	var line: float = data[2]
-	var drawn: float = data[3]
-	var drawn_share: float = data[4]
+	var draws: PackedFloat64Array = data[3]
+	var base: float = data[4]
 	var share_text := NO_VALUE
 	if is_inf(share):
 		share_text = UNBOUNDED
 	elif !is_nan(share):
 		share_text = "%.f%%" % (share * 100.0)
 	var control: Array = data[5]
-	row.set_line(_get_leaf_name(data[0]), share, drawn_share, share_text, _format_money(line),
-			_format_money(drawn), control)
+	row.set_line(_get_leaf_name(data[0]), share, share_text, _format_money(line), control)
+	row.set_draws(_get_drawn_share(draws[0], base), _get_drawn_share(draws[1], base),
+			_format_money(draws[0]), _format_money(draws[1]))
 
 
 func _format_money(value: float) -> String:
@@ -1639,7 +1661,7 @@ class FundingHeaderRow extends HBoxContainer:
 		_auto_label.hide()
 		add_child(_auto_label)
 		add_child(_bar_spacer)
-		for title: StringName in [&"LABEL_SHARE", &"LABEL_LINE", &"LABEL_DRAWN"]:
+		for title: StringName in [&"LABEL_SHARE", &"LABEL_LINE"]:
 			var cell := Label.new()
 			cell.text = title
 			cell.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1677,7 +1699,7 @@ class FundingHeaderRow extends HBoxContainer:
 
 class FundingRow extends HBoxContainer:
 	# One row of the Funding subtab: a budget's title and what it has to spend, a section's name,
-	# or a line with its bar, share, line and what was drawn of it. The name fills the left and the
+	# or a line with its bar, share and line. The name fills the left and the
 	# cells hug the right, under the header's. A line or a budget its human can set has an Auto
 	# checkbox; unchecked, the line's bar drags, and the budget's total is typed in.
 
@@ -1721,7 +1743,7 @@ class FundingRow extends HBoxContainer:
 		_bar.share_dragged.connect(_on_share_dragged)
 		_bar.share_set.connect(_on_share_set)
 		add_child(_bar)
-		for i in 3:
+		for i in 2:
 			var cell := Label.new()
 			cell.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			cell.clip_text = true
@@ -1743,7 +1765,7 @@ class FundingRow extends HBoxContainer:
 
 
 	func set_title(title_text: String, total_text: String, control: Array) -> void:
-		_set_texts(0.0, title_text, ["", total_text, ""])
+		_set_texts(0.0, title_text, ["", total_text])
 		_set_control(control)
 		_bar.hide()
 		var is_held: bool = !control.is_empty() and control[3]
@@ -1758,24 +1780,31 @@ class FundingRow extends HBoxContainer:
 
 
 	func set_section(section_text: String) -> void:
-		_set_texts(_indent, section_text, ["", "", ""])
+		_set_texts(_indent, section_text, ["", ""])
 		_set_control([])
 		_bar.hide()
 		_cells[1].show()
 		_total_edit.hide()
 
 
-	func set_line(name_text: String, share: float, drawn_share: float, share_text: String,
-			line_text: String, drawn_text: String, control: Array) -> void:
-		_set_texts(2.0 * _indent, name_text, [share_text, line_text, drawn_text])
+	func set_line(name_text: String, share: float, share_text: String, line_text: String,
+			control: Array) -> void:
+		_set_texts(2.0 * _indent, name_text, [share_text, line_text])
 		_set_control(control)
 		var is_held: bool = !control.is_empty() and control[3]
 		var cap: float = control[4] if is_held else NAN
 		_bar.set_draggable(is_held, cap)
-		_bar.set_bar(share, drawn_share)
+		_bar.set_share(share)
 		_bar.show()
 		_cells[1].show()
 		_total_edit.hide()
+
+
+	# Marks the line's bar where it drew last quarter and where this quarter's pace puts it, each a
+	# share on the bar's scale, and names both in its tooltip.
+	func set_draws(last_share: float, actual_share: float, last_text: String,
+			actual_text: String) -> void:
+		_bar.set_draws(last_share, actual_share, last_text, actual_text)
 
 
 	func _set_control(control: Array) -> void:
@@ -1833,30 +1862,29 @@ class FundingRow extends HBoxContainer:
 
 
 class FundingBar extends Control:
-	# A line as a horizontal bar: its share, from empty to the full width at 1.0, and within it, on
-	# the same scale, what it drew last quarter, red past the share. A line that funds all its
-	# counterparty lacks is an outline across the width. A draggable bar's share follows the mouse,
-	# up to its cap, while a button is held, and is set on release. Its tooltip is a legend of its
-	# colors.
+	# A line as a horizontal bar: its share, from empty to the full width at 1.0, marked on the same
+	# scale where it drew last quarter and where this quarter's pace puts it, that mark red past the
+	# share. A line that funds all its counterparty lacks is an outline across the width. A
+	# draggable bar's share follows the mouse, up to its cap, while a button is held, and is set on
+	# release. Its tooltip is a legend of its colors with both draws.
 
 	signal share_dragged(share: float)
 	signal share_set(share: float)
 
 	const TRACK_COLOR := Color(1.0, 1.0, 1.0, 0.08)
 	const SET_COLOR := Color(0.75, 0.75, 0.75)
-	const DRAWN_COLOR := Color(0.35, 0.35, 0.35)
-	const EXCESS_COLOR := Color(1.0, 0.4, 0.4)
+	const LAST_COLOR := Color(0.42, 0.42, 0.42)
+	const ACTUAL_COLOR := Color(1.0, 0.75, 0.2)
+	const PAST_COLOR := Color(1.0, 0.3, 0.3)
 	const DRAGGABLE_COLOR := Color(0.53, 0.81, 0.98, 0.6)
-	const DRAWN_HEIGHT := 0.4 # of the set bar's
-	# The legend's rows: [color, text key].
-	const LEGEND := [
-		[SET_COLOR, &"LABEL_SET"],
-		[DRAWN_COLOR, &"LABEL_LAST_QUARTER_DRAWN"],
-		[EXCESS_COLOR, &"LABEL_EXCESS_DRAWN"],
-	]
+	const LAST_WIDTH := 2.0
+	const ACTUAL_WIDTH := 3.0
 
 	var _share := NAN
-	var _drawn_share := NAN
+	var _last_share := NAN
+	var _actual_share := NAN
+	var _last_text := ""
+	var _actual_text := ""
 	var _bar_width: float
 	var _cap := NAN
 	var _is_dragging := false
@@ -1871,11 +1899,21 @@ class FundingBar extends Control:
 		IVSettingsManager.changed.connect(_settings_listener)
 
 
-	func set_bar(share: float, drawn_share: float) -> void:
-		if _is_dragging or (is_same(share, _share) and is_same(drawn_share, _drawn_share)):
+	func set_share(share: float) -> void:
+		if _is_dragging or is_same(share, _share):
 			return
 		_share = share
-		_drawn_share = drawn_share
+		queue_redraw()
+
+
+	func set_draws(last_share: float, actual_share: float, last_text: String,
+			actual_text: String) -> void:
+		_last_text = last_text
+		_actual_text = actual_text
+		if is_same(last_share, _last_share) and is_same(actual_share, _actual_share):
+			return
+		_last_share = last_share
+		_actual_share = actual_share
 		queue_redraw()
 
 
@@ -1894,18 +1932,25 @@ class FundingBar extends Control:
 
 	func _make_custom_tooltip(_for_text: String) -> Object:
 		var legend := VBoxContainer.new()
-		for item: Array in LEGEND:
+		for item: Array in [
+			[SET_COLOR, 24.0, tr(&"LABEL_SET")],
+			[LAST_COLOR, LAST_WIDTH, "%s: %s" % [tr(&"LABEL_LAST_QUARTER"), _last_text]],
+			[ACTUAL_COLOR, ACTUAL_WIDTH, "%s: %s" % [tr(&"LABEL_ACTUAL"), _actual_text]],
+			[PAST_COLOR, ACTUAL_WIDTH, tr(&"LABEL_ACTUAL_PAST_SET")],
+		]:
 			var style := StyleBoxFlat.new()
 			style.bg_color = item[0]
 			var swatch := Panel.new()
-			swatch.custom_minimum_size = Vector2(24.0, 10.0)
-			swatch.size_flags_vertical = SIZE_SHRINK_CENTER
+			var swatch_width: float = item[1]
+			swatch.custom_minimum_size = Vector2(swatch_width, 12.0)
 			swatch.add_theme_stylebox_override(&"panel", style)
+			var swatch_cell := CenterContainer.new()
+			swatch_cell.custom_minimum_size.x = 24.0
+			swatch_cell.add_child(swatch)
 			var label := Label.new()
-			var text_key: StringName = item[1]
-			label.text = tr(text_key)
+			label.text = item[2]
 			var row := HBoxContainer.new()
-			row.add_child(swatch)
+			row.add_child(swatch_cell)
 			row.add_child(label)
 			legend.add_child(row)
 		return legend
@@ -1945,24 +1990,26 @@ class FundingBar extends Control:
 		var height := size.y * 0.5
 		var top := (size.y - height) * 0.5
 		draw_rect(Rect2(left, top, span, height), TRACK_COLOR)
-		var set_width := 0.0
+		var set_width := span
 		if is_inf(_share):
-			set_width = span
 			draw_rect(Rect2(left, top, span, height), SET_COLOR, false, 1.0)
 		elif !is_nan(_share):
 			set_width = span * clampf(_share, 0.0, 1.0)
 			draw_rect(Rect2(left, top, set_width, height), SET_COLOR)
 		if mouse_filter == MOUSE_FILTER_STOP:
 			draw_rect(Rect2(left, top, span, height), DRAGGABLE_COLOR, false, 1.0)
-		if is_nan(_drawn_share):
-			return
-		var drawn_width := span * clampf(_drawn_share, 0.0, 1.0)
-		var drawn_height := height * DRAWN_HEIGHT
-		var drawn_top := (size.y - drawn_height) * 0.5
-		draw_rect(Rect2(left, drawn_top, minf(drawn_width, set_width), drawn_height), DRAWN_COLOR)
-		if drawn_width > set_width:
-			draw_rect(Rect2(left + set_width, drawn_top, drawn_width - set_width, drawn_height),
-					EXCESS_COLOR)
+		var marker_top := size.y * 0.15
+		var marker_height := size.y * 0.7
+		if !is_nan(_last_share):
+			var x := left + span * clampf(_last_share, 0.0, 1.0)
+			draw_rect(Rect2(x - LAST_WIDTH * 0.5, marker_top, LAST_WIDTH, marker_height),
+					LAST_COLOR)
+		if !is_nan(_actual_share):
+			# Red only where it shows past the share: a line set at nothing that drew a rounding's worth
+			# would mark its start.
+			var x := left + span * clampf(_actual_share, 0.0, 1.0)
+			var color := PAST_COLOR if x >= left + set_width + 1.0 else ACTUAL_COLOR
+			draw_rect(Rect2(x - ACTUAL_WIDTH * 0.5, marker_top, ACTUAL_WIDTH, marker_height), color)
 
 
 	func _resize(gui_size: int) -> void:
