@@ -37,6 +37,12 @@ HINT_SUBORBITAL,"Subsurface,  surface and atomosphere (if any)"
 HINT_UPLOADED,"Uploaded are electronic copies of living biological persons and the electronic offspring of such persons,  generally existing in virtual reality only"
 HINT_QUICK_START,Start a new game with the last single-player choices
 HINT_SANDBOX_FREE_BUILDS,"Your players found new facilities for free. (Nothing founds a facility yet.)"
-HINT_SANDBOX_UNLIMITED_MONEY,"Your players' treasuries are never short,  and you set what each spends a year"
+HINT_SANDBOX_UNLIMITED_MONEY,Your players' treasuries are never short; you set what each spends a year
 HINT_SANDBOX_ACCESS_ALL_PLAYERS,You play every playable player
-HINT_AUTO,"Left to the AI while checked; uncheck to set it yourself"
+HINT_AUTO,Auto; uncheck to set
+HINT_BAR_BUDGET,Its budget: the full width is all of it
+HINT_BAR_LINE,The line's share of its budget
+HINT_BAR_DRAWN,What it drew last quarter
+HINT_BAR_UNBOUNDED,No limit: it funds all that is lacked; filled to what it drew
+HINT_BAR_PAST,Past the budget's end or drawn past its line
+HINT_BAR_HELD,Off auto: drag to set

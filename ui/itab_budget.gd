@@ -1813,7 +1813,7 @@ class FundingBar extends Control:
 	# was drawn of it; a share past 1.0, or a fill past the line, is marked at the right end. A line
 	# that funds all its counterparty lacks is an outline across the width, filled to what it drew
 	# of its budget. A draggable bar's share follows the mouse, up to its cap, while a button is
-	# held, and is set on release.
+	# held, and is set on release. Its tooltip is a legend of its colors.
 
 	signal share_dragged(share: float)
 	signal share_set(share: float)
@@ -1823,6 +1823,15 @@ class FundingBar extends Control:
 	const FILL_COLOR := Color(0.62, 0.62, 0.62)
 	const PAST_COLOR := Color(1.0, 0.4, 0.4)
 	const DRAGGABLE_COLOR := Color(0.53, 0.81, 0.98, 0.6)
+	# The legend's rows: [color, is filled, text key].
+	const LEGEND := [
+		[TRACK_COLOR, true, &"HINT_BAR_BUDGET"],
+		[LINE_COLOR, true, &"HINT_BAR_LINE"],
+		[FILL_COLOR, true, &"HINT_BAR_DRAWN"],
+		[FILL_COLOR, false, &"HINT_BAR_UNBOUNDED"],
+		[PAST_COLOR, true, &"HINT_BAR_PAST"],
+		[DRAGGABLE_COLOR, false, &"HINT_BAR_HELD"],
+	]
 
 	var _share := NAN
 	var _fill := NAN
@@ -1833,7 +1842,8 @@ class FundingBar extends Control:
 
 	func _init(bar_width: float) -> void:
 		_bar_width = bar_width
-		mouse_filter = MOUSE_FILTER_IGNORE
+		mouse_filter = MOUSE_FILTER_PASS
+		tooltip_text = " " # shows the legend, which replaces it
 		var gui_size: int = IVSettingsManager.get_setting(&"gui_size")
 		_resize(gui_size)
 		IVSettingsManager.changed.connect(_settings_listener)
@@ -1853,14 +1863,42 @@ class FundingBar extends Control:
 		if draggable == is_draggable and is_same(cap, _cap):
 			return
 		_cap = cap
-		mouse_filter = MOUSE_FILTER_STOP if draggable else MOUSE_FILTER_IGNORE
+		mouse_filter = MOUSE_FILTER_STOP if draggable else MOUSE_FILTER_PASS
 		mouse_default_cursor_shape = CURSOR_HSIZE if draggable else CURSOR_ARROW
 		if !draggable:
 			_is_dragging = false
 		queue_redraw()
 
 
+	func _make_custom_tooltip(_for_text: String) -> Object:
+		var legend := VBoxContainer.new()
+		for item: Array in LEGEND:
+			var style := StyleBoxFlat.new()
+			var color: Color = item[0]
+			var is_filled: bool = item[1]
+			if is_filled:
+				style.bg_color = color
+			else:
+				style.draw_center = false
+				style.border_color = color
+				style.set_border_width_all(1)
+			var swatch := Panel.new()
+			swatch.custom_minimum_size = Vector2(24.0, 10.0)
+			swatch.size_flags_vertical = SIZE_SHRINK_CENTER
+			swatch.add_theme_stylebox_override(&"panel", style)
+			var label := Label.new()
+			var text_key: StringName = item[2]
+			label.text = tr(text_key)
+			var row := HBoxContainer.new()
+			row.add_child(swatch)
+			row.add_child(label)
+			legend.add_child(row)
+		return legend
+
+
 	func _gui_input(event: InputEvent) -> void:
+		if mouse_filter != MOUSE_FILTER_STOP:
+			return
 		var button_event := event as InputEventMouseButton
 		if button_event and button_event.button_index == MOUSE_BUTTON_LEFT:
 			if button_event.pressed:
