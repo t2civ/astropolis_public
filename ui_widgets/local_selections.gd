@@ -19,14 +19,18 @@ extends MarginContainer
 ## Each section is a [code]FoldableContainer[/code]. Buttons fire selections
 ## through the parent [AstroSelectionManager].[br][br]
 ##
-## Set [member local_only] and [member header_text] before adding it to the tree.
+## Set [member local_only], [member header_text] and [member centered] before adding it to the
+## tree.
 
 const SCENE := "res://public/ui_widgets/local_selections.tscn"  ## Scene file for instancing.
+const HEADER_SPACING := 10.0
 
 ## Lists only the facilities at the selected body: no offworld or system sections.
 @export var local_only := false
 ## Text shown above the list where it lists any facilities; none if empty.
 @export var header_text := ""
+## Centers the list and its header in the widget's width.
+@export var centered := false
 
 var _selection_manager: AstroSelectionManager
 var _selection_lookup: Dictionary[String, StringName] = {} # item text -> selection name
@@ -61,12 +65,23 @@ var _busy := false # don't update if getting data on ai thread (cheap mutex)
 
 
 func _ready() -> void:
+	var vbox: VBoxContainer = $ScrollContainer/VBox
+	if centered: # a ScrollContainer ignores its child's shrink-center flag
+		var center := CenterContainer.new()
+		center.size_flags_horizontal = SIZE_EXPAND_FILL
+		_scroll_container.remove_child(vbox)
+		center.add_child(vbox)
+		_scroll_container.add_child(center)
 	if header_text:
 		var header := Label.new()
 		header.text = header_text
-		var vbox: VBoxContainer = $ScrollContainer/VBox
+		header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var spacer := Control.new()
+		spacer.custom_minimum_size.y = HEADER_SPACING
 		vbox.add_child(header)
 		vbox.move_child(header, 0)
+		vbox.add_child(spacer)
+		vbox.move_child(spacer, 1)
 	IVGlobal.ui_dirty.connect(_update_selection)
 	IVStateManager.about_to_free_procedural_nodes.connect(_clear_procedural)
 	IVStateManager.about_to_start_simulator.connect(_connect_selection_manager)

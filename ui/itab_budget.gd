@@ -264,6 +264,7 @@ func _build_ui() -> void:
 	_local_selections = local_selections_scene.instantiate()
 	_local_selections.local_only = true
 	_local_selections.header_text = "LABEL_FACILITIES_AT_BODY"
+	_local_selections.centered = true
 	_local_selections.hide()
 	add_child(_local_selections)
 
