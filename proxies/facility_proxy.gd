@@ -684,8 +684,8 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 ## unit of its capacity for a second costs: no more than its stores' running cost while what the
 ## class holds is well within what they make, more as it nears that and past it, where the class's
 ## give improvises space (storage_classes.schema.md). NAN for a class with no space of its own. A
-## level is held as far as its space pays for it, and what can't be vented pays its keep in its
-## makers' margins (see PRODUCTION_MODEL.md, "A storage class: its storage rent").
+## level is held as far as its space pays for it, and what can't be vented pays its holding cost in
+## its makers' margins (see PRODUCTION_MODEL.md, "A storage class: its storage rent").
 @abstract func get_inventory_storage_rent(storage_type: int) -> float
 
 
