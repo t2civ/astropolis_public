@@ -190,16 +190,16 @@ var flags := 0
 ## of each interval (FINANCIAL_MODEL.md, "Facilities as subsidiaries"). Its owners' payout policy;
 ## 0.0 by default. Use [method set_cash_reserve].
 var cash_reserve := 0.0
-## The least price of funds, a year, at which the facility's owners lend the market for funds what
-## its build budget leaves unspent; below it they take back what it lent and are paid it
-## (FINANCIAL_MODEL.md, "The market for funds"). Its owners' payout policy; 0.0 by default. Use
-## [method set_funds_reservation].
-var funds_reservation := 0.0
-## What the facility may spend past what it holds before anything draws on its owners' residents:
-## its cash less its debt, plus its line where its owners don't fund all it lacks, and what each
-## treasury that funds it holds less what it owes, and its line, as far as what is left of the
-## facility's funding line, as of its last interval (FINANCIAL_MODEL.md, "Credit"). Its trader's
-## commitments are bound by it.
+## Its owners' required return: the least interest rate, a year, at which they lend the credit
+## market what the facility's build budget leaves unspent; below it they collect what it lent and
+## are paid it (FINANCIAL_MODEL.md, "The credit market"). Its owners' payout policy; 0.0 by default.
+## Use [method set_required_return].
+var required_return := 0.0
+## Its available credit: what the facility may spend past what it holds before anything draws on
+## its owners' residents: its cash less its debt, plus its credit limit where its owners don't fund
+## all it lacks, and what each treasury that funds it holds less what it owes, and its credit limit,
+## as far as what is left of the facility's funding line, as of its last interval
+## (FINANCIAL_MODEL.md, "Credit"). Its trader's commitments are bound by it.
 var credit := 0.0
 ## Its budget a year as of its last interval, by [enum BudgetLines]; empty before its first.
 ## Server-authoritative. Use [method get_budget_line].
@@ -740,9 +740,9 @@ func get_market() -> MarketProxy:
 @abstract func set_cash_reserve(value: float) -> void
 
 
-## Sets [member funds_reservation] (>= 0.0), a year. Proxy-authoritative: this change flows
+## Sets [member required_return] (>= 0.0), a year. Proxy-authoritative: this change flows
 ## proxy -> server. No-op on a negative value or NAN.
-@abstract func set_funds_reservation(value: float) -> void
+@abstract func set_required_return(value: float) -> void
 
 
 ## Sets the [code]FROM_PROXY_MASK[/code] bits of operations flags for
