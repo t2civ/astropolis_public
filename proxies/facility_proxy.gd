@@ -139,7 +139,8 @@ enum InventoryItems {
 ## "Budgets"): what it has to spend, its income and what its funding lines leave it; what it
 ## commits, its upkeep, interest and income tax and its replacement, what wears out at its build
 ## cost; and what its R&D and its expansion may spend of what those leave. Its payouts are what
-## remains, except at an agency's facility, which pays nothing out.
+## remains, except at an agency's facility, which pays nothing out. Apart from them, what its
+## expansion borrows past its line from the credit market.
 enum BudgetLines {
 	BUDGET_INCOME,
 	BUDGET_FUNDING,
@@ -149,6 +150,7 @@ enum BudgetLines {
 	BUDGET_REPLACEMENT,
 	BUDGET_RESEARCH,
 	BUDGET_EXPANSION,
+	BUDGET_BORROWING,
 }
 
 

@@ -145,6 +145,7 @@ var _item_dividends_paid := -1
 var _item_appropriations_paid := -1
 var _item_public_provision_paid := -1
 var _item_funding_received := -1
+var _item_loan_proceeds := -1
 var _item_payouts_paid := -1
 var _item_interest_expense := -1
 var _item_income_tax := -1
@@ -256,6 +257,7 @@ func _precompute_display_names() -> void:
 	_item_transfers_paid = _find_item(Enums.UniqueLineItems.TRANSFERS_PAID)
 	_item_dividends_paid = _find_item(Enums.UniqueLineItems.DIVIDENDS_PAID)
 	_item_funding_received = _find_item(Enums.UniqueLineItems.FUNDING_RECEIVED)
+	_item_loan_proceeds = _find_item(Enums.UniqueLineItems.LOAN_PROCEEDS)
 	_item_payouts_paid = _find_item(Enums.UniqueLineItems.PAYOUTS_PAID)
 	_item_interest_expense = _find_item(Enums.UniqueLineItems.INTEREST_EXPENSE)
 	_item_income_tax = _find_item(Enums.UniqueLineItems.INCOME_TAX)
@@ -669,7 +671,8 @@ func _collect_funding(proxy: Proxy) -> Array:
 	# line, draws, base, control], its draws what it drew last quarter and this quarter's pace, as
 	# rates a year (_get_draws), and its base what its share is of: at an administrative center
 	# or for a player, each of the player's treasuries that has a budget or a line; at a facility
-	# its own budget, after its owners' lines for it where it isn't its player's center. A control
+	# its own budget, after its owners' lines for it where it isn't its player's center and what
+	# its expansion borrows where it borrows. A control
 	# is empty where this machine's human can't set the line or budget, and else [Controls, proxy
 	# name, index, is held, limit], its index a budget line's key, a treasury's account or the
 	# build share's operation, and its limit the most a line's share may be set at or a budget's
@@ -698,6 +701,9 @@ func _collect_funding(proxy: Proxy) -> Array:
 		return panels
 	if center and facility != center:
 		panels.append_array(_collect_owner_lines(facility, player, center, is_local))
+	var borrowing_panel := _collect_borrowing(facility)
+	if !borrowing_panel.is_empty():
+		panels.append(borrowing_panel)
 	var budget_panel := _collect_facility_budget(facility, is_local)
 	if !budget_panel.is_empty():
 		panels.append(budget_panel)
@@ -873,6 +879,25 @@ func _collect_owner_lines(facility: FacilityProxy, player: PlayerProxy,
 	if rows.is_empty():
 		return []
 	return [[_item_keys[_item_funding_received], NAN, [], rows, []]]
+
+
+func _collect_borrowing(facility: FacilityProxy) -> Array:
+	# What [param facility]'s expansion borrows past its line from the credit market as one panel,
+	# or empty where it neither borrows nor borrowed last quarter or this one. Borrowing goes to
+	# expansion alone, so it isn't among the shares of what the committed lines leave. Its bar is
+	# on the scale of the largest of what it borrows and what it drew.
+	var line := facility.get_budget_line(FacilityProxy.BudgetLines.BUDGET_BORROWING)
+	if is_nan(line):
+		return []
+	var draws := _get_draws(facility, _item_loan_proceeds, false)
+	var base := line
+	for drawn in draws:
+		if is_finite(drawn):
+			base = maxf(base, drawn)
+	if !(base > 0.0):
+		return []
+	return [_item_keys[_item_loan_proceeds], NAN, [],
+			[["LABEL_EXPANSION", line / base, line, draws, base, []]], []]
 
 
 # What the line kept under [param key] at [param center] drew, net of what came back of it where
