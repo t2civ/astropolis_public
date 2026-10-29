@@ -685,7 +685,7 @@ func get_population_satisfaction(_population_type: int, _need: int) -> float:
 
 
 ## Returns [param population_type]'s wealth, or all types' if -1, in dollars; a facility's
-## classes hold it as unevenly as they are served. 0.0 without a population.
+## deciles hold it as unevenly as they are served. 0.0 without a population.
 func get_population_wealth(_population_type := -1) -> float:
 	return 0.0
 

@@ -37,7 +37,7 @@ moves a population's rates toward what its satisfaction of its needs implies: th
 when they are met, times each satisfaction to the power of minus an elasticity, flat at the
 want and steepest far below it. A positive elasticity raises the rate as the need goes short,
 and a negative one lowers it. A population whose people hold their means unevenly (its
-inequality, `facilities_populations.tsv`) takes the average over its classes.
+inequality, `facilities_populations.tsv`) takes the average over its deciles.
 
 - mortality_need — TABLE_ROW `needs.tsv`, the need whose satisfaction sets the death rates.
   Blank holds them at their seeds.
@@ -72,7 +72,7 @@ inequality, `facilities_populations.tsv`) takes the average over its classes.
 - participation_response_time — FLOAT in years, as `mortality_response_time`, for the
   participation. Default `5 y`.
 - spending_rate — FLOAT per year: the share of its wealth a population spends in a year on
-  its wants. Its classes spend it on their existence wants first, all of it if they take
+  its wants. Its deciles spend it on their existence wants first, all of it if they take
   it, and the rest over their other wants in the shares `wants.tsv` sets
   (`POPULATION_MODEL.md`, "Work and pay"). Its inverse is how many years of spending the
   wealth seeded in `facilities_populations.tsv` holds. Default `1/y`.
@@ -82,7 +82,7 @@ inequality, `facilities_populations.tsv`) takes the average over its classes.
   working head each member of a life stage counts as. Default `0;1;0.2`.
 - work_hours — FLOAT in hours per year, the hours a working head works. A population's able
   hours are its weighted heads times these hours times its participation
-  (`facilities_populations.tsv`), and staff on loan work them in full. Its classes offer them
+  (`facilities_populations.tsv`), and staff on loan work them in full. Its deciles offer them
   down to their spending per hour lived. Default `1800 h/y`.
 
 
@@ -98,7 +98,7 @@ inequality, `facilities_populations.tsv`) takes the average over its classes.
    (`FINANCIAL_MODEL.md`, "The residents and inequality").
 3. Base humans' response columns are fitted on the 2017 cross-section of countries by
    `tests/calibration/seed_demography.py --fit`, as a person's curve over each country's ten
-   classes, each holding what its governments pay alike and the rest at its inequality
+   deciles, each holding what its governments pay alike and the rest at its inequality
    (`EARTH_CALIBRATION.md`, "Population"). The floors and response times are not fitted, and
    neither are the fertility's response to crowding and the participation's response, whose
    values are from recall.

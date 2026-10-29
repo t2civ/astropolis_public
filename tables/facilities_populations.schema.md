@@ -24,7 +24,7 @@ The data type is ARRAY[FLOAT]; each cell holds 22 values delimited by semicolons
   standing in for skill (`FINANCIAL_MODEL.md`, "The residents and inequality").
 - 1 value — the ownership spread: how unevenly its dividends reach its people, in the same
   measure.
-- 1 value, with an inline `$` — the wealth per head. Its classes hold it as unevenly as its
+- 1 value, with an inline `$` — the wealth per head. Its deciles hold it as unevenly as its
   inequality has it, and spend it at the type's `spending_rate` (`populations.tsv`).
 - 1 value — the participation: the most of its able hours the population offers, its
   weighted heads times `work_hours` (`populations.tsv`) being all of them. From the first
