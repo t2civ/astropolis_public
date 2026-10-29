@@ -15,7 +15,7 @@ extends BaseAI
 ##
 ## Traders are paired 1-to-1 with facilities. This trader contracts toward its facility's desired
 ## rate of each resource over the coming horizon, within what its facility's critical rate and its
-## credit allow, and leans its quotes toward its facility's own price while what it
+## credit allow, and skews its quotes toward its facility's own price while what it
 ## contracted falls short; in a two-sided posture it also keeps a quote standing on the other side
 ## (TRADE_MODEL.md, "The facility trader"). It reads its
 ## facility's rates and prices, never its stock, and trades in the posture and resource strategies
@@ -120,12 +120,12 @@ enum ResourceStrategies {
 
 
 ## Share of the way, in ratio, from the market's reference price toward its facility's own local
-## price that a trader leans its quotes at a full gap between what it has contracted and what it
+## price that a trader skews its quotes at a full gap between what it has contracted and what it
 ## would: up while short of what it would buy, where its facility prices the resource above the
 ## market, and down while short of what it would sell, where its facility prices it below (def key
-## [code]lean[/code] overrides per resource strategy).
-const LEAN := 0.5
-## Least a trader's lean takes its facility's price to be, as a share of the market's: a facility
+## [code]skew[/code] overrides per resource strategy).
+const SKEW := 0.5
+## Least a trader's skew takes its facility's price to be, as a share of the market's: a facility
 ## that prices a resource at nothing would give it away.
 const OWN_PRICE_FLOOR := 0.001
 ## How many of its facility's time horizons ahead a trader contracts (def key
@@ -163,8 +163,8 @@ static var trader_strategy_defs: Array[Dictionary] = [
 
 ## Per-resource strategy definitions; index = [enum ResourceStrategies] value. The switches
 ## [code]buy[/code] and [code]sell[/code] select the sides on which the trader contracts toward its
-## facility's desired rate; an entry with neither trades nothing. Tuning keys: [code]lean[/code]
-## (see [constant LEAN]), [code]contract_horizons[/code] (see [constant CONTRACT_HORIZONS]),
+## facility's desired rate; an entry with neither trades nothing. Tuning keys: [code]skew[/code]
+## (see [constant SKEW]), [code]contract_horizons[/code] (see [constant CONTRACT_HORIZONS]),
 ## [code]min_lot[/code], [code]price_tol[/code] and [code]qty_tol[/code]. A stockpile or a
 ## shortage reaches the trader through the desired rate, which the facility's levels move.
 static var resource_strategy_defs: Array[Dictionary] = [
@@ -358,15 +358,15 @@ func process_ai_interval(_delta: float) -> void:
 ## quarter D's step besides, once,
 ## net of the position there, as a bid or an ask. Each quarter's target is held to the def's sides,
 ## never below what the facility could spare (-C, the critical rate, its flow and step alike) and
-## at least C where the facility must take. Each quarter's quotes lean off its own price (see
+## at least C where the facility must take. Each quarter's quotes skew off its own price (see
 ## [method MarketProxy.get_instrument_unit_price]) toward the facility's local price, as far as the
-## def's [code]lean[/code] times the quarter's gap as a share of what it would contract there, each
+## def's [code]skew[/code] times the quarter's gap as a share of what it would contract there, each
 ## side quoting that limit.[br][br]
 ##
 ## With [param standing], a two-sided posture's, each quarter also keeps a lot (the def's
 ## [code]min_lot[/code]) standing on the side its gap doesn't ask for, where the def trades that
 ## side: an ask where the facility could spare a lot over the quarter's part of the window, a bid
-## where it uses one. Toward the facility's price it leans the def's whole lean, and on the far side
+## where it uses one. Toward the facility's price it skews the def's whole skew, and on the far side
 ## it stands at that price, so its market always has a price, and one that follows its facilities
 ## (TRADE_MODEL.md, "Market makers").
 func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, standing: bool
@@ -398,7 +398,7 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 	var end := maxf(now + window, Utils.get_time_at_ordinal_quarter(current_quarter + 1))
 	_windows[resource_type] = TraderProxy.get_foreseen_span(end - now, horizon)
 	var local_price := _facility.get_inventory_local_price(resource_type) * multiplier
-	var lean_share: float = def.get(&"lean", LEAN)
+	var skew_share: float = def.get(&"skew", SKEW)
 	var quarter_price := reference_price # this quarter's own, or the quarter before it's
 	var quarter := current_quarter
 	var start := now
@@ -459,31 +459,31 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 				standing_bid = min_lot
 				bid = 0
 		# A gap as a share of what it would contract: scaled to an unbounded desired rate, a seller
-		# held to the little it could spare leaned next to nothing, and one stale ask held a market
+		# held to the little it could spare skewed next to nothing, and one stale ask held a market
 		# at many times what every facility valued it.
 		var target := absf(wanted / multiplier)
 		var gap_share := clampf(want / maxf(target, absi(want)), -1.0, 1.0) if want else 0.0
 		# The facility's own price says how far the market's stands from where the facility would
 		# trade no more: a fixed step took years to close seeds ten or a hundred times off. A buyer
-		# leans up only where its facility prices the resource above the market, a seller down only
-		# below; one that prices it at nothing leans toward the floor.
+		# skews up only where its facility prices the resource above the market, a seller down only
+		# below; one that prices it at nothing skews toward the floor.
 		var own_price := maxf(local_price, OWN_PRICE_FLOOR * quarter_price)
 		var price_gap := log(own_price / quarter_price)
-		var full_lean := lean_share * price_gap
-		var lean := 0.0
+		var full_skew := skew_share * price_gap
+		var skew := 0.0
 		if price_gap * gap_share > 0.0:
-			lean = absf(gap_share) * full_lean
-		var limit_price := quarter_price * exp(lean)
+			skew = absf(gap_share) * full_skew
+		var limit_price := quarter_price * exp(skew)
 		var bid_price := maxi(floori(limit_price), 1)
 		var ask_price := maxi(ceili(limit_price), 1)
 		# Quoted off the reference alone, a market whose traders' gaps had closed held its last
 		# trade's price while every facility's own moved away from it. Each quotes its own limit,
 		# and a cross matches at the midpoint (TRADE_MODEL.md, "The price"). A standing quote stays
 		# clear of the trader's own on the other side, which wouldn't trade.
-		var leaned_price := quarter_price * exp(full_lean)
-		var standing_bid_price := floori(minf(own_price, leaned_price))
+		var skewed_price := quarter_price * exp(full_skew)
+		var standing_bid_price := floori(minf(own_price, skewed_price))
 		if standing_ask:
-			ask_price = maxi(ceili(maxf(own_price, leaned_price)),
+			ask_price = maxi(ceili(maxf(own_price, skewed_price)),
 					(bid_price if bid else standing_bid_price) + 1)
 		if standing_bid:
 			bid_price = standing_bid_price
