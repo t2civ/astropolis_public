@@ -654,12 +654,12 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 ## margin floors set their runs count (see
 ## PRODUCTION_MODEL.md, "What the facility publishes"). 0.0 when that unit clears its floor
 ## giving it away; INF when no such operation here produces it at known prices.
-@abstract func get_inventory_marginal_production_breakeven(resource_type: int) -> float
+@abstract func get_inventory_marginal_cost(resource_type: int) -> float
 
 
-## Returns the per-resource marginal production break-evens array. Return is proxy array
+## Returns the per-resource marginal costs array. Return is proxy array
 ## reference; read only!
-@abstract func get_inventory_marginal_production_breakevens() -> PackedFloat64Array
+@abstract func get_inventory_marginal_costs() -> PackedFloat64Array
 
 
 ## Returns what a unit of [param resource_type] must fetch, in [method MarketProxy.get_price]
@@ -667,11 +667,12 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 ## prices its capital weighs, as of the last interval: where a shortage, or a need left unmet,
 ## should grow its makers (see PRODUCTION_MODEL.md, "What the facility publishes"). It holds no
 ## margin floor. NAN where no route here would be built for it.
-@abstract func get_inventory_new_unit_price(resource_type: int) -> float
+@abstract func get_inventory_long_run_marginal_cost(resource_type: int) -> float
 
 
-## Returns the per-resource new-unit prices array. Return is proxy array reference; read only!
-@abstract func get_inventory_new_unit_prices() -> PackedFloat64Array
+## Returns the per-resource long-run marginal costs array. Return is proxy array reference; read
+## only!
+@abstract func get_inventory_long_run_marginal_costs() -> PackedFloat64Array
 
 
 ## Returns the amount of storage class [param storage_type] currently in use
@@ -682,10 +683,10 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 ## Returns the price of storage class [param storage_type]'s space at this facility, what keeping a
 ## unit of its capacity for a second costs: no more than its stores' running cost while what the
 ## class holds is well within what they make, more as it nears that and past it, where the class's
-## give improvises space (storage_classes.schema.md). NAN for a class with no space of its own. A
-## level is held as far as its space pays for it, and what can't be vented pays its keep in its
-## makers' margins (see PRODUCTION_MODEL.md, "A storage class: its price of space").
-@abstract func get_inventory_storage_space_price(storage_type: int) -> float
+## overflow improvises space (storage_classes.schema.md). NAN for a class with no space of its own.
+## A level is held as far as its space pays for it, and what can't be vented pays its holding cost
+## in its makers' margins (see PRODUCTION_MODEL.md, "A storage class: its storage rent").
+@abstract func get_inventory_storage_rent(storage_type: int) -> float
 
 
 ## Returns how long storage class [param storage_type] could carry the last interval's flows
