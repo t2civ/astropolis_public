@@ -13,16 +13,16 @@ own content is written, which comes with the first game that holds them
 
 ## Table Data
 
-- bucket_widths — ARRAY[FLOAT] in years, seven values: how long the type spends in each of its first
-  seven age buckets. The eighth, oldest bucket has no upper bound. Each unit of time a population
-  moves on the share of a bucket's members that is one over the bucket's width, which is the whole
-  of aging, so the widths are what make a type long-lived or quick to age. Base humans' buckets are
+- age_group_widths — ARRAY[FLOAT] in years, seven values: how long the type spends in each of its first
+  seven age groups. The eighth, oldest age group has no upper bound. Each unit of time a population
+  moves on the share of an age group's members that is one over the age group's width, which is the whole
+  of aging, so the widths are what make a type long-lived or quick to age. Base humans' age groups are
   0-4, 5-14, 15-24, 25-39, 40-54, 55-64, 65-79 and 80+ (`POPULATION_MODEL.md`, "Demographics").
-- first_adult_bucket — INT, the first bucket whose members are adults. The buckets below it
+- first_adult_age_group — INT, the first age group whose members are adults. The age groups below it
   are the young, so a type with no youth, such as one made as an adult, has 0.
-- first_elder_bucket — INT, the first bucket whose members are elders.
-- birth_weights — ARRAY[FLOAT], eight values: the births per head of each bucket, relative
-  to the others. A population's fertility level scales them. Zero wherever a bucket bears
+- first_elder_age_group — INT, the first age group whose members are elders.
+- birth_weights — ARRAY[FLOAT], eight values: the births per head of each age group, relative
+  to the others. A population's fertility level scales them. Zero wherever an age group bears
   no children.
 - starvation_rate — FLOAT per year: the deaths per head a year that the type suffers on top
   of its death rates with no life support at all. Going without life support kills on a time
@@ -41,9 +41,9 @@ inequality, `facilities_populations.tsv`) takes the average over its classes.
 
 - mortality_need — TABLE_ROW `needs.tsv`, the need whose satisfaction sets the death rates.
   Blank holds them at their seeds.
-- served_mortalities — ARRAY[FLOAT] per year, eight values: each bucket's deaths per head
+- served_mortalities — ARRAY[FLOAT] per year, eight values: each age group's deaths per head
   with the need met.
-- mortality_elasticities — ARRAY[FLOAT], eight values: how steeply each bucket's death rate
+- mortality_elasticities — ARRAY[FLOAT], eight values: how steeply each age group's death rate
   rises as the need goes short, the exponent above. The young respond most.
 - mortality_floor — FLOAT, the satisfaction below which going further without kills no
   faster.
@@ -88,8 +88,8 @@ inequality, `facilities_populations.tsv`) takes the average over its classes.
 
 ## Notes
 
-1. The number of age buckets, eight, is the model's and not a type's (`POPULATION_MODEL.md`,
-   "Demographics"). What a type sets is where its buckets fall in its own lifetime.
+1. The number of age groups, eight, is the model's and not a type's (`POPULATION_MODEL.md`,
+   "Demographics"). What a type sets is where its age groups fall in its own lifetime.
 2. A population's own death rates, fertility, inequality, wealth and participation are state,
    seeded per facility in `facilities_populations.tsv`, and so are how unevenly its wages and its
    dividends reach its people. The death rates, fertility and participation then move as above;

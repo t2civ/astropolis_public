@@ -628,10 +628,10 @@ func get_population_number(_population_type := -1) -> float:
 	return 0.0
 
 
-## Returns how many of [param population_type] are in its age [param bucket], one of the
+## Returns how many of [param population_type] are in its [param age_group], one of the
 ## type's eight (see POPULATION_MODEL.md, "Demographics"). Safe default on an out-of-range
 ## index.
-func get_population_bucket_number(_population_type: int, _bucket: int) -> float:
+func get_population_age_group_number(_population_type: int, _age_group: int) -> float:
 	return 0.0
 
 
@@ -661,7 +661,7 @@ func get_population_starvation_rate(_population_type := -1) -> float:
 
 
 ## Returns the life expectancy at birth of [param population_type] at its present death
-## rates, in seconds. NAN at an aggregate with an empty age bucket, whose death rate is
+## rates, in seconds. NAN at an aggregate with an empty age group, whose death rate is
 ## unknown. Safe default on an out-of-range index.
 func get_population_life_expectancy(_population_type: int) -> float:
 	return 0.0

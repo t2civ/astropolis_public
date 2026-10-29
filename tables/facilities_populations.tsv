@@ -12,7 +12,7 @@ MOD_AMPHIBIOUS
 @DATA_TYPE=ARRAY[FLOAT]																		
 @TRANSPOSE																		
 # written by tests/calibration/seed_demography.py																		
-# each cell: the eight bucket shares; the eight death rates, per year;																		
+# each cell: the eight age group shares; the eight death rates, per year;																		
 # the fertility, per year; the inequality; the labor and ownership spreads;																		
 # the wealth per head, $;																		
 # the participation (tests/calibration/seed_labor.py)																		
