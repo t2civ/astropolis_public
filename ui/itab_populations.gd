@@ -741,12 +741,7 @@ func _format_percent(share: float) -> String:
 func _format_gini(inequality: float) -> String:
 	if is_nan(inequality):
 		return NO_VALUE
-	# Abramowitz and Stegun 7.1.26, within 1.5e-7.
-	var x := absf(inequality) / 2.0
-	var t := 1.0 / (1.0 + 0.3275911 * x)
-	var series := t * (0.254829592 + t * (-0.284496736 + t * (1.421413741
-			+ t * (-1.453152027 + t * 1.061405429))))
-	return "%.2f" % (1.0 - series * exp(-x * x))
+	return "%.2f" % Utils.get_gini(inequality)
 
 
 # Formats [param price], money per trade unit, in dollars.

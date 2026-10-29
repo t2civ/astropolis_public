@@ -91,9 +91,11 @@ inequality, `facilities_populations.tsv`) takes the average over its classes.
 1. The number of age buckets, eight, is the model's and not a type's (`POPULATION_MODEL.md`,
    "Demographics"). What a type sets is where its buckets fall in its own lifetime.
 2. A population's own death rates, fertility, inequality, wealth and participation are state,
-   seeded per facility in `facilities_populations.tsv`. The death rates, fertility and
-   participation then move as above, and the wealth stays as it is through births and deaths,
-   a death leaving its share to the survivors; nothing moves the inequality yet.
+   seeded per facility in `facilities_populations.tsv`, and so are how unevenly its wages and its
+   dividends reach its people. The death rates, fertility and participation then move as above;
+   the wealth stays as it is through births and deaths, a death leaving its share to the
+   survivors; and the inequality moves with how unevenly what the population is paid reaches it
+   (`FINANCIAL_MODEL.md`, "The residents and inequality").
 3. Base humans' response columns are fitted on the 2017 cross-section of countries by
    `tests/calibration/seed_demography.py --fit`, as a person's curve over each country's ten
    classes, each holding what its governments pay alike and the rest at its inequality

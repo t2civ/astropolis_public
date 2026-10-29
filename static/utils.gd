@@ -144,6 +144,43 @@ static func get_filled_budget_shares(shares: PackedFloat64Array, held_shares: Pa
 	return filled
 
 
+# inequality
+
+## Returns the Gini coefficient of [param inequality], how unevenly a population's people hold
+## their means as the standard deviation of the log of a lognormal (POPULATION_MODEL.md,
+## "Demographics", inequality): the error function of half of it.
+static func get_gini(inequality: float) -> float:
+	# Its series in exp(-x * x) has no terms of opposite sign to cancel, so it keeps every digit.
+	var x := absf(inequality) / 2.0
+	var term := x
+	var sum := term
+	var n := 0
+	while term > sum * 1e-17:
+		n += 1
+		term *= 2.0 * x * x / (2 * n + 1)
+		sum += term
+	return 2.0 / sqrt(PI) * exp(-x * x) * sum
+
+
+## Returns the inequality whose Gini coefficient is [param gini], from 0.0 to below 1.0: the
+## inverse of [method get_gini].
+static func get_inequality_of_gini(gini: float) -> float:
+	assert(gini >= 0.0 and gini < 1.0)
+	if !(gini > 0.0):
+		return 0.0
+	# Winitzki's approximation of the inverse error function, then Newton's steps on the exact one.
+	const A := 0.147
+	var log_term := log(1.0 - gini * gini)
+	var first := 2.0 / (PI * A) + log_term / 2.0
+	var x := sqrt(sqrt(first * first - log_term / A) - first)
+	for i in 8:
+		var step := (get_gini(2.0 * x) - gini) / (2.0 / sqrt(PI) * exp(-x * x))
+		x -= step
+		if absf(step) <= x * 1e-15:
+			break
+	return 2.0 * x
+
+
 # array & dict utils
 
 
