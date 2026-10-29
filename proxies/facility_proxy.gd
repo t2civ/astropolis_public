@@ -654,12 +654,12 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 ## margin floors set their runs count (see
 ## PRODUCTION_MODEL.md, "What the facility publishes"). 0.0 when that unit clears its floor
 ## giving it away; INF when no such operation here produces it at known prices.
-@abstract func get_inventory_marginal_production_breakeven(resource_type: int) -> float
+@abstract func get_inventory_marginal_cost(resource_type: int) -> float
 
 
-## Returns the per-resource marginal production break-evens array. Return is proxy array
+## Returns the per-resource marginal costs array. Return is proxy array
 ## reference; read only!
-@abstract func get_inventory_marginal_production_breakevens() -> PackedFloat64Array
+@abstract func get_inventory_marginal_costs() -> PackedFloat64Array
 
 
 ## Returns what a unit of [param resource_type] must fetch, in [method MarketProxy.get_price]
@@ -667,11 +667,12 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 ## prices its capital weighs, as of the last interval: where a shortage, or a need left unmet,
 ## should grow its makers (see PRODUCTION_MODEL.md, "What the facility publishes"). It holds no
 ## margin floor. NAN where no route here would be built for it.
-@abstract func get_inventory_new_unit_price(resource_type: int) -> float
+@abstract func get_inventory_long_run_marginal_cost(resource_type: int) -> float
 
 
-## Returns the per-resource new-unit prices array. Return is proxy array reference; read only!
-@abstract func get_inventory_new_unit_prices() -> PackedFloat64Array
+## Returns the per-resource long-run marginal costs array. Return is proxy array reference; read
+## only!
+@abstract func get_inventory_long_run_marginal_costs() -> PackedFloat64Array
 
 
 ## Returns the amount of storage class [param storage_type] currently in use
