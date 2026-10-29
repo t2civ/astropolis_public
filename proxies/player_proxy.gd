@@ -27,11 +27,14 @@ var player_id := -1 ## Index into [member ProxyBus.player_proxies].
 var player_class := -1 ## Player class index ([code]PlayerClasses[/code] enum).
 var homeworld := "" ## Name of this player's homeworld body.
 ## A polity's taxes (FINANCIAL_MODEL.md, "Taxes"): its corporate tax, a share of its facilities'
-## private operating income; its payroll tax, a share of the wages they pay; and its wealth tax, a
-## share a year of what its residents hold past [member wealth_tax_threshold], a share of their
-## mean wealth. Its agencies' and companies' facilities pay its rates.
+## private operating income; its income tax on wages, the payroll tax, a share of the wages they
+## pay, and on the interest and the dividends its residents are paid; and its wealth tax, a share a
+## year of what its residents hold past [member wealth_tax_threshold], a share of their mean wealth.
+## Its agencies' and companies' facilities pay its rates.
 var corporate_tax_rate := 0.0
 var payroll_tax_rate := 0.0 ## See [member corporate_tax_rate].
+var interest_tax_rate := 0.0 ## See [member corporate_tax_rate].
+var dividend_tax_rate := 0.0 ## See [member corporate_tax_rate].
 var wealth_tax_rate := 0.0 ## See [member corporate_tax_rate].
 var wealth_tax_threshold := 0.0 ## See [member corporate_tax_rate].
 ## True if a human plays this player, as set when the game started; only a playable player may be.

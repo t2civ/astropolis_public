@@ -1,19 +1,19 @@
-name\Field	player_class	start	gui_hide	playable	polity	homeworld	corporate_tax_rate	payroll_tax_rate	wealth_tax_rate	wealth_tax_threshold	appropriation_share	provision_share
-Type	Enums.PlayerClasses	BOOL	BOOL	BOOL	TABLE_ROW	STRING_NAME	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT
-Default		TRUE				PLANET_EARTH	0.2	0.0	0.0	1.0
+name\Field	player_class	start	gui_hide	playable	polity	homeworld	corporate_tax_rate	payroll_tax_rate	wealth_tax_rate	wealth_tax_threshold	interest_tax_rate	dividend_tax_rate	appropriation_share	provision_share
+Type	Enums.PlayerClasses	BOOL	BOOL	BOOL	TABLE_ROW	STRING_NAME	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT
+Default		TRUE				PLANET_EARTH	0.2	0.0	0.0	1.0	0.0	0.0
 Unit
 Prefix/PLAYER_	PLAYER_CLASS_				PLAYER_
-USA	POLITY				USA			0.25				0.6
-RUSSIA	POLITY				RUSSIA			0.22				0.40
-CHINA	POLITY				CHINA			0.13				0.39
-EU	POLITY				EU			0.36				0.39
-INDIA	POLITY				INDIA			0.06				0.31
-JAPAN	POLITY				JAPAN			0.33				0.43
-OTHER	POLITY		x		OTHER			0.15				0.40
-NASA	AGENCY			x	USA						4.57e-3
-ROSCOSMOS	AGENCY			x	RUSSIA						2.23e-3
-CNSA	AGENCY			x	CHINA						3.14e-4
-ESA	AGENCY			x	EU						7.27e-4
-ISRO	AGENCY			x	INDIA						4.24e-4
-JAXA	AGENCY			x	JAPAN						7.64e-4
+USA	POLITY				USA			0.25			0.12	0.10		0.6
+RUSSIA	POLITY				RUSSIA			0.22			0.0	0.13		0.40
+CHINA	POLITY				CHINA			0.13			0.0	0.10		0.39
+EU	POLITY				EU			0.36			0.15	0.15		0.39
+INDIA	POLITY				INDIA			0.06			0.05	0.0		0.31
+JAPAN	POLITY				JAPAN			0.33			0.15	0.15		0.43
+OTHER	POLITY		x		OTHER			0.15			0.10	0.10		0.40
+NASA	AGENCY			x	USA								4.57e-3
+ROSCOSMOS	AGENCY			x	RUSSIA								2.23e-3
+CNSA	AGENCY			x	CHINA								3.14e-4
+ESA	AGENCY			x	EU								7.27e-4
+ISRO	AGENCY			x	INDIA								4.24e-4
+JAXA	AGENCY			x	JAPAN								7.64e-4
 # game start
