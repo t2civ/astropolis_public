@@ -190,6 +190,11 @@ var flags := 0
 ## of each interval (FINANCIAL_MODEL.md, "Facilities as subsidiaries"). Its owners' payout policy;
 ## 0.0 by default. Use [method set_cash_reserve].
 var cash_reserve := 0.0
+## The least price of funds, a year, at which the facility's owners lend the market for funds what
+## its build budget leaves unspent; below it they take back what it lent and are paid it
+## (FINANCIAL_MODEL.md, "The market for funds"). Its owners' payout policy; 0.0 by default. Use
+## [method set_funds_reservation].
+var funds_reservation := 0.0
 ## What the facility may spend past what it holds before anything draws on its owners' residents:
 ## its cash less its debt, plus its line where its owners don't fund all it lacks, and what each
 ## treasury that funds it holds less what it owes, and its line, as far as what is left of the
@@ -733,6 +738,11 @@ func get_market() -> MarketProxy:
 ## Sets [member cash_reserve] (>= 0.0), in money. Proxy-authoritative: this change flows
 ## proxy -> server. No-op on a negative value or NAN.
 @abstract func set_cash_reserve(value: float) -> void
+
+
+## Sets [member funds_reservation] (>= 0.0), a year. Proxy-authoritative: this change flows
+## proxy -> server. No-op on a negative value or NAN.
+@abstract func set_funds_reservation(value: float) -> void
 
 
 ## Sets the [code]FROM_PROXY_MASK[/code] bits of operations flags for
