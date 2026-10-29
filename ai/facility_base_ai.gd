@@ -265,10 +265,10 @@ static var operation_strategy_defs: Array[Dictionary] = [
 	{&"clearance_limited": true}, # CLEARANCE_LIMITED
 ]
 
-## The least price of funds, a year, at which the facility's owners lend what its budget leaves
-## unspent (see [member FacilityProxy.funds_reservation]): the return they require on money they
-## leave in the market rather than are paid.
-static var funds_reservation := 0.04
+## The owners' required return: the least interest rate, a year, at which they lend what the
+## facility's budget leaves unspent (see [member FacilityProxy.required_return]), rather than be
+## paid it.
+static var required_return := 0.04
 
 static var _table_n_rows := IVTableData.table_n_rows
 static var _tradable_resources: PackedInt32Array
@@ -548,9 +548,9 @@ func _reconcile_facility_strategy() -> int:
 ## the other, with the payouts that are their residual where it isn't an agency's, fills what the
 ## held one leaves, in proportion to their shares (FINANCIAL_MODEL.md, "Budgets"). Leaves what is
 ## held alone. Both are resolved by tag, so no table entity name is referenced here. Sets the
-## owners' [member funds_reservation].
+## owners' [member required_return].
 func _apply_facility_knobs(strategy: int) -> void:
-	proxy.set_funds_reservation(funds_reservation)
+	proxy.set_required_return(required_return)
 	var def := facility_strategy_defs[strategy]
 	var expansion_share: float = def.get(&"expansion_spending_share", NAN)
 	var research_share: float = def.get(&"research_spending_share", 0.0)
