@@ -302,6 +302,12 @@ func get_body_flags() -> int:
 	return locus.body_flags
 
 
+## Returns its [LocusProxy], which [code]IVSelectionManager.get_body()[/code] reports while this
+## facility is selected; its name is its body's.
+func get_selection_body() -> LocusProxy:
+	return locus
+
+
 func get_player_name() -> StringName:
 	return player.name
 
