@@ -28,7 +28,7 @@ var _survey_names: Array[StringName] = _db_tables[&"surveys"][&"name"]
 var _survey_substring: Array[StringName] = _db_tables[&"surveys"][&"substring"]
 var _stratum_types: Dictionary # table name enumeration
 
-var _body_name: StringName
+var _locus_name: StringName
 var _selection_name: StringName
 var _fold_memory: Dictionary[StringName, bool] = {} # keep folded states
 
@@ -44,36 +44,36 @@ func _ready() -> void:
 ## Refreshes the resource grid for the cached selection. No-op if no
 ## selection is set yet.
 func refresh() -> void:
-	if !_body_name or !_selection_name:
+	if !_selection_name:
 		return
 	if !IVStateManager.is_threads_allowed():
 		return
-	MainThreadGlobal.call_proxy_thread(_get_proxy_data.bind(_body_name, _selection_name))
+	MainThreadGlobal.call_proxy_thread(_get_proxy_data.bind(_locus_name, _selection_name))
 
 
-## Updates the cached selection ([param body_name] + [param selection_name])
-## and triggers a refresh if it changed.
-func update_selection(body_name: StringName, selection_name: StringName) -> void:
-	assert(body_name and selection_name)
-	if _body_name != body_name or _selection_name != selection_name:
-		_body_name = body_name
+## Updates the cached selection ([param locus_name], empty for a body without a locus, and
+## [param selection_name]) and triggers a refresh if it changed.
+func update_selection(locus_name: StringName, selection_name: StringName) -> void:
+	assert(selection_name)
+	if _locus_name != locus_name or _selection_name != selection_name:
+		_locus_name = locus_name
 		_selection_name = selection_name
 		if !IVStateManager.is_threads_allowed():
 			return
-		MainThreadGlobal.call_proxy_thread(_get_proxy_data.bind(body_name, selection_name))
+		MainThreadGlobal.call_proxy_thread(_get_proxy_data.bind(locus_name, selection_name))
 
 
 
 # ******************************* PROXY THREAD ********************************
 
-func _get_proxy_data(body_name: StringName, selection_name: StringName) -> void:
+func _get_proxy_data(locus_name: StringName, selection_name: StringName) -> void:
 	const BODYFLAGS_SPACECRAFT := IVBody.BodyFlags.BODYFLAGS_SPACECRAFT
 	var data: Array = []
 	var polity_name := ""
 	if selection_name.begins_with("FACILITY_"):
 		var selection_proxy := Proxy.get_proxy_by_name(selection_name)
 		polity_name = selection_proxy.get_polity_name()
-	var locus_proxy: LocusProxy = Proxy.get_proxy_by_name(body_name)
+	var locus_proxy: LocusProxy = Proxy.get_proxy_by_name(locus_name)
 	if !locus_proxy:
 		_update_no_resources.call_deferred()
 		return

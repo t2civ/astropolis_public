@@ -22,7 +22,7 @@ extends Proxy
 ## AI_ARCHITECTURE.md, "Trust the server; guard against AI".
 ##
 ## To get the corresponding scene-tree [code]IVBody[/code] node use
-## [code]IVBody.bodies[name][/code]. Be aware that the SceneTree runs
+## [code]IVBody.bodies[body_name][/code]. Be aware that the SceneTree runs
 ## on the main thread!
 ##
 ## To modify AI, see [BaseAI] and the [code]*_base_ai.gd[/code] files.
@@ -42,6 +42,7 @@ signal positions_changed(position_key: PackedInt32Array, value: PackedFloat64Arr
 
 
 var locus_id := -1  ## Index into [member ProxyBus.locus_proxies].
+var body_name: StringName  ## Name of its [IVBody], which the tables name the locus by.
 var body_flags := 0  ## Flags of its [IVBody], from [enum IVBody.BodyFlags].
 var shade_factor: float  ## Average fraction of time this locus's sites are shaded from the sun (day-night or orbital eclipse).
 var solar_transmission: float  ## Atmospheric transmission of sunlight, in [0, 1] (1.0 = airless/transparent).
@@ -89,6 +90,10 @@ func has_development() -> bool:
 
 func get_locus_name() -> StringName:
 	return name
+
+
+func get_body_name() -> StringName:
+	return body_name
 
 
 func get_body_flags() -> int:

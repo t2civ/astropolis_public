@@ -36,14 +36,18 @@ signal proxy_thread_called(callable: Callable)
 ## thread and can continue arriving for a short time after simulator_started.
 signal proxies_ready
 
+## Emitted when what selecting the [IVBody] named [param body_name] selects changes (see
+## [method get_body_selection_redirect]).
+signal body_selection_redirect_changed(body_name: StringName)
+
 const utils := preload("res://public/static/utils.gd")  ## Convenience alias for [Utils].
 
 ## All [Proxy] instances keyed by [member Proxy.name] (e.g.
-## [code]&"PLANET_EARTH"[/code], [code]&"PLAYER_NASA"[/code]).
+## [code]&"LOCUS_PLANET_EARTH"[/code], [code]&"PLAYER_NASA"[/code]).
 var proxies_by_name: Dictionary[StringName, Variant] = {}
-## Map from body name to facility/player name to redirect selection to a
-## single facility or the local player's facility on that body.
-var body_selection_redirect := {}
+## What selecting a body selects, a facility or a locus, by the body's name (see
+## [method get_body_selection_redirect]).
+var body_selection_redirect: Dictionary[StringName, StringName] = {}
 ## True after [signal proxies_ready] has been emitted; reset on
 ## [code]about_to_free_procedural_nodes[/code].
 var proxies_ready_emitted := false
@@ -86,8 +90,9 @@ func call_proxy_thread(callable: Callable) -> void:
 	proxy_thread_called.emit(callable)
 
 
-## Returns the body-selection redirect target for [param body_name], or
-## [code]&""[/code] if no redirect is set.
+## Returns the name of what selecting the [IVBody] named [param body_name] selects: the facility
+## at its locus if it is the only one, else the local player's facility there, else the
+## [LocusProxy]; [code]&""[/code] for a body without a locus.
 func get_body_selection_redirect(body_name: StringName) -> StringName:
 	return body_selection_redirect.get(body_name, &"")
 
@@ -95,10 +100,13 @@ func get_body_selection_redirect(body_name: StringName) -> StringName:
 ## Sets the selection redirect for [param body_name]. Pass [code]&""[/code]
 ## as [param redirect_name] to clear the redirect.
 func set_body_selection_redirect(body_name: StringName, redirect_name: StringName) -> void:
+	if redirect_name == body_selection_redirect.get(body_name, &""):
+		return
 	if redirect_name:
 		body_selection_redirect[body_name] = redirect_name
 	else:
 		body_selection_redirect.erase(body_name)
+	body_selection_redirect_changed.emit(body_name)
 
 
 ## Returns the [Proxy] with the given [param proxy_name], or null if

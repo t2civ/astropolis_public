@@ -7,7 +7,7 @@ Facilities are described in `facilities.descriptive.md`. Content of this table i
 
 - name (1st column) — Constructed by joining locus name (with type prefix) and player name (without type prefix). Examples: PLANET_EARTH_CHINA, PLANET_EARTH_EU, SPACECRAFT_ISS_NASA.
 - start — Always TRUE (by default).
-- locus — The locus the facility stands at, by name; today a body's name (`PLANET_EARTH`).
+- locus — The locus the facility stands at, by its body's name (`PLANET_EARTH`).
 - player — Owning or controlling player.
 - region — The region of its locus the facility stands in, or blank for none. It stands on the locus's strata in that region and those that span the locus, one of each stratum group (see `region` in strata.tsv). A space agency's ground facility stands in its polity's region.
 - unitary — True ("x") if the facility can be treated as one activity for economic accounting. If false, each operation is treated as a separate activity for internal mechanics like taxation and gross product calculation.

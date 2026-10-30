@@ -114,11 +114,11 @@ func _update_selection(_dummy := false) -> void:
 	if !IVStateManager.is_threads_allowed():
 		return # don't dispatch into the non-draining proxy channel while threads stopped
 	_busy = true
-	var body_name := _selection_manager.get_body_name()
-	MainThreadGlobal.call_proxy_thread(_set_selections_on_proxy_thread.bind(body_name))
+	var locus_name := MainThreadGlobal.get_locus_name(_selection_manager.get_name())
+	MainThreadGlobal.call_proxy_thread(_set_selections_on_proxy_thread.bind(locus_name))
 
 
-func _set_selections_on_proxy_thread(body_name: StringName) -> void:
+func _set_selections_on_proxy_thread(locus_name: StringName) -> void:
 	# proxy thread!
 	const BODYFLAGS_STAR := IVBody.BodyFlags.BODYFLAGS_STAR
 	
@@ -129,12 +129,10 @@ func _set_selections_on_proxy_thread(body_name: StringName) -> void:
 	_system.clear()
 	_selection_lookup.clear()
 	
-	var locus: LocusProxy = Proxy.get_proxy_by_name(body_name)
-	if !locus:
-		_busy = false
-		return
-	var is_star := bool(locus.body_flags & BODYFLAGS_STAR)
-	_set_selections_recursive(locus, is_star, true)
+	var locus: LocusProxy = Proxy.get_proxy_by_name(locus_name)
+	if locus: # none for a body without a locus
+		var is_star := bool(locus.body_flags & BODYFLAGS_STAR)
+		_set_selections_recursive(locus, is_star, true)
 	# TODO: Sort results in some sensible way
 
 	_update_foldables.call_deferred()
@@ -165,7 +163,7 @@ func _set_selections_recursive(locus: LocusProxy, is_star: bool, root_call := fa
 		if !player_class_array.has(player_gui_name):
 			player_class_array.append(player_gui_name)
 			_selection_lookup[player_gui_name] = facility.name
-		elif player.homeworld == locus.name: # has precedence over any others
+		elif player.homeworld == locus.body_name: # has precedence over any others
 			_selection_lookup[player_gui_name] = facility.name
 	
 	if local_only:
@@ -179,7 +177,7 @@ func _set_selections_recursive(locus: LocusProxy, is_star: bool, root_call := fa
 			_system.append(locus_gui_name)
 		else:
 			_offworld.append(locus_gui_name)
-		_selection_lookup[locus_gui_name] = locus.name
+		_selection_lookup[locus_gui_name] = locus.body_name
 	
 	# recurse satallites
 	for satellite_name in locus.satellites:

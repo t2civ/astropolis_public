@@ -405,8 +405,9 @@ func _select_tab(tab: int) -> void:
 func _update_tab(_dummy := false) -> void:
 	if !visible or !IVStateManager.is_threads_allowed():
 		return
+	var selection := _selection_manager.get_selection()
 	var target_name := _selection_manager.get_name()
-	if target_name and target_name == _selection_manager.get_body_name():
+	if selection is IVBody or selection is LocusProxy:
 		_show_only(_local_selections)
 	elif MainThreadGlobal.has_development(target_name):
 		MainThreadGlobal.call_proxy_thread(_get_proxy_data.bind(target_name))

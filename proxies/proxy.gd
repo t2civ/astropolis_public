@@ -22,6 +22,10 @@ extends RefCounted
 ## again. The proxy keeps and persists each held value. A held value is one a human can set, so an
 ## AI must set it too, since on auto nothing else does.
 ##
+## A facility or a locus is a GUI selection: [IVSelectionManager] calls its
+## [code]get_selection_*[/code] hooks on the main thread, and an [IVBody] with a locus is selected
+## as one (see [AstroSelectionManager]).
+##
 ## WARNING: Lives on the proxy thread. Containers and many methods are not
 ## threadsafe; accessing non-container properties is safe.
 
@@ -231,6 +235,12 @@ func get_development_biodiversity() -> float:
 ## Returns the [member name] of this proxy's [LocusProxy], or
 ## [code]&""[/code] if not applicable.
 func get_locus_name() -> StringName:
+	return &""
+
+
+## Returns the name of the [IVBody] of this proxy's [LocusProxy], or [code]&""[/code] if not
+## applicable.
+func get_body_name() -> StringName:
 	return &""
 
 
@@ -790,3 +800,110 @@ func get_cyberspace_computation_rate() -> float:
 ## Returns current information (minimum 1.0 where cyberspace is present).
 func get_cyberspace_information() -> float:
 	return 0.0
+
+
+# ********************************* SELECTION *********************************
+# IVSelectionManager's hooks, called on the main thread while this proxy is selected. They read
+# only what is fixed once the proxy is ready.
+
+## Returns the [IVBody] of this proxy's locus, which [IVSelectionManager] reports as the body of
+## this selection; null if not applicable.
+func get_selection_body() -> IVBody:
+	var body_name := get_body_name()
+	return IVBody.bodies[body_name] if body_name else null
+
+
+## Returns what the camera goes to for this selection: its locus's body.
+func get_selection_camera_target() -> Node3D:
+	return get_selection_body()
+
+
+## Returns the image shown for this selection: its locus's body's.
+func get_selection_texture_2d() -> Texture2D:
+	var body := get_selection_body()
+	return body.texture_2d if body else null
+
+
+## Returns the selection above this one: the body above its locus's. A facility at a locus with
+## other facilities goes to its locus first.
+func get_selection_up() -> Object:
+	var body := get_selection_body()
+	return body.get_selection_up() if body else null
+
+
+## As [method IVBody.get_selection_down], from its locus's body.
+func get_selection_down() -> Object:
+	var body := get_selection_body()
+	return body.get_selection_down() if body else null
+
+
+## As [method IVBody.get_selection_next], from its locus's body.
+func get_selection_next() -> Object:
+	var body := get_selection_body()
+	return body.get_selection_next() if body else null
+
+
+## As [method IVBody.get_selection_last], from its locus's body.
+func get_selection_last() -> Object:
+	var body := get_selection_body()
+	return body.get_selection_last() if body else null
+
+
+## As [method IVBody.get_selection_next_star], from its locus's body.
+func get_selection_next_star() -> Object:
+	var body := get_selection_body()
+	return body.get_selection_next_star() if body else null
+
+
+## As [method IVBody.get_selection_last_star], from its locus's body.
+func get_selection_last_star() -> Object:
+	var body := get_selection_body()
+	return body.get_selection_last_star() if body else null
+
+
+## As [method IVBody.get_selection_next_planet], from its locus's body.
+func get_selection_next_planet() -> Object:
+	var body := get_selection_body()
+	return body.get_selection_next_planet() if body else null
+
+
+## As [method IVBody.get_selection_last_planet], from its locus's body.
+func get_selection_last_planet() -> Object:
+	var body := get_selection_body()
+	return body.get_selection_last_planet() if body else null
+
+
+## As [method IVBody.get_selection_next_major_moon], from its locus's body.
+func get_selection_next_major_moon() -> Object:
+	var body := get_selection_body()
+	return body.get_selection_next_major_moon() if body else null
+
+
+## As [method IVBody.get_selection_last_major_moon], from its locus's body.
+func get_selection_last_major_moon() -> Object:
+	var body := get_selection_body()
+	return body.get_selection_last_major_moon() if body else null
+
+
+## As [method IVBody.get_selection_next_moon], from its locus's body.
+func get_selection_next_moon() -> Object:
+	var body := get_selection_body()
+	return body.get_selection_next_moon() if body else null
+
+
+## As [method IVBody.get_selection_last_moon], from its locus's body.
+func get_selection_last_moon() -> Object:
+	var body := get_selection_body()
+	return body.get_selection_last_moon() if body else null
+
+
+## As [method IVBody.get_selection_next_spacecraft], from its locus's body.
+func get_selection_next_spacecraft() -> Object:
+	var body := get_selection_body()
+	return body.get_selection_next_spacecraft() if body else null
+
+
+## As [method IVBody.get_selection_last_spacecraft], from its locus's body.
+func get_selection_last_spacecraft() -> Object:
+	var body := get_selection_body()
+	return body.get_selection_last_spacecraft() if body else null

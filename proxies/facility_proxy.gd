@@ -229,10 +229,6 @@ var held_research_shares: Dictionary[int, float] = {}
 
 # *****************************************************************************
 
-## Body texture cached for [code]IVSelectionManager[/code] (currently the
-## [code]IVBody.texture_2d[/code] of its locus's body).
-var texture_2d: Texture2D
-
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
 
@@ -243,7 +239,6 @@ func _clear_for_destruction() -> void:
 	trader = null
 	joins.clear()
 	market = null
-	texture_2d = null
 
 
 ## Detaches this facility from its locus and player, then breaks its outgoing
@@ -298,14 +293,12 @@ func get_locus_name() -> StringName:
 	return locus.name
 
 
+func get_body_name() -> StringName:
+	return locus.body_name
+
+
 func get_body_flags() -> int:
 	return locus.body_flags
-
-
-## Returns its [LocusProxy], which [code]IVSelectionManager.get_body()[/code] reports while this
-## facility is selected; its name is its body's.
-func get_selection_body() -> LocusProxy:
-	return locus
 
 
 func get_player_name() -> StringName:
