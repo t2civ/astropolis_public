@@ -76,6 +76,9 @@ inequality, `facilities_populations.tsv`) takes the average over its deciles.
   it, and the rest over their other wants in the shares `wants.tsv` sets
   (`POPULATION_MODEL.md`, "Work and pay"). Its inverse is how many years of spending the
   wealth seeded in `facilities_populations.tsv` holds. Default `1/y`.
+- satiation_headroom — FLOAT, the most a want's satisfaction rises past the want, approached with
+  diminishing returns as a decile buys past it: past a fill f of one, a satisfaction of
+  1 + h(1 − e^(−(f − 1)/h)) (`FINANCIAL_MODEL.md`, "Saving and borrowing"). Default `0.1`.
 - work_resource — TABLE_ROW `resources.tsv`, the resource the type's work makes. Default
   `LABOR`, which every operation draws (`POPULATION_MODEL.md`, "Work and pay").
 - work_stage_weights — ARRAY[FLOAT], three values, young, adults and elders: how much of a

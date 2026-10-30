@@ -197,11 +197,11 @@ var cash_reserve := 0.0
 ## are paid it (FINANCIAL_MODEL.md, "The credit market"). Its owners' payout policy; 0.0 by default.
 ## Use [method set_required_return].
 var required_return := 0.0
-## Its available credit: what the facility may spend past what it holds before anything draws on
-## its owners' residents: its cash less its debt, plus its credit limit where its owners don't fund
-## all it lacks, and what each treasury that funds it holds less what it owes, and its credit limit,
-## as far as what is left of the facility's funding line, as of its last interval
-## (FINANCIAL_MODEL.md, "Credit"). Its trader's commitments are bound by it.
+## Its available credit: what the facility may spend past what it holds, as of its last interval:
+## its cash less what it owes, and what more it could owe before its interest at its own rate
+## passed what its income carries, and what is left of each funding line that funds it, as far as
+## the treasury's own such room goes (FINANCIAL_MODEL.md, "Saving and borrowing"). Its trader's
+## commitments are bound by it.
 var credit := 0.0
 ## Its budget a year as of its last interval, by [enum BudgetLines]; empty before its first.
 ## Server-authoritative. Use [method get_budget_line].

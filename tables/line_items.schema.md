@@ -15,8 +15,8 @@ account's settlements, where what it is short is booked as its debt (`DEBT`, `GO
 statement `PL_SETTLEMENTS` / `PL_PAYMENTS`, `EXCHANGE_TAKE_RECEIVED` / `EXCHANGE_TAKE_PAID`,
 `PAYOUTS_PAID` / `FUNDING_RECEIVED` and each treasury's side of them,
 at an agency `APPROPRIATIONS_RECEIVED` / `APPROPRIATION_LAPSES_PAID` and at its polity
-`APPROPRIATION_LAPSES_RECEIVED` / `APPROPRIATIONS_PAID`, `TRANSFERS_PAID` / `LEVIES_RECEIVED`,
-`DIVIDENDS_PAID` / `CAPITAL_PAID_IN`, and `BORROWED` / `REPAID` and each treasury's.
+`APPROPRIATION_LAPSES_RECEIVED` / `APPROPRIATIONS_PAID`, and `BORROWED` / `REPAID` and each
+treasury's.
 
 ## Fields
 
