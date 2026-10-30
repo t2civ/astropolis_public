@@ -57,7 +57,8 @@ var has_satellites := false  ## True while this locus has at least one satellite
 var has_facilities := false  ## True while this locus hosts at least one facility.
 ## Parent locus, or null for the top locus only.
 var parent: LocusProxy
-## Direct satellite loci, keyed by name. Resizable container — not threadsafe!
+## The loci of the bodies directly below its own that have one, keyed by name. Resizable
+## container — not threadsafe!
 var satellites: Dictionary[StringName, LocusProxy]
 ## Facilities at this locus. Resizable container — not threadsafe!
 var facilities: Array[Proxy] = []
