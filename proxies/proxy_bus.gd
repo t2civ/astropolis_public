@@ -30,7 +30,7 @@ static var verbose2 := false ## Enable extra-verbose proxy logging.
 var proxies: Array[Proxy] ## All [Proxy] instances indexed by proxy_id; nulls possible.
 var proxies_by_name: Dictionary[StringName, Proxy] ## All proxies keyed by name.
 var facility_proxies: Array[FacilityProxy] ## [FacilityProxy]s indexed by facility_id; nulls possible.
-var body_proxies: Array[BodyProxy] ## [BodyProxy]s indexed by body_id; nulls possible.
+var locus_proxies: Array[LocusProxy] ## [LocusProxy]s indexed by locus_id; nulls possible.
 var player_proxies: Array[PlayerProxy] ## [PlayerProxy]s indexed by player_id; no nulls.
 var join_proxies: Array[JoinProxy] ## [JoinProxy]s indexed by join_id; nulls possible.
 var trader_proxies: Array[TraderProxy] ## [TraderProxy]s indexed by trader_id; nulls possible.

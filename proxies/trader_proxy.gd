@@ -12,7 +12,7 @@ extends Proxy
 ## [TraderProxy] buys and sells resources for a specific [FacilityProxy].
 ##
 ## A trader is paired 1-to-1 with a facility and trades on its behalf via the
-## [MarketProxy] at the facility's body.
+## [MarketProxy] at the facility's locus.
 ##
 ## To modify AI, see [BaseAI] and the [code]*_base_ai.gd[/code] files.
 ##
@@ -21,7 +21,7 @@ extends Proxy
 
 
 ## Emitted when a position changes. [param position_key] is the 3-element
-## key [resource_type, ordinal_quarter, body_id] (the delivery body). [param value] is
+## key [resource_type, ordinal_quarter, locus_id] (the delivery locus). [param value] is
 ## the resulting position [signed_unit_quantity, unit_price] in trade units (empty if
 ## the position cleared); the quantity sign gives the side (+ long, − short). [param
 ## ask] and [param bid] are the trader's outstanding ask and bid [unit_quantity,
@@ -50,9 +50,9 @@ var market: MarketProxy  ## Lives on markets thread!
 # *****************************************************************************
 
 ## Positions indexed by the 3-element position key [resource_type,
-## ordinal_quarter, body_id] (the delivery body). Values are [signed_unit_quantity,
+## ordinal_quarter, locus_id] (the delivery locus). Values are [signed_unit_quantity,
 ## unit_price] in trade units; the quantity sign gives the side (+ long / pick up at
-## the body, − short / drop off).
+## the locus, − short / drop off).
 var positions: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
 
 
@@ -90,16 +90,16 @@ func get_market() -> MarketProxy:
 # Call on proxy thread.
 
 ## Adds, replaces, or cancels this trader's sell (ask) order. [param
-## instrument] is composed as [resource_type, ordinal_quarter]; the delivery body
-## is the body of [param delivery_market_id]. Cancels if [param unit_quantity] is
+## instrument] is composed as [resource_type, ordinal_quarter]; the delivery locus
+## is the locus of [param delivery_market_id]. Cancels if [param unit_quantity] is
 ## 0. Placing an order in a resource with no trade class (see
 ## [constant FacilityProxy.InventoryFlags.TRADABLE]) is a no-op.
 ## [param unit_quantity] and [param unit_price] are in trade units. The
 ## resulting position side (long/short) follows from matching; a trader may hold
-## either side at any delivery body and may flip. The current quarter is the
+## either side at any delivery locus and may flip. The current quarter is the
 ## near-immediate ("spot") case; later quarters are forward delivery, accepted
 ## up to (excluding) ordinal_qtr + [constant MAX_FORWARD_QUARTERS]. [param
-## delivery_market_id] is the market at the delivery body; the caller already
+## delivery_market_id] is the market at the delivery locus; the caller already
 ## holds it, since it must query that market to see available instruments.
 @abstract func set_ask(instrument: PackedInt32Array, unit_quantity: int,
 		unit_price: int, delivery_market_id: int) -> void
@@ -108,6 +108,6 @@ func get_market() -> MarketProxy:
 ## Adds, replaces, or cancels this trader's buy (bid) order. See [param
 ## instrument] composition and params in the ask counterpart [method
 ## set_ask]. The resulting position side (long/short) follows from
-## matching; a trader may hold either side at any delivery body and may flip.
+## matching; a trader may hold either side at any delivery locus and may flip.
 @abstract func set_bid(instrument: PackedInt32Array, unit_quantity: int,
 		unit_price: int, delivery_market_id: int) -> void

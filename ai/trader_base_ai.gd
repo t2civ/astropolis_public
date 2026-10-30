@@ -21,7 +21,7 @@ extends BaseAI
 ## facility's rates and prices, never its stock, and trades in the posture and resource strategies
 ## its facility's AI authors (it trusts that these already incorporate player strategies).[br][br]
 ##
-## A facility-paired trader orders delivery/pickup [b]only at its own facility's body[/b], or at
+## A facility-paired trader orders delivery/pickup [b]only at its own facility's locus[/b], or at
 ## the cyber market for a cyber resource: the order helpers resolve the delivery market
 ## internally. The future transport trader will be this same class running different strategies,
 ## discriminated by [member TraderProxy.facility_id] == -1 — all facility-paired behavior is gated
@@ -63,7 +63,7 @@ enum TraderStrategies {
 	## stockpiling — even at facility cost. Analog: state-owned trading
 	## enterprise.
 	POLICY_AGENT,
-	## Make the facility's body's market: keep a quote standing on both sides of every resource
+	## Make the facility's locus's market: keep a quote standing on both sides of every resource
 	## the facility deals in, so the market always has a price (see TRADE_MODEL.md, "Market
 	## makers"). The posture of a market-making facility's trader. Analog: a wholesale merchant; a
 	## spaceport's commodity desk.
@@ -215,9 +215,9 @@ var resource_strategies: PackedInt32Array
 
 ## Memory of open asks, keyed at this trader's order-key width (see [member _key_width]):
 ## the 2-element instrument [resource_type, ordinal_quarter] for a facility trader (one
-## market per resource makes the body redundant), or 3-element [resource_type,
-## ordinal_quarter, body_id] for a transport trader (which trades a resource at many
-## bodies). Values are [unit_quantity, unit_price] in trade units; unique per key. Mirrors
+## market per resource makes the locus redundant), or 3-element [resource_type,
+## ordinal_quarter, locus_id] for a transport trader (which trades a resource at many
+## loci). Values are [unit_quantity, unit_price] in trade units; unique per key. Mirrors
 ## the market's resting ask, refreshed via position notifications.
 var _asks: Dictionary[PackedInt32Array, PackedInt64Array] = {}
 
@@ -231,17 +231,17 @@ var _facility_ai: FacilityBaseAI
 var _facility: FacilityProxy  # paired facility proxy
 
 # Facility-trader auxiliary: this trader's positions keyed by the 2-element instrument
-# [resource_type, ordinal_quarter], body projected out (unique per instrument because a
+# [resource_type, ordinal_quarter], locus projected out (unique per instrument because a
 # facility trades each resource in exactly one market — home or cyber). Maintained in
 # _on_positions_changed, seeded in ai_init. Stays empty for a transport trader, which is
-# inherently multi-body and works off proxy.positions directly.
+# inherently multi-locus and works off proxy.positions directly.
 var _positions_by_instrument: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
 # This trader's cyber market id, resolved once in ai_init; the routing target for cyber
 # resources (see _delivery_market_id). -1 for a transport trader.
 var _cyber_market_id := -1
 # Width of this trader's order keys (_asks / _bids / _on_positions_changed): 2 for a
 # facility trader ([resource, quarter]), 3 for a transport trader ([resource, quarter,
-# body_id]). Set in ai_init.
+# locus_id]). Set in ai_init.
 var _key_width := 2
 # Per resource, the span of its flow this interval's quotes contract, what its facility foresees of
 # how far ahead they reach, in sim time; 0.0 where it isn't traded.
@@ -303,7 +303,7 @@ func bind_proxy(proxy_: Proxy) -> void:
 func ai_init() -> void:
 	proxy.positions_changed.connect(_on_positions_changed)
 	if proxy.facility_id == -1:
-		_key_width = 3 # transport: order keys carry the delivery body (see _key_width)
+		_key_width = 3 # transport: order keys carry the delivery locus (see _key_width)
 		return # transport trader: not facility-paired; transport strategies TBD
 	_facility = proxy.facility
 	_cyber_market_id = proxy.market.cyber_market_id
@@ -569,7 +569,7 @@ func _place_quotes() -> void:
 
 ## Adds, replaces, or cancels a sell (ask) order. See [method
 ## TraderProxy.set_ask] for instrument composition and params, including
-## [param market_id] (the market at the delivery body). This method
+## [param market_id] (the market at the delivery locus). This method
 ## updates AI ask memory on the outgoing call. Rejects if specified
 ## ordinal_quarter < proxy.ordinal_qtr (proxy would reject if it went through
 ## here).
@@ -578,8 +578,8 @@ func _set_ask(instrument: PackedInt32Array, unit_quantity: int,
 	if instrument[1] < proxy.ordinal_qtr:
 		return
 	var mem_key := instrument.duplicate() # facility: 2-element [resource, quarter]
-	if _key_width == 3: # transport: append the delivery body (see _key_width)
-		mem_key.append(_market_body_id(delivery_market_id))
+	if _key_width == 3: # transport: append the delivery locus (see _key_width)
+		mem_key.append(_market_locus_id(delivery_market_id))
 	if unit_quantity:
 		var ask: PackedInt64Array
 		if _asks.has(mem_key):
@@ -596,7 +596,7 @@ func _set_ask(instrument: PackedInt32Array, unit_quantity: int,
 
 ## Adds, replaces, or cancels a buy (bid) order. See [method
 ## TraderProxy.set_bid] for instrument composition and params, including
-## [param market_id] (the market at the delivery body). This method
+## [param market_id] (the market at the delivery locus). This method
 ## updates AI bid memory on the outgoing call. Rejects if specified
 ## ordinal_quarter < proxy.ordinal_qtr (proxy would reject if it went through
 ## here).
@@ -605,8 +605,8 @@ func _set_bid(instrument: PackedInt32Array, unit_quantity: int,
 	if instrument[1] < proxy.ordinal_qtr:
 		return
 	var mem_key := instrument.duplicate() # facility: 2-element [resource, quarter]
-	if _key_width == 3: # transport: append the delivery body (see _key_width)
-		mem_key.append(_market_body_id(delivery_market_id))
+	if _key_width == 3: # transport: append the delivery locus (see _key_width)
+		mem_key.append(_market_locus_id(delivery_market_id))
 	if unit_quantity:
 		var bid: PackedInt64Array
 		if _bids.has(mem_key):
@@ -665,17 +665,17 @@ func _is_quote_stale(orders: Dictionary[PackedInt32Array, PackedInt64Array],
 
 
 # Resolves which market an order for [param resource_type] routes to: the cyber market
-# for a cyber resource, else this facility trader's home body market.
+# for a cyber resource, else this facility trader's home locus market.
 func _delivery_market_id(resource_type: int) -> int:
 	return _cyber_market_id if _cyber_resource[resource_type] else proxy.market_id
 
 
-# Resolves the delivery body of [param market_id], for a transport trader's 3-element
+# Resolves the delivery locus of [param market_id], for a transport trader's 3-element
 # order key (see _key_width). Not called on the facility path (_key_width == 2).
-func _market_body_id(market_id: int) -> int:
+func _market_locus_id(market_id: int) -> int:
 	var market_proxy: MarketProxy = Proxy.proxy_bus.market_proxies[market_id]
-	assert(market_proxy and market_proxy.body, "delivery market/body not resolved")
-	return market_proxy.body.body_id
+	assert(market_proxy and market_proxy.locus, "delivery market/locus not resolved")
+	return market_proxy.locus.locus_id
 
 
 # The market purges old-quarter resting orders at rollover without echoes; drop
@@ -780,7 +780,7 @@ func _on_facility_resource_strategy_changed(resource_type: int, strategy_id: int
 
 # Mirrors the trader's resting ask/bid (carried in every notification) into order memory,
 # keyed at this trader's width (2-element instrument for a facility, 3-element with the
-# delivery body for a transport — see _key_width). The body-less position view
+# delivery locus for a transport — see _key_width). The locus-less position view
 # (_positions_by_instrument) is a facility convenience; a transport reads proxy.positions
 # directly, so it is maintained only when _facility is set.
 func _on_positions_changed(position_key: PackedInt32Array, value: PackedFloat64Array,

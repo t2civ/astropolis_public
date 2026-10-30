@@ -9,7 +9,7 @@
 class_name FacilityProxy
 extends Proxy
 
-## [FacilityProxy] represents a [PlayerProxy]'s development at a [BodyProxy].
+## [FacilityProxy] represents a [PlayerProxy]'s development at a [LocusProxy].
 ##
 ## A facility runs operations enabled by modules (see corresponding data
 ## tables). Server-side automations translate AI intent set here into per-tick
@@ -160,7 +160,7 @@ const FLOW_CURVE_FACTORS: PackedFloat64Array = [0.5, 1.0, 2.0]
 
 
 var facility_id := -1  ## Index into [member ProxyBus.facility_proxies].
-## Its name among its player's facilities, as in its owners' budget lines: its body's name, unless
+## Its name among its player's facilities, as in its owners' budget lines: its locus's name, unless
 ## the game start names it otherwise.
 var short_name := ""
 var facility_class := -1  ## [code]facility_classes.tsv[/code] row index.
@@ -168,21 +168,21 @@ var facility_class := -1  ## [code]facility_classes.tsv[/code] row index.
 var public_sector: float
 ## True if this is a small focused activity (affects stats and tax treatment).
 var unitary: bool
-## True if this facility makes its body's market, warehousing stock and keeping a bid
+## True if this facility makes its locus's market, warehousing stock and keeping a bid
 ## and an ask standing (see TRADE_MODEL.md, "Market makers").
 var market_maker: bool
 ## True if all resource streams flow from/to inventory (no atmosphere/surface
 ## market).
 var closed_cycle_ops: bool
-## Per-source corrections multiplying this site's body-level renewable capacity
-## factor (territorial quality vs the body baseline; 1.0 = body value).
+## Per-source corrections multiplying this site's locus-level renewable capacity
+## factor (territorial quality vs the locus baseline; 1.0 = locus value).
 var solar_correction := 1.0
 var wind_correction := 1.0
 var geothermal_correction := 1.0
 ## Time horizon used by AI and automations (inventory reserves, resupply, etc.).
 var time_horizon: float
-## Region of its body the facility stands in, or [code]&""[/code] for none; it stands on the
-## body's strata in that region and those that span the body.
+## Region of its locus the facility stands in, or [code]&""[/code] for none; it stands on the
+## locus's strata in that region and those that span the locus.
 var region: StringName
 ## Bidirectional bit flags (see [enum FacilityFlags]). FROM_SERVER bits are
 ## server-authoritative; FROM_PROXY bits are proxy-authoritative. Use
@@ -215,7 +215,7 @@ var interval_time := -INF
 
 var player: PlayerProxy  ## Owning [PlayerProxy].
 var polity: PlayerProxy  ## The polity of [member player].
-var body: BodyProxy  ## Hosting [BodyProxy].
+var locus: LocusProxy  ## Hosting [LocusProxy].
 var trader: TraderProxy  ## Paired [TraderProxy]; set when TraderProxy registers.
 var trader_id := -1  ## [member TraderProxy.trader_id] of [member trader].
 var joins: Array[JoinProxy] = []  ## [JoinProxy] aggregates this facility belongs to.
@@ -230,14 +230,14 @@ var held_research_shares: Dictionary[int, float] = {}
 # *****************************************************************************
 
 ## Body texture cached for [code]IVSelectionManager[/code] (currently the
-## hosting body's [code]IVBody.texture_2d[/code]).
+## [code]IVBody.texture_2d[/code] of its locus's body).
 var texture_2d: Texture2D
 
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
 
 func _clear_for_destruction() -> void:
-	body = null
+	locus = null
 	player = null
 	polity = null
 	trader = null
@@ -246,11 +246,11 @@ func _clear_for_destruction() -> void:
 	texture_2d = null
 
 
-## Detaches this facility from its body and player, then breaks its outgoing
+## Detaches this facility from its locus and player, then breaks its outgoing
 ## refs via [method super.remove]. Called by the server side at runtime when a
 ## facility is removed mid-game.
 func remove() -> void:
-	body.remove_facility(self)
+	locus.remove_facility(self)
 	player.remove_facility(self)
 	super.remove()
 
@@ -281,8 +281,8 @@ func has_development() -> bool:
 
 
 ## Returns the environmental capacity factor for renewable-power operation
-## [param operation_type] at this facility (the body factor scaled by this site's
-## per-source correction); NAN if not a body-modeled renewable or unavailable here.
+## [param operation_type] at this facility (the locus factor scaled by this site's
+## per-source correction); NAN if not a locus-modeled renewable or unavailable here.
 @abstract func calculate_capacity_factor(operation_type: int) -> float
 
 
@@ -294,12 +294,12 @@ func has_inventory() -> bool:
 	return true
 
 
-func get_body_name() -> StringName:
-	return body.name
+func get_locus_name() -> StringName:
+	return locus.name
 
 
 func get_body_flags() -> int:
-	return body.body_flags
+	return locus.body_flags
 
 
 func get_player_name() -> StringName:
@@ -344,7 +344,7 @@ func get_budget_line(line: int) -> float:
 
 
 ## Returns the availability of operation [param operation_type]: the share of its capacity it can
-## run at, seeded or, for a renewable its body models, its capacity factor.
+## run at, seeded or, for a renewable its locus models, its capacity factor.
 @abstract func get_operations_availability(operation_type: int) -> float
 
 
@@ -488,7 +488,7 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 
 
 ## Returns the desired rate of [param resource_type], smoothed over the time horizon: the trade
-## the facility wants at the body market's price, positive to take and negative to give, where
+## the facility wants at the locus market's price, positive to take and negative to give, where
 ## its whole use and the step toward its desired level would meet what its producers make at that
 ## price. NAN where the market has no price; 0.0 for a resource that can't be traded. Until trade
 ## returns, the market's prices stand at their seeds. See PRODUCTION_MODEL.md, "A facility's

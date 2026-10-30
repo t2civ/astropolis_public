@@ -1,4 +1,4 @@
-name\Field	start	body	player	region	unitary	market_maker	closed_cycle_ops	public_sector	funding_share	population	staff	constructions	biomass	bioproductivity	biodiversity_fraction	information_fraction	nominal_information	solar_correction	wind_correction	geothermal_correction	time_horizon	facility_class	short_name
+name\Field	start	locus	player	region	unitary	market_maker	closed_cycle_ops	public_sector	funding_share	population	staff	constructions	biomass	bioproductivity	biodiversity_fraction	information_fraction	nominal_information	solar_correction	wind_correction	geothermal_correction	time_horizon	facility_class	short_name
 Type	BOOL	STRING_NAME	TABLE_ROW	STRING_NAME	BOOL	BOOL	BOOL	FLOAT	FLOAT	ARRAY[FLOAT]	ARRAY[FLOAT]	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	TABLE_ROW	STRING_NAME
 Unit												t	t	t/h			Tbit				d		
 Default	TRUE							0		0	0	0	0	0	0	0	0	1.0	1.0	1.0			
@@ -21,4 +21,4 @@ SPACECRAFT_ISS_ROSCOSMOS		SPACECRAFT_ISS	ROSCOSMOS		x		x	1	0.3			75					15	1.10	
 SPACECRAFT_ISS_ESA		SPACECRAFT_ISS	ESA		x		x	1	0.1			12.5					8	1.10	1.0	1.0	180	RESEARCH_STATION
 SPACECRAFT_ISS_JAXA		SPACECRAFT_ISS	JAXA		x		x	1	0.2			28.3					8	1.10	1.0	1.0	180	RESEARCH_STATION
 SPACECRAFT_TIANGONG_CNSA		SPACECRAFT_TIANGONG	CNSA		x		x	1	0.2			66					20	1.10	1.0	1.0	180	RESEARCH_STATION
-# 1 per Body per Player, at most																					
+# 1 per locus per player, at most																					

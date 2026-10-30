@@ -332,7 +332,7 @@ func ai_init() -> void:
 	_player_ai.global_strategy_changed.connect(_on_player_global_strategy_changed)
 	_player_ai.player_resource_strategy_changed.connect(_on_player_resource_strategy_changed)
 	_player_ai.player_facility_strategy_changed.connect(_on_player_facility_strategy_changed)
-	_player_ai.body_strategy_changed.connect(_on_player_body_strategy_changed)
+	_player_ai.locus_strategy_changed.connect(_on_player_locus_strategy_changed)
 	# new_quarter does not fire on load or the first adopted quarter, so author once
 	# here to bootstrap (and re-author idempotently after load). The trader's posture
 	# goes first: the resource knobs hold a market maker's stock against its swings from it.
@@ -379,8 +379,8 @@ func _on_player_facility_strategy_changed(facility_id: int, _strategy_id: int) -
 		_author_operation_strategies()
 
 
-func _on_player_body_strategy_changed(_target_body_id: int, _strategy_id: int) -> void:
-	pass # body strategies are not folded into per-resource policy in the base AI
+func _on_player_locus_strategy_changed(_target_locus_id: int, _strategy_id: int) -> void:
+	pass # locus strategies are not folded into per-resource policy in the base AI
 
 
 # **************************** INTERNAL PRIVATE *******************************
@@ -598,7 +598,7 @@ func _author_trader_strategy() -> void:
 
 
 ## Folds the facility's role into its trader's posture: a market-making facility's trader
-## makes its body's market, and any other supplies its facility. A custom AI overrides
+## makes its locus's market, and any other supplies its facility. A custom AI overrides
 ## this to weigh a player's directive or the facility's own situation.
 func _reconcile_trader_strategy() -> int:
 	const TS := TraderBaseAI.TraderStrategies

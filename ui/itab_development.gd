@@ -58,7 +58,7 @@ func _update_selection(_dummy := false) -> void:
 	# Selection is either a Facility or Body. It's a Facility if user selected
 	# a player (NASA, USA, etc.), so show auxilary columns accordingly.
 	
-	var body_name: StringName = MainThreadGlobal.get_body_name(selection_name)
+	var body_name: StringName = MainThreadGlobal.get_locus_name(selection_name)
 	var body_flags: int = MainThreadGlobal.get_body_flags(body_name)
 	var player_join_name := ""
 	if selection_name.begins_with("FACILITY_"):

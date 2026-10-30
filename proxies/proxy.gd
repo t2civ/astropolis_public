@@ -12,7 +12,7 @@ extends RefCounted
 ## Base class for entity proxies between AI/GUI clients and the game server.
 ##
 ## All GUI and in-game AI interaction with game internals goes through a
-## [Proxy]. Subclasses ([FacilityProxy], [PlayerProxy], [BodyProxy],
+## [Proxy]. Subclasses ([FacilityProxy], [PlayerProxy], [LocusProxy],
 ## [JoinProxy], [TraderProxy], [MarketProxy]) declare the
 ## API. Sync plumbing and concrete instantiation live on server-side entities.
 ##
@@ -135,7 +135,7 @@ func _clear_for_destruction() -> void:
 
 ## Called once by ProxyServer when this proxy becomes ready (cross-proxy refs
 ## wired). Override to derive non-ref state from those refs (e.g. a cached
-## texture from the hosting body). Runs again on the fresh post-load instance;
+## texture from the hosting locus's body). Runs again on the fresh post-load instance;
 ## idempotent overrides required.
 func _on_ready() -> void:
 	pass
@@ -174,7 +174,7 @@ func has_inventory() -> bool:
 
 
 # Development totals. Default 0.0; the developed proxies (Facility, Player,
-# Body, Join) override with values combined from their components.
+# Locus, Join) override with values combined from their components.
 
 ## Returns the development "population" total, optionally filtered to a
 ## specific [param population_type] (-1 for total).
@@ -228,13 +228,13 @@ func get_development_biodiversity() -> float:
 	return 0.0
 
 
-## Returns the [member name] of this proxy's [BodyProxy], or
+## Returns the [member name] of this proxy's [LocusProxy], or
 ## [code]&""[/code] if not applicable.
-func get_body_name() -> StringName:
+func get_locus_name() -> StringName:
 	return &""
 
 
-## Returns body flags for this proxy's [BodyProxy] (see ivoyager
+## Returns the body flags of this proxy's [LocusProxy] (see ivoyager
 ## [code]IVBody.BodyFlags[/code]), or 0 if not applicable.
 func get_body_flags() -> int:
 	return 0
@@ -618,7 +618,7 @@ func get_financials_counterparty_keys(_line_item_type: int) -> Array[int]:
 
 
 # Population data (read-only). Default 0.0/empty; developed proxies override. A facility
-# answers for its residents, and a body, player or join for those of the facilities it
+# answers for its residents, and a locus, player or join for those of the facilities it
 # aggregates, its rates and shares derived from their sums (POPULATION_MODEL.md, "What players
 # and AIs do"). Where population_type may be -1, the getter answers for all types together.
 

@@ -117,17 +117,17 @@ func get_gui_name(proxy_name: StringName) -> String:
 	return proxy.gui_name
 
 
-## Returns the body name for [param proxy_name]. Useful (not [code]&""[/code])
-## for facilities and bodies.
-func get_body_name(proxy_name: StringName) -> StringName:
+## Returns the locus name for [param proxy_name]. Useful (not [code]&""[/code])
+## for facilities and loci.
+func get_locus_name(proxy_name: StringName) -> StringName:
 	var proxy: Proxy = proxies_by_name.get(proxy_name)
 	if !proxy:
 		return &""
-	return proxy.get_body_name()
+	return proxy.get_locus_name()
 
 
-## Returns body flags for [param proxy_name]. Useful (not 0) for
-## facilities and bodies.
+## Returns the body flags of the locus for [param proxy_name]. Useful (not 0) for
+## facilities and loci.
 func get_body_flags(proxy_name: StringName) -> int:
 	var proxy: Proxy = proxies_by_name.get(proxy_name)
 	if !proxy:
@@ -163,7 +163,7 @@ func get_polity_name(proxy_name: StringName) -> StringName:
 
 
 ## Returns true if [param proxy_name] contributes development statistics
-## (facility, join, player; bodies if they have facilities).
+## (facility, join, player; loci if they have facilities).
 func has_development(proxy_name: StringName) -> bool:
 	var proxy: Proxy = proxies_by_name.get(proxy_name)
 	if !proxy:

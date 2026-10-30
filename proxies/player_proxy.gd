@@ -25,7 +25,7 @@ extends Proxy
 # public read-only
 var player_id := -1 ## Index into [member ProxyBus.player_proxies].
 var player_class := -1 ## Player class index ([code]PlayerClasses[/code] enum).
-var homeworld := "" ## Name of this player's homeworld body.
+var homeworld := "" ## Name of this player's homeworld locus.
 ## A polity's taxes (FINANCIAL_MODEL.md, "Taxes"): its corporate tax, a share of its facilities'
 ## private operating income; its income tax on wages, the payroll tax, a share of the wages they
 ## pay, and on the interest and the dividends its residents are paid; and its wealth tax, a share a

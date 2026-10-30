@@ -40,7 +40,7 @@ enum UniqueModules {
 ## Identifies an operation with unique internal (hard-coded) mechanics. Each
 ## member must exist exactly once in operations.tsv. These are the renewable-power
 ## operations, whose run rate the simulation sets from a computed environmental
-## capacity factor (by body and site) rather than from a player or market lever.
+## capacity factor (by locus and site) rather than from a player or market lever.
 enum UniqueOperations {
 	SOLAR_POWER,
 	WIND_POWER,
@@ -146,7 +146,7 @@ enum TradeClasses {
 	TRADE_CLASS_CYBER, ## Tradable in the universal cyber market.
 }
 
-## Body stratum that receives a resource's disposed-of surplus (the
+## Locus stratum that receives a resource's disposed-of surplus (the
 ## [code]disposal_sink[/code] column of [code]resources.tsv[/code]).
 enum DisposalSinks {
 	DISPOSAL_SINK_ATMOSPHERE,

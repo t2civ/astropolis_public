@@ -24,8 +24,8 @@ signal global_strategy_changed(strategy_id: int)
 signal player_resource_strategy_changed(resource_type: int, strategy_id: int)
 ## Emitted when an entry in [member player_facility_strategies] changes.
 signal player_facility_strategy_changed(facility_id: int, strategy_id: int)
-## Emitted when an entry in [member body_strategies] changes.
-signal body_strategy_changed(body_id: int, strategy_id: int)
+## Emitted when an entry in [member locus_strategies] changes.
+signal locus_strategy_changed(locus_id: int, strategy_id: int)
 ## Emitted when an entry in [member counterparty_strategies] changes.
 signal counterparty_strategy_changed(player_id: int, strategy_id: int)
 
@@ -63,7 +63,7 @@ enum GlobalStrategies {
 	## Prioritize long-term sustainability, biome health, and biodiversity
 	## over output. Analog: green-economy / degrowth advocacy.
 	STEWARDSHIP,
-	## Pursue new bodies and frontier development at high risk. Analog:
+	## Pursue new loci and frontier development at high risk. Analog:
 	## age-of-exploration powers, settler colonialism.
 	EXPANSION,
 	## Crisis posture; preserve core capabilities; accept losses elsewhere.
@@ -148,10 +148,10 @@ enum PlayerFacilityStrategies {
 	N_BASE_PLAYER_FACILITY_STRATEGIES,
 }
 
-## Per-body player-level strategies. By convention id 0 is the no-op default.
-## Add-on strategies begin at [code]N_BASE_BODY_STRATEGIES[/code].
-enum BodyStrategies {
-	## No special player stance toward this body.
+## Per-locus player-level strategies. By convention id 0 is the no-op default.
+## Add-on strategies begin at [code]N_BASE_LOCUS_STRATEGIES[/code].
+enum LocusStrategies {
+	## No special player stance toward this locus.
 	NEUTRAL,
 	## Concentrate new facility-building and resourcing here. Analog: Project
 	## Apollo's Moon focus, Mars-first agencies.
@@ -159,15 +159,15 @@ enum BodyStrategies {
 	## Maintain a footprint but don't grow it aggressively. Analog: minor
 	## research outposts.
 	SECONDARY_PRESENCE,
-	## Treat the body primarily as a resource source; extract aggressively.
+	## Treat the locus primarily as a resource source; extract aggressively.
 	## Analog: colonial extractive economies.
 	EXPLOIT,
 	## Limit development for environmental or scientific reasons. Analog:
 	## protected reserves, Antarctica-treaty-style scientific zones.
 	CONSERVE,
-	## Wind down all facilities on this body; withdraw entirely.
+	## Wind down all facilities on this locus; withdraw entirely.
 	EXIT,
-	N_BASE_BODY_STRATEGIES,
+	N_BASE_LOCUS_STRATEGIES,
 }
 
 ## Per-other-player strategies (diplomatic / trade posture). By convention
@@ -245,9 +245,9 @@ static var player_facility_strategy_defs: Array[Dictionary] = [
 	{}, # DIVEST
 ]
 
-## Per-body player-level strategy definitions; index = [enum BodyStrategies]
+## Per-locus player-level strategy definitions; index = [enum LocusStrategies]
 ## value.
-static var body_strategy_defs: Array[Dictionary] = [
+static var locus_strategy_defs: Array[Dictionary] = [
 	{}, # NEUTRAL
 	{}, # PRIORITY_DEVELOPMENT
 	{}, # SECONDARY_PRESENCE
@@ -276,7 +276,7 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"global_strategy",
 	&"player_resource_strategies",
 	&"player_facility_strategies",
-	&"body_strategies",
+	&"locus_strategies",
 	&"counterparty_strategies",
 ]
 
@@ -297,9 +297,9 @@ var player_resource_strategies: PackedInt32Array
 ## Per-facility strategies keyed by [member FacilityProxy.facility_id]. Absent
 ## is the same as "NEUTRAL". See [enum PlayerFacilityStrategies].
 var player_facility_strategies: Dictionary[int, int]
-## Per-body strategies keyed by [member BodyProxy.body_id]. Absent is the same
-## as "NEUTRAL". See [enum BodyStrategies].
-var body_strategies: Dictionary[int, int]
+## Per-locus strategies keyed by [member LocusProxy.locus_id]. Absent is the same
+## as "NEUTRAL". See [enum LocusStrategies].
+var locus_strategies: Dictionary[int, int]
 ## Per-counterparty strategies keyed by [member PlayerProxy.player_id]. Absent
 ## is the same as "NEUTRAL". See [enum CounterpartyStrategies].
 var counterparty_strategies: Dictionary[int, int]

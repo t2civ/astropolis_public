@@ -10,27 +10,27 @@ class_name JoinProxy
 extends Proxy
 
 ## Read-only data proxy for a server-side Join, which joins component data
-## from Facilities, Bodies, and other Joins.
+## from Facilities, Loci, and other Joins.
 ##
 ## Joins aggregate 5 components (Operations, Financials, Population, Biome
-## and Cyberspace) that derive from Facilities. Body and Player objects also
+## and Cyberspace) that derive from Facilities. Locus and Player objects also
 ## act as Joins.[br][br]
 ##
 ## There are two hard-coded Joins; the rest are procedural. They form
-## tree structures with Facilities, Bodies, and Players:
+## tree structures with Facilities, Loci, and Players:
 ##
 ## [codeblock]
-## JOIN_OFFWORLD (<-data from all non-homeworld Bodies)
+## JOIN_OFFWORLD (<-data from all non-homeworld Loci)
 ##
 ## JOIN_ALL (<-data from the next 4 Join types)
-## JOIN_<star>_PLANETS (<-data from planet Bodies)
+## JOIN_<star>_PLANETS (<-data from planet Loci)
 ## JOIN_<star>_MOONS (<-data from JOIN_<planet>_MOONS below)
 ## JOIN_<star>_SPACE (<-data from JOIN_<planet>_SPACE below & non-planet spacecraft)
-## JOIN_<star>_PLANETOIDS (<-data from planetoid Bodies)
+## JOIN_<star>_PLANETOIDS (<-data from planetoid Loci)
 ##
-## <body> (<-data from self Facilities)
-## JOIN_<planet>_MOONS (<-data from all moon Bodies of a planet)
-## JOIN_<planet>_SPACE (<-data from all spacecraft Bodies of a planet)
+## <locus> (<-data from self Facilities)
+## JOIN_<planet>_MOONS (<-data from all moon Loci of a planet)
+## JOIN_<planet>_SPACE (<-data from all spacecraft Loci of a planet)
 ##
 ## JOIN_<star>_PLANETS_<player> (<-data from planet Facilities for Player)
 ## JOIN_<star>_MOONS_<player> (<-data from JOIN_<planet>_MOONS_<player> below)

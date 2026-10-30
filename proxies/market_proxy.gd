@@ -9,10 +9,10 @@
 class_name MarketProxy
 extends Proxy
 
-## A centrally cleared, physically-settled forward market for one body.
+## A centrally cleared, physically-settled forward market for one locus.
 ##
-## An instrument is a [resource_type, ordinal_quarter] pair; the delivery body is
-## implicit (always this market's body). The current quarter is the near-immediate
+## An instrument is a [resource_type, ordinal_quarter] pair; the delivery locus is
+## implicit (always this market's locus). The current quarter is the near-immediate
 ## ("spot") case, later quarters forward delivery. Each trader holds at most one
 ## resting ask and one resting bid per instrument. Orders use SET semantics — a new
 ## order replaces the resting one, quantity 0 cancels — and never expire, though an
@@ -20,10 +20,10 @@ extends Proxy
 ## match at the midpoint price.[br][br]
 ##
 ## A match moves no goods; it opens or adjusts a [b]position[/b]: the ask side goes
-## (more) short (owes delivery at the body), the bid side (more) long (awaits
+## (more) short (owes delivery at the locus), the bid side (more) long (awaits
 ## pickup). The quantity sign is the side (+ long, − short); a trader may hold
 ## either side per instrument and may flip. Read positions on [TraderProxy] and
-## [BodyProxy].[br][br]
+## [LocusProxy].[br][br]
 ##
 ## Physical settlement is bilateral, performed by the [b]short side[/b] over one or
 ## more intervals: it delivers stock above its reserves to matched longs, and a
@@ -36,7 +36,7 @@ extends Proxy
 ## TRADE_MODEL.md, "Price discovery"), or the best ask where neither exists, else 0;
 ## [b]ask[/b] / [b]bid[/b] — the current-quarter top-of-book, 0 for an empty side.
 ## [member instruments] also carries per-instrument top-of-book for every quarter. What a
-## body's facilities buy and sell here is their own, summed on [BodyProxy] (see
+## locus's facilities buy and sell here is their own, summed on [LocusProxy] (see
 ## [method Proxy.get_operations_bought_rate]).[br][br]
 ##
 ## Prices and order quantities are integer "ticks": price in integer cents, the sim's money
@@ -59,19 +59,19 @@ extends Proxy
 
 
 var market_id := -1  ## Index into [member ProxyBus.market_proxies].
-var body_id := -1  ## [member BodyProxy.body_id] of [member body].
+var locus_id := -1  ## [member LocusProxy.locus_id] of [member locus].
 var cyber_market_id := -1  ## [member market_id] of the system cyber market (self if this is it).
 
 # *****************************************************************************
 # persisted
 
-var body: BodyProxy ## Body this market serves.
+var locus: LocusProxy ## Locus this market serves.
 var cyber_market: MarketProxy ## The one system-wide cyber market (self if this is it).
 
 # *****************************************************************************
 
 ## Top-of-book per instrument, keyed by [resource_type, ordinal_quarter] (delivery
-## at this market's body). Value is [lowest_ask_price, lowest_ask_quantity,
+## at this market's locus). Value is [lowest_ask_price, lowest_ask_quantity,
 ## highest_bid_price, highest_bid_quantity, price] in trade units; an empty side reads 0.
 ## The price is the published price for the current quarter, and a later quarter's own (see
 ## [method get_instrument_unit_price]). An instrument is present while it has a resting
@@ -84,7 +84,7 @@ var instruments: Dictionary[PackedInt32Array, PackedInt64Array]
 # ************************* VIRTUAL & IMPLEMENTATION **************************
 
 func _clear_for_destruction() -> void:
-	body = null
+	locus = null
 	cyber_market = null # may be self (the cyber market self-references)
 
 

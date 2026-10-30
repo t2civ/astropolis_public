@@ -129,25 +129,25 @@ func _set_selections_on_proxy_thread(body_name: StringName) -> void:
 	_system.clear()
 	_selection_lookup.clear()
 	
-	var body: BodyProxy = Proxy.get_proxy_by_name(body_name)
-	if !body:
+	var locus: LocusProxy = Proxy.get_proxy_by_name(body_name)
+	if !locus:
 		_busy = false
 		return
-	var is_star := bool(body.body_flags & BODYFLAGS_STAR)
-	_set_selections_recursive(body, is_star, true)
+	var is_star := bool(locus.body_flags & BODYFLAGS_STAR)
+	_set_selections_recursive(locus, is_star, true)
 	# TODO: Sort results in some sensible way
 
 	_update_foldables.call_deferred()
 
 
-func _set_selections_recursive(body: BodyProxy, is_star: bool, root_call := false) -> void:
+func _set_selections_recursive(locus: LocusProxy, is_star: bool, root_call := false) -> void:
 	# proxy thread!
 	const PLAYER_CLASS_POLITY := Enums.PlayerClasses.PLAYER_CLASS_POLITY
 	const PLAYER_CLASS_AGENCY := Enums.PlayerClasses.PLAYER_CLASS_AGENCY
 	const PLAYER_CLASS_COMPANY := Enums.PlayerClasses.PLAYER_CLASS_COMPANY
 
 	# add players that have a facility here
-	for facility: FacilityProxy in body.get_facilities():
+	for facility: FacilityProxy in locus.get_facilities():
 		var player := facility.player
 		var player_gui_name := player.gui_name
 		if !player_gui_name: # hidden player
@@ -165,25 +165,25 @@ func _set_selections_recursive(body: BodyProxy, is_star: bool, root_call := fals
 		if !player_class_array.has(player_gui_name):
 			player_class_array.append(player_gui_name)
 			_selection_lookup[player_gui_name] = facility.name
-		elif player.homeworld == body.name: # has precedence over any others
+		elif player.homeworld == locus.name: # has precedence over any others
 			_selection_lookup[player_gui_name] = facility.name
 	
 	if local_only:
 		return
 
-	# add "offworld" or "system" bodies that have facilities
-	if !root_call and body.has_development():
-		# add body
-		var body_gui_name := body.gui_name
+	# add "offworld" or "system" loci that have facilities
+	if !root_call and locus.has_development():
+		# add locus
+		var locus_gui_name := locus.gui_name
 		if is_star:
-			_system.append(body_gui_name)
+			_system.append(locus_gui_name)
 		else:
-			_offworld.append(body_gui_name)
-		_selection_lookup[body_gui_name] = body.name
+			_offworld.append(locus_gui_name)
+		_selection_lookup[locus_gui_name] = locus.name
 	
 	# recurse satallites
-	for satellite_name in body.satellites:
-		_set_selections_recursive(body.satellites[satellite_name], is_star)
+	for satellite_name in locus.satellites:
+		_set_selections_recursive(locus.satellites[satellite_name], is_star)
 
 
 func _update_foldables() -> void:

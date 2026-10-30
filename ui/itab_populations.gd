@@ -9,7 +9,7 @@ class_name ITabPopulations
 extends MarginContainer
 
 ## "Populations" tab subpanel for [InfoPanel]. Shows the residents of the selection, a facility
-## or the facilities a body, player or join aggregates, one population type at a time or, where
+## or the facilities a locus, player or join aggregates, one population type at a time or, where
 ## several live, all together, in three views.
 ##
 ## [b]Demog[/b]: the head count, the share in each life stage, and the vital rates; a type's life
@@ -19,7 +19,7 @@ extends MarginContainer
 ## held, the price level of their wants, their work and its pay, and the money that moves their
 ## wealth: what they spent and what their facility's owners' settlement paid them. All together
 ## shows a column for each type and one for all of them, where a type with no want for a need
-## reads "·". A body with one facility shows as
+## reads "·". A locus with one facility shows as
 ## that facility. Header and row tooltips define the values; the model behind them is
 ## POPULATION_MODEL.md.
 
@@ -304,9 +304,9 @@ func _update_no_populations() -> void:
 func _get_proxy_data(target_name: StringName, tab: int, chosen_type: int) -> void:
 	var proxy := Proxy.get_proxy_by_name(target_name)
 	if proxy:
-		var body := proxy as BodyProxy
-		if body and body.facilities.size() == 1:
-			proxy = body.facilities[0]
+		var locus := proxy as LocusProxy
+		if locus and locus.facilities.size() == 1:
+			proxy = locus.facilities[0]
 	if !proxy or !proxy.has_development():
 		_update_no_populations.call_deferred()
 		return

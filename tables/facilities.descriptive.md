@@ -1,6 +1,6 @@
 # Facilities (Descriptive)
 
-Facilities are the economic, industrial and scientific "activity" units of each player at each body. Players are described in `players.descriptive.md`. "Body" is any freely orbiting object, such as a planet, moon, asteroid, or spacecraft.
+Facilities are the economic, industrial and scientific "activity" units of each player at each locus. Players are described in `players.descriptive.md`. A locus is a place facilities stand: today any freely orbiting body, such as a planet, moon, asteroid, or spacecraft.
 
 Notes:
 
