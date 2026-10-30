@@ -40,7 +40,7 @@ enum UniqueModules {
 ## Identifies an operation with unique internal (hard-coded) mechanics. Each
 ## member must exist exactly once in operations.tsv. These are the renewable-power
 ## operations, whose run rate the simulation sets from a computed environmental
-## capacity factor (by body and site) rather than from a player or market lever.
+## capacity factor (by locus and site) rather than from a player or market lever.
 enum UniqueOperations {
 	SOLAR_POWER,
 	WIND_POWER,
@@ -100,9 +100,7 @@ enum UniqueLineItems {
 	APPROPRIATIONS_RECEIVED,
 	APPROPRIATIONS_PAID,
 	TRANSFERS_PAID,
-	LEVIES_RECEIVED,
 	DIVIDENDS_PAID,
-	CAPITAL_PAID_IN,
 	DEBT,
 	BORROWED,
 	REPAID,
@@ -112,15 +110,28 @@ enum UniqueLineItems {
 	GOVERNMENT_BORROWED,
 	GOVERNMENT_REPAID,
 	GOVERNMENT_INTEREST_PAID,
-	INTEREST_RECEIVED,
+	INTEREST_TAX_RECEIVED,
 	CORPORATE_DEBT,
 	CORPORATE_BORROWED,
 	CORPORATE_REPAID,
 	CORPORATE_INTEREST_PAID,
 	GOVERNMENT_GRANTED,
 	CORPORATE_GRANTED,
-	APPROPRIATION_RETURNS_RECEIVED,
-	APPROPRIATION_RETURNS_PAID,
+	APPROPRIATION_LAPSES_RECEIVED,
+	APPROPRIATION_LAPSES_PAID,
+	PAYROLL_TAX_PAID,
+	PAYROLL_TAX_RECEIVED,
+	WEALTH_TAX_RECEIVED,
+	DIVIDEND_TAX_RECEIVED,
+	LOANS_RECEIVABLE,
+	LOANS_PAYABLE,
+	LOANS_MADE,
+	LOANS_COLLECTED,
+	LOAN_PROCEEDS,
+	LOANS_REPAID,
+	INTEREST_RECEIVED,
+	PUBLIC_PROVISION_RECEIPTS,
+	PUBLIC_PROVISION_PAID,
 }
 
 ## Trade classes group resources by handling (electricity, bulk, cryogenic,
@@ -135,7 +146,7 @@ enum TradeClasses {
 	TRADE_CLASS_CYBER, ## Tradable in the universal cyber market.
 }
 
-## Body stratum that receives a resource's disposed-of surplus (the
+## Locus stratum that receives a resource's disposed-of surplus (the
 ## [code]disposal_sink[/code] column of [code]resources.tsv[/code]).
 enum DisposalSinks {
 	DISPOSAL_SINK_ATMOSPHERE,
@@ -150,9 +161,9 @@ enum PlayerClasses {
 	PLAYER_CLASS_COMPANY,
 }
 
-## Life stage of a population type's age buckets: what wants, work, reports and targets read,
-## however the type cuts its buckets (the [code]first_adult_bucket[/code] and
-## [code]first_elder_bucket[/code] columns of [code]populations.tsv[/code]; see
+## Life stage of a population type's age groups: what wants, work, reports and targets read,
+## however the type cuts its age groups (the [code]first_adult_age_group[/code] and
+## [code]first_elder_age_group[/code] columns of [code]populations.tsv[/code]; see
 ## POPULATION_MODEL.md, "Demographics").
 enum LifeStages {
 	LIFE_STAGE_YOUNG,

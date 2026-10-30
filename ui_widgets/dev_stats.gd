@@ -58,7 +58,7 @@ var content: Array[Array] = [
 ]
 
 ## Proxy names to query, one per column.
-var targets: Array[StringName] = [&"PLANET_EARTH", &"JOIN_OFFWORLD"]
+var targets: Array[StringName] = [&"LOCUS_PLANET_EARTH", &"JOIN_OFFWORLD"]
 ## Header text per column (translated keys); if non-empty, used instead of
 ## the proxy's own name.
 var column_names: Array[StringName] = [&"PLANET_EARTH", &"TXT_OFF_EARTH"]

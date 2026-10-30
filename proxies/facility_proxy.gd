@@ -9,7 +9,7 @@
 class_name FacilityProxy
 extends Proxy
 
-## [FacilityProxy] represents a [PlayerProxy]'s development at a [BodyProxy].
+## [FacilityProxy] represents a [PlayerProxy]'s development at a [LocusProxy].
 ##
 ## A facility runs operations enabled by modules (see corresponding data
 ## tables). Server-side automations translate AI intent set here into per-tick
@@ -137,18 +137,20 @@ enum InventoryItems {
 
 ## The lines of a facility's budget in [member budget_lines], each a year (FINANCIAL_MODEL.md,
 ## "Budgets"): what it has to spend, its income and what its funding lines leave it; what it
-## commits, its upkeep, interest and income tax and what wears out at its build cost; and what its
-## R&D and its builds past what wears out may spend of what those leave. Its payouts are what
-## remains.
+## commits, its upkeep, interest and income tax and its replacement, what wears out at its build
+## cost; and what its R&D and its expansion may spend of what those leave. Its payouts are what
+## remains, except at an agency's facility, which pays nothing out. Apart from them, what its
+## expansion borrows past its line from the credit market.
 enum BudgetLines {
 	BUDGET_INCOME,
 	BUDGET_FUNDING,
 	BUDGET_UPKEEP,
 	BUDGET_INTEREST,
 	BUDGET_TAX,
-	BUDGET_WEAR,
+	BUDGET_REPLACEMENT,
 	BUDGET_RESEARCH,
-	BUDGET_BUILDS,
+	BUDGET_EXPANSION,
+	BUDGET_BORROWING,
 }
 
 
@@ -158,7 +160,7 @@ const FLOW_CURVE_FACTORS: PackedFloat64Array = [0.5, 1.0, 2.0]
 
 
 var facility_id := -1  ## Index into [member ProxyBus.facility_proxies].
-## Its name among its player's facilities, as in its owners' budget lines: its body's name, unless
+## Its name among its player's facilities, as in its owners' budget lines: its locus's name, unless
 ## the game start names it otherwise.
 var short_name := ""
 var facility_class := -1  ## [code]facility_classes.tsv[/code] row index.
@@ -166,21 +168,21 @@ var facility_class := -1  ## [code]facility_classes.tsv[/code] row index.
 var public_sector: float
 ## True if this is a small focused activity (affects stats and tax treatment).
 var unitary: bool
-## True if this facility makes its body's market, warehousing stock and keeping a bid
+## True if this facility makes its locus's market, warehousing stock and keeping a bid
 ## and an ask standing (see TRADE_MODEL.md, "Market makers").
 var market_maker: bool
 ## True if all resource streams flow from/to inventory (no atmosphere/surface
 ## market).
 var closed_cycle_ops: bool
-## Per-source corrections multiplying this site's body-level renewable capacity
-## factor (territorial quality vs the body baseline; 1.0 = body value).
+## Per-source corrections multiplying this site's locus-level renewable capacity
+## factor (territorial quality vs the locus baseline; 1.0 = locus value).
 var solar_correction := 1.0
 var wind_correction := 1.0
 var geothermal_correction := 1.0
 ## Time horizon used by AI and automations (inventory reserves, resupply, etc.).
 var time_horizon: float
-## Region of its body the facility stands in, or [code]&""[/code] for none; it stands on the
-## body's strata in that region and those that span the body.
+## Region of its locus the facility stands in, or [code]&""[/code] for none; it stands on the
+## locus's strata in that region and those that span the locus.
 var region: StringName
 ## Bidirectional bit flags (see [enum FacilityFlags]). FROM_SERVER bits are
 ## server-authoritative; FROM_PROXY bits are proxy-authoritative. Use
@@ -190,10 +192,15 @@ var flags := 0
 ## of each interval (FINANCIAL_MODEL.md, "Facilities as subsidiaries"). Its owners' payout policy;
 ## 0.0 by default. Use [method set_cash_reserve].
 var cash_reserve := 0.0
-## What the facility may spend past what it holds before anything draws on its owners' residents:
-## its cash less its debt, plus its line where its owners don't fund all it lacks, and what each
-## treasury that funds it holds less what it owes, and its line, as far as what is left of the
-## facility's funding line, as of its last interval (FINANCIAL_MODEL.md, "Credit"). Its trader's
+## Its owners' required return: the least interest rate, a year, at which they lend the credit
+## market what the facility's build budget leaves unspent; below it they collect what it lent and
+## are paid it (FINANCIAL_MODEL.md, "The credit market"). Its owners' payout policy; 0.0 by default.
+## Use [method set_required_return].
+var required_return := 0.0
+## Its available credit: what the facility may spend past what it holds, as of its last interval:
+## its cash less what it owes, and what more it could owe before its interest at its own rate
+## passed what its income carries, and what is left of each funding line that funds it, as far as
+## the treasury's own such room goes (FINANCIAL_MODEL.md, "Saving and borrowing"). Its trader's
 ## commitments are bound by it.
 var credit := 0.0
 ## Its budget a year as of its last interval, by [enum BudgetLines]; empty before its first.
@@ -208,7 +215,7 @@ var interval_time := -INF
 
 var player: PlayerProxy  ## Owning [PlayerProxy].
 var polity: PlayerProxy  ## The polity of [member player].
-var body: BodyProxy  ## Hosting [BodyProxy].
+var locus: LocusProxy  ## Hosting [LocusProxy].
 var trader: TraderProxy  ## Paired [TraderProxy]; set when TraderProxy registers.
 var trader_id := -1  ## [member TraderProxy.trader_id] of [member trader].
 var joins: Array[JoinProxy] = []  ## [JoinProxy] aggregates this facility belongs to.
@@ -222,28 +229,23 @@ var held_research_shares: Dictionary[int, float] = {}
 
 # *****************************************************************************
 
-## Body texture cached for [code]IVSelectionManager[/code] (currently the
-## hosting body's [code]IVBody.texture_2d[/code]).
-var texture_2d: Texture2D
-
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
 
 func _clear_for_destruction() -> void:
-	body = null
+	locus = null
 	player = null
 	polity = null
 	trader = null
 	joins.clear()
 	market = null
-	texture_2d = null
 
 
-## Detaches this facility from its body and player, then breaks its outgoing
+## Detaches this facility from its locus and player, then breaks its outgoing
 ## refs via [method super.remove]. Called by the server side at runtime when a
 ## facility is removed mid-game.
 func remove() -> void:
-	body.remove_facility(self)
+	locus.remove_facility(self)
 	player.remove_facility(self)
 	super.remove()
 
@@ -274,8 +276,8 @@ func has_development() -> bool:
 
 
 ## Returns the environmental capacity factor for renewable-power operation
-## [param operation_type] at this facility (the body factor scaled by this site's
-## per-source correction); NAN if not a body-modeled renewable or unavailable here.
+## [param operation_type] at this facility (the locus factor scaled by this site's
+## per-source correction); NAN if not a locus-modeled renewable or unavailable here.
 @abstract func calculate_capacity_factor(operation_type: int) -> float
 
 
@@ -287,12 +289,16 @@ func has_inventory() -> bool:
 	return true
 
 
+func get_locus_name() -> StringName:
+	return locus.name
+
+
 func get_body_name() -> StringName:
-	return body.name
+	return locus.body_name
 
 
 func get_body_flags() -> int:
-	return body.body_flags
+	return locus.body_flags
 
 
 func get_player_name() -> StringName:
@@ -337,7 +343,7 @@ func get_budget_line(line: int) -> float:
 
 
 ## Returns the availability of operation [param operation_type]: the share of its capacity it can
-## run at, seeded or, for a renewable its body models, its capacity factor.
+## run at, seeded or, for a renewable its locus models, its capacity factor.
 @abstract func get_operations_availability(operation_type: int) -> float
 
 
@@ -481,7 +487,7 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 
 
 ## Returns the desired rate of [param resource_type], smoothed over the time horizon: the trade
-## the facility wants at the body market's price, positive to take and negative to give, where
+## the facility wants at the locus market's price, positive to take and negative to give, where
 ## its whole use and the step toward its desired level would meet what its producers make at that
 ## price. NAN where the market has no price; 0.0 for a resource that can't be traded. Until trade
 ## returns, the market's prices stand at their seeds. See PRODUCTION_MODEL.md, "A facility's
@@ -649,12 +655,12 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 ## margin floors set their runs count (see
 ## PRODUCTION_MODEL.md, "What the facility publishes"). 0.0 when that unit clears its floor
 ## giving it away; INF when no such operation here produces it at known prices.
-@abstract func get_inventory_marginal_production_breakeven(resource_type: int) -> float
+@abstract func get_inventory_marginal_cost(resource_type: int) -> float
 
 
-## Returns the per-resource marginal production break-evens array. Return is proxy array
+## Returns the per-resource marginal costs array. Return is proxy array
 ## reference; read only!
-@abstract func get_inventory_marginal_production_breakevens() -> PackedFloat64Array
+@abstract func get_inventory_marginal_costs() -> PackedFloat64Array
 
 
 ## Returns what a unit of [param resource_type] must fetch, in [method MarketProxy.get_price]
@@ -662,11 +668,12 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 ## prices its capital weighs, as of the last interval: where a shortage, or a need left unmet,
 ## should grow its makers (see PRODUCTION_MODEL.md, "What the facility publishes"). It holds no
 ## margin floor. NAN where no route here would be built for it.
-@abstract func get_inventory_new_unit_price(resource_type: int) -> float
+@abstract func get_inventory_long_run_marginal_cost(resource_type: int) -> float
 
 
-## Returns the per-resource new-unit prices array. Return is proxy array reference; read only!
-@abstract func get_inventory_new_unit_prices() -> PackedFloat64Array
+## Returns the per-resource long-run marginal costs array. Return is proxy array reference; read
+## only!
+@abstract func get_inventory_long_run_marginal_costs() -> PackedFloat64Array
 
 
 ## Returns the amount of storage class [param storage_type] currently in use
@@ -677,10 +684,10 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 ## Returns the price of storage class [param storage_type]'s space at this facility, what keeping a
 ## unit of its capacity for a second costs: no more than its stores' running cost while what the
 ## class holds is well within what they make, more as it nears that and past it, where the class's
-## give improvises space (storage_classes.schema.md). NAN for a class with no space of its own. A
-## level is held as far as its space pays for it, and what can't be vented pays its keep in its
-## makers' margins (see PRODUCTION_MODEL.md, "A storage class: its price of space").
-@abstract func get_inventory_storage_space_price(storage_type: int) -> float
+## overflow improvises space (storage_classes.schema.md). NAN for a class with no space of its own.
+## A level is held as far as its space pays for it, and what can't be vented pays its holding cost
+## in its makers' margins (see PRODUCTION_MODEL.md, "A storage class: its storage rent").
+@abstract func get_inventory_storage_rent(storage_type: int) -> float
 
 
 ## Returns how long storage class [param storage_type] could carry the last interval's flows
@@ -733,6 +740,11 @@ func get_market() -> MarketProxy:
 ## Sets [member cash_reserve] (>= 0.0), in money. Proxy-authoritative: this change flows
 ## proxy -> server. No-op on a negative value or NAN.
 @abstract func set_cash_reserve(value: float) -> void
+
+
+## Sets [member required_return] (>= 0.0), a year. Proxy-authoritative: this change flows
+## proxy -> server. No-op on a negative value or NAN.
+@abstract func set_required_return(value: float) -> void
 
 
 ## Sets the [code]FROM_PROXY_MASK[/code] bits of operations flags for

@@ -116,6 +116,71 @@ static func get_line_item_counterparty(key: int) -> int:
 	return (key >> LINE_ITEM_TYPE_BITS) - 1
 
 
+# budgets
+
+## Returns [param shares], a budget's discretionary lines, with each held line at its share in
+## [param held_shares] and those on auto, NAN there, scaled in proportion to their shares to fill
+## what the held lines leave (FINANCIAL_MODEL.md, "Budgets"). Where [param has_residual], the
+## residual, what [param shares] leave of one, scales with those on auto and is what the result
+## leaves of one; where not, the result sums to one wherever a line is on auto.
+static func get_filled_budget_shares(shares: PackedFloat64Array, held_shares: PackedFloat64Array,
+		has_residual: bool) -> PackedFloat64Array:
+	var held_sum := 0.0
+	var auto_sum := 0.0
+	var share_sum := 0.0
+	for i in shares.size():
+		share_sum += shares[i]
+		if is_nan(held_shares[i]):
+			auto_sum += shares[i]
+		else:
+			held_sum += held_shares[i]
+	if has_residual:
+		auto_sum += maxf(1.0 - share_sum, 0.0)
+	var scale := maxf(1.0 - held_sum, 0.0) / auto_sum if auto_sum > 0.0 else 0.0
+	var filled := PackedFloat64Array()
+	filled.resize(shares.size())
+	for i in shares.size():
+		filled[i] = shares[i] * scale if is_nan(held_shares[i]) else held_shares[i]
+	return filled
+
+
+# inequality
+
+## Returns the Gini coefficient of [param inequality], how unevenly a population's people hold
+## their means as the standard deviation of the log of a lognormal (POPULATION_MODEL.md,
+## "Demographics", inequality): the error function of half of it.
+static func get_gini(inequality: float) -> float:
+	# Its series in exp(-x * x) has no terms of opposite sign to cancel, so it keeps every digit.
+	var x := absf(inequality) / 2.0
+	var term := x
+	var sum := term
+	var n := 0
+	while term > sum * 1e-17:
+		n += 1
+		term *= 2.0 * x * x / (2 * n + 1)
+		sum += term
+	return 2.0 / sqrt(PI) * exp(-x * x) * sum
+
+
+## Returns the inequality whose Gini coefficient is [param gini], from 0.0 to below 1.0: the
+## inverse of [method get_gini].
+static func get_inequality_of_gini(gini: float) -> float:
+	assert(gini >= 0.0 and gini < 1.0)
+	if !(gini > 0.0):
+		return 0.0
+	# Winitzki's approximation of the inverse error function, then Newton's steps on the exact one.
+	const A := 0.147
+	var log_term := log(1.0 - gini * gini)
+	var first := 2.0 / (PI * A) + log_term / 2.0
+	var x := sqrt(sqrt(first * first - log_term / A) - first)
+	for i in 8:
+		var step := (get_gini(2.0 * x) - gini) / (2.0 / sqrt(PI) * exp(-x * x))
+		x -= step
+		if absf(step) <= x * 1e-15:
+			break
+	return 2.0 * x
+
+
 # array & dict utils
 
 

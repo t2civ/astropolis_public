@@ -1,4 +1,4 @@
-name\Field	give	space
+name\Field	overflow	space
 Type	FLOAT	TABLE_ROW
 Prefix/STORAGE_CLASS_		RESOURCE_
 ELECTRICITY	0.03	ELECTRICITY_STORAGE

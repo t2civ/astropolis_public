@@ -55,11 +55,12 @@ func _update_selection(_dummy := false) -> void:
 	var selection_name := _selection_manager.get_name()
 	if !selection_name:
 		return
-	# Selection is either a Facility or Body. It's a Facility if user selected
+	# Selection is a Facility, a Locus or a Body without one. It's a Facility if user selected
 	# a player (NASA, USA, etc.), so show auxilary columns accordingly.
 	
-	var body_name: StringName = MainThreadGlobal.get_body_name(selection_name)
-	var body_flags: int = MainThreadGlobal.get_body_flags(body_name)
+	var locus_name: StringName = MainThreadGlobal.get_locus_name(selection_name)
+	var body_name := _selection_manager.get_body_name()
+	var body_flags := _selection_manager.get_body_flags()
 	var player_join_name := ""
 	if selection_name.begins_with("FACILITY_"):
 		player_join_name = "_" + MainThreadGlobal.get_player_name(selection_name)
@@ -68,7 +69,7 @@ func _update_selection(_dummy := false) -> void:
 	var column_names: Array[StringName] = []
 	
 	if body_flags & BodyFlags.BODYFLAGS_PLANET:
-		targets.append(selection_name) # Facility or Body name
+		targets.append(selection_name) # Facility or Locus name
 		column_names.append(&"LABEL_PLANETARY")
 		if body_name == &"PLANET_EARTH":
 			targets.append(StringName("JOIN_" + body_name + "_MOONS" + player_join_name))
@@ -94,6 +95,6 @@ func _update_selection(_dummy := false) -> void:
 		column_names.append(&"LABEL_SYSTEM_SPACE")
 	
 	else:
-		targets.append(body_name)
+		targets.append(locus_name)
 	
 	_dev_stats.update_targets(targets, column_names)

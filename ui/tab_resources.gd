@@ -28,7 +28,7 @@ var _survey_names: Array[StringName] = _db_tables[&"surveys"][&"name"]
 var _survey_substring: Array[StringName] = _db_tables[&"surveys"][&"substring"]
 var _stratum_types: Dictionary # table name enumeration
 
-var _body_name: StringName
+var _locus_name: StringName
 var _selection_name: StringName
 var _fold_memory: Dictionary[StringName, bool] = {} # keep folded states
 
@@ -44,58 +44,58 @@ func _ready() -> void:
 ## Refreshes the resource grid for the cached selection. No-op if no
 ## selection is set yet.
 func refresh() -> void:
-	if !_body_name or !_selection_name:
+	if !_selection_name:
 		return
 	if !IVStateManager.is_threads_allowed():
 		return
-	MainThreadGlobal.call_proxy_thread(_get_proxy_data.bind(_body_name, _selection_name))
+	MainThreadGlobal.call_proxy_thread(_get_proxy_data.bind(_locus_name, _selection_name))
 
 
-## Updates the cached selection ([param body_name] + [param selection_name])
-## and triggers a refresh if it changed.
-func update_selection(body_name: StringName, selection_name: StringName) -> void:
-	assert(body_name and selection_name)
-	if _body_name != body_name or _selection_name != selection_name:
-		_body_name = body_name
+## Updates the cached selection ([param locus_name], empty for a body without a locus, and
+## [param selection_name]) and triggers a refresh if it changed.
+func update_selection(locus_name: StringName, selection_name: StringName) -> void:
+	assert(selection_name)
+	if _locus_name != locus_name or _selection_name != selection_name:
+		_locus_name = locus_name
 		_selection_name = selection_name
 		if !IVStateManager.is_threads_allowed():
 			return
-		MainThreadGlobal.call_proxy_thread(_get_proxy_data.bind(body_name, selection_name))
+		MainThreadGlobal.call_proxy_thread(_get_proxy_data.bind(locus_name, selection_name))
 
 
 
 # ******************************* PROXY THREAD ********************************
 
-func _get_proxy_data(body_name: StringName, selection_name: StringName) -> void:
+func _get_proxy_data(locus_name: StringName, selection_name: StringName) -> void:
 	const BODYFLAGS_SPACECRAFT := IVBody.BodyFlags.BODYFLAGS_SPACECRAFT
 	var data: Array = []
 	var polity_name := ""
 	if selection_name.begins_with("FACILITY_"):
 		var selection_proxy := Proxy.get_proxy_by_name(selection_name)
 		polity_name = selection_proxy.get_polity_name()
-	var body_proxy: BodyProxy = Proxy.get_proxy_by_name(body_name)
-	if !body_proxy:
+	var locus_proxy: LocusProxy = Proxy.get_proxy_by_name(locus_name)
+	if !locus_proxy:
 		_update_no_resources.call_deferred()
 		return
 
-	if !body_proxy.has_strata():
-		var is_unknown := not body_proxy.body_flags & BODYFLAGS_SPACECRAFT
+	if !locus_proxy.has_strata():
+		var is_unknown := not locus_proxy.body_flags & BODYFLAGS_SPACECRAFT
 		_update_no_resources.call_deferred(is_unknown)
 		return
 
 	var stratum_polities := []
 
-	var n_strata := body_proxy.get_n_strata()
+	var n_strata := locus_proxy.get_n_strata()
 
 	for i in n_strata:
-		var stratum_polity := body_proxy.get_stratum_polity(i)
+		var stratum_polity := locus_proxy.get_stratum_polity(i)
 		if polity_name and stratum_polity and polity_name != stratum_polity:
 			continue
 		if !stratum_polities.has(stratum_polity):
 			stratum_polities.append(stratum_polity)
-		var masses := body_proxy.get_stratum_masses(i)
-		var total_mass := body_proxy.get_stratum_total_mass(i)
-		var survey_type := body_proxy.get_stratum_survey_type(i)
+		var masses := locus_proxy.get_stratum_masses(i)
+		var total_mass := locus_proxy.get_stratum_total_mass(i)
+		var survey_type := locus_proxy.get_stratum_survey_type(i)
 
 		var resources_data := []
 		# Stratum resource indexes must be converted to resource_type.
@@ -104,7 +104,7 @@ func _get_proxy_data(body_name: StringName, selection_name: StringName) -> void:
 			if mass == 0.0:
 				continue
 			var resource_type: int = _extraction_resources[j]
-			var distribution_data := body_proxy.get_stratum_resource_data(i, resource_type)
+			var distribution_data := locus_proxy.get_stratum_resource_data(i, resource_type)
 			var resource_data := [resource_type, distribution_data]
 			resources_data.append(resource_data)
 
@@ -115,11 +115,11 @@ func _get_proxy_data(body_name: StringName, selection_name: StringName) -> void:
 			survey_name = _survey_names[survey_type]
 
 		resources_data.append(total_mass)
-		resources_data.append(body_proxy.get_stratum_density(i))
-		resources_data.append(body_proxy.get_stratum_thickness(i))
-		resources_data.append(body_proxy.get_stratum_body_radius(i))
+		resources_data.append(locus_proxy.get_stratum_density(i))
+		resources_data.append(locus_proxy.get_stratum_thickness(i))
+		resources_data.append(locus_proxy.get_stratum_body_radius(i))
 		resources_data.append(survey_name)
-		resources_data.append(body_proxy.get_stratum_stratum_type(i))
+		resources_data.append(locus_proxy.get_stratum_stratum_type(i))
 		resources_data.append(stratum_polity)
 		
 		data.append(resources_data)

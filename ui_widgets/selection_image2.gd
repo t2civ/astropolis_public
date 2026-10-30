@@ -45,10 +45,10 @@ func _gui_input(event: InputEvent) -> void:
 		return
 	if !_selection_manager:
 		return
-	# Modified from I, Voyager: this could be an "up" selection from a facility
-	var body_name := _selection_manager.get_body_name()
-	if body_name != _selection_manager.get_name():
-		_selection_manager.select_by_name(body_name)
+	# Modified from I, Voyager: a facility's image selects its locus, if it has one to show
+	var up := _selection_manager.get_up()
+	if up is LocusProxy:
+		_selection_manager.select(up)
 		return
 	# End modification
 	_selection_manager.select(_selection_manager.get_selection())

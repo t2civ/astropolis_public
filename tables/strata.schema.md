@@ -7,10 +7,10 @@ Strata are volumes of natural or artificial bodies that have defined resource co
 
 - name (1st column) — See Name Construction below.
 - generic_body_class — Empty unless generic strata.
-- body — Non-generic strata only. Body type (e.g., PLANET, MOON, ASTEROID) followed by body name (usually the section name in strata.md; for Small/Undifferentiated Bodies section, extract body name from the item name). Examples: PLANET_EARTH, MOON_MOON, PLANET_MARS, MOON_PHOBOS.
+- locus — Non-generic strata only. The locus the stratum belongs to, by its body's name exactly as I, Voyager's body tables give it: the table's prefix and the body's row name. Examples: PLANET_EARTH, MOON_PHOBOS, PLANET_CERES (Ceres is in planets.tsv), ASTEROID_4_VESTA (asteroids carry their number). A name no body has leaves the stratum unused.
 - body_radius — Mean radius of the body (to sea level or other standard reference).
 - polity — Usually empty. For Earth "continental" strata, it is the regional subdivision defined in strata.md note 5 (except Antarctica which is empty). Who owns the stratum, apart from where it lies.
-- region — The region of its body the stratum lies in, or blank where it spans the body, as the atmosphere and the ocean do. A facility stands on the strata of its own region and those that span the body (see `region` in facilities.tsv). For Earth "continental" strata it is the subdivision of strata.md note 5, Antarctica included.
+- region — The region of its locus the stratum lies in, or blank where it spans the locus, as the atmosphere and the ocean do. A facility stands on the strata of its own region and those that span the locus (see `region` in facilities.tsv). For Earth "continental" strata it is the subdivision of strata.md note 5, Antarctica included.
 - stratum_group — Item name without body or territory prefix. Abbreviate CONTINENTAL as CONT. In the case of Small/Undifferentiated Bodies and Generic, it is simply BULK.
 - depth — Mean radius minus inner boundary radius of the specific stratum. For bulk strata, mean radius of the body. 0 for generic strata.
 - thickness — Thickness of the stratum. For bulk strata, this should be the same as depth. 0 for generic strata.
@@ -32,7 +32,7 @@ Strata are volumes of natural or artificial bodies that have defined resource co
 ## Name Construction
 
 The `name` field is constructed as follows:
-- For non-generic strata, join body, territory if applicable (from strata.md note 5, including ANTARCTICA), and strata_group. Examples: PLANET_EARTH_ATMOSPHERE, PLANET_EARTH_ANTARCTICA_CONT_ICE_BODIES, PLANET_EARTH_USA_CONT_SHELF.
+- For non-generic strata, join locus, territory if applicable (from strata.md note 5, including ANTARCTICA), and strata_group. Examples: PLANET_EARTH_ATMOSPHERE, PLANET_EARTH_ANTARCTICA_CONT_ICE_BODIES, PLANET_EARTH_USA_CONT_SHELF.
 - For generic strata, convert the strata name to CONSTANT_CASE. Example: CLASS_M_BULK.
 
 

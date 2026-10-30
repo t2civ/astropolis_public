@@ -15,13 +15,13 @@ extends BaseAI
 ##
 ## Traders are paired 1-to-1 with facilities. This trader contracts toward its facility's desired
 ## rate of each resource over the coming horizon, within what its facility's critical rate and its
-## credit allow, and leans its quotes toward its facility's own price while what it
+## credit allow, and skews its quotes toward its facility's own price while what it
 ## contracted falls short; in a two-sided posture it also keeps a quote standing on the other side
 ## (TRADE_MODEL.md, "The facility trader"). It reads its
 ## facility's rates and prices, never its stock, and trades in the posture and resource strategies
 ## its facility's AI authors (it trusts that these already incorporate player strategies).[br][br]
 ##
-## A facility-paired trader orders delivery/pickup [b]only at its own facility's body[/b], or at
+## A facility-paired trader orders delivery/pickup [b]only at its own facility's locus[/b], or at
 ## the cyber market for a cyber resource: the order helpers resolve the delivery market
 ## internally. The future transport trader will be this same class running different strategies,
 ## discriminated by [member TraderProxy.facility_id] == -1 — all facility-paired behavior is gated
@@ -63,7 +63,7 @@ enum TraderStrategies {
 	## stockpiling — even at facility cost. Analog: state-owned trading
 	## enterprise.
 	POLICY_AGENT,
-	## Make the facility's body's market: keep a quote standing on both sides of every resource
+	## Make the facility's locus's market: keep a quote standing on both sides of every resource
 	## the facility deals in, so the market always has a price (see TRADE_MODEL.md, "Market
 	## makers"). The posture of a market-making facility's trader. Analog: a wholesale merchant; a
 	## spaceport's commodity desk.
@@ -120,12 +120,12 @@ enum ResourceStrategies {
 
 
 ## Share of the way, in ratio, from the market's reference price toward its facility's own local
-## price that a trader leans its quotes at a full gap between what it has contracted and what it
+## price that a trader skews its quotes at a full gap between what it has contracted and what it
 ## would: up while short of what it would buy, where its facility prices the resource above the
 ## market, and down while short of what it would sell, where its facility prices it below (def key
-## [code]lean[/code] overrides per resource strategy).
-const LEAN := 0.5
-## Least a trader's lean takes its facility's price to be, as a share of the market's: a facility
+## [code]skew[/code] overrides per resource strategy).
+const SKEW := 0.5
+## Least a trader's skew takes its facility's price to be, as a share of the market's: a facility
 ## that prices a resource at nothing would give it away.
 const OWN_PRICE_FLOOR := 0.001
 ## How many of its facility's time horizons ahead a trader contracts (def key
@@ -163,8 +163,8 @@ static var trader_strategy_defs: Array[Dictionary] = [
 
 ## Per-resource strategy definitions; index = [enum ResourceStrategies] value. The switches
 ## [code]buy[/code] and [code]sell[/code] select the sides on which the trader contracts toward its
-## facility's desired rate; an entry with neither trades nothing. Tuning keys: [code]lean[/code]
-## (see [constant LEAN]), [code]contract_horizons[/code] (see [constant CONTRACT_HORIZONS]),
+## facility's desired rate; an entry with neither trades nothing. Tuning keys: [code]skew[/code]
+## (see [constant SKEW]), [code]contract_horizons[/code] (see [constant CONTRACT_HORIZONS]),
 ## [code]min_lot[/code], [code]price_tol[/code] and [code]qty_tol[/code]. A stockpile or a
 ## shortage reaches the trader through the desired rate, which the facility's levels move.
 static var resource_strategy_defs: Array[Dictionary] = [
@@ -215,9 +215,9 @@ var resource_strategies: PackedInt32Array
 
 ## Memory of open asks, keyed at this trader's order-key width (see [member _key_width]):
 ## the 2-element instrument [resource_type, ordinal_quarter] for a facility trader (one
-## market per resource makes the body redundant), or 3-element [resource_type,
-## ordinal_quarter, body_id] for a transport trader (which trades a resource at many
-## bodies). Values are [unit_quantity, unit_price] in trade units; unique per key. Mirrors
+## market per resource makes the locus redundant), or 3-element [resource_type,
+## ordinal_quarter, locus_id] for a transport trader (which trades a resource at many
+## loci). Values are [unit_quantity, unit_price] in trade units; unique per key. Mirrors
 ## the market's resting ask, refreshed via position notifications.
 var _asks: Dictionary[PackedInt32Array, PackedInt64Array] = {}
 
@@ -231,17 +231,17 @@ var _facility_ai: FacilityBaseAI
 var _facility: FacilityProxy  # paired facility proxy
 
 # Facility-trader auxiliary: this trader's positions keyed by the 2-element instrument
-# [resource_type, ordinal_quarter], body projected out (unique per instrument because a
+# [resource_type, ordinal_quarter], locus projected out (unique per instrument because a
 # facility trades each resource in exactly one market — home or cyber). Maintained in
 # _on_positions_changed, seeded in ai_init. Stays empty for a transport trader, which is
-# inherently multi-body and works off proxy.positions directly.
+# inherently multi-locus and works off proxy.positions directly.
 var _positions_by_instrument: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
 # This trader's cyber market id, resolved once in ai_init; the routing target for cyber
 # resources (see _delivery_market_id). -1 for a transport trader.
 var _cyber_market_id := -1
 # Width of this trader's order keys (_asks / _bids / _on_positions_changed): 2 for a
 # facility trader ([resource, quarter]), 3 for a transport trader ([resource, quarter,
-# body_id]). Set in ai_init.
+# locus_id]). Set in ai_init.
 var _key_width := 2
 # Per resource, the span of its flow this interval's quotes contract, what its facility foresees of
 # how far ahead they reach, in sim time; 0.0 where it isn't traded.
@@ -303,7 +303,7 @@ func bind_proxy(proxy_: Proxy) -> void:
 func ai_init() -> void:
 	proxy.positions_changed.connect(_on_positions_changed)
 	if proxy.facility_id == -1:
-		_key_width = 3 # transport: order keys carry the delivery body (see _key_width)
+		_key_width = 3 # transport: order keys carry the delivery locus (see _key_width)
 		return # transport trader: not facility-paired; transport strategies TBD
 	_facility = proxy.facility
 	_cyber_market_id = proxy.market.cyber_market_id
@@ -358,15 +358,15 @@ func process_ai_interval(_delta: float) -> void:
 ## quarter D's step besides, once,
 ## net of the position there, as a bid or an ask. Each quarter's target is held to the def's sides,
 ## never below what the facility could spare (-C, the critical rate, its flow and step alike) and
-## at least C where the facility must take. Each quarter's quotes lean off its own price (see
+## at least C where the facility must take. Each quarter's quotes skew off its own price (see
 ## [method MarketProxy.get_instrument_unit_price]) toward the facility's local price, as far as the
-## def's [code]lean[/code] times the quarter's gap as a share of what it would contract there, each
+## def's [code]skew[/code] times the quarter's gap as a share of what it would contract there, each
 ## side quoting that limit.[br][br]
 ##
 ## With [param standing], a two-sided posture's, each quarter also keeps a lot (the def's
 ## [code]min_lot[/code]) standing on the side its gap doesn't ask for, where the def trades that
 ## side: an ask where the facility could spare a lot over the quarter's part of the window, a bid
-## where it uses one. Toward the facility's price it leans the def's whole lean, and on the far side
+## where it uses one. Toward the facility's price it skews the def's whole skew, and on the far side
 ## it stands at that price, so its market always has a price, and one that follows its facilities
 ## (TRADE_MODEL.md, "Market makers").
 func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, standing: bool
@@ -398,7 +398,7 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 	var end := maxf(now + window, Utils.get_time_at_ordinal_quarter(current_quarter + 1))
 	_windows[resource_type] = TraderProxy.get_foreseen_span(end - now, horizon)
 	var local_price := _facility.get_inventory_local_price(resource_type) * multiplier
-	var lean_share: float = def.get(&"lean", LEAN)
+	var skew_share: float = def.get(&"skew", SKEW)
 	var quarter_price := reference_price # this quarter's own, or the quarter before it's
 	var quarter := current_quarter
 	var start := now
@@ -459,31 +459,31 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 				standing_bid = min_lot
 				bid = 0
 		# A gap as a share of what it would contract: scaled to an unbounded desired rate, a seller
-		# held to the little it could spare leaned next to nothing, and one stale ask held a market
+		# held to the little it could spare skewed next to nothing, and one stale ask held a market
 		# at many times what every facility valued it.
 		var target := absf(wanted / multiplier)
 		var gap_share := clampf(want / maxf(target, absi(want)), -1.0, 1.0) if want else 0.0
 		# The facility's own price says how far the market's stands from where the facility would
 		# trade no more: a fixed step took years to close seeds ten or a hundred times off. A buyer
-		# leans up only where its facility prices the resource above the market, a seller down only
-		# below; one that prices it at nothing leans toward the floor.
+		# skews up only where its facility prices the resource above the market, a seller down only
+		# below; one that prices it at nothing skews toward the floor.
 		var own_price := maxf(local_price, OWN_PRICE_FLOOR * quarter_price)
 		var price_gap := log(own_price / quarter_price)
-		var full_lean := lean_share * price_gap
-		var lean := 0.0
+		var full_skew := skew_share * price_gap
+		var skew := 0.0
 		if price_gap * gap_share > 0.0:
-			lean = absf(gap_share) * full_lean
-		var limit_price := quarter_price * exp(lean)
+			skew = absf(gap_share) * full_skew
+		var limit_price := quarter_price * exp(skew)
 		var bid_price := maxi(floori(limit_price), 1)
 		var ask_price := maxi(ceili(limit_price), 1)
 		# Quoted off the reference alone, a market whose traders' gaps had closed held its last
 		# trade's price while every facility's own moved away from it. Each quotes its own limit,
 		# and a cross matches at the midpoint (TRADE_MODEL.md, "The price"). A standing quote stays
 		# clear of the trader's own on the other side, which wouldn't trade.
-		var leaned_price := quarter_price * exp(full_lean)
-		var standing_bid_price := floori(minf(own_price, leaned_price))
+		var skewed_price := quarter_price * exp(full_skew)
+		var standing_bid_price := floori(minf(own_price, skewed_price))
 		if standing_ask:
-			ask_price = maxi(ceili(maxf(own_price, leaned_price)),
+			ask_price = maxi(ceili(maxf(own_price, skewed_price)),
 					(bid_price if bid else standing_bid_price) + 1)
 		if standing_bid:
 			bid_price = standing_bid_price
@@ -569,7 +569,7 @@ func _place_quotes() -> void:
 
 ## Adds, replaces, or cancels a sell (ask) order. See [method
 ## TraderProxy.set_ask] for instrument composition and params, including
-## [param market_id] (the market at the delivery body). This method
+## [param market_id] (the market at the delivery locus). This method
 ## updates AI ask memory on the outgoing call. Rejects if specified
 ## ordinal_quarter < proxy.ordinal_qtr (proxy would reject if it went through
 ## here).
@@ -578,8 +578,8 @@ func _set_ask(instrument: PackedInt32Array, unit_quantity: int,
 	if instrument[1] < proxy.ordinal_qtr:
 		return
 	var mem_key := instrument.duplicate() # facility: 2-element [resource, quarter]
-	if _key_width == 3: # transport: append the delivery body (see _key_width)
-		mem_key.append(_market_body_id(delivery_market_id))
+	if _key_width == 3: # transport: append the delivery locus (see _key_width)
+		mem_key.append(_market_locus_id(delivery_market_id))
 	if unit_quantity:
 		var ask: PackedInt64Array
 		if _asks.has(mem_key):
@@ -596,7 +596,7 @@ func _set_ask(instrument: PackedInt32Array, unit_quantity: int,
 
 ## Adds, replaces, or cancels a buy (bid) order. See [method
 ## TraderProxy.set_bid] for instrument composition and params, including
-## [param market_id] (the market at the delivery body). This method
+## [param market_id] (the market at the delivery locus). This method
 ## updates AI bid memory on the outgoing call. Rejects if specified
 ## ordinal_quarter < proxy.ordinal_qtr (proxy would reject if it went through
 ## here).
@@ -605,8 +605,8 @@ func _set_bid(instrument: PackedInt32Array, unit_quantity: int,
 	if instrument[1] < proxy.ordinal_qtr:
 		return
 	var mem_key := instrument.duplicate() # facility: 2-element [resource, quarter]
-	if _key_width == 3: # transport: append the delivery body (see _key_width)
-		mem_key.append(_market_body_id(delivery_market_id))
+	if _key_width == 3: # transport: append the delivery locus (see _key_width)
+		mem_key.append(_market_locus_id(delivery_market_id))
 	if unit_quantity:
 		var bid: PackedInt64Array
 		if _bids.has(mem_key):
@@ -665,17 +665,17 @@ func _is_quote_stale(orders: Dictionary[PackedInt32Array, PackedInt64Array],
 
 
 # Resolves which market an order for [param resource_type] routes to: the cyber market
-# for a cyber resource, else this facility trader's home body market.
+# for a cyber resource, else this facility trader's home locus market.
 func _delivery_market_id(resource_type: int) -> int:
 	return _cyber_market_id if _cyber_resource[resource_type] else proxy.market_id
 
 
-# Resolves the delivery body of [param market_id], for a transport trader's 3-element
+# Resolves the delivery locus of [param market_id], for a transport trader's 3-element
 # order key (see _key_width). Not called on the facility path (_key_width == 2).
-func _market_body_id(market_id: int) -> int:
+func _market_locus_id(market_id: int) -> int:
 	var market_proxy: MarketProxy = Proxy.proxy_bus.market_proxies[market_id]
-	assert(market_proxy and market_proxy.body, "delivery market/body not resolved")
-	return market_proxy.body.body_id
+	assert(market_proxy and market_proxy.locus, "delivery market/locus not resolved")
+	return market_proxy.locus.locus_id
 
 
 # The market purges old-quarter resting orders at rollover without echoes; drop
@@ -780,7 +780,7 @@ func _on_facility_resource_strategy_changed(resource_type: int, strategy_id: int
 
 # Mirrors the trader's resting ask/bid (carried in every notification) into order memory,
 # keyed at this trader's width (2-element instrument for a facility, 3-element with the
-# delivery body for a transport — see _key_width). The body-less position view
+# delivery locus for a transport — see _key_width). The locus-less position view
 # (_positions_by_instrument) is a facility convenience; a transport reads proxy.positions
 # directly, so it is maintained only when _facility is set.
 func _on_positions_changed(position_key: PackedInt32Array, value: PackedFloat64Array,

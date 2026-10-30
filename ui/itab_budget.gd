@@ -37,12 +37,14 @@ extends MarginContainer
 ## marked on the same scale where the line drew last quarter and where its current trend, this
 ## quarter's pace, puts it; a line that funds all its counterparty lacks spans the width. The bar's
 ## tooltip gives both draws, beside a legend of its colors. A line its owner sets, a treasury's
-## funding of a facility and a facility's R&D and builds, shows the share it is set at, a facility
-## by its short name.[br][br]
+## funding of a facility, a polity's appropriation of an agency and its public provision and a
+## facility's R&D and expansion, shows the share it is set at, a facility by its short name. An agency's budgets, its treasury's
+## and its facilities', have no rest: what it is appropriated is spent.[br][br]
 ##
 ## Where this machine's human plays the player ([method PlayerProxy.is_local_human]), each line its
 ## owner sets has an Auto checkbox, checked while the player's AI sets it; unchecked, the line is
-## held and its bar drags, up to what the rest of its budget leaves. With unlimited money
+## held and its bar drags. What it moves is taken up by the budget's lines on auto and its rest, as
+## far as they go, or where it has neither, by its other lines. With unlimited money
 ## ([code]ThreadsafeGlobal.sandbox_unlimited_money[/code]) each of its treasuries' budgets has one
 ## too, and unchecked its total is typed in. The Balance subtab shows such a treasury's cash as
 ## unbounded.
@@ -71,7 +73,7 @@ const FUNDING_TAB := 0
 enum Controls {
 	CONTROL_BUDGET_SHARE, # a treasury's funding of a facility
 	CONTROL_BUDGET_TARGET, # what a treasury spends a year
-	CONTROL_BUILDS, # a facility's build share
+	CONTROL_EXPANSION, # a facility's expansion share
 	CONTROL_RESEARCH, # a facility's research share
 }
 
@@ -141,8 +143,9 @@ var _funding_items := PackedInt32Array() # a treasury's funding of a facility, b
 var _item_transfers_paid := -1
 var _item_dividends_paid := -1
 var _item_appropriations_paid := -1
-var _item_appropriation_returns_paid := -1
+var _item_public_provision_paid := -1
 var _item_funding_received := -1
+var _item_loan_proceeds := -1
 var _item_payouts_paid := -1
 var _item_interest_expense := -1
 var _item_income_tax := -1
@@ -150,7 +153,7 @@ var _item_research_development := -1
 var _item_fixed_assets := -1
 var _upkeep_items := PackedInt32Array() # a facility's module maintenance, administration, staffing
 var _treasury_cash_items := PackedInt32Array() # each treasury's balance, by Enums.Accounts
-var _type_buildout := -1 # the operation whose target spending share is the build share
+var _type_buildout := -1 # the operation whose target spending share is the expansion share
 var _research_resources := PackedInt32Array() # those tagged research
 
 var _selection_manager: AstroSelectionManager
@@ -242,13 +245,10 @@ func _precompute_display_names() -> void:
 	var funding_paid := _find_item(Enums.UniqueLineItems.GOVERNMENT_FUNDING_PAID)
 	var corporate_funding_paid := _find_item(Enums.UniqueLineItems.CORPORATE_FUNDING_PAID)
 	_item_appropriations_paid = _find_item(Enums.UniqueLineItems.APPROPRIATIONS_PAID)
+	_item_public_provision_paid = _find_item(Enums.UniqueLineItems.PUBLIC_PROVISION_PAID)
 	_item_returns[funding_paid] = _find_item(Enums.UniqueLineItems.GOVERNMENT_PAYOUTS_RECEIVED)
 	_item_returns[corporate_funding_paid] = _find_item(
 			Enums.UniqueLineItems.CORPORATE_PAYOUTS_RECEIVED)
-	_item_returns[_item_appropriations_paid] = _find_item(
-			Enums.UniqueLineItems.APPROPRIATION_RETURNS_RECEIVED)
-	_item_appropriation_returns_paid = _find_item(
-			Enums.UniqueLineItems.APPROPRIATION_RETURNS_PAID)
 	_funding_items = PackedInt32Array([funding_paid, corporate_funding_paid])
 	_committed_items = PackedInt32Array([
 		_find_item(Enums.UniqueLineItems.GOVERNMENT_INTEREST_PAID),
@@ -257,6 +257,7 @@ func _precompute_display_names() -> void:
 	_item_transfers_paid = _find_item(Enums.UniqueLineItems.TRANSFERS_PAID)
 	_item_dividends_paid = _find_item(Enums.UniqueLineItems.DIVIDENDS_PAID)
 	_item_funding_received = _find_item(Enums.UniqueLineItems.FUNDING_RECEIVED)
+	_item_loan_proceeds = _find_item(Enums.UniqueLineItems.LOAN_PROCEEDS)
 	_item_payouts_paid = _find_item(Enums.UniqueLineItems.PAYOUTS_PAID)
 	_item_interest_expense = _find_item(Enums.UniqueLineItems.INTEREST_EXPENSE)
 	_item_income_tax = _find_item(Enums.UniqueLineItems.INCOME_TAX)
@@ -404,8 +405,9 @@ func _select_tab(tab: int) -> void:
 func _update_tab(_dummy := false) -> void:
 	if !visible or !IVStateManager.is_threads_allowed():
 		return
+	var selection := _selection_manager.get_selection()
 	var target_name := _selection_manager.get_name()
-	if target_name and target_name == _selection_manager.get_body_name():
+	if selection is IVBody or selection is LocusProxy:
 		_show_only(_local_selections)
 	elif MainThreadGlobal.has_development(target_name):
 		MainThreadGlobal.call_proxy_thread(_get_proxy_data.bind(target_name))
@@ -583,6 +585,9 @@ func _collect_account_groups(proxy: Proxy, accountings: Dictionary[int, float],
 	# A treasury with unlimited money is never short, so its cash shows as unbounded.
 	var item_revenue: Array[bool] = _db_tables[&"line_items"][&"revenue"]
 	var is_unbounded := statement == _balance_statement and _has_unlimited_money(proxy)
+	var player := proxy as PlayerProxy
+	if proxy is FacilityProxy:
+		player = (proxy as FacilityProxy).player
 	var groups := []
 	for account in _account_keys.size():
 		var rows := []
@@ -604,7 +609,7 @@ func _collect_account_groups(proxy: Proxy, accountings: Dictionary[int, float],
 				if _has_nonzero(leaf_series):
 					rows.append(leaf)
 		if !rows.is_empty():
-			groups.append([_account_keys[account], group_series, rows])
+			groups.append([_get_account_name(player, account), group_series, rows])
 	return groups
 
 
@@ -667,7 +672,8 @@ func _collect_funding(proxy: Proxy) -> Array:
 	# line, draws, base, control], its draws what it drew last quarter and this quarter's pace, as
 	# rates a year (_get_draws), and its base what its share is of: at an administrative center
 	# or for a player, each of the player's treasuries that has a budget or a line; at a facility
-	# its own budget, after its owners' lines for it where it isn't its player's center. A control
+	# its own budget, after its owners' lines for it where it isn't its player's center and what
+	# its expansion borrows where it borrows. A control
 	# is empty where this machine's human can't set the line or budget, and else [Controls, proxy
 	# name, index, is held, limit], its index a budget line's key, a treasury's account or the
 	# build share's operation, and its limit the most a line's share may be set at or a budget's
@@ -696,6 +702,9 @@ func _collect_funding(proxy: Proxy) -> Array:
 		return panels
 	if center and facility != center:
 		panels.append_array(_collect_owner_lines(facility, player, center, is_local))
+	var borrowing_panel := _collect_borrowing(facility)
+	if !borrowing_panel.is_empty():
+		panels.append(borrowing_panel)
 	var budget_panel := _collect_facility_budget(facility, is_local)
 	if !budget_panel.is_empty():
 		panels.append(budget_panel)
@@ -705,17 +714,17 @@ func _collect_funding(proxy: Proxy) -> Array:
 func _collect_facility_budget(facility: FacilityProxy, is_local: bool) -> Array:
 	# The facility's budget, or empty before its first interval: its committed lines, its
 	# operations' loss among them where its income is below nothing, as shares of what it has to
-	# spend, and its R&D and builds at the shares they are set at of what those leave, its payouts
-	# the rest. What its builds drew is what its fixed assets gained, net of what came down. Its
-	# R&D and builds are controls where [param is_local].
+	# spend, and its R&D and expansion at the shares they are set at of what those leave, its
+	# payouts the rest where it isn't an agency's. What its expansion drew is what its fixed assets
+	# gained, net of what came down. Its R&D and expansion are controls where [param is_local].
 	const BUDGET_INCOME := FacilityProxy.BudgetLines.BUDGET_INCOME
 	const BUDGET_FUNDING := FacilityProxy.BudgetLines.BUDGET_FUNDING
 	const BUDGET_UPKEEP := FacilityProxy.BudgetLines.BUDGET_UPKEEP
 	const BUDGET_INTEREST := FacilityProxy.BudgetLines.BUDGET_INTEREST
 	const BUDGET_TAX := FacilityProxy.BudgetLines.BUDGET_TAX
-	const BUDGET_WEAR := FacilityProxy.BudgetLines.BUDGET_WEAR
+	const BUDGET_REPLACEMENT := FacilityProxy.BudgetLines.BUDGET_REPLACEMENT
 	const BUDGET_RESEARCH := FacilityProxy.BudgetLines.BUDGET_RESEARCH
-	const BUDGET_BUILDS := FacilityProxy.BudgetLines.BUDGET_BUILDS
+	const BUDGET_EXPANSION := FacilityProxy.BudgetLines.BUDGET_EXPANSION
 	var lines := facility.budget_lines
 	if lines.size() != FacilityProxy.BudgetLines.size():
 		return []
@@ -739,7 +748,7 @@ func _collect_facility_budget(facility: FacilityProxy, is_local: bool) -> Array:
 				_get_draws(facility, _item_interest_expense, false)],
 		[_item_keys[_item_income_tax], lines[BUDGET_TAX],
 				_get_draws(facility, _item_income_tax, false)],
-		["LABEL_WEAR", lines[BUDGET_WEAR], NO_DRAWS],
+		["LABEL_REPLACEMENT", lines[BUDGET_REPLACEMENT], NO_DRAWS],
 		["LABEL_OPERATIONS_LOSS", maxf(-income, 0.0), NO_DRAWS],
 	]:
 		var line: float = row[1]
@@ -750,18 +759,36 @@ func _collect_facility_budget(facility: FacilityProxy, is_local: bool) -> Array:
 				[]])
 	var left := maxf(total - committed, 0.0)
 	var research := lines[BUDGET_RESEARCH]
-	var builds := lines[BUDGET_BUILDS]
+	var expansion := lines[BUDGET_EXPANSION]
 	var research_share := _get_research_share(facility)
-	var builds_share := _get_builds_share(facility)
+	var expansion_share := _get_expansion_share(facility)
+	var is_research_held := _is_research_held(facility)
+	var is_expansion_held := (_type_buildout != -1
+			and facility.is_operations_target_spending_share_held(_type_buildout))
+	var has_rest := !_is_agency(facility.player)
 	var research_control := []
-	var builds_control := []
+	var expansion_control := []
 	if is_local:
-		research_control = [Controls.CONTROL_RESEARCH, facility.name, -1,
-				_is_research_held(facility), maxf(1.0 - builds_share, 0.0)]
+		research_control = [Controls.CONTROL_RESEARCH, facility.name, -1, is_research_held,
+				_get_cap(expansion_share if is_expansion_held else 0.0,
+				has_rest or !is_expansion_held)]
 		if _type_buildout != -1:
-			builds_control = [Controls.CONTROL_BUILDS, facility.name, _type_buildout,
-					facility.is_operations_target_spending_share_held(_type_buildout),
-					maxf(1.0 - research_share, 0.0)]
+			expansion_control = [Controls.CONTROL_EXPANSION, facility.name, _type_buildout,
+					is_expansion_held, _get_cap(research_share if is_research_held else 0.0,
+					has_rest or !is_research_held)]
+	# NOTE: What its fixed assets gained, net of what came down, stands in for what its expansion
+	# drew, past what replaced worn plant at its book value (FINANCIAL_MODEL.md, "Budgets, as
+	# built").
+	var discretionary_rows := []
+	for row: Array in [
+		[_item_keys[_item_research_development], research_share, research, research_draws,
+				research_control],
+		["LABEL_EXPANSION", expansion_share, expansion,
+				_get_balance_gains(facility, _item_fixed_assets), expansion_control],
+	]:
+		discretionary_rows.append([row[0], row[1], row[2], row[3], left, row[4]])
+	if !has_rest:
+		return [facility.gui_name, total, committed_rows, discretionary_rows, []]
 	# Where it houses its residents its income counts their pay, so the rest reaches them as wages
 	# as well as payouts, and the ledger doesn't tell which wages its upkeep's staffing took.
 	var rest_name: String = _item_keys[_item_payouts_paid]
@@ -769,18 +796,8 @@ func _collect_facility_budget(facility: FacilityProxy, is_local: bool) -> Array:
 	if facility.get_population_number() > 0.0:
 		rest_name = "LABEL_PAY_AND_PAYOUTS"
 		rest_draws = NO_DRAWS
-	# NOTE: "Builds" names the build share past what wears out, but what its fixed assets gained
-	# counts what replaced worn plant too (FINANCIAL_MODEL.md, "Budgets, as built").
-	var discretionary_rows := []
-	for row: Array in [
-		[_item_keys[_item_research_development], research_share, research, research_draws,
-				research_control],
-		["LABEL_BUILDS", builds_share, builds, _get_balance_gains(facility, _item_fixed_assets),
-				builds_control],
-		[rest_name, maxf(1.0 - research_share - builds_share, 0.0),
-				maxf(left - research - builds, 0.0), rest_draws, []],
-	]:
-		discretionary_rows.append([row[0], row[1], row[2], row[3], left, row[4]])
+	discretionary_rows.append([rest_name, maxf(1.0 - research_share - expansion_share, 0.0),
+			maxf(left - research - expansion, 0.0), rest_draws, left, []])
 	return [facility.gui_name, total, committed_rows, discretionary_rows, []]
 
 
@@ -788,11 +805,10 @@ func _collect_treasury(player: PlayerProxy, center: FacilityProxy, account: int,
 		keys: Array[int], is_local: bool) -> Array:
 	# A treasury's budget, or empty where it has neither a budget nor a line. Its committed lines'
 	# shares are of what it has to spend, and its discretionary lines' of what they leave, its
-	# funding lines' those they are set at, which its rest, transfers or dividends, or at an agency
-	# what goes back to its polity, takes last. Its funding lines are controls where
-	# [param is_local], and its budget too with unlimited money.
+	# funding lines', appropriations' and provision's those they are set at, which its rest,
+	# transfers or dividends, takes last; an agency's has none. Those are controls where [param is_local], and
+	# its budget too with unlimited money.
 	var budget := player.budgets[account]
-	var funding_room := maxf(1.0 - _get_funding_share_sum(player, account), 0.0)
 	var committed_rows := []
 	var discretionary_rows := []
 	var committed := 0.0
@@ -809,11 +825,13 @@ func _collect_treasury(player: PlayerProxy, center: FacilityProxy, account: int,
 			continue
 		var share := line / budget if budget > 0.0 else NAN
 		var control := []
-		if item == _funding_items[account]:
+		if _is_share_item(item, account):
 			share = player.get_budget_share(key)
+			if is_finite(share):
+				line = share * budget
 			if is_local and is_finite(share):
 				control = [Controls.CONTROL_BUDGET_SHARE, player.name, key,
-						player.is_budget_share_held(key), share + funding_room]
+						player.is_budget_share_held(key), _get_share_cap(player, account, key)]
 		if is_finite(share):
 			share_sum += share
 		discretionary_rows.append([_get_funding_line_name(item, key), share, line, draws, budget,
@@ -825,21 +843,19 @@ func _collect_treasury(player: PlayerProxy, center: FacilityProxy, account: int,
 		var line: float = row[2]
 		row[1] = line / total if total > 0.0 else NAN
 		row[4] = total
-	var rest_key := _item_dividends_paid
-	if account == Enums.Accounts.ACCOUNT_GOVERNMENT:
-		rest_key = _item_transfers_paid
-		if player.player_class == Enums.PlayerClasses.PLAYER_CLASS_AGENCY:
-			rest_key = Utils.get_line_item_key(_item_appropriation_returns_paid,
-					player.polity.player_id)
-	var rest_share := maxf(1.0 - share_sum, 0.0) if budget > 0.0 else NAN
-	discretionary_rows.append([_get_line_name(Utils.get_line_item_type(rest_key), rest_key),
-			rest_share, rest_share * budget, _get_draws(center, rest_key, false), budget, []])
+	if _has_rest(player):
+		var rest_key := (_item_transfers_paid if account == Enums.Accounts.ACCOUNT_GOVERNMENT
+				else _item_dividends_paid)
+		var rest_share := maxf(1.0 - share_sum, 0.0) if budget > 0.0 else NAN
+		discretionary_rows.append([_item_keys[rest_key], rest_share, rest_share * budget,
+				_get_draws(center, rest_key, false), budget, []])
 	var budget_control := []
 	if is_local and ThreadsafeGlobal.sandbox_unlimited_money:
 		var target := player.get_budget_target(account)
 		budget_control = [Controls.CONTROL_BUDGET_TARGET, player.name, account,
 				player.is_budget_target_held(account), target if target >= 0.0 else total]
-	return [_account_keys[account], total, committed_rows, discretionary_rows, budget_control]
+	return [_get_account_name(player, account), total, committed_rows, discretionary_rows,
+			budget_control]
 
 
 func _collect_owner_lines(facility: FacilityProxy, player: PlayerProxy,
@@ -853,16 +869,36 @@ func _collect_owner_lines(facility: FacilityProxy, player: PlayerProxy,
 		if is_nan(line):
 			continue
 		var share := player.get_budget_share(key)
+		if is_finite(share):
+			line = share * player.budgets[account]
 		var control := []
 		if is_local and is_finite(share):
 			control = [Controls.CONTROL_BUDGET_SHARE, player.name, key,
-					player.is_budget_share_held(key),
-					share + maxf(1.0 - _get_funding_share_sum(player, account), 0.0)]
-		rows.append([[_account_keys[account], player.gui_name], share, line,
+					player.is_budget_share_held(key), _get_share_cap(player, account, key)]
+		rows.append([[_get_account_name(player, account), player.gui_name], share, line,
 				_get_draws(center, key, true), player.budgets[account], control])
 	if rows.is_empty():
 		return []
 	return [[_item_keys[_item_funding_received], NAN, [], rows, []]]
+
+
+func _collect_borrowing(facility: FacilityProxy) -> Array:
+	# What [param facility]'s expansion borrows past its line from the credit market as one panel,
+	# or empty where it neither borrows nor borrowed last quarter or this one. Borrowing goes to
+	# expansion alone, so it isn't among the shares of what the committed lines leave. Its bar is
+	# on the scale of the largest of what it borrows and what it drew.
+	var line := facility.get_budget_line(FacilityProxy.BudgetLines.BUDGET_BORROWING)
+	if is_nan(line):
+		return []
+	var draws := _get_draws(facility, _item_loan_proceeds, false)
+	var base := line
+	for drawn in draws:
+		if is_finite(drawn):
+			base = maxf(base, drawn)
+	if !(base > 0.0):
+		return []
+	return [_item_keys[_item_loan_proceeds], NAN, [],
+			[["LABEL_EXPANSION", line / base, line, draws, base, []]], []]
 
 
 # What the line kept under [param key] at [param center] drew, net of what came back of it where
@@ -919,13 +955,72 @@ func _get_drawn_share(drawn: float, base: float) -> float:
 	return drawn / base
 
 
-# The share of the treasury [param account]'s budget its funding lines are set at, together.
-func _get_funding_share_sum(player: PlayerProxy, account: int) -> float:
-	var sum := 0.0
+# The keys of the treasury [param account]'s lines that have a share: its funding lines, and a
+# government treasury's appropriations and public provision.
+func _get_share_keys(player: PlayerProxy, account: int) -> Array[int]:
+	var keys: Array[int] = []
 	for key in player.budget_shares:
-		if Utils.get_line_item_type(key) == _funding_items[account]:
-			sum += player.budget_shares[key]
-	return sum
+		if _is_share_item(Utils.get_line_item_type(key), account) and is_finite(
+				player.budget_shares[key]):
+			keys.append(key)
+	return keys
+
+
+# Whether [param item] is a line of the treasury [param account]'s budget set as a share of it.
+func _is_share_item(item: int, account: int) -> bool:
+	return (item == _funding_items[account]
+			or ((item == _item_appropriations_paid or item == _item_public_provision_paid)
+			and _item_accounts[item] == account))
+
+
+# The most the treasury [param account]'s line kept under [param key] may be set at
+# (_get_cap).
+func _get_share_cap(player: PlayerProxy, account: int, key: int) -> float:
+	var held_sum := 0.0
+	var is_any_auto := _has_rest(player)
+	for line_key in _get_share_keys(player, account):
+		if line_key == key:
+			continue
+		if player.is_budget_share_held(line_key):
+			held_sum += player.budget_shares[line_key]
+		else:
+			is_any_auto = true
+	return _get_cap(held_sum, is_any_auto)
+
+
+# The most a line of a budget may be set at where the budget's other lines held take
+# [param held_sum]: what they leave where [param is_any_auto], a line on auto or the rest taking up
+# the move, or all of it, where the other lines are taken up instead.
+static func _get_cap(held_sum: float, is_any_auto: bool) -> float:
+	return maxf(1.0 - held_sum, 0.0) if is_any_auto else 1.0
+
+
+static func _format_share(share: float) -> String:
+	var percent := share * 100.0
+	# An appropriation is a few tenths of a percent of its government's budget, or less.
+	if percent > 0.0 and percent < 1.0:
+		return "%.2f%%" % percent
+	return "%.f%%" % percent
+
+
+# Whether [param player]'s budgets have a rest, which an agency's, given its money to spend, don't.
+static func _has_rest(player: PlayerProxy) -> bool:
+	return !_is_agency(player)
+
+
+static func _is_agency(player: PlayerProxy) -> bool:
+	return player.player_class == Enums.PlayerClasses.PLAYER_CLASS_AGENCY
+
+
+# The translation key of [param player]'s treasury [param account]'s name: an agency's and a
+# company's by what they are.
+func _get_account_name(player: PlayerProxy, account: int) -> String:
+	if player and account == Enums.Accounts.ACCOUNT_GOVERNMENT and _is_agency(player):
+		return "LABEL_AGENCY_TREASURY"
+	if (player and account == Enums.Accounts.ACCOUNT_CORPORATE
+			and player.player_class == Enums.PlayerClasses.PLAYER_CLASS_COMPANY):
+		return "LABEL_COMPANY_TREASURY"
+	return _account_keys[account]
 
 
 # The share of what [param facility]'s committed lines leave that its R&D is set at.
@@ -936,9 +1031,9 @@ func _get_research_share(facility: FacilityProxy) -> float:
 	return minf(share, 1.0)
 
 
-# The share of what [param facility]'s committed lines leave that its builds are set at, nothing
+# The share of what [param facility]'s committed lines leave that its expansion is set at, nothing
 # where it builds nothing.
-func _get_builds_share(facility: FacilityProxy) -> float:
+func _get_expansion_share(facility: FacilityProxy) -> float:
 	if _type_buildout == -1:
 		return 0.0
 	return maxf(facility.get_operations_target_spending_share(_type_buildout), 0.0)
@@ -969,14 +1064,91 @@ func _hold_control(control: Array, value: float) -> void:
 	var index: int = control[2]
 	match control[0]:
 		Controls.CONTROL_BUDGET_SHARE:
-			(proxy as PlayerProxy).hold_budget_share(index, value)
+			_hold_budget_share(proxy as PlayerProxy, index, value)
 		Controls.CONTROL_BUDGET_TARGET:
 			(proxy as PlayerProxy).hold_budget_target(index, value)
-		Controls.CONTROL_BUILDS:
-			(proxy as FacilityProxy).hold_operations_target_spending_share(index, value)
+		Controls.CONTROL_EXPANSION:
+			_hold_facility_share(proxy as FacilityProxy, 0, value)
 		Controls.CONTROL_RESEARCH:
-			_hold_research_share(proxy as FacilityProxy, value)
+			_hold_facility_share(proxy as FacilityProxy, 1, value)
 	_update_tab.call_deferred()
+
+
+# Holds [param player]'s line kept under [param key] at [param share], its treasury's other lines
+# taking up the move (FINANCIAL_MODEL.md, "Budgets"): those on auto with its rest, set as its
+# AI will set them, since a paused game runs no AI, or where it has neither, every other line,
+# held where it moves.
+func _hold_budget_share(player: PlayerProxy, key: int, share: float) -> void:
+	var account := _item_accounts[Utils.get_line_item_type(key)]
+	var keys := _get_share_keys(player, account)
+	var has_rest := _has_rest(player)
+	var is_any_auto := has_rest
+	var shares := PackedFloat64Array()
+	var held_shares := PackedFloat64Array()
+	for line_key in keys:
+		var is_held := line_key == key or player.is_budget_share_held(line_key)
+		is_any_auto = is_any_auto or !is_held
+		shares.append(player.budget_shares[line_key])
+		held_shares.append(share if line_key == key else (shares[-1] if is_held else NAN))
+	if !is_any_auto:
+		held_shares.fill(NAN)
+		held_shares[keys.find(key)] = share
+	var filled := Utils.get_filled_budget_shares(shares, held_shares, has_rest)
+	for i in keys.size():
+		if keys[i] == key or !is_any_auto:
+			player.hold_budget_share(keys[i], filled[i])
+		else:
+			player.set_budget_share(keys[i], filled[i])
+
+
+# Holds [param facility]'s expansion share, [param line] 0, or its R&D share, 1, at [param share],
+# the other with its payouts taking up the move as its AI will set them, since a paused game runs
+# no AI, or at an agency's facility, which has no payouts, the other alone, held where it is.
+func _hold_facility_share(facility: FacilityProxy, line: int, share: float) -> void:
+	if line == 1 and !(_type_buildout != -1
+			and facility.get_operations_target_spending_share(_type_buildout) >= 0.0):
+		_set_facility_share(facility, line, share, true) # no expansion to take it up
+		return
+	var other := 1 - line
+	var has_rest := _has_rest(facility.player)
+	var is_other_held := (_is_research_held(facility) if other == 1
+			else facility.is_operations_target_spending_share_held(_type_buildout))
+	var shares := PackedFloat64Array([_get_expansion_share(facility),
+			_get_research_share(facility)])
+	var held_shares := PackedFloat64Array([NAN, NAN])
+	held_shares[line] = share
+	if is_other_held and has_rest:
+		held_shares[other] = shares[other]
+	var filled := Utils.get_filled_budget_shares(shares, held_shares, has_rest)
+	_set_facility_share(facility, line, filled[line], true)
+	if !is_other_held or !has_rest:
+		_set_facility_share(facility, other, filled[other], is_other_held)
+
+
+# Sets [param facility]'s expansion share, [param line] 0, or its R&D share, 1, to [param share],
+# held where [param is_held].
+func _set_facility_share(facility: FacilityProxy, line: int, share: float, is_held: bool) -> void:
+	if line == 0:
+		if _type_buildout == -1:
+			return
+		if is_held:
+			facility.hold_operations_target_spending_share(_type_buildout, share)
+		else:
+			facility.set_operations_target_spending_share(_type_buildout, share)
+		return
+	var sum := 0.0
+	for resource_type in _research_resources:
+		sum += maxf(facility.get_inventory_research_share(resource_type), 0.0)
+	for resource_type in _research_resources:
+		var resource_share := share / _research_resources.size()
+		if sum > 0.0:
+			var current := maxf(facility.get_inventory_research_share(resource_type), 0.0)
+			resource_share = share * current / sum
+		resource_share = clampf(resource_share, 0.0, 1.0)
+		if is_held:
+			facility.hold_inventory_research_share(resource_type, resource_share)
+		else:
+			facility.set_inventory_research_share(resource_type, resource_share)
 
 
 # Returns what [param control] sets to its AI where [param auto], or holds it at what it is set at,
@@ -1001,12 +1173,12 @@ func _set_control_auto(control: Array, auto: bool) -> void:
 			else:
 				var budget := player.get_budget(index)
 				player.hold_budget_target(index, budget if budget >= 0.0 else 0.0)
-		Controls.CONTROL_BUILDS:
+		Controls.CONTROL_EXPANSION:
 			var facility := proxy as FacilityProxy
 			if auto:
 				facility.release_operations_target_spending_share(index)
 			else:
-				facility.hold_operations_target_spending_share(index, _get_builds_share(facility))
+				facility.hold_operations_target_spending_share(index, _get_expansion_share(facility))
 		Controls.CONTROL_RESEARCH:
 			var facility := proxy as FacilityProxy
 			for resource_type in _research_resources:
@@ -1017,19 +1189,6 @@ func _set_control_auto(control: Array, auto: bool) -> void:
 							clampf(facility.get_inventory_research_share(resource_type), 0.0, 1.0))
 	_update_tab.call_deferred()
 
-
-# Holds [param facility]'s research shares so that together they are [param share]: each in
-# proportion to what it is set at now, or alike where none is set.
-func _hold_research_share(facility: FacilityProxy, share: float) -> void:
-	var sum := 0.0
-	for resource_type in _research_resources:
-		sum += maxf(facility.get_inventory_research_share(resource_type), 0.0)
-	for resource_type in _research_resources:
-		var resource_share := share / _research_resources.size()
-		if sum > 0.0:
-			var current := maxf(facility.get_inventory_research_share(resource_type), 0.0)
-			resource_share = share * current / sum
-		facility.hold_inventory_research_share(resource_type, clampf(resource_share, 0.0, 1.0))
 
 
 # A Funding subtab line's name, as _get_leaf_name takes it: a treasury's funding of a facility by
@@ -1312,7 +1471,7 @@ func _set_funding_line(row: FundingRow, data: Array) -> void:
 	if is_inf(share):
 		share_text = UNBOUNDED
 	elif !is_nan(share):
-		share_text = "%.f%%" % (share * 100.0)
+		share_text = _format_share(share)
 	var control: Array = data[5]
 	row.set_line(_get_leaf_name(data[0]), share, share_text, _format_money(line), control)
 	row.set_draws(_get_drawn_share(draws[0], base), _get_drawn_share(draws[1], base),
@@ -1831,7 +1990,7 @@ class FundingRow extends HBoxContainer:
 
 
 	func _on_share_dragged(share: float) -> void:
-		_cells[0].text = "%.f%%" % (share * 100.0)
+		_cells[0].text = ITabBudget._format_share(share)
 
 
 	func _on_share_set(share: float) -> void:

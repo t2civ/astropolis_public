@@ -9,17 +9,17 @@ class_name ITabPopulations
 extends MarginContainer
 
 ## "Populations" tab subpanel for [InfoPanel]. Shows the residents of the selection, a facility
-## or the facilities a body, player or join aggregates, one population type at a time or, where
+## or the facilities a locus, player or join aggregates, one population type at a time or, where
 ## several live, all together, in three views.
 ##
 ## [b]Demog[/b]: the head count, the share in each life stage, and the vital rates; a type's life
-## stages unfold to its age buckets. [b]Needs[/b]: how well each need is met, by tier; at a
+## stages unfold to its age groups. [b]Needs[/b]: how well each need is met, by tier; at a
 ## facility, a type's needs unfold to their satisfiers, with the facility's unmet rate and local
 ## price for each. [b]Means[/b]: the residents' wealth, what it buys and how unevenly it is
 ## held, the price level of their wants, their work and its pay, and the money that moves their
 ## wealth: what they spent and what their facility's owners' settlement paid them. All together
 ## shows a column for each type and one for all of them, where a type with no want for a need
-## reads "·". A body with one facility shows as
+## reads "·". A locus with one facility shows as
 ## that facility. Header and row tooltips define the values; the model behind them is
 ## POPULATION_MODEL.md.
 
@@ -113,9 +113,9 @@ var _db_tables := IVTableData.db_tables
 var _n_populations: int = IVTableData.table_n_rows[&"populations"]
 var _n_needs: int = IVTableData.table_n_rows[&"needs"]
 var _population_names: Array[StringName] = _db_tables[&"populations"][&"name"]
-var _bucket_widths: Array[Array] = _db_tables[&"populations"][&"bucket_widths"]
-var _first_adult_buckets: Array[int] = _db_tables[&"populations"][&"first_adult_bucket"]
-var _first_elder_buckets: Array[int] = _db_tables[&"populations"][&"first_elder_bucket"]
+var _age_group_widths: Array[Array] = _db_tables[&"populations"][&"age_group_widths"]
+var _first_adult_age_groups: Array[int] = _db_tables[&"populations"][&"first_adult_age_group"]
+var _first_elder_age_groups: Array[int] = _db_tables[&"populations"][&"first_elder_age_group"]
 var _starvation_thresholds: Array[float] = _db_tables[&"populations"][&"starvation_threshold"]
 var _work_resources: Array[int] = _db_tables[&"populations"][&"work_resource"]
 var _need_names: Array[StringName] = _db_tables[&"needs"][&"name"]
@@ -304,9 +304,9 @@ func _update_no_populations() -> void:
 func _get_proxy_data(target_name: StringName, tab: int, chosen_type: int) -> void:
 	var proxy := Proxy.get_proxy_by_name(target_name)
 	if proxy:
-		var body := proxy as BodyProxy
-		if body and body.facilities.size() == 1:
-			proxy = body.facilities[0]
+		var locus := proxy as LocusProxy
+		if locus and locus.facilities.size() == 1:
+			proxy = locus.facilities[0]
 	if !proxy or !proxy.has_development():
 		_update_no_populations.call_deferred()
 		return
@@ -341,8 +341,8 @@ func _get_column(proxy: Proxy, type: int, types: Array[int]) -> ColumnData:
 	for stage in Enums.LifeStages.size():
 		column.stage_numbers.append(proxy.get_population_stage_number(type, stage))
 	if type != -1:
-		for bucket in _bucket_widths[type].size() + 1:
-			column.bucket_numbers.append(proxy.get_population_bucket_number(type, bucket))
+		for age_group in _age_group_widths[type].size() + 1:
+			column.age_group_numbers.append(proxy.get_population_age_group_number(type, age_group))
 	column.birth_rate = proxy.get_population_birth_rate(type)
 	column.death_rate = proxy.get_population_death_rate(type)
 	column.starvation_rate = proxy.get_population_starvation_rate(type)
@@ -442,7 +442,7 @@ func _get_demography_lines(data: PopulationsData) -> Array[LineData]:
 			_add_cell(line, _format_share(_get_ratio(stage_number, column.number)),
 					_format_named(stage_number) + " heads")
 		if is_single:
-			_add_buckets(line, columns[0], stage)
+			_add_age_groups(line, columns[0], stage)
 		lines.append(line)
 	var births := _make_line("Births (/k·y)",
 			"Births a year per thousand heads, over about a quarter.")
@@ -454,7 +454,7 @@ func _get_demography_lines(data: PopulationsData) -> Array[LineData]:
 			"Births less deaths, a percent of the heads a year.")
 	var expectancy := _make_line("Life expectancy (y)",
 			"The mean lifetime of a newborn at the present death rates, a type's own.\n"
-			+ "Unknown where one of its age buckets is empty.")
+			+ "Unknown where one of its age groups is empty.")
 	for column in columns:
 		var per_thousand := _get_ratio(1000.0 * YEAR, column.number)
 		_add_cell(births, _format_value(column.birth_rate * per_thousand))
@@ -578,26 +578,26 @@ func _add_cell(line: LineData, text: String, tooltip := "", tone: int = TONE_NOR
 	line.tones.append(tone)
 
 
-# Makes [param line], life [param stage]'s share of [param column], unfold to its age buckets'.
-func _add_buckets(line: LineData, column: ColumnData, stage: int) -> void:
+# Makes [param line], life [param stage]'s share of [param column], unfold to its age groups'.
+func _add_age_groups(line: LineData, column: ColumnData, stage: int) -> void:
 	var type := column.population_type
 	line.memory_key = "POP_STAGE_%d" % stage
 	line.share = _get_ratio(column.stage_numbers[stage], column.number)
-	var first_bucket := 0
-	var end_bucket := _first_adult_buckets[type]
+	var first_age_group := 0
+	var end_age_group := _first_adult_age_groups[type]
 	if stage == Enums.LifeStages.LIFE_STAGE_ADULT:
-		first_bucket = end_bucket
-		end_bucket = _first_elder_buckets[type]
+		first_age_group = end_age_group
+		end_age_group = _first_elder_age_groups[type]
 	elif stage == Enums.LifeStages.LIFE_STAGE_ELDER:
-		first_bucket = _first_elder_buckets[type]
-		end_bucket = column.bucket_numbers.size()
-	var bucket_texts := _get_bucket_texts(type)
-	for bucket in range(first_bucket, end_bucket):
-		var bucket_number := column.bucket_numbers[bucket]
-		var bucket_share := _get_ratio(bucket_number, column.number)
-		var row := _make_line(bucket_texts[bucket])
-		_add_cell(row, _format_share(bucket_share), _format_named(bucket_number) + " heads")
-		row.share = bucket_share
+		first_age_group = _first_elder_age_groups[type]
+		end_age_group = column.age_group_numbers.size()
+	var age_group_texts := _get_age_group_texts(type)
+	for age_group in range(first_age_group, end_age_group):
+		var age_group_number := column.age_group_numbers[age_group]
+		var age_group_share := _get_ratio(age_group_number, column.number)
+		var row := _make_line(age_group_texts[age_group])
+		_add_cell(row, _format_share(age_group_share), _format_named(age_group_number) + " heads")
+		row.share = age_group_share
 		line.rows.append(row)
 
 
@@ -662,9 +662,9 @@ func _get_work_unit(work_resource: int) -> String:
 	return String(_trade_units[work_resource]) if work_resource != -1 else "h"
 
 
-# Each age bucket's bounds in years, the last open-ended.
-func _get_bucket_texts(type: int) -> PackedStringArray:
-	var widths: Array = _bucket_widths[type]
+# Each age group's bounds in years, the last open-ended.
+func _get_age_group_texts(type: int) -> PackedStringArray:
+	var widths: Array = _age_group_widths[type]
 	var texts := PackedStringArray()
 	var start := 0.0
 	for width: float in widths:
@@ -741,12 +741,7 @@ func _format_percent(share: float) -> String:
 func _format_gini(inequality: float) -> String:
 	if is_nan(inequality):
 		return NO_VALUE
-	# Abramowitz and Stegun 7.1.26, within 1.5e-7.
-	var x := absf(inequality) / 2.0
-	var t := 1.0 / (1.0 + 0.3275911 * x)
-	var series := t * (0.254829592 + t * (-0.284496736 + t * (1.421413741
-			+ t * (-1.453152027 + t * 1.061405429))))
-	return "%.2f" % (1.0 - series * exp(-x * x))
+	return "%.2f" % Utils.get_gini(inequality)
 
 
 # Formats [param price], money per trade unit, in dollars.
@@ -784,7 +779,7 @@ class ColumnData extends RefCounted:
 	var population_type: int
 	var number: float
 	var stage_numbers := PackedFloat64Array() # by Enums.LifeStages
-	var bucket_numbers := PackedFloat64Array()
+	var age_group_numbers := PackedFloat64Array()
 	var birth_rate: float
 	var death_rate: float
 	var starvation_rate: float

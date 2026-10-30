@@ -13,16 +13,16 @@ own content is written, which comes with the first game that holds them
 
 ## Table Data
 
-- bucket_widths — ARRAY[FLOAT] in years, seven values: how long the type spends in each of its first
-  seven age buckets. The eighth, oldest bucket has no upper bound. Each unit of time a population
-  moves on the share of a bucket's members that is one over the bucket's width, which is the whole
-  of aging, so the widths are what make a type long-lived or quick to age. Base humans' buckets are
+- age_group_widths — ARRAY[FLOAT] in years, seven values: how long the type spends in each of its first
+  seven age groups. The eighth, oldest age group has no upper bound. Each unit of time a population
+  moves on the share of an age group's members that is one over the age group's width, which is the whole
+  of aging, so the widths are what make a type long-lived or quick to age. Base humans' age groups are
   0-4, 5-14, 15-24, 25-39, 40-54, 55-64, 65-79 and 80+ (`POPULATION_MODEL.md`, "Demographics").
-- first_adult_bucket — INT, the first bucket whose members are adults. The buckets below it
+- first_adult_age_group — INT, the first age group whose members are adults. The age groups below it
   are the young, so a type with no youth, such as one made as an adult, has 0.
-- first_elder_bucket — INT, the first bucket whose members are elders.
-- birth_weights — ARRAY[FLOAT], eight values: the births per head of each bucket, relative
-  to the others. A population's fertility level scales them. Zero wherever a bucket bears
+- first_elder_age_group — INT, the first age group whose members are elders.
+- birth_weights — ARRAY[FLOAT], eight values: the births per head of each age group, relative
+  to the others. A population's fertility level scales them. Zero wherever an age group bears
   no children.
 - starvation_rate — FLOAT per year: the deaths per head a year that the type suffers on top
   of its death rates with no life support at all. Going without life support kills on a time
@@ -37,13 +37,13 @@ moves a population's rates toward what its satisfaction of its needs implies: th
 when they are met, times each satisfaction to the power of minus an elasticity, flat at the
 want and steepest far below it. A positive elasticity raises the rate as the need goes short,
 and a negative one lowers it. A population whose people hold their means unevenly (its
-inequality, `facilities_populations.tsv`) takes the average over its classes.
+inequality, `facilities_populations.tsv`) takes the average over its deciles.
 
 - mortality_need — TABLE_ROW `needs.tsv`, the need whose satisfaction sets the death rates.
   Blank holds them at their seeds.
-- served_mortalities — ARRAY[FLOAT] per year, eight values: each bucket's deaths per head
+- served_mortalities — ARRAY[FLOAT] per year, eight values: each age group's deaths per head
   with the need met.
-- mortality_elasticities — ARRAY[FLOAT], eight values: how steeply each bucket's death rate
+- mortality_elasticities — ARRAY[FLOAT], eight values: how steeply each age group's death rate
   rises as the need goes short, the exponent above. The young respond most.
 - mortality_floor — FLOAT, the satisfaction below which going further without kills no
   faster.
@@ -72,33 +72,39 @@ inequality, `facilities_populations.tsv`) takes the average over its classes.
 - participation_response_time — FLOAT in years, as `mortality_response_time`, for the
   participation. Default `5 y`.
 - spending_rate — FLOAT per year: the share of its wealth a population spends in a year on
-  its wants. Its classes spend it on their existence wants first, all of it if they take
+  its wants. Its deciles spend it on their existence wants first, all of it if they take
   it, and the rest over their other wants in the shares `wants.tsv` sets
   (`POPULATION_MODEL.md`, "Work and pay"). Its inverse is how many years of spending the
   wealth seeded in `facilities_populations.tsv` holds. Default `1/y`.
+- satiation_headroom — FLOAT, the most a want's satisfaction rises past the want, approached with
+  diminishing returns as a decile buys past it: past a fill f of one, a satisfaction of
+  1 + h(1 − e^(−(f − 1)/h)) (`FINANCIAL_MODEL.md`, "Saving and borrowing"). Default `0.1`.
 - work_resource — TABLE_ROW `resources.tsv`, the resource the type's work makes. Default
   `LABOR`, which every operation draws (`POPULATION_MODEL.md`, "Work and pay").
 - work_stage_weights — ARRAY[FLOAT], three values, young, adults and elders: how much of a
   working head each member of a life stage counts as. Default `0;1;0.2`.
 - work_hours — FLOAT in hours per year, the hours a working head works. A population's able
   hours are its weighted heads times these hours times its participation
-  (`facilities_populations.tsv`), and staff on loan work them in full. Its classes offer them
+  (`facilities_populations.tsv`), and staff on loan work them in full. Its deciles offer them
   down to their spending per hour lived. Default `1800 h/y`.
 
 
 ## Notes
 
-1. The number of age buckets, eight, is the model's and not a type's (`POPULATION_MODEL.md`,
-   "Demographics"). What a type sets is where its buckets fall in its own lifetime.
+1. The number of age groups, eight, is the model's and not a type's (`POPULATION_MODEL.md`,
+   "Demographics"). What a type sets is where its age groups fall in its own lifetime.
 2. A population's own death rates, fertility, inequality, wealth and participation are state,
-   seeded per facility in `facilities_populations.tsv`. The death rates, fertility and
-   participation then move as above, and the wealth stays as it is through births and deaths,
-   a death leaving its share to the survivors; nothing moves the inequality yet.
+   seeded per facility in `facilities_populations.tsv`, and so are how unevenly its wages and its
+   dividends reach its people. The death rates, fertility and participation then move as above;
+   the wealth stays as it is through births and deaths, a death leaving its share to the
+   survivors; and the inequality moves with how unevenly what the population is paid reaches it
+   (`FINANCIAL_MODEL.md`, "The residents and inequality").
 3. Base humans' response columns are fitted on the 2017 cross-section of countries by
    `tests/calibration/seed_demography.py --fit`, as a person's curve over each country's ten
-   classes at its inequality (`EARTH_CALIBRATION.md`, "Population"). The
-   floors and response times are not fitted, and neither are the fertility's response to
-   crowding and the participation's response, whose values are from recall.
+   deciles, each holding what its governments pay alike and the rest at its inequality
+   (`EARTH_CALIBRATION.md`, "Population"). The floors and response times are not fitted, and
+   neither are the fertility's response to crowding and the participation's response, whose
+   values are from recall.
 4. What a type needs, and where it can live, are its wants (`wants.tsv`): room is the want of its
    shelter need, a draw on the habitation its environments' housing makes, and an individual that
    takes less room wants less of it (`POPULATION_MODEL.md`, "Where populations live").

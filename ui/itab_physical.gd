@@ -20,7 +20,7 @@ const PERSIST_PROPERTIES: Array[StringName] = []  ## Member names persisted by s
 
 var _selection_manager: AstroSelectionManager
 
-var _body_name: StringName
+var _locus_name: StringName
 var _selection_name: StringName
 
 @onready var _tab_resources: TabResources = %Resources
@@ -43,7 +43,7 @@ func timer_update() -> void:
 func _refresh() -> void:
 	if !visible or !IVStateManager.is_threads_allowed():
 		return
-	if !_body_name or !_selection_name:
+	if !_selection_name:
 		_update_selection()
 	_tab_resources.refresh()
 
@@ -51,11 +51,9 @@ func _refresh() -> void:
 func _update_selection(_suppress_camera_move := false) -> void:
 	if !visible or !IVStateManager.is_threads_allowed():
 		return
-	var selection_name := _selection_manager.get_name() # body or facility
+	var selection_name := _selection_manager.get_name() # locus, facility or body without a locus
 	if !selection_name:
 		return
-	var body_name := _selection_manager.get_body_name()
-	assert(body_name)
-	_body_name = body_name
+	_locus_name = MainThreadGlobal.get_locus_name(selection_name)
 	_selection_name = selection_name
-	_tab_resources.update_selection(body_name, selection_name)
+	_tab_resources.update_selection(_locus_name, selection_name)

@@ -12,7 +12,7 @@ Values here are game-start seeds at the 2015 vintage, like every other seed in
 
 - biodiversity_pool — FLOAT in `spp` (effective species). The pool of macroscopic
   species the whole game draws on, from which each facility's `biodiversity_fraction`
-  in `facilities.tsv` samples. It is global rather than per-body on purpose: a habitat
+  in `facilities.tsv` samples. It is global rather than per-locus on purpose: a habitat
   on Mars houses Earth species, so there is one pool and off-world biomes sample the
   same one. See the Information & Biodiversity section of `facilities.schema.md` for
   how sampling and shared content work.

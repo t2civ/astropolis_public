@@ -12,16 +12,16 @@ extends MarginContainer
 ## the resources of one resource class at a time, in two views.
 ##
 ## [b]Flows[/b]: for a facility, its local price, its net trade, its internal volume where it
-## is non-unitary, and the trade it wants and must have; for a body, join or player, the market
+## is non-unitary, and the trade it wants and must have; for a locus, join or player, the market
 ## price and spread (at a join or player, of cyber resources only) and its facilities' net
 ## trade, purchases and internal volume. [b]Cover[/b], for a facility only: its stock and stock
 ## levels as a percent of one time horizon's outflow, and the share of the horizon's wanted trade
-## it has contracted. A body with one facility shows as that facility. A facility lists the
+## it has contracted. A locus with one facility shows as that facility. A facility lists the
 ## resources it deals in or holds; an aggregate, those any of its facilities deal in. Unfolding a
 ## resource lists its quarters: forward prices and what is contracted for each. Header tooltips
 ## define the columns.[br][br]
 ##
-## The desired rate is read at the body market's price, which stands at its seed where nothing
+## The desired rate is read at the locus market's price, which stands at its seed where nothing
 ## trades (PRODUCTION_MODEL.md, "A facility's flows with the market").[br][br]
 ##
 ## Tab indices follow row enumerations in [code]resource_classes.tsv[/code], with a
@@ -363,9 +363,9 @@ func _update_no_markets() -> void:
 func _get_proxy_data(target_name: StringName) -> void:
 	var proxy := Proxy.get_proxy_by_name(target_name)
 	if proxy:
-		var body := proxy as BodyProxy
-		if body and body.facilities.size() == 1:
-			proxy = body.facilities[0]
+		var locus := proxy as LocusProxy
+		if locus and locus.facilities.size() == 1:
+			proxy = locus.facilities[0]
 	if !proxy or !proxy.has_development():
 		_update_no_markets.call_deferred()
 		return
@@ -486,7 +486,7 @@ func _add_facility_quarters(row: RowData, market: MarketProxy, resource_position
 func _get_aggregate_rows(proxy: Proxy, resource_types: PackedInt32Array, time: float,
 		rows: Array[RowData]) -> void:
 	const TRADE_CLASS_CYBER := Enums.TradeClasses.TRADE_CLASS_CYBER
-	var body := proxy as BodyProxy
+	var locus := proxy as LocusProxy
 	var market := proxy.get_market()
 	var cyber_market := _get_cyber_market()
 	for resource_type in resource_types:
@@ -511,13 +511,13 @@ func _get_aggregate_rows(proxy: Proxy, resource_types: PackedInt32Array, time: f
 		row.internal_volume = internal_volume
 		row.market_count = market_count
 		if row.has_market_price and row_market.ordinal_qtr >= 0:
-			_add_aggregate_quarters(row, row_market, null if is_cyber else body, time)
+			_add_aggregate_quarters(row, row_market, null if is_cyber else locus, time)
 		rows.append(row)
 
 
 # Lists the current quarter and every later one with a book at [param market] or open interest at
-# [param body], with what the body's own facilities have contracted in each, net.
-func _add_aggregate_quarters(row: RowData, market: MarketProxy, body: BodyProxy, time: float
+# [param locus], with what the locus's own facilities have contracted in each, net.
+func _add_aggregate_quarters(row: RowData, market: MarketProxy, locus: LocusProxy, time: float
 		) -> void:
 	var resource_type := row.resource_type
 	var current_qtr := market.ordinal_qtr
@@ -527,18 +527,18 @@ func _add_aggregate_quarters(row: RowData, market: MarketProxy, body: BodyProxy,
 			ordinal_qtrs.append(key[1])
 	var open_interests: Dictionary[int, float] = {}
 	var facility_positions: Dictionary[int, float] = {}
-	if body:
+	if locus:
 		var trader_proxies := Proxy.proxy_bus.trader_proxies
-		for key: PackedInt32Array in body.positions:
+		for key: PackedInt32Array in locus.positions:
 			if key[0] != resource_type or key[1] < current_qtr:
 				continue
 			var ordinal_qtr := key[1]
-			var quantity := body.positions[key][0]
+			var quantity := locus.positions[key][0]
 			if quantity > 0.0:
 				open_interests[ordinal_qtr] = open_interests.get(ordinal_qtr, 0.0) + quantity
 			var trader: TraderProxy = (trader_proxies[key[2]] if key[2] < trader_proxies.size()
 					else null)
-			if trader and trader.facility and trader.facility.body == body:
+			if trader and trader.facility and trader.facility.locus == locus:
 				facility_positions[ordinal_qtr] = (facility_positions.get(ordinal_qtr, 0.0)
 						+ quantity)
 			if !ordinal_qtrs.has(ordinal_qtr):
@@ -548,7 +548,7 @@ func _add_aggregate_quarters(row: RowData, market: MarketProxy, body: BodyProxy,
 		var from := maxf(Utils.get_time_at_ordinal_quarter(ordinal_qtr), time)
 		var end := Utils.get_time_at_ordinal_quarter(ordinal_qtr + 1)
 		var quarter := _make_quarter(market, resource_type, ordinal_qtr, current_qtr, from, end)
-		if body:
+		if locus:
 			quarter.has_positions = true
 			quarter.position = facility_positions.get(ordinal_qtr, 0.0)
 			quarter.open_interest = open_interests.get(ordinal_qtr, 0.0)

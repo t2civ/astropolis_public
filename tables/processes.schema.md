@@ -1,6 +1,6 @@
 # Schema for processes.tsv
 
-A process is a change to a body's strata that no module makes, run in the body's interval (`PRODUCTION_MODEL.md`, "Strata and processes"). Each acts on every stratum of its group that holds its resource. Today every process is a living stock regrowing toward its carrying capacity: logistically, fastest at half of it, solved over each interval so that it never overshoots.
+A process is a change to a locus's strata that no module makes, run in the locus's interval (`PRODUCTION_MODEL.md`, "Strata and processes"). Each acts on every stratum of its group that holds its resource. Today every process is a living stock regrowing toward its carrying capacity: logistically, fastest at half of it, solved over each interval so that it never overshoots.
 
 ## Fields
 

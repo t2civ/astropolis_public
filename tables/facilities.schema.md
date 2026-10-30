@@ -5,17 +5,17 @@ Facilities are described in `facilities.descriptive.md`. Content of this table i
 
 ## Fields
 
-- name (1st column) — Constructed by joining body name (with type prefix) and player name (without type prefix). Examples: PLANET_EARTH_CHINA, PLANET_EARTH_EU, SPACECRAFT_ISS_NASA.
+- name (1st column) — Constructed by joining locus name (with type prefix) and player name (without type prefix). Examples: PLANET_EARTH_CHINA, PLANET_EARTH_EU, SPACECRAFT_ISS_NASA.
 - start — Always TRUE (by default).
-- body — Simulation body.
+- locus — The locus the facility stands at, by its body's name (`PLANET_EARTH`).
 - player — Owning or controlling player.
-- region — The region of its body the facility stands in, or blank for none. It stands on the body's strata in that region and those that span the body, one of each stratum group (see `region` in strata.tsv). A space agency's ground facility stands in its polity's region.
+- region — The region of its locus the facility stands in, or blank for none. It stands on the locus's strata in that region and those that span the locus, one of each stratum group (see `region` in strata.tsv). A space agency's ground facility stands in its polity's region.
 - unitary — True ("x") if the facility can be treated as one activity for economic accounting. If false, each operation is treated as a separate activity for internal mechanics like taxation and gross product calculation.
-- market_maker — True ("x") if the facility makes its body's market: it warehouses stock and keeps a bid and an ask standing on the resources it trades. The Earth nations are market makers; a spaceport will be. See "Market makers" in the development repository's `TRADE_MODEL.md`.
+- market_maker — True ("x") if the facility makes its locus's market: it warehouses stock and keeps a bid and an ask standing on the resources it trades. The Earth nations are market makers; a spaceport will be. See "Market makers" in the development repository's `TRADE_MODEL.md`.
 - closed_cycle_ops — True ("x") if the facility runs operations in a "closed cycle"; i.e., resource streams are entirely from and to inventory.
 - public_sector — Fraction of economic activity that is public sector. For unitary facilities, this is usually 1 (agencies) or 0 (companies).
-- funding_share — Game-start value: the share of its owners' budget each treasury that owns it funds it at most, which the base AI seeds as their budget line (`FINANCIAL_MODEL.md`, "Budgets"). An agency's facilities' shares sum to one. Blank for all it lacks, as the nations' are until the market for funds.
-- population — The residents in 2015, by population type: for a national polity, its total population. How each is spread over its age buckets, and its vital rates, are in `facilities_populations.tsv`.
+- funding_share — Game-start value: the share of its owners' budget each treasury that owns it funds it at most, which the base AI seeds as their budget line (`FINANCIAL_MODEL.md`, "Budgets"). An agency's facilities' shares sum to one. Blank for all it lacks, as the nations' are until the credit market lends the residents' savings.
+- population — The residents in 2015, by population type: for a national polity, its total population. How each is spread over its age groups, and its vital rates, are in `facilities_populations.tsv`.
 - staff — The staff on loan in 2015, by population type: people who work at the facility and belong to its polity's population, which already counts them. For an agency, its direct employees and contractor/support workforce. Crew who live aboard come from the modules that house them (`biological_crew` in `modules.tsv`), not from here.
 - constructions — Total mass of all existing buildings, infrastructure, and manufactured items. Includes "active" monuments (e.g., tourist destinations such as the Pyramids) but not inactive ruins or rubbish.
 - biomass — Total dry-weight mass (not carbon weight).
@@ -23,9 +23,9 @@ Facilities are described in `facilities.descriptive.md`. Content of this table i
 - biodiversity_fraction — See Information & Biodiversity below.
 - information_fraction — See Information & Biodiversity below.
 - nominal_information — For small facilities with relatively little computer capacity, assign a nominal Shannon information content in Terrabits (Tbit). Use this field instead of `information_fraction` if unique information content is too small to significantly affect the global information model.
-- solar_correction / wind_correction / geothermal_correction — Per-source multipliers (default 1.0) on this site's body-level renewable capacity factor, capturing territorial quality versus the body baseline (latitude, climate, regional regime). Facility capacity factor = body factor × correction (see `calculate_capacity_factor` on Body/Facility). `solar_correction` also multiplies the share of its time the site spends in sunlight, its body's average over its solar day, standing for its weather and latitude (`light_role` in `operations.schema.md`). Agencies on a planet should match their owning polity. Hydro and tidal have no correction — they are not yet body-modeled and run from the seeded `facilities_operations` rate.
+- solar_correction / wind_correction / geothermal_correction — Per-source multipliers (default 1.0) on this site's locus-level renewable capacity factor, capturing territorial quality versus the locus baseline (latitude, climate, regional regime). Facility capacity factor = locus factor × correction (see `calculate_capacity_factor` on Locus/Facility). `solar_correction` also multiplies the share of its time the site spends in sunlight, its body's average over its solar day, standing for its weather and latitude (`light_role` in `operations.schema.md`). Agencies on a planet should match their owning polity. Hydro and tidal have no correction — they are not yet locus-modeled and run from the seeded `facilities_operations` rate.
 - time_horizon — Planning horizon used by AI and automations (inventory reserves, resupply, etc.). Shorter for facilities with frequent resupply (e.g., Earth), longer for facilities with infrequent resupply (e.g., LEO).
-- short_name — Game-start value: a text key naming the facility among its player's facilities, as in its owners' budget lines; blank for its body's name.
+- short_name — Game-start value: a text key naming the facility among its player's facilities, as in its owners' budget lines; blank for its locus's name.
 - facility_class — `facility_classes.tsv` row classifying this facility. For unitary facilities it supplies the revenue/cost line items (the facility is one activity); for non-unitary facilities it is descriptive (they book per operation). Current values: POLITY (the nations), GROUND_FACILITIES (Earth space agencies), RESEARCH_STATION (ISS / Tiangong slices).
 
 

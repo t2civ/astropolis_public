@@ -22,7 +22,7 @@ var resource_trade_unit_multipliers: PackedFloat64Array
 var local_player_name := &""
 ## True in a sandbox game whose human players found facilities for free. Nothing founds a facility
 ## yet.
-var sandbox_free_builds := false
+var sandbox_free_new_facilities := false
 ## True in a sandbox game whose human players' treasuries are never short: what one lacks it is
 ## granted, booked as a grant, never borrowed or drawn from its residents.
 var sandbox_unlimited_money := false
@@ -62,16 +62,17 @@ func get_playable_start_players() -> Array[StringName]:
 	return playable_names
 
 
-## Returns true in a sandbox game: one whose human players have free builds or unlimited money.
+## Returns true in a sandbox game: one whose human players have free new facilities or unlimited
+## money.
 func is_sandbox() -> bool:
-	return sandbox_free_builds or sandbox_unlimited_money
+	return sandbox_free_new_facilities or sandbox_unlimited_money
 
 
 ## Returns the game's start options, for its saves and for [method set_start_options].
 func get_start_options() -> Dictionary:
 	return {
 		&"local_player_name": local_player_name,
-		&"sandbox_free_builds": sandbox_free_builds,
+		&"sandbox_free_new_facilities": sandbox_free_new_facilities,
 		&"sandbox_unlimited_money": sandbox_unlimited_money,
 		&"sandbox_access_all_players": sandbox_access_all_players,
 	}
@@ -83,7 +84,7 @@ func get_start_options() -> Dictionary:
 ## sandbox.
 func set_start_options(options: Dictionary) -> void:
 	local_player_name = options[&"local_player_name"]
-	sandbox_free_builds = options[&"sandbox_free_builds"]
+	sandbox_free_new_facilities = options[&"sandbox_free_new_facilities"]
 	sandbox_unlimited_money = options[&"sandbox_unlimited_money"]
 	sandbox_access_all_players = options[&"sandbox_access_all_players"]
 
@@ -92,6 +93,6 @@ func set_start_options(options: Dictionary) -> void:
 ## without [method set_start_options] doesn't inherit the last one's.
 func reset_start_options() -> void:
 	local_player_name = _default_local_player_name
-	sandbox_free_builds = false
+	sandbox_free_new_facilities = false
 	sandbox_unlimited_money = false
 	sandbox_access_all_players = false

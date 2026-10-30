@@ -24,8 +24,8 @@ signal global_strategy_changed(strategy_id: int)
 signal player_resource_strategy_changed(resource_type: int, strategy_id: int)
 ## Emitted when an entry in [member player_facility_strategies] changes.
 signal player_facility_strategy_changed(facility_id: int, strategy_id: int)
-## Emitted when an entry in [member body_strategies] changes.
-signal body_strategy_changed(body_id: int, strategy_id: int)
+## Emitted when an entry in [member locus_strategies] changes.
+signal locus_strategy_changed(locus_id: int, strategy_id: int)
 ## Emitted when an entry in [member counterparty_strategies] changes.
 signal counterparty_strategy_changed(player_id: int, strategy_id: int)
 
@@ -63,7 +63,7 @@ enum GlobalStrategies {
 	## Prioritize long-term sustainability, biome health, and biodiversity
 	## over output. Analog: green-economy / degrowth advocacy.
 	STEWARDSHIP,
-	## Pursue new bodies and frontier development at high risk. Analog:
+	## Pursue new loci and frontier development at high risk. Analog:
 	## age-of-exploration powers, settler colonialism.
 	EXPANSION,
 	## Crisis posture; preserve core capabilities; accept losses elsewhere.
@@ -148,10 +148,10 @@ enum PlayerFacilityStrategies {
 	N_BASE_PLAYER_FACILITY_STRATEGIES,
 }
 
-## Per-body player-level strategies. By convention id 0 is the no-op default.
-## Add-on strategies begin at [code]N_BASE_BODY_STRATEGIES[/code].
-enum BodyStrategies {
-	## No special player stance toward this body.
+## Per-locus player-level strategies. By convention id 0 is the no-op default.
+## Add-on strategies begin at [code]N_BASE_LOCUS_STRATEGIES[/code].
+enum LocusStrategies {
+	## No special player stance toward this locus.
 	NEUTRAL,
 	## Concentrate new facility-building and resourcing here. Analog: Project
 	## Apollo's Moon focus, Mars-first agencies.
@@ -159,15 +159,15 @@ enum BodyStrategies {
 	## Maintain a footprint but don't grow it aggressively. Analog: minor
 	## research outposts.
 	SECONDARY_PRESENCE,
-	## Treat the body primarily as a resource source; extract aggressively.
+	## Treat the locus primarily as a resource source; extract aggressively.
 	## Analog: colonial extractive economies.
 	EXPLOIT,
 	## Limit development for environmental or scientific reasons. Analog:
 	## protected reserves, Antarctica-treaty-style scientific zones.
 	CONSERVE,
-	## Wind down all facilities on this body; withdraw entirely.
+	## Wind down all facilities on this locus; withdraw entirely.
 	EXIT,
-	N_BASE_BODY_STRATEGIES,
+	N_BASE_LOCUS_STRATEGIES,
 }
 
 ## Per-other-player strategies (diplomatic / trade posture). By convention
@@ -245,9 +245,9 @@ static var player_facility_strategy_defs: Array[Dictionary] = [
 	{}, # DIVEST
 ]
 
-## Per-body player-level strategy definitions; index = [enum BodyStrategies]
+## Per-locus player-level strategy definitions; index = [enum LocusStrategies]
 ## value.
-static var body_strategy_defs: Array[Dictionary] = [
+static var locus_strategy_defs: Array[Dictionary] = [
 	{}, # NEUTRAL
 	{}, # PRIORITY_DEVELOPMENT
 	{}, # SECONDARY_PRESENCE
@@ -276,7 +276,7 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"global_strategy",
 	&"player_resource_strategies",
 	&"player_facility_strategies",
-	&"body_strategies",
+	&"locus_strategies",
 	&"counterparty_strategies",
 ]
 
@@ -297,9 +297,9 @@ var player_resource_strategies: PackedInt32Array
 ## Per-facility strategies keyed by [member FacilityProxy.facility_id]. Absent
 ## is the same as "NEUTRAL". See [enum PlayerFacilityStrategies].
 var player_facility_strategies: Dictionary[int, int]
-## Per-body strategies keyed by [member BodyProxy.body_id]. Absent is the same
-## as "NEUTRAL". See [enum BodyStrategies].
-var body_strategies: Dictionary[int, int]
+## Per-locus strategies keyed by [member LocusProxy.locus_id]. Absent is the same
+## as "NEUTRAL". See [enum LocusStrategies].
+var locus_strategies: Dictionary[int, int]
 ## Per-counterparty strategies keyed by [member PlayerProxy.player_id]. Absent
 ## is the same as "NEUTRAL". See [enum CounterpartyStrategies].
 var counterparty_strategies: Dictionary[int, int]
@@ -334,25 +334,24 @@ func process_ai_interval(_delta: float) -> void:
 
 # ***************************** INTERNAL PRIVATE ******************************
 
-# Sets its treasuries' budget lines (FINANCIAL_MODEL.md, "Budgets"): a polity's appropriation of
-# each of its agencies, the agency's appropriation_share in players.tsv, and its funding of each of
-# its facilities from each treasury that owns it, the facility's funding_share in facilities.tsv. A
-# line no table seeds funds all its counterparty lacks. TEMPORARY PATCH: each line is its table
-# seed, read again each interval so a line its human returns to auto goes back to it, until the AI
-# weighs its lines.
+# Sets its treasuries' budget lines (FINANCIAL_MODEL.md, "Budgets"): a polity's government
+# treasury's appropriation of each of its agencies, the agency's appropriation_share in
+# players.tsv, and its residents' public provision, its own provision_share there, and its
+# funding of each of its facilities from each treasury that owns it, the
+# facility's funding_share in facilities.tsv, those on auto filling what its human's held lines of
+# the same treasury leave, in proportion to their seeds, with the treasury's residual where it has
+# one. An agency's treasury has none, so its lines on auto fill its budget. A line no table seeds
+# funds all its counterparty lacks. TEMPORARY PATCH: each line is its table seed, read again each
+# interval so a line its human returns to auto goes back to it, until the AI weighs its lines.
 func _author_budget_shares() -> void:
 	const PLAYER_CLASS_AGENCY := Enums.PlayerClasses.PLAYER_CLASS_AGENCY
 	const PLAYER_CLASS_COMPANY := Enums.PlayerClasses.PLAYER_CLASS_COMPANY
 	var appropriations_paid := IVTableData.db_find(&"line_items", &"unique_type",
 			Enums.UniqueLineItems.APPROPRIATIONS_PAID)
+	var public_provision_paid := IVTableData.db_find(&"line_items", &"unique_type",
+			Enums.UniqueLineItems.PUBLIC_PROVISION_PAID)
 	var appropriation_shares: Array[float] = IVTableData.db_tables[&"players"][&"appropriation_share"]
-	for agency in Proxy.proxy_bus.player_proxies:
-		if agency == proxy or agency.polity != proxy or agency.player_class != PLAYER_CLASS_AGENCY:
-			continue
-		var player_type := IVTableData.get_row(agency.name)
-		if player_type != -1 and appropriation_shares[player_type] >= 0.0:
-			proxy.set_budget_share(Utils.get_line_item_key(appropriations_paid, agency.player_id),
-					appropriation_shares[player_type])
+	var provision_shares: Array[float] = IVTableData.db_tables[&"players"][&"provision_share"]
 	var funding_items: Array[int] = [
 		IVTableData.db_find(&"line_items", &"unique_type",
 				Enums.UniqueLineItems.GOVERNMENT_FUNDING_PAID),
@@ -360,18 +359,47 @@ func _author_budget_shares() -> void:
 				Enums.UniqueLineItems.CORPORATE_FUNDING_PAID),
 	]
 	var funding_shares: Array[float] = IVTableData.db_tables[&"facilities"][&"funding_share"]
-	for facility in proxy.facilities:
-		var facility_type := IVTableData.get_row(facility.name)
-		if facility_type == -1 or !(funding_shares[facility_type] >= 0.0):
-			continue
-		var facility_proxy := facility as FacilityProxy
-		var is_government := proxy.player_class != PLAYER_CLASS_COMPANY
-		var is_corporate := (proxy.player_class != PLAYER_CLASS_AGENCY
-				and facility_proxy.public_sector < 1.0)
-		for account in funding_items.size():
-			if (is_government if account == Enums.Accounts.ACCOUNT_GOVERNMENT else is_corporate):
-				proxy.set_budget_share(Utils.get_line_item_key(funding_items[account],
-						facility_proxy.facility_id), funding_shares[facility_type])
+	var has_residual := proxy.player_class != PLAYER_CLASS_AGENCY
+	for account in funding_items.size():
+		var keys := PackedInt32Array()
+		var seeds := PackedFloat64Array()
+		if account == Enums.Accounts.ACCOUNT_GOVERNMENT:
+			for agency in Proxy.proxy_bus.player_proxies:
+				if (agency == proxy or agency.polity != proxy
+						or agency.player_class != PLAYER_CLASS_AGENCY):
+					continue
+				var player_type := IVTableData.get_row(agency.name)
+				if player_type != -1 and appropriation_shares[player_type] >= 0.0:
+					keys.append(Utils.get_line_item_key(appropriations_paid, agency.player_id))
+					seeds.append(appropriation_shares[player_type])
+			var own_type := IVTableData.get_row(proxy.name)
+			if own_type != -1 and provision_shares[own_type] >= 0.0:
+				keys.append(Utils.get_line_item_key(public_provision_paid))
+				seeds.append(provision_shares[own_type])
+		for facility in proxy.facilities:
+			var facility_type := IVTableData.get_row(facility.name)
+			if facility_type == -1 or !(funding_shares[facility_type] >= 0.0):
+				continue
+			var facility_proxy := facility as FacilityProxy
+			var is_owner := proxy.player_class != PLAYER_CLASS_COMPANY
+			if account == Enums.Accounts.ACCOUNT_CORPORATE:
+				is_owner = (proxy.player_class != PLAYER_CLASS_AGENCY
+						and facility_proxy.public_sector < 1.0)
+			if !is_owner:
+				continue
+			keys.append(Utils.get_line_item_key(funding_items[account], facility_proxy.facility_id))
+			seeds.append(funding_shares[facility_type])
+		var held_shares := PackedFloat64Array()
+		var is_any_held := false
+		for key in keys:
+			var is_held := proxy.is_budget_share_held(key)
+			is_any_held = is_any_held or is_held
+			held_shares.append(proxy.get_budget_share(key) if is_held else NAN)
+		var shares := seeds
+		if is_any_held:
+			shares = Utils.get_filled_budget_shares(seeds, held_shares, has_residual)
+		for i in keys.size():
+			proxy.set_budget_share(keys[i], shares[i])
 
 
 # Has each of its treasuries spend what its revenue gives it (see PlayerProxy.set_budget_target).

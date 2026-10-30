@@ -99,13 +99,13 @@ What a stratum has that modules occupy and don't draw down: land, and the sites 
 
 ## compositions.tsv
 
-Compositions define all of the extractable resources in solar system bodies. Internally, 'Composition' is a data structure attached to a Body that defines resources for one 'stratum'. Strata correspond to both physical/geophysical structures and also practictical accessibility (on Earth this includes political boundaries). 
+Compositions define all of the extractable resources in solar system bodies. Internally, 'Composition' is a data structure attached to a locus that defines resources for one 'stratum'. Strata correspond to both physical/geophysical structures and also practictical accessibility (on Earth this includes political boundaries). 
 
 Composition names are constructed:
 `COMPOSITION_<body_name or generic body_class>_<stratum_name>[_<owner_name>]`
 
 Field comments:
-* `outer_depth` (default = 0.0) Top of the stratum relative to Body.m_radius. Negative if stratum radius is greater than m_radius (e.g., Earth's atmosphere). 
+* `outer_depth` (default = 0.0) Top of the stratum relative to the body's mean radius. Negative if stratum radius is greater than m_radius (e.g., Earth's atmosphere). 
 * `thickness` If blank, the stratum is assumed to include the body center and value is calculated as m_radius minus outer_depth.
 * `spherical_fraction` 1 if whole sphere, < 1 if partial (i.e., region). Can be blank only if `area` is provided.
 * `area` Surface area of the stratum, or leave blank to be calcuated from radius and `spherical_fraction`.
@@ -171,9 +171,9 @@ For undifferentiated asteroids and small moons, spatial heterogeneity is much mu
 
 ## facilities.tsv
 
-Name construction: `FACILITY_<body_name>_<player_name>`
+Name construction: `FACILITY_<locus_name>_<player_name>`
 
-There is at most one "facility" for each player at each body, which combines all of that player's activity. 
+There is at most one "facility" for each player at each locus, which combines all of that player's activity. 
 
 The table has game start entities only. We have one 'homeworld' facility for each player on Earth, plus four at SPACECRAFT_ISS (one each for NASA, Roscosmos, ESA & JAXA) and one at SPACECRAFT_TIANGONG (CNSA).
 
@@ -213,7 +213,7 @@ Definitions that still apply:
 
 * Capacity is "peak", "nominal", "nameplate" or similar; utilization is capacity factor (see https://en.wikipedia.org/wiki/Capacity_factor). Internally, capacity x utilization = run_rate. For extractions, the extraction rate for each output resource is further multiplied by the deposits fraction.
 * Capacities are determined by modules; game-start code sets module numbers to achieve the specified capacities.
-* Renewable capacity factors are location-dependent: solar from irradiance with per-body shade and transmission factors, wind and geothermal from authored body factors, with per-facility `*_correction` multipliers on top.
+* Renewable capacity factors are location-dependent: solar from irradiance with per-locus shade and transmission factors, wind and geothermal from authored locus factors, with per-facility `*_correction` multipliers on top.
 * ISS and Tiangong solar panels are modeled at 50% capacity factor (shaded half the time at 1 AU), consistent with NASA's 75-90 kW figure for the USOS segment.
 
 
@@ -371,7 +371,7 @@ Different kinds of humans or non-humans, corporeal or virtual, that we want to c
 
 ## processes.tsv
 
-Processes are to a body and its strata what operations are to a facility and its modules: the changes to a body's strata that no module makes, such as fish stocks and forests regrowing. Still to come: restoration of the fresh water hydrosphere, the breakdown of wastes, and climate change in response to atmospheric changes. See `processes.schema.md`.
+Processes are to a locus and its strata what operations are to a facility and its modules: the changes to a locus's strata that no module makes, such as fish stocks and forests regrowing. Still to come: restoration of the fresh water hydrosphere, the breakdown of wastes, and climate change in response to atmospheric changes. See `processes.schema.md`.
 
 
 ## resource_classes.tsv

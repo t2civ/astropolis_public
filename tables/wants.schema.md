@@ -7,7 +7,7 @@ saturation level, and what differs from place to place is what a population gets
 (`POPULATION_MODEL.md`, "Needs").
 
 A want's recipe is written as an operation's is (`operations.schema.md`, "Flow Fields"),
-with its target lists and none of its driver lists. Each of the residents' classes buys it
+with its target lists and none of its driver lists. Each of the residents' deciles buys it
 at local prices from its spending, up to its share of their head count in each life stage
 times `stage_weights`: its existence wants first, as one bundle, then each input of each other
 want with its share of the want's `spending_share` of what is left, the input's share by its
@@ -25,9 +25,15 @@ clear, shared in a shortage with the operations', and what they give off follows
 - stage_weights — ARRAY[FLOAT], three values: how much of the want an individual of each life
   stage (young, adults, elders; `Enums.LifeStages`) draws, relative to the rates. Default
   `1;1;1`.
-- spending_share — FLOAT, the share of what a class has left after its existence wants that
+- spending_share — FLOAT, the share of what a decile has left after its existence wants that
   it spends on this want, none past the want. Blank for an existence want, which comes
-  first. The shares are relative: a type's are scaled to sum to one.
+  first. The shares are relative: a type's are scaled to sum to one. Where public provision buys
+  part of a want, its share shrinks with what is left to the decile to buy, and the others take up
+  what it no longer spends.
+- public_share — FLOAT, the share of the want that a polity's public provision buys for every
+  decile alike, as far as the line of its government treasury's budget for it goes
+  (`FINANCIAL_MODEL.md`, "The treasuries' budgets"); each decile buys the rest. Blank: none, a
+  private want. An existence want takes none.
 - spread — FLOAT, how readily its substitution group's members stand in for one another: the
   share of what its cheapest member costs, for what it fills, over which their shares change
   e-fold. Wide where one form stands in for another only in part. Blank: 0.2.
@@ -62,3 +68,7 @@ clear, shared in a shortage with the operations', and what they give off follows
    output per head.
 4. Base humans' spending shares are each want's value per head at start prices, over the
    world's life stages in 2015, as a share of all but their existence want's.
+5. Base humans' order is two wants, public administration, policing and the courts, which the
+   state provides, and law and insurance, which households buy. Their public shares are about
+   the most of each want any state provides in 2015: nearly all of public administration, nine
+   tenths of schooling and a little less of health care, from recall.

@@ -1,4 +1,4 @@
-# body_proxy.gd
+# locus_proxy.gd
 # This file is part of Astropolis
 # https://t2civ.com
 # *****************************************************************************
@@ -6,13 +6,14 @@
 # Astropolis is a registered trademark of Charlie Whitfield in the US
 # *****************************************************************************
 @abstract
-class_name BodyProxy
+class_name LocusProxy
 extends Proxy
 
-## [BodyProxy] corresponds to an [IVBody] in the simulation, hosting
-## facilities and aggregating their stats.
+## [LocusProxy] is a place facilities stand, hosting them and aggregating their
+## stats. Each corresponds to an [IVBody] in the simulation; a small-bodies group
+## will be one too (PRODUCTION_MODEL.md, "Strata and processes").
 ##
-## Server-side Body aggregates component data from its facilities and exposes
+## The server-side locus aggregates component data from its facilities and exposes
 ## stratum composition (atmosphere, surface, subsurface). It gains a
 ## [MarketProxy] when it has a facility.
 ##
@@ -30,7 +31,7 @@ extends Proxy
 ## threadsafe; accessing non-container properties is safe.
 
 
-## Emitted when a position at this body changes. [param position_key] is the
+## Emitted when a position at this locus changes. [param position_key] is the
 ## 3-element key [resource_type, ordinal_quarter, trader_id]. [param value] is the
 ## resulting position [signed_unit_quantity, unit_price] in trade units (empty if the
 ## position cleared); the quantity sign gives the side (+ long, − short). [param ask]
@@ -40,32 +41,34 @@ signal positions_changed(position_key: PackedInt32Array, value: PackedFloat64Arr
 		ask: PackedInt64Array, bid: PackedInt64Array)
 
 
-var body_id := -1  ## Index into [member ProxyBus.body_proxies].
-var body_flags := 0  ## Body flags from [enum IVBody.BodyFlags].
-var shade_factor: float  ## Average fraction of time this body's sites are shaded from the sun (day-night or orbital eclipse).
+var locus_id := -1  ## Index into [member ProxyBus.locus_proxies].
+var body_name: StringName  ## Name of its [IVBody], which the tables name the locus by.
+var body_flags := 0  ## Flags of its [IVBody], from [enum IVBody.BodyFlags].
+var shade_factor: float  ## Average fraction of time this locus's sites are shaded from the sun (day-night or orbital eclipse).
 var solar_transmission: float  ## Atmospheric transmission of sunlight, in [0, 1] (1.0 = airless/transparent).
-var wind_factor: float  ## Wind-power capacity factor for this body; NAN if wind power is unavailable here.
-var geothermal_factor: float  ## Geothermal-power capacity factor for this body; NAN if unavailable here.
-var solar_irradiance := 1.0  ## Solar irradiance at this body, normalized to 1.0 at 1 AU; refreshed ~weekly.
+var wind_factor: float  ## Wind-power capacity factor for this locus; NAN if wind power is unavailable here.
+var geothermal_factor: float  ## Geothermal-power capacity factor for this locus; NAN if unavailable here.
+var solar_irradiance := 1.0  ## Solar irradiance at this locus, normalized to 1.0 at 1 AU; refreshed ~weekly.
 
 # *****************************************************************************
 # persisted
 
-var has_satellites := false  ## True while this body has at least one satellite.
-var has_facilities := false  ## True while this body hosts at least one facility.
-## Parent body, or null for the top body only.
-var parent: BodyProxy
-## Direct satellite bodies, keyed by name. Resizable container — not threadsafe!
-var satellites: Dictionary[StringName, BodyProxy]
-## Facilities at this body. Resizable container — not threadsafe!
+var has_satellites := false  ## True while this locus has at least one satellite.
+var has_facilities := false  ## True while this locus hosts at least one facility.
+## Parent locus, or null for the top locus only.
+var parent: LocusProxy
+## The loci of the bodies directly below its own that have one, keyed by name. Resizable
+## container — not threadsafe!
+var satellites: Dictionary[StringName, LocusProxy]
+## Facilities at this locus. Resizable container — not threadsafe!
 var facilities: Array[Proxy] = []
-## The market at this body, or null if it has no facility yet.
+## The market at this locus, or null if it has no facility yet.
 var market: MarketProxy
 
 # *****************************************************************************
 
-## Positions at this body, keyed by the 3-element position key
-## [resource_type, ordinal_quarter, trader_id] (the delivery body is this body).
+## Positions at this locus, keyed by the 3-element position key
+## [resource_type, ordinal_quarter, trader_id] (the delivery locus is this locus).
 ## Values are [signed_unit_quantity, unit_price] in trade units; the quantity sign
 ## gives the side (+ long, − short). Server-maintained; read-only here.
 var positions: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
@@ -86,15 +89,19 @@ func has_development() -> bool:
 	return has_facilities
 
 
-func get_body_name() -> StringName:
+func get_locus_name() -> StringName:
 	return name
+
+
+func get_body_name() -> StringName:
+	return body_name
 
 
 func get_body_flags() -> int:
 	return body_flags
 
 
-## Returns this body's [member facilities]. proxy thread only!
+## Returns this locus's [member facilities]. proxy thread only!
 func get_facilities() -> Array[Proxy]:
 	return facilities
 
@@ -104,18 +111,18 @@ func get_market() -> MarketProxy:
 
 
 ## Returns the environmental capacity factor for renewable-power operation
-## [param operation_type] at this body, in [0, 1]; NAN if it is not a renewable
-## this body models (e.g. hydro/tidal) or that renewable is unavailable here.
+## [param operation_type] at this locus, in [0, 1]; NAN if it is not a renewable
+## this locus models (e.g. hydro/tidal) or that renewable is unavailable here.
 @abstract func calculate_capacity_factor(operation_type: int) -> float
 
 
 # Strata. The composition layers live on the server.
 
-## Returns true if this body has any stratum composition layers.
+## Returns true if this locus has any stratum composition layers.
 @abstract func has_strata() -> bool
 
 
-## Returns the number of stratum composition layers on this body.
+## Returns the number of stratum composition layers on this locus.
 @abstract func get_n_strata() -> int
 
 
@@ -238,23 +245,23 @@ func get_market() -> MarketProxy:
 @abstract func get_stratum_spherical_fraction(index: int) -> float
 
 
-## Returns true if the stratum at [param index] is the body's atmosphere.
+## Returns true if the stratum at [param index] is the locus's atmosphere.
 @abstract func get_stratum_atmosphere(index: int) -> bool
 
 
 # ******************************** AI METHODS *********************************
 
-## Registers [param satellite] under this body. Updates [member has_satellites].
-@abstract func add_satellite(satellite: BodyProxy) -> void
+## Registers [param satellite] under this locus. Updates [member has_satellites].
+@abstract func add_satellite(satellite: LocusProxy) -> void
 
 
-## Removes [param satellite] from this body. Updates [member has_satellites].
-@abstract func remove_satellite(satellite: BodyProxy) -> void
+## Removes [param satellite] from this locus. Updates [member has_satellites].
+@abstract func remove_satellite(satellite: LocusProxy) -> void
 
 
-## Registers [param facility] at this body. Updates [member has_facilities].
+## Registers [param facility] at this locus. Updates [member has_facilities].
 @abstract func add_facility(facility: Proxy) -> void
 
 
-## Removes [param facility] from this body. Updates [member has_facilities].
+## Removes [param facility] from this locus. Updates [member has_facilities].
 @abstract func remove_facility(facility: Proxy) -> void
