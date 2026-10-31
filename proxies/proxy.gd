@@ -725,8 +725,8 @@ func get_population_inequality(_population_type := -1) -> float:
 
 
 ## Returns the hours [param population_type]'s residents offered in their last interval, or
-## all types' if -1, in sim units of the type's work resource per second: the number offering
-## to work at once. 0.0 without a population.
+## all types' if -1, in hours per second, the sim unit of an hour its work resource is counted in:
+## the number offering to work at once. 0.0 without a population.
 func get_population_offered_hours(_population_type := -1) -> float:
 	return 0.0
 
@@ -738,10 +738,18 @@ func get_population_worked_hours(_population_type := -1) -> float:
 
 
 ## Returns what [param population_type]'s work was paid in its last interval, or all types'
-## if -1, in dollars per sim unit of its work resource: the wage. NAN where no one worked;
-## 0.0 without a population.
+## if -1, in dollars per hour worked, the sim unit of an hour its work resource is counted in: the
+## wage. NAN where no one worked; 0.0 without a population.
 func get_population_wage(_population_type := -1) -> float:
 	return 0.0
+
+
+## Returns the work an hour of [param population_type] makes, its productivity, or of all types'
+## if -1: 1.0 is the hour its work resource's recipes assume. A facility's type holds its own;
+## elsewhere it is the work its residents' hours made in their last interval over those hours. NAN
+## where no one worked or without a population.
+func get_population_productivity(_population_type := -1) -> float:
+	return NAN
 
 
 ## Returns what [param _population_type]'s residents paid in their last interval for what they

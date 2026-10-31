@@ -1,10 +1,10 @@
 # Schema for facilities_populations.tsv
 
 This Entity x Entity table defines the age structure, vital rates, inequality and its spreads,
-wealth and participation of each population at facilities at simulation start in 2015. How many a facility holds of each
+wealth, productivity and participation of each population at facilities at simulation start in 2015. How many a facility holds of each
 type is `population` in `facilities.tsv`; this table says how they are spread over the
 type's eight age groups, how fast they die and bear children, how unevenly they
-hold their means and are paid, what they hold and save and how much they work. It is the populations' starting state: from the first interval their death rates,
+hold their means and are paid, what they hold and save, what their work makes and how much they work. It is the populations' starting state: from the first interval their death rates,
 fertility and participation move with what they get, and their inequality with how unevenly
 what they are paid reaches them (`populations.schema.md`). Population types are described
 in `populations.schema.md`, and the model in `POPULATION_MODEL.md` ("Demographics").
@@ -12,7 +12,7 @@ in `populations.schema.md`, and the model in `POPULATION_MODEL.md` ("Demographic
 
 ## Table Data
 
-The data type is ARRAY[FLOAT]; each cell holds 23 values delimited by semicolons:
+The data type is ARRAY[FLOAT]; each cell holds 24 values delimited by semicolons:
 
 - 8 values — each age group's share of the population, in the order of the type's age groups.
 - 8 values, per year — the deaths per head in each age group.
@@ -29,6 +29,9 @@ The data type is ARRAY[FLOAT]; each cell holds 23 values delimited by semicolons
 - 1 value — the saving rate: the share of what its residents are paid, wages, transfers and
   dividends, that they save and offer the credit market, kept as the population's own
   (`FINANCIAL_MODEL.md`, "Saving and borrowing").
+- 1 value — the productivity: the work an hour of the population makes, an hour at productivity
+  one being what the recipes assume, the USA's of 2015 (`POPULATION_MODEL.md`, "Productivity and
+  schooling"). Held from the first interval.
 - 1 value — the participation: the most of its able hours the population offers, its
   weighted heads times `work_hours` (`populations.tsv`) being all of them. From the first
   interval it moves toward what its type's participation response implies.
@@ -48,7 +51,8 @@ The rates carry an inline `/y`, and the wealth an inline `$`. A cell must be pre
    game's first decade, measured once, ownership's Gini a multiple of labor's from recall
    (`SPREADS`; `EARTH_CALIBRATION.md`, "Population"). A wealth is a year of what the polity's
    residents drew per head in their first interval at start prices, measured once. A saving rate
-   is what the polity's households saved in 2015, from recall (`SAVING_RATES`). The
+   is what the polity's households saved in 2015, from recall (`SAVING_RATES`), and a productivity
+   what an hour worked made there against the USA's in 2015, from recall (`PRODUCTIVITIES`). The
    participation is written by `tests/calibration/seed_labor.py`, from 2015 employment and
    hours from recall, and `seed_demography.py` keeps it.
 2. An agency has no residents: its headcount is staff on loan from its polity (`facilities.tsv`, `staff`).

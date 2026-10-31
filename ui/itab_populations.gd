@@ -10,14 +10,16 @@ extends MarginContainer
 
 ## "Populations" tab subpanel for [InfoPanel]. Shows the residents of the selection, a facility
 ## or the facilities a locus, player or join aggregates, one population type at a time or, where
-## several live, all together, in three views.
+## several live, all together, in four views.
 ##
 ## [b]Demog[/b]: the head count, the share in each life stage, and the vital rates; a type's life
 ## stages unfold to its age groups. [b]Needs[/b]: how well each need is met, by tier; at a
 ## facility, a type's needs unfold to their satisfiers, with the facility's unmet rate and local
 ## price for each. [b]Means[/b]: the residents' wealth, what it buys and how unevenly it is
-## held, the price level of their wants, their work and its pay, and the money that moves their
-## wealth: what they spent and what their facility's owners' settlement paid them. All together
+## held, the price level of their wants, and the money that moves their wealth: what their work
+## was paid, what they spent and what their facility's owners' settlement paid them. [b]Work[/b]:
+## what an hour of their work makes, the hours they offer and those left idle, and what an hour is
+## paid, against the price of work at a facility. All together
 ## shows a column for each type and one for all of them, where a type with no want for a need
 ## reads "·". A locus with one facility shows as
 ## that facility. Header and row tooltips define the values; the model behind them is
@@ -29,6 +31,7 @@ enum {
 	TAB_DEMOGRAPHY,
 	TAB_NEEDS,
 	TAB_MEANS,
+	TAB_WORK,
 }
 
 enum {
@@ -45,6 +48,7 @@ const TAB_NAMES: Array[StringName] = [ # by TAB_; node names auto-translate as t
 	&"TAB_POP_DEMOGRAPHY",
 	&"TAB_POP_NEEDS",
 	&"TAB_POP_MEANS",
+	&"TAB_POP_WORK",
 ]
 const STAGE_TEXTS: Array[String] = ["Young", "Adult", "Elder"] # by Enums.LifeStages
 const TIER_TEXTS: Array[String] = ["Existence", "Wellbeing", "Fulfillment"] # by Enums.NeedTiers
@@ -57,9 +61,10 @@ const TYPE_COLUMN_TOOLTIPS: Array[String] = [ # by TAB_
 	"Heads, their shares by life stage, and the vital rates.",
 	("The share of the want for each need that was met, smoothed over about a month for an"
 			+ "\nexistence need and a quarter for the others."),
-	"Wealth and what it buys, work and its pay, and the money that moves the wealth.",
+	"Wealth and what it buys, and the money that moves the wealth.",
+	"What an hour of work makes, the hours offered and worked, and what an hour is paid.",
 ]
-const SINGLE_HEADERS: Array[String] = ["", "Met\n(%)", ""] # by TAB_
+const SINGLE_HEADERS: Array[String] = ["", "Met\n(%)", "", ""] # by TAB_
 const COMBINED_TEXT := "Combined"
 const COMBINED_TOOLTIP := ("\nAll types together; a need's satisfaction weighs each type's by what"
 		+ "\nits want has cost over the last decade.")
@@ -358,6 +363,7 @@ func _get_column(proxy: Proxy, type: int, types: Array[int]) -> ColumnData:
 	column.offered_hours = proxy.get_population_offered_hours(type)
 	column.worked_hours = proxy.get_population_worked_hours(type)
 	column.wage = proxy.get_population_wage(type)
+	column.productivity = proxy.get_population_productivity(type)
 	var facility := proxy as FacilityProxy
 	var work_resource := _get_work_resource(type, types)
 	column.work_price = (facility.get_inventory_local_price(work_resource)
@@ -401,9 +407,11 @@ func _update_tab_display(tab: int, data: PopulationsData) -> void:
 			lines = _get_demography_lines(data)
 		TAB_NEEDS:
 			lines = _get_needs_lines(data)
-		_:
+		TAB_MEANS:
 			lines = _get_means_lines(data)
-	var is_bar_shown := is_single and tab != TAB_MEANS
+		_:
+			lines = _get_work_lines(data)
+	var is_bar_shown := is_single and (tab == TAB_DEMOGRAPHY or tab == TAB_NEEDS)
 	var type_ids: Array[int] = data.types.duplicate()
 	if data.types.size() > 1:
 		type_ids.append(-1)
@@ -524,21 +532,6 @@ func _get_means_lines(data: PopulationsData) -> Array[LineData]:
 			"How unevenly the residents hold their wealth in years of their wants, as a Gini\n"
 			+ "coefficient: 0 where all hold alike, toward 1 where a few hold most of it. Over\n"
 			+ "several places or types it counts how far their means differ as well.")
-	var participation := _make_line("Participation (%)",
-			"The most of their able hours the residents offer.")
-	var unit := _get_work_unit(_get_work_resource(-1, data.types))
-	var offered := _make_line("Offered (%s/d)" % unit,
-			"The hours the residents offered to work in their last interval, a day.")
-	var worked := _make_line("Worked (%)",
-			"The share of the hours offered that were worked in the last interval.")
-	var wage := _make_line("Wage ($/%s)" % unit,
-			"What an hour of the residents' work was paid in their last interval.")
-	var paid_share := _make_line("Paid of its price (%)",
-			"The share of the price of their work the residents were paid in their last interval:
-"
-			+ "all of it while their facility can still borrow, and less once it owes all its own
-"
-			+ "income carries, so that it pays out what it takes in.")
 	var price_level := _make_line("Price level",
 			"What a year of the residents' wants costs at local prices over what it has cost\n"
 			+ "over the last decade.")
@@ -551,9 +544,6 @@ func _get_means_lines(data: PopulationsData) -> Array[LineData]:
 			+ "less what it drew from them where it was short. The residents own their polity's\n"
 			+ "facilities, its public share through its treasury.")
 	for column in columns:
-		var work_resource := _get_work_resource(column.population_type, data.types)
-		var multiplier := (_trade_unit_multipliers[work_resource] if work_resource != -1
-				else 1.0)
 		_add_cell(wealth, _format_money(column.wealth),
 				"$" + _format_named(column.wealth / IVUnits.USD))
 		_add_cell(wealth_per_head, _format_money(_get_ratio(column.wealth, column.number)))
@@ -561,19 +551,59 @@ func _get_means_lines(data: PopulationsData) -> Array[LineData]:
 				if _has_any_want(column.population_type, data.types) else NOT_APPLICABLE)
 		_add_cell(inequality, _format_gini(column.inequality)
 				if _has_any_want(column.population_type, data.types) else NOT_APPLICABLE)
-		_add_cell(participation, _format_percent(column.participation))
-		_add_cell(offered, IVQFormat.metric_number(column.offered_hours * IVUnits.DAY / multiplier))
-		_add_cell(worked, _format_percent(_get_ratio(column.worked_hours, column.offered_hours)))
-		_add_cell(wage, _format_price(column.wage * multiplier))
-		_add_cell(paid_share, _format_percent(_get_ratio(column.wage, column.work_price))
-				if data.at_facility else NOT_APPLICABLE)
 		_add_cell(price_level, _format_value(column.price_level))
 		var paid := column.wage * column.worked_hours if column.worked_hours > 0.0 else 0.0
 		_add_cell(pay, _format_money(paid * IVUnits.DAY))
 		_add_cell(spent, _format_money(column.spending * IVUnits.DAY))
 		_add_cell(dividends, _format_money(column.dividends * IVUnits.DAY))
-	lines.append_array([wealth, wealth_per_head, years, inequality, price_level, participation,
-			offered, worked, wage, paid_share, pay, spent, dividends])
+	lines.append_array([wealth, wealth_per_head, years, inequality, price_level, pay, spent,
+			dividends])
+	return lines
+
+
+func _get_work_lines(data: PopulationsData) -> Array[LineData]:
+	var columns := data.columns
+	var lines: Array[LineData] = []
+	var unit := _get_work_unit(_get_work_resource(-1, data.types))
+	var productivity := _make_line("Productivity",
+			"The work an hour of the residents makes: 1 is an hour at the frontier's know-how\n"
+			+ "with the reference schooling, the USA's of 2015, what the recipes assume. Over\n"
+			+ "several places or types, the work their hours made over those hours.")
+	var participation := _make_line("Participation (%)",
+			"The most of their able hours the residents offer.")
+	var offered := _make_line("Offered (%s/d)" % unit,
+			"The hours the residents offered to work in their last interval, a day.")
+	var unemployment := _make_line("Unemployment (%)",
+			"The share of the hours offered that weren't worked in the last interval: those the\n"
+			+ "facility's work didn't draw at the wage.")
+	var wage := _make_line("Wage ($/%s)" % unit,
+			"What an hour of the residents' work was paid in their last interval: the price of\n"
+			+ "work times their productivity and the share of it their facility pays.")
+	var work_price := _make_line("Price of work ($/%s)" % unit,
+			"The local price of work, an hour at productivity 1, in the residents' last interval.")
+	var paid_share := _make_line("Paid of its price (%)",
+			"The share of the price of their work the residents were paid in their last interval:\n"
+			+ "all of it while their facility can still borrow, and less once it owes all its own\n"
+			+ "income carries, so that it pays out what it takes in.")
+	for column in columns:
+		var work_resource := _get_work_resource(column.population_type, data.types)
+		var multiplier := (_trade_unit_multipliers[work_resource] if work_resource != -1
+				else 1.0)
+		_add_cell(productivity, _format_productivity(column.productivity))
+		_add_cell(participation, _format_percent(column.participation))
+		_add_cell(offered, IVQFormat.metric_number(column.offered_hours * IVUnits.DAY / multiplier))
+		var worked_share := _get_ratio(column.worked_hours, column.offered_hours)
+		_add_cell(unemployment, _format_percent(1.0 - worked_share))
+		_add_cell(wage, _format_price(column.wage * multiplier))
+		if !data.at_facility:
+			_add_cell(work_price, NOT_APPLICABLE)
+			_add_cell(paid_share, NOT_APPLICABLE)
+			continue
+		_add_cell(work_price, _format_price(column.work_price * multiplier))
+		_add_cell(paid_share, _format_percent(_get_ratio(column.wage,
+				column.work_price * column.productivity)))
+	lines.append_array([productivity, participation, offered, unemployment, wage, work_price,
+			paid_share])
 	return lines
 
 
@@ -748,6 +778,12 @@ func _format_percent(share: float) -> String:
 	return "%.f" % (share * 100.0)
 
 
+func _format_productivity(productivity: float) -> String:
+	if is_nan(productivity):
+		return NO_VALUE
+	return "%.2f" % productivity
+
+
 # Formats [param inequality], the standard deviation of the log of a lognormal, as its Gini
 # coefficient, erf(inequality / 2).
 func _format_gini(inequality: float) -> String:
@@ -803,7 +839,8 @@ class ColumnData extends RefCounted:
 	var participation: float
 	var offered_hours: float
 	var worked_hours: float
-	var wage: float # per sim unit of the work resource; NAN where no one worked
+	var wage: float # per hour worked, the work resource's sim unit; NAN where no one worked
+	var productivity: float # the work an hour makes; NAN where no one worked away from a facility
 	var work_price: float # the local price of its work resource at a facility; NAN elsewhere
 	var spending: float # dollars a second
 	var dividends: float # dollars a second, less what was drawn
