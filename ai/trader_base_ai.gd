@@ -63,10 +63,10 @@ enum TraderStrategies {
 	## stockpiling — even at facility cost. Analog: state-owned trading
 	## enterprise.
 	POLICY_AGENT,
-	## Make the facility's locus's market: keep a quote standing on both sides of every resource
-	## the facility deals in, so the market always has a price (see TRADE_MODEL.md, "Market
-	## makers"). The posture of a market-making facility's trader. Analog: a wholesale merchant; a
-	## spaceport's commodity desk.
+	## Make the facility's locus's market, a port's: keep a lot standing on both sides of every
+	## resource the facility deals in, ready to trade in amounts that matter (see TRADE_MODEL.md,
+	## "Market makers"). The posture of a market-making facility's trader. Analog: a wholesale
+	## merchant; a spaceport's commodity desk.
 	MARKET_MAKING,
 	N_BASE_TRADER_STRATEGIES,
 }
@@ -370,8 +370,7 @@ func process_ai_interval(_delta: float) -> void:
 ## each quarter also keeps a lot standing on the side its gap doesn't ask for, where the def trades
 ## that side: an ask where the facility could spare a lot over the quarter's part of the window, a
 ## bid where it uses one. Toward the facility's price it skews the def's whole skew, and on the far
-## side it stands at that price, so its market always has a price, and one that follows its
-## facilities (TRADE_MODEL.md, "Market makers").
+## side it stands at that price, ready to trade there (TRADE_MODEL.md, "Market makers").
 func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, standing: bool
 		) -> void:
 	var buys: bool = def.get(&"buy", false)
@@ -458,11 +457,13 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 		var standing_bid := 0
 		# A bid where the facility uses nothing is demand nobody has, which held a good nobody used
 		# at whatever its makers last traded it among themselves.
+		# Read over the quarter's whole span rather than what its facility foresees of it, as its
+		# bounds are, a lot standing sold every later quarter out to all it could spare.
 		if standing:
-			if sells and ask < lot and position_quantity + spare * held / multiplier >= lot:
+			if sells and ask < lot and position_quantity + spare * foreseen / multiplier >= lot:
 				standing_ask = lot
 				ask = 0
-			if buys and bid < lot and use * held / multiplier >= lot:
+			if buys and bid < lot and use * foreseen / multiplier >= lot:
 				standing_bid = lot
 				bid = 0
 		# A gap as a share of what it would contract: scaled to an unbounded desired rate, a seller

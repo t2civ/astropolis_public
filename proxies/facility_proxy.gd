@@ -168,8 +168,9 @@ var facility_class := -1  ## [code]facility_classes.tsv[/code] row index.
 var public_sector: float
 ## True if this is a small focused activity (affects stats and tax treatment).
 var unitary: bool
-## True if this facility makes its locus's market, warehousing stock and keeping a bid
-## and an ask standing (see TRADE_MODEL.md, "Market makers").
+## True if this facility makes its locus's market, a port's: it warehouses stock and keeps a
+## bid and an ask standing, ready to trade in amounts that matter (see TRADE_MODEL.md, "Market
+## makers").
 var market_maker: bool
 ## True if all resource streams flow from/to inventory (no atmosphere/surface
 ## market).
