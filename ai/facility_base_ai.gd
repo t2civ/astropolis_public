@@ -438,24 +438,8 @@ func _capability_strategy(resource_type: int) -> int:
 ## than it uses is never in crisis: its stock runs low because it sells. A custom AI overrides
 ## this to change reconciliation.
 func _reconcile_resource_strategy(resource_type: int, capability: int) -> int:
-	const CAN_HAVE_INPUT := FacilityProxy.InventoryFlags.CAN_HAVE_INPUT
-	const OPS_RESERVE_BREACHED := FacilityProxy.InventoryFlags.OPS_RESERVE_BREACHED
-	const STRATEGIC_RESERVE_BREACHED := FacilityProxy.InventoryFlags.STRATEGIC_RESERVE_BREACHED
 	const PR := PlayerBaseAI.PlayerResourceStrategies
 	const PF := PlayerBaseAI.PlayerFacilityStrategies
-
-	# (1) Own crisis: a resource used here beyond what is made here, in shortage, prioritizes
-	# supply continuity.
-	var inv_flags := proxy.get_inventory_flags(resource_type)
-	if inv_flags & CAN_HAVE_INPUT and proxy.get_inventory_expected_rate(resource_type) < 0.0:
-		if inv_flags & OPS_RESERVE_BREACHED:
-			return _RS.CRITICAL_INPUT
-		# Hold until the desired level refills, or the escalation ends the interval stock
-		# crosses the critical level. Only an escalated resource holds: stock short of a
-		# stockpile directive's larger level is not a shortage.
-		if (facility_resource_strategies[resource_type] == _RS.CRITICAL_INPUT
-				and inv_flags & STRATEGIC_RESERVE_BREACHED):
-			return _RS.CRITICAL_INPUT
 
 	# (2) Player structural directive overrides influence and capability.
 	if _player_ai.player_facility_strategies.get(proxy.facility_id, 0) == PF.DIVEST:
