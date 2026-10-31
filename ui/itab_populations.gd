@@ -358,6 +358,10 @@ func _get_column(proxy: Proxy, type: int, types: Array[int]) -> ColumnData:
 	column.offered_hours = proxy.get_population_offered_hours(type)
 	column.worked_hours = proxy.get_population_worked_hours(type)
 	column.wage = proxy.get_population_wage(type)
+	var facility := proxy as FacilityProxy
+	var work_resource := _get_work_resource(type, types)
+	column.work_price = (facility.get_inventory_local_price(work_resource)
+			if facility and work_resource != -1 else NAN)
 	column.spending = proxy.get_population_spending(type)
 	column.dividends = proxy.get_population_dividends(type)
 	column.price_level = proxy.get_population_price_level(type)
@@ -529,6 +533,12 @@ func _get_means_lines(data: PopulationsData) -> Array[LineData]:
 			"The share of the hours offered that were worked in the last interval.")
 	var wage := _make_line("Wage ($/%s)" % unit,
 			"What an hour of the residents' work was paid in their last interval.")
+	var paid_share := _make_line("Paid of its price (%)",
+			"The share of the price of their work the residents were paid in their last interval:
+"
+			+ "all of it while their facility can still borrow, and less once it owes all its own
+"
+			+ "income carries, so that it pays out what it takes in.")
 	var price_level := _make_line("Price level",
 			"What a year of the residents' wants costs at local prices over what it has cost\n"
 			+ "over the last decade.")
@@ -555,13 +565,15 @@ func _get_means_lines(data: PopulationsData) -> Array[LineData]:
 		_add_cell(offered, IVQFormat.metric_number(column.offered_hours * IVUnits.DAY / multiplier))
 		_add_cell(worked, _format_percent(_get_ratio(column.worked_hours, column.offered_hours)))
 		_add_cell(wage, _format_price(column.wage * multiplier))
+		_add_cell(paid_share, _format_percent(_get_ratio(column.wage, column.work_price))
+				if data.at_facility else NOT_APPLICABLE)
 		_add_cell(price_level, _format_value(column.price_level))
 		var paid := column.wage * column.worked_hours if column.worked_hours > 0.0 else 0.0
 		_add_cell(pay, _format_money(paid * IVUnits.DAY))
 		_add_cell(spent, _format_money(column.spending * IVUnits.DAY))
 		_add_cell(dividends, _format_money(column.dividends * IVUnits.DAY))
 	lines.append_array([wealth, wealth_per_head, years, inequality, price_level, participation,
-			offered, worked, wage, pay, spent, dividends])
+			offered, worked, wage, paid_share, pay, spent, dividends])
 	return lines
 
 
@@ -792,6 +804,7 @@ class ColumnData extends RefCounted:
 	var offered_hours: float
 	var worked_hours: float
 	var wage: float # per sim unit of the work resource; NAN where no one worked
+	var work_price: float # the local price of its work resource at a facility; NAN elsewhere
 	var spending: float # dollars a second
 	var dividends: float # dollars a second, less what was drawn
 	var price_level: float # of the residents' wants; NAN where nothing is wanted
