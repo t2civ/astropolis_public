@@ -361,7 +361,8 @@ func process_ai_interval(_delta: float) -> void:
 ## at least C where the facility must take. Each quarter's quotes skew off its own price (see
 ## [method MarketProxy.get_instrument_unit_price]) toward the facility's local price, as far as the
 ## def's [code]skew[/code] times the quarter's gap as a share of what it would contract there, each
-## side quoting that limit.[br][br]
+## side quoting that limit, and a bid no more than the facility's price unless it buys back a
+## short.[br][br]
 ##
 ## With [param standing], a two-sided posture's, each quarter also keeps a lot (the def's
 ## [code]min_lot[/code]) standing on the side its gap doesn't ask for, where the def trades that
@@ -474,7 +475,12 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 		if price_gap * gap_share > 0.0:
 			skew = absf(gap_share) * full_skew
 		var limit_price := quarter_price * exp(skew)
-		var bid_price := maxi(floori(limit_price), 1)
+		# Bidding the reference where its facility priced the good below it, every buyer carried a
+		# reference one trader had lifted into the next contracts (TRADE_MODEL.md, "Where it stands",
+		# a buyer held to its own price). A short it buys back closes at the market's price: held to
+		# its facility's, a seller that owed past what it could spare owed it longer.
+		var bid_limit := limit_price if position_quantity < 0.0 else minf(limit_price, own_price)
+		var bid_price := maxi(floori(bid_limit), 1)
 		var ask_price := maxi(ceili(limit_price), 1)
 		# Quoted off the reference alone, a market whose traders' gaps had closed held its last
 		# trade's price while every facility's own moved away from it. Each quotes its own limit,
