@@ -421,6 +421,32 @@ func is_operations_target_spending_share_held(operation_type: int) -> bool:
 @abstract func get_inventory_contracteds() -> PackedFloat64Array
 
 
+## Returns what this facility's transit buffer would hold of [param resource_type]: what is
+## delivered to it, less what it would release into stock, fill the stock with, or deliver, and
+## with what it would take from stock for what is owed. Read beside what is in transit, which
+## arrivals go through; nothing yet regulates by it (PRODUCTION_MODEL.md, "The local price: two
+## flows and a stock").
+@abstract func get_inventory_buffered(resource_type: int) -> float
+
+
+## Returns the per-resource buffered array (see [method get_inventory_buffered]). Return is proxy
+## array reference; read only!
+@abstract func get_inventory_buffereds() -> PackedFloat64Array
+
+
+## Returns the rate at which this facility's transit buffer would release [param resource_type]
+## into stock over its last interval: what it holds released evenly until its next delivery is
+## due, the trade flow in that its local price would read. Read only; nothing regulates by it.
+@abstract func get_inventory_trade_in_rate(resource_type: int) -> float
+
+
+## Returns the rate at which this facility's stock would give [param resource_type] for what is
+## owed over its last interval: what the buffer couldn't deliver, and what it would take at the
+## pace contracted for what is owed next, down to the critical level only; the trade flow out
+## that its local price would read. Read only; nothing regulates by it.
+@abstract func get_inventory_trade_out_rate(resource_type: int) -> float
+
+
 ## Returns the critical level of [param resource_type]: the stock the facility's operations
 ## and its residents' existence needs draw until resupply could land, their use over its time
 ## horizon. Its producers rebuild it as fast as their capacity allows. Fitted to what storage
