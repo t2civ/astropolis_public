@@ -409,8 +409,10 @@ func is_operations_target_spending_share_held(operation_type: int) -> bool:
 @abstract func get_inventory_stocks() -> PackedFloat64Array
 
 
-## Returns the contracted quantity of [param resource_type] (committed but not
-## yet delivered).
+## Returns what this facility's trader has contracted of [param resource_type] over the period
+## its stock's holder reads, from the start of its last interval: what it is to receive less what
+## it is to deliver, a quarter's position counting by the period's share of what is left of the
+## quarter and one past due whole. Positive for an importer, negative for an exporter.
 @abstract func get_inventory_contracted(resource_type: int) -> float
 
 
