@@ -411,8 +411,7 @@ func _get_facility_rows(facility: FacilityProxy, resource_types: PackedInt32Arra
 		row.internal_volume = facility.get_operations_internal_volume(resource_type)
 		row.use = facility.get_inventory_use(resource_type)
 		row.stock = stock
-		row.in_transit = facility.get_inventory_in_transit(resource_type)
-		row.outbound = facility.get_inventory_outbound(resource_type)
+		row.buffered = facility.get_inventory_buffered(resource_type)
 		row.critical_level = facility.get_inventory_critical_level(resource_type)
 		row.desired_level = facility.get_inventory_desired_level(resource_type)
 		row.unmet_rate = facility.get_inventory_unmet_rate(resource_type)
@@ -788,10 +787,9 @@ func _get_stock_tooltip(row: RowData, multiplier: float, unit: String) -> String
 	var outflow := row.use + row.sold_rate
 	var cover_text := UNBOUNDED if !outflow else IVQFormat.number(
 			row.stock / outflow / IVUnits.DAY, 2)
-	return "Stock %s\nIn transit %s, outbound %s\nCover %s d" % [
+	return "Stock %s\nIn transit %s\nCover %s d" % [
 			_format_quantity(row.stock, multiplier, unit),
-			_format_quantity(row.in_transit, multiplier, unit),
-			_format_quantity(row.outbound, multiplier, unit),
+			_format_quantity(row.buffered, multiplier, unit),
 			cover_text]
 
 
@@ -908,8 +906,7 @@ class RowData extends RefCounted:
 	var market_count: float
 	var use: float
 	var stock: float
-	var in_transit: float
-	var outbound: float
+	var buffered: float
 	var critical_level: float
 	var desired_level: float
 	var unmet_rate: float

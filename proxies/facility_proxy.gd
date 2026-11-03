@@ -129,7 +129,7 @@ enum InventoryItems {
 	CRITICAL_LEVELS = 1 << 2,
 	DESIRED_LEVELS = 1 << 3,
 	EXPECTED_RATES = 1 << 4,
-	IN_TRANSITS = 1 << 5,
+	BUFFEREDS = 1 << 5,
 	RATES = 1 << 6,
 	FLAGS = 1 << 7,
 }
@@ -421,11 +421,11 @@ func is_operations_target_spending_share_held(operation_type: int) -> bool:
 @abstract func get_inventory_contracteds() -> PackedFloat64Array
 
 
-## Returns what this facility's transit buffer would hold of [param resource_type]: what is
-## delivered to it, less what it would release into stock, fill the stock with, or deliver, and
-## with what it would take from stock for what is owed. Read beside what is in transit, which
-## arrivals go through; nothing yet regulates by it (PRODUCTION_MODEL.md, "The local price: two
-## flows and a stock").
+## Returns what this facility's transit buffer holds of [param resource_type] (always >= 0.0): what
+## is delivered to it, less what it gave the stock or delivered, and with what it took from the
+## stock for what is owed. It uses no storage. The trade flow its local price reads comes from it,
+## and its trader contracts net of it (PRODUCTION_MODEL.md, "The local price: two flows and a
+## stock").
 @abstract func get_inventory_buffered(resource_type: int) -> float
 
 
@@ -434,16 +434,15 @@ func is_operations_target_spending_share_held(operation_type: int) -> bool:
 @abstract func get_inventory_buffereds() -> PackedFloat64Array
 
 
-## Returns the rate at which this facility's transit buffer would release [param resource_type]
-## into stock over its last interval: what it holds released evenly until its next delivery is
-## due, the trade flow in that its local price would read. Read only; nothing regulates by it.
+## Returns the rate at which this facility's transit buffer gave [param resource_type] to its stock
+## over its last interval: what the step took of its offer at the market's ask, and what filled the
+## stock to its desired level; the trade flow in.
 @abstract func get_inventory_trade_in_rate(resource_type: int) -> float
 
 
-## Returns the rate at which this facility's stock would give [param resource_type] for what is
-## owed over its last interval: what the buffer couldn't deliver, and what it would take at the
-## pace contracted for what is owed next, down to the critical level only; the trade flow out
-## that its local price would read. Read only; nothing regulates by it.
+## Returns the rate at which this facility's stock gave [param resource_type] to its transit
+## buffer over its last interval: what the step drew for what is owed at the market's bid, and the
+## surplus taken off for what is contracted to go out; the trade flow out.
 @abstract func get_inventory_trade_out_rate(resource_type: int) -> float
 
 
@@ -583,27 +582,6 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 
 ## Returns the per-resource local prices array. Return is proxy array reference; read only!
 @abstract func get_inventory_local_prices() -> PackedFloat64Array
-
-
-## Returns the quantity of [param resource_type] delivered to this facility and not yet taken
-## into stock (always >= 0.0). It uses no storage. The facility's next interval draws it before
-## anything else and stores what is left, and what its storage can't hold then is disposed of.
-@abstract func get_inventory_in_transit(resource_type: int) -> float
-
-
-## Returns the per-resource in-transit array. Return is proxy array reference;
-## read only!
-@abstract func get_inventory_in_transits() -> PackedFloat64Array
-
-
-## Returns the quantity of [param resource_type] this facility has set aside for deliveries it
-## owes (always >= 0.0). It uses no storage, and settlement delivers it before any stock; what
-## the facility no longer owes returns in transit.
-@abstract func get_inventory_outbound(resource_type: int) -> float
-
-
-## Returns the per-resource outbound array. Return is proxy array reference; read only!
-@abstract func get_inventory_outbounds() -> PackedFloat64Array
 
 
 ## Returns the most recent measured net rate for [param resource_type] (positive

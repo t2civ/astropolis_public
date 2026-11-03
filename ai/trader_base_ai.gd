@@ -15,11 +15,11 @@ extends BaseAI
 ##
 ## Traders are paired 1-to-1 with facilities. This trader contracts toward its facility's desired
 ## rate of each resource over the coming horizon, within what its facility's critical rate and its
-## credit allow, and skews its quotes toward its facility's own price while what it
-## contracted falls short; in a two-sided posture it also keeps a quote standing on the other side
-## (TRADE_MODEL.md, "The facility trader"). It reads its
-## facility's rates and prices, never its stock, and trades in the posture and resource strategies
-## its facility's AI authors (it trusts that these already incorporate player strategies).[br][br]
+## credit allow, and skews its quotes toward its facility's own price while what it contracted
+## falls short; in a two-sided posture it also keeps a quote standing on the other side
+## (TRADE_MODEL.md, "The facility trader"). It reads its facility's rates, prices and transit
+## buffer, never its stock, and trades in the posture and resource strategies its facility's AI
+## authors (it trusts that these already incorporate player strategies).[br][br]
 ##
 ## A facility-paired trader orders delivery/pickup [b]only at its own facility's locus[/b], or at
 ## the cyber market for a cyber resource: the order helpers resolve the delivery market
@@ -357,13 +357,13 @@ func process_ai_interval(_delta: float) -> void:
 ## quarter the window spans wants D's flow, read off its curve over price at that quarter's own
 ## price, times what its facility foresees of the part of the window it holds, and the current
 ## quarter D's step besides, once,
-## net of the position there, as a bid or an ask. Each quarter's target is held to the def's sides,
+## net of the position there, and in the current quarter of what its facility's transit buffer
+## holds, as a bid or an ask. Each quarter's target is held to the def's sides,
 ## never below what the facility could spare (-C, the critical rate, its flow and step alike) and
 ## at least C where the facility must take. Each quarter's quotes skew off its own price (see
 ## [method MarketProxy.get_instrument_unit_price]) toward the facility's local price, as far as the
 ## def's [code]skew[/code] times the quarter's gap as a share of what it would contract there, each
-## side quoting that limit, a bid no more than the facility's price unless it buys back a short
-## and an ask no less unless it offers back a long.[br][br]
+## side quoting that limit.[br][br]
 ##
 ## No order is smaller than a lot, what its facility moves of the resource in an [constant INTERVAL]
 ## and no less than the def's [code]min_lot[/code]. With [param standing], a two-sided posture's,
@@ -392,6 +392,7 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 	var multiplier := _trade_unit_multipliers[resource_type]
 	var spare := maxf(-critical, 0.0) # the most its facility could spare
 	var use := _facility.get_inventory_use(resource_type)
+	var buffered := _facility.get_inventory_buffered(resource_type)
 	# A lot is what its facility moves of the resource in an interval: one unit a lot, a trader
 	# kept thousands of orders standing at a millionth of its flow, and their fills moved prices
 	# and nothing else (TRADE_MODEL.md, "Where it stands").
@@ -435,6 +436,12 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 				quarter_price = own
 		var position: PackedFloat64Array = _positions_by_instrument.get(key, PackedFloat64Array())
 		var position_quantity := position[0] if position else 0.0
+		# What the buffer holds is its facility's, to come into its stock or to go out for what is
+		# owed. Read from the contracts alone, the trade flow missed it, and what waited there was
+		# bought again (PRODUCTION_MODEL.md, "The local price: two flows and a stock").
+		var netted := position_quantity
+		if is_current:
+			netted += buffered / multiplier
 		# Each quarter wants what its facility's flow would be at that quarter's price: at the
 		# current quarter's, a later quarter's price moved and no quantity answered it.
 		var factor := quarter_price / multiplier / curve_price
@@ -450,7 +457,7 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 		wanted = maxf(wanted, minf(must, 0.0)) # gives no more than its facility could spare
 		if buys:
 			wanted = maxf(wanted, must) # takes at least what its facility must
-		var want := roundi(wanted / multiplier - position_quantity)
+		var want := roundi(wanted / multiplier - netted)
 		var ask := maxi(-want, 0)
 		var bid := maxi(want, 0)
 		var standing_ask := 0
@@ -482,15 +489,8 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 		if price_gap * gap_share > 0.0:
 			skew = absf(gap_share) * full_skew
 		var limit_price := quarter_price * exp(skew)
-		# Bidding the reference where its facility priced the good below it, every buyer carried a
-		# reference one trader had lifted into the next contracts, and asking it where above, a
-		# seller sold what its own facility needed more (TRADE_MODEL.md, "Where it stands", a trader
-		# held to its own price). A position it closes trades at the market's price: a buy-back held
-		# to its facility's left a seller owing past what it could spare for longer.
-		var bid_limit := limit_price if position_quantity < 0.0 else minf(limit_price, own_price)
-		var ask_limit := limit_price if position_quantity > 0.0 else maxf(limit_price, own_price)
-		var bid_price := maxi(floori(bid_limit), 1)
-		var ask_price := maxi(ceili(ask_limit), 1)
+		var bid_price := maxi(floori(limit_price), 1)
+		var ask_price := maxi(ceili(limit_price), 1)
 		# Quoted off the reference alone, a market whose traders' gaps had closed held its last
 		# trade's price while every facility's own moved away from it. Each quotes its own limit,
 		# and a cross matches at the midpoint (TRADE_MODEL.md, "The price"). A standing quote stays
