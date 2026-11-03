@@ -357,8 +357,10 @@ func process_ai_interval(_delta: float) -> void:
 ## quarter the window spans wants D's flow, read off its curve over price at that quarter's own
 ## price, times what its facility foresees of the part of the window it holds, and the current
 ## quarter D's step besides, once,
-## net of the position there, and in the current quarter of what its facility's transit buffer
-## holds, as a bid or an ask. Each quarter's target is held to the def's sides,
+## net of the position there and of what its facility's transit buffer holds, counted in the quarter
+## it comes in: in the current quarter all it holds but what it will still hold when the quarter
+## ends ([method FacilityProxy.get_inventory_carried]), and that in the next; as a bid or an ask.
+## Each quarter's target is held to the def's sides,
 ## never below what the facility could spare (-C, the critical rate, its flow and step alike) and
 ## at least C where the facility must take. Each quarter's quotes skew off its own price (see
 ## [method MarketProxy.get_instrument_unit_price]) toward the facility's local price, as far as the
@@ -393,6 +395,7 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 	var spare := maxf(-critical, 0.0) # the most its facility could spare
 	var use := _facility.get_inventory_use(resource_type)
 	var buffered := _facility.get_inventory_buffered(resource_type)
+	var carried := _facility.get_inventory_carried(resource_type)
 	# A lot is what its facility moves of the resource in an interval: one unit a lot, a trader
 	# kept thousands of orders standing at a millionth of its flow, and their fills moved prices
 	# and nothing else (TRADE_MODEL.md, "Where it stands").
@@ -437,11 +440,15 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 		var position: PackedFloat64Array = _positions_by_instrument.get(key, PackedFloat64Array())
 		var position_quantity := position[0] if position else 0.0
 		# What the buffer holds is its facility's, to come into its stock or to go out for what is
-		# owed. Read from the contracts alone, the trade flow missed it, and what waited there was
-		# bought again (PRODUCTION_MODEL.md, "The local price: two flows and a stock").
+		# owed, counted in the quarter it will come in. Read from the contracts alone, the trade flow
+		# missed it, and what waited there was bought again; counted all in the current quarter,
+		# what its buffer held back past it was bought short, and at the quarter's end sold off
+		# (PRODUCTION_MODEL.md, "The local price: two flows and a stock").
 		var netted := position_quantity
 		if is_current:
-			netted += buffered / multiplier
+			netted += (buffered - carried) / multiplier
+		elif key[1] == current_quarter + 1:
+			netted += carried / multiplier
 		# Each quarter wants what its facility's flow would be at that quarter's price: at the
 		# current quarter's, a later quarter's price moved and no quantity answered it.
 		var factor := quarter_price / multiplier / curve_price

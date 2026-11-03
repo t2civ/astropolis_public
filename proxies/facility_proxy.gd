@@ -125,7 +125,7 @@ enum OperationsFlags {
 ## values are in ascending bit order.
 enum InventoryItems {
 	STOCKS = 1,
-	CONTRACTEDS = 1 << 1,
+	CARRIEDS = 1 << 1,
 	CRITICAL_LEVELS = 1 << 2,
 	DESIRED_LEVELS = 1 << 3,
 	EXPECTED_RATES = 1 << 4,
@@ -409,16 +409,19 @@ func is_operations_target_spending_share_held(operation_type: int) -> bool:
 @abstract func get_inventory_stocks() -> PackedFloat64Array
 
 
-## Returns what this facility's trader has contracted of [param resource_type] over the period
-## its stock's holder reads, from the start of its last interval: what it is to receive less what
-## it is to deliver, a quarter's position counting by the period's share of what is left of the
-## quarter and one past due whole. Positive for an importer, negative for an exporter.
-@abstract func get_inventory_contracted(resource_type: int) -> float
+## Returns what this facility's transit buffer will still hold of [param resource_type], of what
+## is to come into its stock, when the current quarter ends (always >= 0.0): the interval of what is
+## contracted to come in that it holds back to take up uneven deliveries, and what its pacing leaves
+## of the rest; once its facility has no step left in the quarter, all it holds and all still to
+## arrive before the quarter ends. Its trader counts what its buffer holds against the current
+## quarter less this, and this against the next (PRODUCTION_MODEL.md, "The local price: two flows
+## and a stock").
+@abstract func get_inventory_carried(resource_type: int) -> float
 
 
-## Returns the per-resource contracted array. Return is proxy array reference;
-## read only!
-@abstract func get_inventory_contracteds() -> PackedFloat64Array
+## Returns the per-resource carried array (see [method get_inventory_carried]). Return is proxy
+## array reference; read only!
+@abstract func get_inventory_carrieds() -> PackedFloat64Array
 
 
 ## Returns what this facility's transit buffer holds of [param resource_type] (always >= 0.0): what
