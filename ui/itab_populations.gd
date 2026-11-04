@@ -18,7 +18,8 @@ extends MarginContainer
 ## price for each. [b]Means[/b]: the residents' wealth, what it buys and how unevenly it is
 ## held, the price level of their wants, and the money that moves their wealth: what their work
 ## was paid, what they spent and what their facility's owners' settlement paid them. [b]Work[/b]:
-## what an hour of their work makes, the hours they offer and those left idle, and what an hour is
+## what an hour of their work makes, its know-how and the schooling the workforce holds, which
+## unfolds to each age group's, the hours they offer and those left idle, and what an hour is
 ## paid, against the price of work at a facility. All together
 ## shows a column for each type and one for all of them, where a type with no want for a need
 ## reads "·". A locus with one facility shows as
@@ -62,7 +63,8 @@ const TYPE_COLUMN_TOOLTIPS: Array[String] = [ # by TAB_
 	("The share of the want for each need that was met, smoothed over about a month for an"
 			+ "\nexistence need and a quarter for the others."),
 	"Wealth and what it buys, and the money that moves the wealth.",
-	"What an hour of work makes, the hours offered and worked, and what an hour is paid.",
+	("What an hour of work makes and the schooling behind it, the hours offered and worked,"
+			+ "\nand what an hour is paid."),
 ]
 const SINGLE_HEADERS: Array[String] = ["", "Met\n(%)", "", ""] # by TAB_
 const COMBINED_TEXT := "Combined"
@@ -364,6 +366,12 @@ func _get_column(proxy: Proxy, type: int, types: Array[int]) -> ColumnData:
 	column.worked_hours = proxy.get_population_worked_hours(type)
 	column.wage = proxy.get_population_wage(type)
 	column.productivity = proxy.get_population_productivity(type)
+	if type != -1:
+		column.know_how = proxy.get_population_know_how(type)
+		column.schooling = proxy.get_population_schooling(type)
+		column.expected_schooling = proxy.get_population_expected_schooling(type)
+		for age_group in _age_group_widths[type].size() + 1:
+			column.age_group_schoolings.append(proxy.get_population_schooling(type, age_group))
 	var facility := proxy as FacilityProxy
 	var work_resource := _get_work_resource(type, types)
 	column.work_price = (facility.get_inventory_local_price(work_resource)
@@ -569,6 +577,17 @@ func _get_work_lines(data: PopulationsData) -> Array[LineData]:
 			"The work an hour of the residents makes: 1 is an hour at the frontier's know-how\n"
 			+ "with the reference schooling, the USA's of 2015, what the recipes assume. Over\n"
 			+ "several places or types, the work their hours made over those hours.")
+	var know_how := _make_line("Know-how",
+			"The work an hour of the residents would make with the reference schooling: how well\n"
+			+ "their work uses the plant it works, against the frontier's 1. Over several places,\n"
+			+ "their productivity over what their workforce's schooling gives.")
+	var schooling := _make_line("Schooling (y)",
+			"The years of school the residents' workforce holds, each life stage weighted as it\n"
+			+ "works; each year past the reference makes an hour more productive. By age group,\n"
+			+ "the young count what they will hold as they leave theirs.")
+	var expected := _make_line("Expected schooling (y)",
+			"The years of school a newborn would gain at the learning the young were served in\n"
+			+ "their last interval.")
 	var participation := _make_line("Participation (%)",
 			"The most of their able hours the residents offer.")
 	var offered := _make_line("Offered (%s/d)" % unit,
@@ -590,6 +609,14 @@ func _get_work_lines(data: PopulationsData) -> Array[LineData]:
 		var multiplier := (_trade_unit_multipliers[work_resource] if work_resource != -1
 				else 1.0)
 		_add_cell(productivity, _format_productivity(column.productivity))
+		if column.population_type == -1:
+			_add_cell(know_how, NOT_APPLICABLE)
+			_add_cell(schooling, NOT_APPLICABLE)
+			_add_cell(expected, NOT_APPLICABLE)
+		else:
+			_add_cell(know_how, _format_productivity(column.know_how))
+			_add_cell(schooling, _format_schooling(column.schooling))
+			_add_cell(expected, _format_schooling(column.expected_schooling))
 		_add_cell(participation, _format_percent(column.participation))
 		_add_cell(offered, IVQFormat.metric_number(column.offered_hours * IVUnits.DAY / multiplier))
 		var worked_share := _get_ratio(column.worked_hours, column.offered_hours)
@@ -602,8 +629,10 @@ func _get_work_lines(data: PopulationsData) -> Array[LineData]:
 		_add_cell(work_price, _format_price(column.work_price * multiplier))
 		_add_cell(paid_share, _format_percent(_get_ratio(column.wage,
 				column.work_price * column.productivity)))
-	lines.append_array([productivity, participation, offered, unemployment, wage, work_price,
-			paid_share])
+	if columns.size() == 1 and columns[0].population_type != -1:
+		_add_age_group_schoolings(schooling, columns[0])
+	lines.append_array([productivity, know_how, schooling, expected, participation, offered,
+			unemployment, wage, work_price, paid_share])
 	return lines
 
 
@@ -640,6 +669,17 @@ func _add_age_groups(line: LineData, column: ColumnData, stage: int) -> void:
 		var row := _make_line(age_group_texts[age_group])
 		_add_cell(row, _format_share(age_group_share), _format_named(age_group_number) + " heads")
 		row.share = age_group_share
+		line.rows.append(row)
+
+
+# Makes [param line], the workforce's schooling, unfold to each age group's of [param column].
+func _add_age_group_schoolings(line: LineData, column: ColumnData) -> void:
+	line.memory_key = "POP_SCHOOLING"
+	var age_group_texts := _get_age_group_texts(column.population_type)
+	for age_group in column.age_group_schoolings.size():
+		var row := _make_line(age_group_texts[age_group])
+		_add_cell(row, _format_schooling(column.age_group_schoolings[age_group]),
+				_format_named(column.age_group_numbers[age_group]) + " heads")
 		line.rows.append(row)
 
 
@@ -784,6 +824,13 @@ func _format_productivity(productivity: float) -> String:
 	return "%.2f" % productivity
 
 
+# Formats [param schooling], a time, in years.
+func _format_schooling(schooling: float) -> String:
+	if is_nan(schooling):
+		return NO_VALUE
+	return "%.1f" % (schooling / IVUnits.YEAR)
+
+
 # Formats [param inequality], the standard deviation of the log of a lognormal, as its Gini
 # coefficient, erf(inequality / 2).
 func _format_gini(inequality: float) -> String:
@@ -841,6 +888,10 @@ class ColumnData extends RefCounted:
 	var worked_hours: float
 	var wage: float # per hour worked, the work resource's sim unit; NAN where no one worked
 	var productivity: float # the work an hour makes; NAN where no one worked away from a facility
+	var know_how := NAN # the work an hour makes at the reference schooling; NAN for all types
+	var schooling := NAN # the workforce's, in seconds; NAN for all types
+	var expected_schooling := NAN # a newborn's at the young's learning, in seconds
+	var age_group_schoolings := PackedFloat64Array() # in seconds; empty for all types
 	var work_price: float # the local price of its work resource at a facility; NAN elsewhere
 	var spending: float # dollars a second
 	var dividends: float # dollars a second, less what was drawn
