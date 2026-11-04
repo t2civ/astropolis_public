@@ -270,6 +270,24 @@ static func get_curve_value(curve: PackedFloat64Array, factor: float, start := 0
 	return lerpf(curve[start + k - 1], curve[start + k], t)
 
 
+## Returns the factor of the price it was read at where a curve of [constant FLOW_CURVE_FACTORS]
+## points, starting at [param start] in [param curve], gives [param value]: the inverse of
+## [method get_curve_value] for a curve that falls as the price rises, the end factor past either
+## end.
+static func get_curve_factor(curve: PackedFloat64Array, value: float, start := 0) -> float:
+	const FACTORS := FLOW_CURVE_FACTORS
+	var last := FACTORS.size() - 1
+	if !(value < curve[start]):
+		return FACTORS[0]
+	if !(value > curve[start + last]):
+		return FACTORS[last]
+	var k := 1
+	while curve[start + k] > value:
+		k += 1
+	var t := (curve[start + k - 1] - value) / (curve[start + k - 1] - curve[start + k])
+	return FACTORS[k - 1] * pow(FACTORS[k] / FACTORS[k - 1], t)
+
+
 # ***************************** THREAD-SAFE READ ******************************
 
 func has_development() -> bool:

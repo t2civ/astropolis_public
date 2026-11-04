@@ -371,8 +371,8 @@ func process_ai_interval(_delta: float) -> void:
 ## and no less than the def's [code]min_lot[/code]. With [param standing], a two-sided posture's,
 ## each quarter also keeps a lot standing on the side its gap doesn't ask for, where the def trades
 ## that side: an ask where the facility could spare a lot over the quarter's part of the window, a
-## bid where it uses one. Toward the facility's price it skews the def's whole skew, and on the far
-## side it stands at that price, ready to trade there (TRADE_MODEL.md, "Market makers").
+## bid where it uses one, each at the price where this plan would trade that lot, read off its
+## facility's curve within the curve's range (TRADE_MODEL.md, "Market makers").
 func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, standing: bool
 		) -> void:
 	var buys: bool = def.get(&"buy", false)
@@ -500,13 +500,20 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 		var ask_price := maxi(ceili(limit_price), 1)
 		# Quoted off the reference alone, a market whose traders' gaps had closed held its last
 		# trade's price while every facility's own moved away from it. Each quotes its own limit,
-		# and a cross matches at the midpoint (TRADE_MODEL.md, "The price"). A standing quote stays
-		# clear of the trader's own on the other side, which wouldn't trade.
-		var skewed_price := quarter_price * exp(full_skew)
-		var standing_bid_price := floori(minf(own_price, skewed_price))
+		# and a cross matches at the midpoint (TRADE_MODEL.md, "The price"). A maker's lot stands
+		# where its own plan would trade that lot, read off its facility's curve: stood between the
+		# market's price and its facility's local price, which its last fill had moved, the next lot
+		# filled on the other side, every other interval where nothing stores the resource
+		# (TRADE_MODEL.md, "Market makers"). A standing quote stays clear of the trader's own on the
+		# other side, which wouldn't trade.
+		var step := desired_step if is_current else 0.0
+		var span := maxf(foreseen, 1.0)
+		var standing_ask_price := maxi(ceili(FacilityProxy.get_curve_factor(desired_flows,
+				((netted - lot) * multiplier - step) / span) * curve_price * multiplier), 1)
+		var standing_bid_price := floori(FacilityProxy.get_curve_factor(desired_flows,
+				((netted + lot) * multiplier - step) / span) * curve_price * multiplier)
 		if standing_ask:
-			ask_price = maxi(ceili(maxf(own_price, skewed_price)),
-					(bid_price if bid else standing_bid_price) + 1)
+			ask_price = maxi(standing_ask_price, (bid_price if bid else standing_bid_price) + 1)
 		if standing_bid:
 			bid_price = standing_bid_price
 			if ask or standing_ask:
