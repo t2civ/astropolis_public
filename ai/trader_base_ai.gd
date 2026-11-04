@@ -399,7 +399,7 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 	var carried := _facility.get_inventory_carried(resource_type)
 	# A lot is what its facility moves of the resource in an interval: one unit a lot, a trader
 	# kept thousands of orders standing at a millionth of its flow, and their fills moved prices
-	# and nothing else (TRADE_MODEL.md, "Where it stands").
+	# and nothing else (TRADE_MODEL.md, "What was tried", market makers and the floor).
 	var min_lot: int = def.get(&"min_lot", MIN_LOT)
 	var lot := maxi(min_lot, roundi(maxf(use, _facility.get_inventory_production_rate(
 			resource_type)) * INTERVAL / multiplier))
@@ -499,8 +499,8 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 		var limit_price := quarter_price * exp(skew)
 		# Bidding the reference where its facility priced the good below it, every buyer carried a
 		# reference one trader had lifted into the next contracts, and asking it where above, a
-		# seller sold what its own facility needed more (TRADE_MODEL.md, "Where it stands", a trader
-		# held to its own price). A position it closes trades at the market's price: a buy-back held
+		# seller sold what its own facility needed more (TRADE_MODEL.md, "What was tried", the
+		# price). A position it closes trades at the market's price: a buy-back held
 		# to its facility's left a seller owing past what it could spare for longer.
 		var bid_limit := limit_price if position_quantity < 0.0 else minf(limit_price, own_price)
 		var ask_limit := limit_price if position_quantity > 0.0 else maxf(limit_price, own_price)
