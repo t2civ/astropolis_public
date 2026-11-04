@@ -125,11 +125,11 @@ enum OperationsFlags {
 ## values are in ascending bit order.
 enum InventoryItems {
 	STOCKS = 1,
-	CONTRACTEDS = 1 << 1,
+	CARRIEDS = 1 << 1,
 	CRITICAL_LEVELS = 1 << 2,
 	DESIRED_LEVELS = 1 << 3,
 	EXPECTED_RATES = 1 << 4,
-	IN_TRANSITS = 1 << 5,
+	BUFFEREDS = 1 << 5,
 	RATES = 1 << 6,
 	FLAGS = 1 << 7,
 }
@@ -168,8 +168,9 @@ var facility_class := -1  ## [code]facility_classes.tsv[/code] row index.
 var public_sector: float
 ## True if this is a small focused activity (affects stats and tax treatment).
 var unitary: bool
-## True if this facility makes its locus's market, warehousing stock and keeping a bid
-## and an ask standing (see TRADE_MODEL.md, "Market makers").
+## True if this facility makes its locus's market, a port's: it warehouses stock and keeps a
+## bid and an ask standing, ready to trade in amounts that matter (see TRADE_MODEL.md, "Market
+## makers").
 var market_maker: bool
 ## True if all resource streams flow from/to inventory (no atmosphere/surface
 ## market).
@@ -267,6 +268,24 @@ static func get_curve_value(curve: PackedFloat64Array, factor: float, start := 0
 		k += 1
 	var t := log(factor / FACTORS[k - 1]) / log(FACTORS[k] / FACTORS[k - 1])
 	return lerpf(curve[start + k - 1], curve[start + k], t)
+
+
+## Returns the factor of the price it was read at where a curve of [constant FLOW_CURVE_FACTORS]
+## points, starting at [param start] in [param curve], gives [param value]: the inverse of
+## [method get_curve_value] for a curve that falls as the price rises, the end factor past either
+## end.
+static func get_curve_factor(curve: PackedFloat64Array, value: float, start := 0) -> float:
+	const FACTORS := FLOW_CURVE_FACTORS
+	var last := FACTORS.size() - 1
+	if !(value < curve[start]):
+		return FACTORS[0]
+	if !(value > curve[start + last]):
+		return FACTORS[last]
+	var k := 1
+	while curve[start + k] > value:
+		k += 1
+	var t := (curve[start + k - 1] - value) / (curve[start + k - 1] - curve[start + k])
+	return FACTORS[k - 1] * pow(FACTORS[k] / FACTORS[k - 1], t)
 
 
 # ***************************** THREAD-SAFE READ ******************************
@@ -408,14 +427,44 @@ func is_operations_target_spending_share_held(operation_type: int) -> bool:
 @abstract func get_inventory_stocks() -> PackedFloat64Array
 
 
-## Returns the contracted quantity of [param resource_type] (committed but not
-## yet delivered).
-@abstract func get_inventory_contracted(resource_type: int) -> float
+## Returns what this facility's transit buffer will still hold of [param resource_type], of what
+## is to come into its stock, when the current quarter ends (always >= 0.0): the interval of what is
+## contracted to come in that it holds back to take up uneven deliveries, and what its pacing leaves
+## of the rest; once its facility has no step left in the quarter, all it holds and all still to
+## arrive before the quarter ends. Its trader counts what its buffer holds against the current
+## quarter less this, and this against the next (PRODUCTION_MODEL.md, "The local price: two flows
+## and a stock").
+@abstract func get_inventory_carried(resource_type: int) -> float
 
 
-## Returns the per-resource contracted array. Return is proxy array reference;
-## read only!
-@abstract func get_inventory_contracteds() -> PackedFloat64Array
+## Returns the per-resource carried array (see [method get_inventory_carried]). Return is proxy
+## array reference; read only!
+@abstract func get_inventory_carrieds() -> PackedFloat64Array
+
+
+## Returns what this facility's transit buffer holds of [param resource_type] (always >= 0.0): what
+## is delivered to it, less what it gave the stock or delivered, and with what it took from the
+## stock for what is owed. It uses no storage. The trade flow its local price reads comes from it,
+## and its trader contracts net of it (PRODUCTION_MODEL.md, "The local price: two flows and a
+## stock").
+@abstract func get_inventory_buffered(resource_type: int) -> float
+
+
+## Returns the per-resource buffered array (see [method get_inventory_buffered]). Return is proxy
+## array reference; read only!
+@abstract func get_inventory_buffereds() -> PackedFloat64Array
+
+
+## Returns the rate at which this facility's transit buffer gave [param resource_type] to its stock
+## over its last interval: what the step took of its offer at the market's ask, and what filled the
+## stock to its desired level; the trade flow in.
+@abstract func get_inventory_trade_in_rate(resource_type: int) -> float
+
+
+## Returns the rate at which this facility's stock gave [param resource_type] to its transit
+## buffer over its last interval: what the step drew for what is owed at the market's bid, and the
+## surplus taken off for what is contracted to go out; the trade flow out.
+@abstract func get_inventory_trade_out_rate(resource_type: int) -> float
 
 
 ## Returns the critical level of [param resource_type]: the stock the facility's operations
@@ -554,27 +603,6 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 
 ## Returns the per-resource local prices array. Return is proxy array reference; read only!
 @abstract func get_inventory_local_prices() -> PackedFloat64Array
-
-
-## Returns the quantity of [param resource_type] delivered to this facility and not yet taken
-## into stock (always >= 0.0). It uses no storage. The facility's next interval draws it before
-## anything else and stores what is left, and what its storage can't hold then is disposed of.
-@abstract func get_inventory_in_transit(resource_type: int) -> float
-
-
-## Returns the per-resource in-transit array. Return is proxy array reference;
-## read only!
-@abstract func get_inventory_in_transits() -> PackedFloat64Array
-
-
-## Returns the quantity of [param resource_type] this facility has set aside for deliveries it
-## owes (always >= 0.0). It uses no storage, and settlement delivers it before any stock; what
-## the facility no longer owes returns in transit.
-@abstract func get_inventory_outbound(resource_type: int) -> float
-
-
-## Returns the per-resource outbound array. Return is proxy array reference; read only!
-@abstract func get_inventory_outbounds() -> PackedFloat64Array
 
 
 ## Returns the most recent measured net rate for [param resource_type] (positive

@@ -14,7 +14,7 @@ extends RefCounted
 ##
 ## Configures: proxy thread verbosity, start time and sim time mode, physical
 ## light, program class registration ([InfoCloner], [code]AstropolisGUI[/code]),
-## translations, units formatting, save/load gates, and the
+## units formatting, save/load gates, and the
 ## [code]IVAssistantServer[/code] ready predicate.
 
 
