@@ -7,8 +7,9 @@ table says how they are spread over the type's eight age groups, how fast they d
 children, how unevenly they hold their means and are paid, what they hold and save, the schooling
 they hold, what their work makes with it and how much they work. It is the populations' starting
 state: from the first interval their death rates, fertility and participation move with what they
-get, their schooling with the learning their young get and as they age, and their inequality with
-how unevenly what they are paid reaches them (`populations.schema.md`). Population types are
+get, their schooling with the learning their young get and as they age, their know-how toward the
+frontier, and their inequality with how unevenly what they are paid reaches them
+(`populations.schema.md`). Population types are
 described in `populations.schema.md`, and the model in `POPULATION_MODEL.md` ("Demographics").
 
 
@@ -37,7 +38,8 @@ The data type is ARRAY[FLOAT]; each cell holds 32 values delimited by semicolons
 - 1 value — the know-how: the work an hour of the population makes with a workforce of its type's
   reference schooling, one being the frontier's, what the recipes assume. With its schooling it
   makes the population's productivity, the work its hour makes (`POPULATION_MODEL.md`,
-  "Productivity and schooling"). Held from the first interval.
+  "Productivity and schooling"). From the first interval it closes on the frontier
+  (`catch_up_time` in `populations.tsv`).
 - 1 value — the participation: the most of its able hours the population offers, its
   weighted heads times `work_hours` (`populations.tsv`) being all of them. From the first
   interval it moves toward what its type's participation response implies.

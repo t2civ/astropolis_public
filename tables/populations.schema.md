@@ -91,7 +91,8 @@ inequality, `facilities_populations.tsv`) takes the average over its deciles.
 The last columns are the type's schooling, the years of school its people hold, gained by the
 young and carried as they age, and what it makes of an hour (`POPULATION_MODEL.md`, "Productivity
 and schooling"). An hour of a population makes its know-how (`facilities_populations.tsv`) times
-e to the return times its workforce's years of schooling past the reference.
+e to the return times its workforce's years of schooling past the reference, and its know-how
+closes on the frontier, faster as its schooling rises.
 
 - schooling_need — TABLE_ROW `needs.tsv`, the need whose satisfaction gains the young their
   schooling. Blank: the type gains none and holds what it was seeded with. Default `LEARNING`.
@@ -112,6 +113,11 @@ e to the return times its workforce's years of schooling past the reference.
   know-how, its people weighted as `work_stage_weights` counts them. Base humans' is the USA's as
   seeded for 2015, at whose know-how of one an hour makes what the recipes assume. Default
   `13.57 y`.
+- catch_up_time — FLOAT in years: how fast a population's know-how closes on the frontier, one,
+  the recipes' own. Each year it closes a share of its gap, what its workforce's schooling makes of
+  an hour against the reference schooling over this time, so a population schooled to the
+  reference closes about a thirtieth of its gap a year at the default. `inf`: its know-how holds.
+  Default `30 y`, a guess.
 
 
 ## Notes
@@ -123,14 +129,15 @@ e to the return times its workforce's years of schooling past the reference.
    unevenly its wages and its dividends reach its people. The death rates, fertility and
    participation then move as above; the wealth stays as it is through births and deaths, a death
    leaving its share to the survivors; the schooling moves with its people, the born holding none
-   and the dead taking their age group's; and the inequality moves with how unevenly what the
-   population is paid reaches it (`FINANCIAL_MODEL.md`, "The residents and inequality").
+   and the dead taking their age group's; the know-how closes on the frontier; and the inequality
+   moves with how unevenly what the population is paid reaches it (`FINANCIAL_MODEL.md`, "The
+   residents and inequality").
 3. Base humans' response columns are fitted on the 2017 cross-section of countries by
    `tests/calibration/seed_demography.py --fit`, as a person's curve over each country's ten
    deciles, each holding what its governments pay alike and the rest at its inequality
    (`EARTH_CALIBRATION.md`, "Population"). The floors and response times are not fitted, and
    neither are the fertility's response to crowding, the participation's response and the
-   schooling's, whose values are from recall.
+   schooling's, whose values are from recall, or the catch-up time, a guess.
 4. What a type needs, and where it can live, are its wants (`wants.tsv`): room is the want of its
    shelter need, a draw on the habitation its environments' housing makes, and an individual that
    takes less room wants less of it (`POPULATION_MODEL.md`, "Where populations live").
