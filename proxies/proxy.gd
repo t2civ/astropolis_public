@@ -752,6 +752,31 @@ func get_population_productivity(_population_type := -1) -> float:
 	return NAN
 
 
+## Returns the work an hour of [param population_type] makes with a workforce of its type's
+## reference schooling, its know-how, 1.0 being the frontier's (POPULATION_MODEL.md, "Productivity
+## and schooling"). A facility's type holds its own; elsewhere it is the productivity over what
+## the workforce's schooling gives. NAN where no one worked, without a population or on an
+## out-of-range index.
+func get_population_know_how(_population_type: int) -> float:
+	return NAN
+
+
+## Returns the schooling [param population_type]'s people hold, in seconds: those of its
+## [param age_group], one of the type's eight, an age group that gains schooling counting what its
+## people will carry out of it, or with -1 its workforce's, each life stage weighted as its type
+## counts it a working head. NAN where no one is, without a population or on an out-of-range
+## index.
+func get_population_schooling(_population_type: int, _age_group := -1) -> float:
+	return NAN
+
+
+## Returns the schooling a newborn of [param population_type] would gain over its life at the
+## learning its young were served in their last interval, in seconds: its expected schooling. NAN
+## where none of its people gain schooling now, without a population or on an out-of-range index.
+func get_population_expected_schooling(_population_type: int) -> float:
+	return NAN
+
+
 ## Returns what [param _population_type]'s residents paid in their last interval for what they
 ## drew, or all types' if -1, in dollars per second. 0.0 without a population.
 func get_population_spending(_population_type := -1) -> float:

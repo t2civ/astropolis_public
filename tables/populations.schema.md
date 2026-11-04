@@ -88,23 +88,49 @@ inequality, `facilities_populations.tsv`) takes the average over its deciles.
   (`facilities_populations.tsv`), and staff on loan work them in full. Its deciles offer them
   down to their spending per hour lived. Default `1800 h/y`.
 
+The last columns are the type's schooling, the years of school its people hold, gained by the
+young and carried as they age, and what it makes of an hour (`POPULATION_MODEL.md`, "Productivity
+and schooling"). An hour of a population makes its know-how (`facilities_populations.tsv`) times
+e to the return times its workforce's years of schooling past the reference.
+
+- schooling_need — TABLE_ROW `needs.tsv`, the need whose satisfaction gains the young their
+  schooling. Blank: the type gains none and holds what it was seeded with. Default `LEARNING`.
+- schooling_rates — ARRAY[FLOAT], eight values: the years of schooling each age group gains a
+  year with the need met. The last age group, which has no width, gains none. An age group that
+  gains holds what its people will carry out of it, since its people leave it at one rate however
+  long they have been in it. Default `0;0.95;0.43;0;0;0;0;0`: 9.5 years by 15 and 13.8 by 25, what
+  the USA's young held in 2015, from recall.
+- schooling_elasticity — FLOAT, how steeply the schooling gained falls as the need goes short:
+  the rates times each decile's satisfaction of the need to this power, averaged over the
+  deciles, as the slow responses average theirs. One gains in proportion to the need met. Default
+  `0.27`, from recall: India's young, served about a fifth of the learning the USA's are, held
+  about two thirds of their years.
+- schooling_return — FLOAT per year of schooling: how much more an hour makes for each year its
+  workforce holds, e to it times the years, the Mincerian return. Zero leaves the hour at the
+  know-how, whatever the schooling. Default `0.1/y`.
+- reference_schooling — FLOAT in years: the workforce's schooling at which an hour makes the
+  know-how, its people weighted as `work_stage_weights` counts them. Base humans' is the USA's as
+  seeded for 2015, at whose know-how of one an hour makes what the recipes assume. Default
+  `13.57 y`.
+
 
 ## Notes
 
 1. The number of age groups, eight, is the model's and not a type's (`POPULATION_MODEL.md`,
    "Demographics"). What a type sets is where its age groups fall in its own lifetime.
-2. A population's own death rates, fertility, inequality, wealth and participation are state,
-   seeded per facility in `facilities_populations.tsv`, and so are how unevenly its wages and its
-   dividends reach its people. The death rates, fertility and participation then move as above;
-   the wealth stays as it is through births and deaths, a death leaving its share to the
-   survivors; and the inequality moves with how unevenly what the population is paid reaches it
-   (`FINANCIAL_MODEL.md`, "The residents and inequality").
+2. A population's own death rates, fertility, inequality, wealth, schooling, know-how and
+   participation are state, seeded per facility in `facilities_populations.tsv`, and so are how
+   unevenly its wages and its dividends reach its people. The death rates, fertility and
+   participation then move as above; the wealth stays as it is through births and deaths, a death
+   leaving its share to the survivors; the schooling moves with its people, the born holding none
+   and the dead taking their age group's; and the inequality moves with how unevenly what the
+   population is paid reaches it (`FINANCIAL_MODEL.md`, "The residents and inequality").
 3. Base humans' response columns are fitted on the 2017 cross-section of countries by
    `tests/calibration/seed_demography.py --fit`, as a person's curve over each country's ten
    deciles, each holding what its governments pay alike and the rest at its inequality
    (`EARTH_CALIBRATION.md`, "Population"). The floors and response times are not fitted, and
-   neither are the fertility's response to crowding and the participation's response, whose
-   values are from recall.
+   neither are the fertility's response to crowding, the participation's response and the
+   schooling's, whose values are from recall.
 4. What a type needs, and where it can live, are its wants (`wants.tsv`): room is the want of its
    shelter need, a draw on the habitation its environments' housing makes, and an individual that
    takes less room wants less of it (`POPULATION_MODEL.md`, "Where populations live").
