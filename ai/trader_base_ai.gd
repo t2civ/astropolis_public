@@ -594,17 +594,18 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 		# (TRADE_MODEL.md, "Market makers"). Past what its facility foresees, a lot is more than the
 		# flow it foresees there, which would stand it at the ends of its curve's range, so it stands
 		# where its facility's flow over the whole quarter would trade it, and no better for the
-		# other side than the quarter's price, where the trader expects to cover what it sells there
-		# or resell what it buys. A standing quote stays clear of the trader's own on the other
-		# side, which wouldn't trade.
+		# other side than the market's price, where the trader expects to cover what it sells there
+		# or resell what it buys. Held to a far quarter's own price instead, which nothing had traded
+		# since its book opened, a far lot asked hundreds of times what the market traded at. A
+		# standing quote stays clear of the trader's own on the other side, which wouldn't trade.
 		var ask_lot_price := lot_ask_price
 		if !foresees_ask:
 			ask_lot_price = maxf(_get_flow_price(desired_flows, (netted - lot) * multiplier - step,
-					quarter_span, curve_price, multiplier), quarter_price)
+					quarter_span, curve_price, multiplier), reference_price)
 		var bid_lot_price := lot_bid_price
 		if !foresees_bid:
 			bid_lot_price = minf(_get_flow_price(desired_flows, (netted + lot) * multiplier - step,
-					quarter_span, curve_price, multiplier), quarter_price)
+					quarter_span, curve_price, multiplier), reference_price)
 		var standing_ask_price := maxi(ceili(ask_lot_price), 1)
 		var standing_bid_price := floori(bid_lot_price)
 		if standing_ask:
