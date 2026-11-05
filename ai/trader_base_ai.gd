@@ -369,27 +369,29 @@ func process_ai_interval(_delta: float) -> void:
 ## Plans this interval's quotes for [param resource_type] under its strategy's [param def]. The
 ## trader contracts the coming window, the def's [code]contract_horizons[/code] of its facility's
 ## time horizon, and the rest of the current quarter at least, toward the desired rate D: each
-## quarter the window spans wants D's flow, read off its curve over price at that quarter's own
-## price, times what its facility foresees of the part of the window it holds, and the current
-## quarter D's step besides, once,
-## net of the position there and of what its facility's transit buffer holds, counted in the quarter
-## it comes in: in the current quarter all it holds but what it will still hold when the quarter
-## ends ([method FacilityProxy.get_inventory_carried]), and that in the next; as a bid or an ask.
-## Each quarter's target is held to the def's sides,
-## never below what the facility could spare (-C, the critical rate, its flow and step alike) and
-## at least C where the facility must take.[br][br]
+## quarter the window spans wants D's flow, read off its curve over price at the price its order
+## would trade at, times what its facility foresees of the part of the window it holds, and the
+## current quarter D's step besides, once, net of the position there and of what its facility's
+## transit buffer holds, counted in the quarter it comes in: in the current quarter all it holds
+## but what it will still hold when the quarter ends ([method FacilityProxy.get_inventory_carried]),
+## and that in the next. It bids where its facility would take at the price it could buy at now, the
+## best ask another trader stands at there or in a sooner quarter, and otherwise asks where its
+## facility would give at the price it could sell at, the best bid; where no such quote stands, at
+## the quarter's own price, and where it has none at its facility's. Each quarter's target is held
+## to the def's sides, never below what the facility could spare (-C, the critical rate, its flow
+## and step alike) and at least C where the facility must take.[br][br]
 ##
 ## Each quote is priced in the facility's interest (TRADE_MODEL.md, "The facility trader", the
 ## price). Its facility's price is its local price in the current quarter, and in a later one what
 ## its curve says a lot more of that quarter's flow is worth. It takes another's quote within that
 ## price, and otherwise opens a search where others trade, at the quarter's own price (see
 ## [method MarketProxy.get_instrument_unit_price]) or the best quote another trader stands at on the
-## other side there or in a sooner quarter where that is better, and as long as the market leaves
-## its want unanswered it concedes toward its facility's price, evenly in ratio over the time until
-## the quarter opens and the facility's horizon past that; answered, it starts again where the
-## market then stands. A bid is no more than the facility's price unless it buys back a short, and
-## an ask no less unless it offers back a long, and a later quarter's quote trades no more than its
-## facility's curve wants at the price it quotes.[br][br]
+## other side there or in a sooner quarter where that is better, or where nothing has traded at its
+## facility's price, and as long as the market leaves its want unanswered it concedes toward its
+## facility's price, evenly in ratio over the time until the quarter opens and the facility's
+## horizon past that; answered, it starts again where the market then stands. A bid is no more than
+## the facility's price unless it buys back a short, and an ask no less unless it offers back a
+## long, and each quote trades what its facility's curve wants at the price it quotes.[br][br]
 ##
 ## No order is smaller than a lot, what its facility moves of the resource in an [constant INTERVAL]
 ## and no less than the def's [code]min_lot[/code]. A two-sided posture, [param standing_quarters]
@@ -399,22 +401,22 @@ func process_ai_interval(_delta: float) -> void:
 ## each where this plan would trade that lot; past the window, where no gap is traded, an ask
 ## where it could spare a lot over the quarter and a bid where it uses one, no more than a lot each
 ## way, each where its facility's flow over the quarter would trade it and no better for the other
-## side than the market's price. All are read off its facility's curve within the curve's range
-## (TRADE_MODEL.md, "Market makers").
+## side than the market's price, where it has one. All are read off its facility's curve within the
+## curve's range (TRADE_MODEL.md, "Market makers").
 func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 		standing_quarters: int) -> void:
 	var standing := standing_quarters > 0
 	var buys: bool = def.get(&"buy", false)
 	var sells: bool = def.get(&"sell", false)
 	var desired_step := _facility.get_inventory_desired_step(resource_type)
-	var reference_price := market.get_unit_price(resource_type)
-	if !(buys or sells) or is_nan(desired_step) or reference_price <= 0:
+	if !(buys or sells) or is_nan(desired_step):
 		return # not traded: any order resting on it is cancelled with the unplanned
-	var critical_step := _facility.get_inventory_critical_step(resource_type)
-	var curve_price := _facility.get_inventory_curve_price(resource_type)
-	if !(curve_price > 0.0):
+	var curve_prices := _facility.get_inventory_curve_prices(resource_type)
+	if !(curve_prices[0] > 0.0):
 		return
+	var critical_step := _facility.get_inventory_critical_step(resource_type)
 	var desired_flows := _facility.get_inventory_desired_flow_curve(resource_type)
+	var reference_price := market.get_unit_price(resource_type) # its last sale; 0 where none
 	var critical_flow := _facility.get_inventory_critical_flow(resource_type)
 	var critical := _facility.get_inventory_critical_rate(resource_type)
 	var contract_horizons: float = def.get(&"contract_horizons", CONTRACT_HORIZONS)
@@ -492,12 +494,15 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 			_bid_searches.erase(key)
 			if !(far_ask or far_bid):
 				continue
-			var far_bid_price := floori(minf(_get_flow_price(desired_flows,
-					(far_netted + lot) * multiplier, quarter_span, curve_price, multiplier),
-					reference_price))
-			var far_ask_price := maxi(maxi(ceili(maxf(_get_flow_price(desired_flows,
-					(far_netted - lot) * multiplier, quarter_span, curve_price, multiplier),
-					reference_price)), far_bid_price + 1), 1)
+			var far_bid_flow_price := _get_flow_price(desired_flows, curve_prices,
+					(far_netted + lot) * multiplier, quarter_span, multiplier)
+			var far_ask_flow_price := _get_flow_price(desired_flows, curve_prices,
+					(far_netted - lot) * multiplier, quarter_span, multiplier)
+			if reference_price > 0:
+				far_bid_flow_price = minf(far_bid_flow_price, reference_price)
+				far_ask_flow_price = maxf(far_ask_flow_price, reference_price)
+			var far_bid_price := floori(far_bid_flow_price)
+			var far_ask_price := maxi(maxi(ceili(far_ask_flow_price), far_bid_price + 1), 1)
 			if far_ask:
 				far_bid_price = mini(far_bid_price, far_ask_price - 1)
 			if far_bid_price < 1:
@@ -530,17 +535,38 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 			netted += (buffered - carried) / multiplier
 		elif key[1] == current_quarter + 1:
 			netted += carried / multiplier
-		# Each quarter wants what its facility's flow would be at that quarter's price: at the
-		# current quarter's, a later quarter's price moved and no quantity answered it.
 		var step := desired_step if is_current else 0.0
 		var must := critical_flow * foreseen
 		if is_current:
 			must += critical_step
-		var wanted := _get_wanted(desired_flows, quarter_price / multiplier / curve_price, foreseen,
-				step, must, buys, sells)
-		var want := roundi(wanted / multiplier - netted)
-		var ask := maxi(-want, 0)
-		var bid := maxi(want, 0)
+		# What the market shows of this quarter and the sooner ones is in other traders' quotes: a
+		# trader's own bid lifts the price of a quarter no seller offers, and read back as the
+		# market's, an agency's bid climbed from it toward its stock-out price within weeks.
+		var others_ask := _get_others_ask(market, key)
+		var others_bid := _get_others_bid(market, key)
+		if others_ask > 0 and (!sooner_ask or others_ask < sooner_ask):
+			sooner_ask = others_ask
+		sooner_bid = maxi(sooner_bid, others_bid)
+		var own_price := maxf(local_price, OWN_PRICE_FLOOR * quarter_price)
+		# Each quarter wants what its facility's flow would be where it could trade now: it buys
+		# where its facility would take at the best ask another trader stands at, and otherwise
+		# sells where it would give at the best bid; where none stands, at the quarter's own
+		# price, at the current quarter's a later quarter's price moved and no quantity answered
+		# it. Read at the quarter's last sale alone, a price no trade could be made at, every
+		# trader of a market whose sale stood past all their facilities' prices quoted one side
+		# and nothing filled (TRADE_MODEL.md, "What was tried", the price moved only by fills).
+		var buy_price := float(sooner_ask if sooner_ask else quarter_price)
+		if !(buy_price > 0.0):
+			buy_price = own_price
+		var sell_price := float(sooner_bid if sooner_bid else quarter_price)
+		if !(sell_price > 0.0):
+			sell_price = own_price
+		var bid := maxi(roundi(_get_wanted(desired_flows, curve_prices, buy_price / multiplier,
+				foreseen, step, must, buys, sells) / multiplier - netted), 0)
+		var ask := 0
+		if !bid:
+			ask = maxi(-roundi(_get_wanted(desired_flows, curve_prices, sell_price / multiplier,
+					foreseen, step, must, buys, sells) / multiplier - netted), 0)
 		var standing_ask := 0
 		var standing_bid := 0
 		# A bid where the facility uses nothing is demand nobody has, which held a good nobody used
@@ -554,14 +580,6 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 			if buys and bid < lot and use * foreseen / multiplier >= lot:
 				standing_bid = lot
 				bid = 0
-		# What the market shows of this quarter and the sooner ones is in other traders' quotes: a
-		# trader's own bid lifts the price of a quarter no seller offers, and read back as the
-		# market's, an agency's bid climbed from it toward its stock-out price within weeks.
-		var others_ask := _get_others_ask(market, key)
-		var others_bid := _get_others_bid(market, key)
-		if others_ask > 0 and (!sooner_ask or others_ask < sooner_ask):
-			sooner_ask = others_ask
-		sooner_bid = maxi(sooner_bid, others_bid)
 		# Its facility's own price is the most it would pay or the least it would take, never what
 		# it quotes: a seller takes a bid at the bid's price, and an agency out of power that bid
 		# toward its own paid ten thousand times power's worth. Bidding the market's price where its
@@ -573,22 +591,21 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 		# shortage at the shortage's price. A position it closes trades at the market's price at
 		# least: a buy-back held to its facility's left a seller owing past what it could spare for
 		# longer.
-		var lot_ask_price := _get_flow_price(desired_flows, (netted - lot) * multiplier - step,
-				foreseen, curve_price, multiplier)
-		var lot_bid_price := _get_flow_price(desired_flows, (netted + lot) * multiplier - step,
-				foreseen, curve_price, multiplier)
-		var own_price := maxf(local_price, OWN_PRICE_FLOOR * quarter_price)
+		var lot_ask_price := _get_flow_price(desired_flows, curve_prices,
+				(netted - lot) * multiplier - step, foreseen, multiplier)
+		var lot_bid_price := _get_flow_price(desired_flows, curve_prices,
+				(netted + lot) * multiplier - step, foreseen, multiplier)
 		var time_span := maxf(opens_in + horizon, INTERVAL)
 		var bid_price := 1
 		var ask_price := 1
 		if bid:
 			var search := _get_search(_bid_searches, key, now, time_span, position_quantity, 1.0,
 					lot)
-			var start_price := float(quarter_price)
+			var reservation := own_price if is_current else lot_bid_price
+			var start_price := float(quarter_price) if quarter_price > 0 else reservation
 			if sooner_ask:
 				start_price = minf(start_price, sooner_ask)
 			search[2] = minf(search[2], start_price) if search[2] else start_price
-			var reservation := own_price if is_current else lot_bid_price
 			if position_quantity < 0.0:
 				reservation = maxf(reservation, search[2])
 			var limit := reservation
@@ -597,20 +614,17 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 			if others_ask > 0 and others_ask <= reservation:
 				limit = maxf(limit, others_ask) # it is offered within what its facility would pay
 			bid_price = maxi(floori(limit), 1)
-			# A later quarter's quote past that quarter's price buys only what its facility's curve
-			# wants at the price it quotes.
-			if !is_current:
-				bid = mini(bid, maxi(roundi(_get_wanted(desired_flows,
-						bid_price / multiplier / curve_price, foreseen, 0.0, must, buys, sells)
-						/ multiplier - netted), 0))
+			bid = maxi(roundi(_get_wanted(desired_flows, curve_prices, bid_price / multiplier,
+					foreseen, step, must, buys, sells) / multiplier - netted), 0)
 		else:
 			_bid_searches.erase(key)
 		if ask:
 			var search := _get_search(_ask_searches, key, now, time_span, position_quantity, -1.0,
 					lot)
-			var start_price := maxf(float(quarter_price), sooner_bid)
-			search[2] = maxf(search[2], start_price)
 			var reservation := own_price if is_current else lot_ask_price
+			var start_price := maxf(float(quarter_price) if quarter_price > 0 else reservation,
+					sooner_bid)
+			search[2] = maxf(search[2], start_price)
 			if position_quantity > 0.0:
 				reservation = minf(reservation, search[2])
 			var limit := reservation
@@ -619,10 +633,8 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 			if others_bid > 0 and others_bid >= reservation:
 				limit = minf(limit, others_bid)
 			ask_price = maxi(ceili(limit), 1)
-			if !is_current:
-				ask = mini(ask, maxi(-roundi(_get_wanted(desired_flows,
-						ask_price / multiplier / curve_price, foreseen, 0.0, must, buys, sells)
-						/ multiplier - netted), 0))
+			ask = maxi(-roundi(_get_wanted(desired_flows, curve_prices, ask_price / multiplier,
+					foreseen, step, must, buys, sells) / multiplier - netted), 0)
 		else:
 			_ask_searches.erase(key)
 		# Quoted off the reference alone, a market whose traders' gaps had closed held its last
@@ -830,19 +842,20 @@ func _market_locus_id(market_id: int) -> int:
 
 
 # The price a trade unit at which its facility's desired flow over [param span] comes to
-# [param quantity], read off [param desired_flows] within the curve's range.
-static func _get_flow_price(desired_flows: PackedFloat64Array, quantity: float, span: float,
-		curve_price: float, multiplier: float) -> float:
-	return (FacilityProxy.get_curve_factor(desired_flows, quantity / maxf(span, 1.0)) * curve_price
+# [param quantity], read off [param desired_flows] at [param curve_prices] within the curve's range.
+static func _get_flow_price(desired_flows: PackedFloat64Array, curve_prices: PackedFloat64Array,
+		quantity: float, span: float, multiplier: float) -> float:
+	return (FacilityProxy.get_curve_price(desired_flows, curve_prices, quantity / maxf(span, 1.0))
 			* multiplier)
 
 
-# What its facility wants over [param foreseen] of a quarter at [param factor] times its curve's
-# price, and [param step] besides, held to the sides [param buys] and [param sells] and to what
-# [param must] bounds: a quantity, negative for what it would give.
-static func _get_wanted(desired_flows: PackedFloat64Array, factor: float, foreseen: float,
-		step: float, must: float, buys: bool, sells: bool) -> float:
-	var wanted := FacilityProxy.get_curve_value(desired_flows, factor) * foreseen + step
+# What its facility wants over [param foreseen] of a quarter at [param price] a sim unit, read off
+# [param desired_flows] at [param curve_prices], and [param step] besides, held to the sides
+# [param buys] and [param sells] and to what [param must] bounds: a quantity, negative for what it
+# would give.
+static func _get_wanted(desired_flows: PackedFloat64Array, curve_prices: PackedFloat64Array,
+		price: float, foreseen: float, step: float, must: float, buys: bool, sells: bool) -> float:
+	var wanted := FacilityProxy.get_curve_value(desired_flows, curve_prices, price) * foreseen + step
 	if !buys:
 		wanted = minf(wanted, 0.0)
 	if !sells:
