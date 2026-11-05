@@ -15,9 +15,10 @@ extends BaseAI
 ##
 ## Traders are paired 1-to-1 with facilities. This trader contracts toward its facility's desired
 ## rate of each resource over the coming horizon, within what its facility's critical rate and its
-## credit allow, and skews its quotes toward its facility's own price while what it contracted
-## falls short; in a two-sided posture it also keeps a quote standing on the other side
-## (TRADE_MODEL.md, "The facility trader"). It reads its facility's rates, prices and transit
+## credit allow, and prices its quotes in its facility's interest: where other traders trade,
+## conceding toward its facility's own price only as the market leaves its want unanswered; in a
+## two-sided posture it also keeps a quote standing on the other side (TRADE_MODEL.md, "The
+## facility trader"). It reads its facility's rates, prices and transit
 ## buffer, never its stock, and trades in the posture and resource strategies its facility's AI
 ## authors (it trusts that these already incorporate player strategies).[br][br]
 ##
@@ -119,14 +120,8 @@ enum ResourceStrategies {
 }
 
 
-## Share of the way, in ratio, from the market's reference price toward its facility's own local
-## price that a trader skews its quotes at a full gap between what it has contracted and what it
-## would: up while short of what it would buy, where its facility prices the resource above the
-## market, and down while short of what it would sell, where its facility prices it below (def key
-## [code]skew[/code] overrides per resource strategy).
-const SKEW := 0.5
-## Least a trader's skew takes its facility's price to be, as a share of the market's: a facility
-## that prices a resource at nothing would give it away.
+## Least a trader takes its facility's price to be, as a share of the market's: a facility that
+## prices a resource at nothing would give it away.
 const OWN_PRICE_FLOOR := 0.001
 ## How many of its facility's time horizons ahead a trader contracts (def key
 ## [code]contract_horizons[/code] overrides per resource strategy): about a year for a facility on
@@ -163,9 +158,9 @@ static var trader_strategy_defs: Array[Dictionary] = [
 
 ## Per-resource strategy definitions; index = [enum ResourceStrategies] value. The switches
 ## [code]buy[/code] and [code]sell[/code] select the sides on which the trader contracts toward its
-## facility's desired rate; an entry with neither trades nothing. Tuning keys: [code]skew[/code]
-## (see [constant SKEW]), [code]contract_horizons[/code] (see [constant CONTRACT_HORIZONS]),
-## [code]min_lot[/code], [code]price_tol[/code] and [code]qty_tol[/code]. A stockpile or a
+## facility's desired rate; an entry with neither trades nothing. Tuning keys:
+## [code]contract_horizons[/code] (see [constant CONTRACT_HORIZONS]), [code]min_lot[/code],
+## [code]price_tol[/code] and [code]qty_tol[/code]. A stockpile or a
 ## shortage reaches the trader through the desired rate, which the facility's levels move.
 static var resource_strategy_defs: Array[Dictionary] = [
 	{&"buy": true, &"sell": true}, # NEUTRAL
@@ -192,6 +187,8 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"resource_strategies",
 	&"_asks",
 	&"_bids",
+	&"_ask_searches",
+	&"_bid_searches",
 ]
 
 
@@ -224,6 +221,14 @@ var _asks: Dictionary[PackedInt32Array, PackedInt64Array] = {}
 ## Memory of open bids, keyed like [member _asks] with values [unit_quantity, unit_price]
 ## in trade units.
 var _bids: Dictionary[PackedInt32Array, PackedInt64Array] = {}
+
+## The searches for a buyer for what this trader would sell, keyed like [member _asks]: when its
+## want opened or the market last answered it, the time it gives itself to find one, the price it
+## started from, and its position as it last quoted (see [method _plan_resource]).
+var _ask_searches: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
+
+## The searches for a seller of what this trader would buy, as [member _ask_searches].
+var _bid_searches: Dictionary[PackedInt32Array, PackedFloat64Array] = {}
 
 # *****************************************************************************
 
@@ -362,11 +367,17 @@ func process_ai_interval(_delta: float) -> void:
 ## ends ([method FacilityProxy.get_inventory_carried]), and that in the next; as a bid or an ask.
 ## Each quarter's target is held to the def's sides,
 ## never below what the facility could spare (-C, the critical rate, its flow and step alike) and
-## at least C where the facility must take. Each quarter's quotes skew off its own price (see
-## [method MarketProxy.get_instrument_unit_price]) toward the facility's local price, as far as the
-## def's [code]skew[/code] times the quarter's gap as a share of what it would contract there, each
-## side quoting that limit, a bid no more than the facility's price unless it buys back a short
-## and an ask no less unless it offers back a long.[br][br]
+## at least C where the facility must take.[br][br]
+##
+## Each quote is priced in the facility's interest (TRADE_MODEL.md, "The facility trader", the
+## price). It opens a search where others trade, at the quarter's own price (see
+## [method MarketProxy.get_instrument_unit_price]) or the best quote another trader stands at on the
+## other side there or in a sooner quarter where that is better, and as long as the market leaves
+## its want unanswered it concedes toward the facility's local price, evenly in ratio over the time
+## until the quarter opens and the facility's horizon past that; answered, it starts again where
+## the market then stands. A bid is no more than the facility's price unless it buys back a short,
+## and an ask no less unless it offers back a long. In the current quarter it takes another's quote
+## within its facility's price.[br][br]
 ##
 ## No order is smaller than a lot, what its facility moves of the resource in an [constant INTERVAL]
 ## and no less than the def's [code]min_lot[/code]. With [param standing], a two-sided posture's,
@@ -412,8 +423,9 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 	var end := maxf(now + window, Utils.get_time_at_ordinal_quarter(current_quarter + 1))
 	_windows[resource_type] = TraderProxy.get_foreseen_span(end - now, horizon)
 	var local_price := _facility.get_inventory_local_price(resource_type) * multiplier
-	var skew_share: float = def.get(&"skew", SKEW)
 	var quarter_price := reference_price # this quarter's own, or the quarter before it's
+	var sooner_ask := 0 # the lowest ask of another trader's in this quarter or a sooner one
+	var sooner_bid := 0 # the highest bid, as sooner_ask
 	var quarter := current_quarter
 	var start := now
 	while start < end and quarter < current_quarter + TraderProxy.MAX_FORWARD_QUARTERS:
@@ -421,6 +433,7 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 		var held := minf(end, quarter_end) - start
 		var key := PackedInt32Array([resource_type, quarter])
 		var is_current := quarter == current_quarter
+		var opens_in := start - now # until the quarter's delivery begins; nothing in the current
 		# A buyer takes all it contracted, and a need contracted at once for a year held a spike
 		# of a month's use for all of it. What a quarter holds counts as far as its facility
 		# foresees it.
@@ -481,35 +494,63 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 			if buys and bid < lot and use * foreseen / multiplier >= lot:
 				standing_bid = lot
 				bid = 0
-		# A gap as a share of what it would contract: scaled to an unbounded desired rate, a seller
-		# held to the little it could spare skewed next to nothing, and one stale ask held a market
-		# at many times what every facility valued it.
-		var target := absf(wanted / multiplier)
-		var gap_share := clampf(want / maxf(target, absi(want)), -1.0, 1.0) if want else 0.0
-		# The facility's own price says how far the market's stands from where the facility would
-		# trade no more: a fixed step took years to close seeds ten or a hundred times off. A buyer
-		# skews up only where its facility prices the resource above the market, a seller down only
-		# below; one that prices it at nothing skews toward the floor.
+		# What the market shows of this quarter and the sooner ones is in other traders' quotes: a
+		# trader's own bid lifts the price of a quarter no seller offers, and read back as the
+		# market's, an agency's bid climbed from it toward its stock-out price within weeks.
+		var others_ask := _get_others_ask(market, key)
+		var others_bid := _get_others_bid(market, key)
+		if others_ask > 0 and (!sooner_ask or others_ask < sooner_ask):
+			sooner_ask = others_ask
+		sooner_bid = maxi(sooner_bid, others_bid)
+		# Its facility's own price is the most it would pay or the least it would take, never what
+		# it quotes: a seller takes a bid at the bid's price, and an agency out of power that bid
+		# toward its own paid ten thousand times power's worth. Bidding the market's price where its
+		# facility priced the good below it, every buyer carried a price one trader had lifted into
+		# the next contracts, and asking it where above, a seller sold what its own facility needed
+		# more (TRADE_MODEL.md, "What was tried", the price). A position it closes trades at the
+		# market's price at least: a buy-back held to its facility's left a seller owing past what
+		# it could spare for longer.
 		var own_price := maxf(local_price, OWN_PRICE_FLOOR * quarter_price)
-		var price_gap := log(own_price / quarter_price)
-		var full_skew := skew_share * price_gap
-		var skew := 0.0
-		if price_gap * gap_share > 0.0:
-			skew = absf(gap_share) * full_skew
-		var limit_price := quarter_price * exp(skew)
-		# Bidding the reference where its facility priced the good below it, every buyer carried a
-		# reference one trader had lifted into the next contracts, and asking it where above, a
-		# seller sold what its own facility needed more (TRADE_MODEL.md, "What was tried", the
-		# price). A position it closes trades at the market's price: a buy-back held
-		# to its facility's left a seller owing past what it could spare for longer.
-		var bid_limit := limit_price if position_quantity < 0.0 else minf(limit_price, own_price)
-		var ask_limit := limit_price if position_quantity > 0.0 else maxf(limit_price, own_price)
-		var bid_price := maxi(floori(bid_limit), 1)
-		var ask_price := maxi(ceili(ask_limit), 1)
+		var time_span := maxf(opens_in + horizon, INTERVAL)
+		var bid_price := 1
+		var ask_price := 1
+		if bid:
+			var search := _get_search(_bid_searches, key, now, time_span, position_quantity, 1.0,
+					lot)
+			var start_price := float(quarter_price)
+			if sooner_ask:
+				start_price = minf(start_price, sooner_ask)
+			search[2] = minf(search[2], start_price) if search[2] else start_price
+			var reservation := own_price
+			if position_quantity < 0.0:
+				reservation = maxf(own_price, search[2])
+			var limit := reservation
+			if reservation > search[2]:
+				limit = _concede(search[2], reservation, (now - search[0]) / search[1])
+			if is_current and others_ask > 0 and others_ask <= reservation:
+				limit = maxf(limit, others_ask) # its facility needs it now, and it is offered
+			bid_price = maxi(floori(limit), 1)
+		else:
+			_bid_searches.erase(key)
+		if ask:
+			var search := _get_search(_ask_searches, key, now, time_span, position_quantity, -1.0,
+					lot)
+			var start_price := maxf(float(quarter_price), sooner_bid)
+			search[2] = maxf(search[2], start_price)
+			var reservation := own_price
+			if position_quantity > 0.0:
+				reservation = minf(own_price, search[2])
+			var limit := reservation
+			if reservation < search[2]:
+				limit = _concede(search[2], reservation, (now - search[0]) / search[1])
+			if is_current and others_bid > 0 and others_bid >= reservation:
+				limit = minf(limit, others_bid)
+			ask_price = maxi(ceili(limit), 1)
+		else:
+			_ask_searches.erase(key)
 		# Quoted off the reference alone, a market whose traders' gaps had closed held its last
-		# trade's price while every facility's own moved away from it. Each quotes its own limit,
-		# and a cross matches at the midpoint (TRADE_MODEL.md, "The price"). A maker's lot stands
-		# where its own plan would trade that lot, read off its facility's curve: stood between the
+		# trade's price while every facility's own moved away from it. A maker's lot stands where
+		# its own plan would trade that lot, read off its facility's curve: stood between the
 		# market's price and its facility's local price, which its last fill had moved, the next lot
 		# filled on the other side, every other interval where nothing stores the resource
 		# (TRADE_MODEL.md, "Market makers"). A standing quote stays clear of the trader's own on the
@@ -528,7 +569,6 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 				bid_price = mini(bid_price, ask_price - 1)
 			if bid_price < 1:
 				standing_bid = 0
-				bid_price = maxi(floori(bid_limit), 1)
 		_plan_keys.append(key)
 		_plan_asks.append(ask)
 		_plan_bids.append(bid)
@@ -716,6 +756,48 @@ func _market_locus_id(market_id: int) -> int:
 	return market_proxy.locus.locus_id
 
 
+# The lowest ask resting on the instrument of [param key] but this trader's own, or 0 where none
+# shows: the book shows only its best, so none where that may be this trader's.
+func _get_others_ask(market: MarketProxy, key: PackedInt32Array) -> int:
+	var price := market.get_instrument_ask_unit_price(key[0], key[1])
+	if price > 0 and _asks.has(key) and _asks[key][1] <= price:
+		return 0
+	return price
+
+
+# The highest bid resting on the instrument of [param key] but this trader's own, read as
+# [method _get_others_ask] reads the ask.
+func _get_others_bid(market: MarketProxy, key: PackedInt32Array) -> int:
+	var price := market.get_instrument_bid_unit_price(key[0], key[1])
+	if price > 0 and _bids.has(key) and _bids[key][1] >= price:
+		return 0
+	return price
+
+
+# The search for a quote on [param key] in [param searches], opened at [param now] with
+# [param time_span] to run where none is open, or anew where the market answered the last quote
+# with a lot or more: [param side] is 1.0 for a bid, whose position a fill grows, and -1.0 for an
+# ask. Its start price is the caller's to set, 0.0 in a search just opened.
+func _get_search(searches: Dictionary[PackedInt32Array, PackedFloat64Array],
+		key: PackedInt32Array, now: float, time_span: float, position_quantity: float, side: float,
+		lot: int) -> PackedFloat64Array:
+	if searches.has(key):
+		var open_search := searches[key]
+		var filled := (position_quantity - open_search[3]) * side
+		open_search[3] = position_quantity # in-place write-back into the dict entry
+		if filled < lot:
+			return open_search
+	var search := PackedFloat64Array([now, time_span, 0.0, position_quantity])
+	searches[key] = search
+	return search
+
+
+# The price a search that started at [param start_price] has conceded to, [param share] of its
+# way toward [param reservation] in ratio.
+static func _concede(start_price: float, reservation: float, share: float) -> float:
+	return start_price * pow(reservation / start_price, clampf(share, 0.0, 1.0))
+
+
 # The market purges old-quarter resting orders at rollover without echoes; drop
 # matching memory by the same rule so stale entries can't satisfy _maintain_*
 # lookups (which would suppress fresh front-quarter quotes).
@@ -727,9 +809,17 @@ func _drop_expired_memory() -> void:
 	for key in _bids:
 		if key[1] < current_qtr:
 			_expired_keys.append(key)
+	for key in _ask_searches:
+		if key[1] < current_qtr:
+			_expired_keys.append(key)
+	for key in _bid_searches:
+		if key[1] < current_qtr:
+			_expired_keys.append(key)
 	for key in _expired_keys: # duplicates fine; erase is idempotent
 		_asks.erase(key)
 		_bids.erase(key)
+		_ask_searches.erase(key)
+		_bid_searches.erase(key)
 	_expired_keys.clear()
 
 
@@ -747,13 +837,21 @@ func _clear_plan() -> void:
 	_planned.clear()
 
 
-# Cancels every order resting on an instrument this interval's plan doesn't cover: a resource no
-# longer traded, a quarter the window has left, a strategy that dropped a side.
+# Cancels every order resting on an instrument this interval's plan doesn't cover, and ends its
+# searches: a resource no longer traded, a quarter the window has left, a strategy that dropped a
+# side. A search left open there would resume months later conceded all the way to its facility's
+# price.
 func _cancel_unplanned() -> void:
 	for key in _asks: # collect-then-act; _set_* mutates the dicts
 		if !_planned.has(key):
 			_expired_keys.append(key)
 	for key in _bids:
+		if !_planned.has(key):
+			_expired_keys.append(key)
+	for key in _ask_searches:
+		if !_planned.has(key):
+			_expired_keys.append(key)
+	for key in _bid_searches:
 		if !_planned.has(key):
 			_expired_keys.append(key)
 	for key in _expired_keys: # duplicates fine; the has() checks make this idempotent
@@ -762,6 +860,8 @@ func _cancel_unplanned() -> void:
 			_set_ask(key, 0, 1, market_id) # placeholder price: the proxy rejects price <= 0
 		if _bids.has(key):
 			_set_bid(key, 0, 1, market_id)
+		_ask_searches.erase(key)
+		_bid_searches.erase(key)
 	_expired_keys.clear()
 
 
