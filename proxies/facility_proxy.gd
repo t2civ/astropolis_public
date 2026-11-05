@@ -154,9 +154,9 @@ enum BudgetLines {
 }
 
 
-## The multiples of the market's price, lowest first, that a facility's desired flow is given at
-## (see [method get_inventory_desired_flow_curve]); the middle one is the market's price itself.
-const FLOW_CURVE_FACTORS: PackedFloat64Array = [0.5, 1.0, 2.0]
+## The number of prices a facility's desired flow is given at (see
+## [method get_inventory_desired_flow_curve]).
+const N_CURVE_POINTS := 3
 
 
 var facility_id := -1  ## Index into [member ProxyBus.facility_proxies].
@@ -253,39 +253,39 @@ func remove() -> void:
 
 # ********************************** STATIC ***********************************
 
-## Returns what a curve of [constant FLOW_CURVE_FACTORS] points, starting at [param start] in
-## [param curve], gives at [param factor] times the price it was read at: linear in the log of
-## price between the points, and the end point's value past either end.
-static func get_curve_value(curve: PackedFloat64Array, factor: float, start := 0) -> float:
-	const FACTORS := FLOW_CURVE_FACTORS
-	var last := FACTORS.size() - 1
-	if !(factor > FACTORS[0]):
-		return curve[start]
-	if factor >= FACTORS[last]:
-		return curve[start + last]
-	var k := 1
-	while FACTORS[k] < factor:
+## Returns what a curve of [constant N_CURVE_POINTS] [param values] at [param prices], rising, each
+## starting at [param start], gives at [param price]: linear in the log of price between the points,
+## and the end point's value past either end.
+static func get_curve_value(values: PackedFloat64Array, prices: PackedFloat64Array, price: float,
+		start := 0) -> float:
+	var last := start + N_CURVE_POINTS - 1
+	if !(price > prices[start]):
+		return values[start]
+	if price >= prices[last]:
+		return values[last]
+	var k := start + 1
+	while prices[k] < price:
 		k += 1
-	var t := log(factor / FACTORS[k - 1]) / log(FACTORS[k] / FACTORS[k - 1])
-	return lerpf(curve[start + k - 1], curve[start + k], t)
+	var t := log(price / prices[k - 1]) / log(prices[k] / prices[k - 1])
+	return lerpf(values[k - 1], values[k], t)
 
 
-## Returns the factor of the price it was read at where a curve of [constant FLOW_CURVE_FACTORS]
-## points, starting at [param start] in [param curve], gives [param value]: the inverse of
-## [method get_curve_value] for a curve that falls as the price rises, the end factor past either
+## Returns the price at which a curve of [constant N_CURVE_POINTS] [param values] at
+## [param prices], each starting at [param start], gives [param value]: the inverse of
+## [method get_curve_value] for a curve that falls as the price rises, the end price past either
 ## end.
-static func get_curve_factor(curve: PackedFloat64Array, value: float, start := 0) -> float:
-	const FACTORS := FLOW_CURVE_FACTORS
-	var last := FACTORS.size() - 1
-	if !(value < curve[start]):
-		return FACTORS[0]
-	if !(value > curve[start + last]):
-		return FACTORS[last]
-	var k := 1
-	while curve[start + k] > value:
+static func get_curve_price(values: PackedFloat64Array, prices: PackedFloat64Array, value: float,
+		start := 0) -> float:
+	var last := start + N_CURVE_POINTS - 1
+	if !(value < values[start]):
+		return prices[start]
+	if !(value > values[last]):
+		return prices[last]
+	var k := start + 1
+	while values[k] > value:
 		k += 1
-	var t := (curve[start + k - 1] - value) / (curve[start + k - 1] - curve[start + k])
-	return FACTORS[k - 1] * pow(FACTORS[k] / FACTORS[k - 1], t)
+	var t := (values[k - 1] - value) / (values[k - 1] - values[k])
+	return prices[k - 1] * pow(prices[k] / prices[k - 1], t)
 
 
 # ***************************** THREAD-SAFE READ ******************************
@@ -525,9 +525,10 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 
 ## Returns the critical rate of [param resource_type], smoothed over the time horizon: the trade
 ## the facility must have (positive), what its operations and its residents' existence use past
-## all its producers could make, or the most it can spare (negative). A trader secures at least
-## this where it is positive, and never commits to give more than it allows. 0.0 for a resource
-## that can't be traded. See PRODUCTION_MODEL.md, "A facility's flows with the market".
+## all its producers could make, or the most it can spare (negative), read where its trader could
+## trade now as the desired rate is (see [method get_inventory_desired_rate]). A trader secures at
+## least this where it is positive, and never commits to give more than it allows. 0.0 for a
+## resource that can't be traded. See PRODUCTION_MODEL.md, "A facility's flows with the market".
 @abstract func get_inventory_critical_rate(resource_type: int) -> float
 
 
@@ -536,11 +537,13 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 
 
 ## Returns the desired rate of [param resource_type], smoothed over the time horizon: the trade
-## the facility wants at the locus market's price, positive to take and negative to give, where
-## its whole use and the step toward its desired level would meet what its producers make at that
-## price. NAN where the market has no price; 0.0 for a resource that can't be traded. Until trade
-## returns, the market's prices stand at their seeds. See PRODUCTION_MODEL.md, "A facility's
-## flows with the market".
+## the facility wants, positive to take and negative to give, where its whole use and the step
+## toward its desired level would meet what its producers make, read where its trader could trade
+## now: at the ask its trader expects where the facility would take there, at the bid where it
+## would give there, and nothing between; where its trader expects no quote, at the market's last
+## sale, and where the market has none, at the facility's own price. NAN where it has no price at
+## all; 0.0 for a resource that can't be traded. See PRODUCTION_MODEL.md, "A facility's flows with
+## the market".
 @abstract func get_inventory_desired_rate(resource_type: int) -> float
 
 
@@ -548,39 +551,40 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 @abstract func get_inventory_desired_rates() -> PackedFloat64Array
 
 
-## Returns the flow in the critical rate of [param resource_type] at the market's price: the rate
+## Returns the flow in the critical rate of [param resource_type], read as the rate is: the rate
 ## without its step to the critical level (see [method get_inventory_critical_step]), so what the
 ## facility must have over a span longer than its horizon is this flow over the span plus that
 ## step, once. Smoothed over the time horizon as the rate is.
 @abstract func get_inventory_critical_flow(resource_type: int) -> float
 
 
-## Returns the step in the critical rate of [param resource_type]: what the facility's stock must
-## gain to reach its critical level at the market's price, a quantity, negative for what it holds
+## Returns the step in the critical rate of [param resource_type], read as the rate is: what the
+## facility's stock must gain to reach its critical level, a quantity, negative for what it holds
 ## past it. Smoothed over the time horizon as the rate is.
 @abstract func get_inventory_critical_step(resource_type: int) -> float
 
 
-## Returns the step in the desired rate of [param resource_type]: what the facility's holder would
-## add to its stock at the market's price, a quantity, negative for what it would give. Smoothed
-## over the time horizon as the rate is. NAN where the market has no price.
+## Returns the step in the desired rate of [param resource_type], read as the rate is: what the
+## facility's holder would add to its stock, a quantity, negative for what it would give. Smoothed
+## over the time horizon as the rate is. NAN where the facility has no price at all.
 @abstract func get_inventory_desired_step(resource_type: int) -> float
 
 
 ## Returns the flow in the desired rate of [param resource_type], the rate without its step toward
 ## the desired levels (see [method get_inventory_desired_step]), as a curve over price: at each of
-## [constant FLOW_CURVE_FACTORS] times [method get_inventory_curve_price], smoothed over the time
-## horizon. What the facility wants over a span longer than its horizon is this flow over the span
-## plus that step, once; a trader contracting a quarter ahead reads it at that quarter's price (see
-## [method get_curve_value]). NANs where the market has no price; empty for an index out of
-## range.
+## the prices [method get_inventory_curve_prices] gives, smoothed over the time horizon. What the
+## facility wants over a span longer than its horizon is this flow over the span plus that step,
+## once; a trader reads it at the price its order would trade at (see [method get_curve_value]).
+## NANs where the facility has no price at all; empty for an index out of range.
 @abstract func get_inventory_desired_flow_curve(resource_type: int) -> PackedFloat64Array
 
 
-## Returns the market's price of [param resource_type], in [method MarketProxy.get_price] units,
-## that the flow curves were last read at (see [method get_inventory_desired_flow_curve]). NAN
-## where the market has no price.
-@abstract func get_inventory_curve_price(resource_type: int) -> float
+## Returns the prices, rising and in [method MarketProxy.get_price] units, that the desired flow's
+## curve of [param resource_type] is given at (see [method get_inventory_desired_flow_curve]): the
+## facility's own price between the lowest and the highest of half and twice it, the market's last
+## sale and the quotes its trader expects. NANs where the facility has no price at all; empty for an
+## index out of range.
+@abstract func get_inventory_curve_prices(resource_type: int) -> PackedFloat64Array
 
 
 ## Returns what the facility used of [param resource_type] per unit time, averaged over its

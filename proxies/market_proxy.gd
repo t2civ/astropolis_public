@@ -32,9 +32,9 @@ extends Proxy
 ## The market is the central counterparty; only the cash leg would be centrally
 ## novated, and cash is not implemented yet (TODO).[br][br]
 ##
-## Published per-resource values: [b]price[/b] — the last current-quarter trade or
-## fiat seed, held between the current-quarter best bid and best ask (see
-## TRADE_MODEL.md, "Price discovery"), or the best ask where neither exists, else 0;
+## Published per-resource values: [b]price[/b] — the volume-weighted price of what the
+## current quarter has filled, or where it has filled nothing the price of the quarter before
+## it or the fiat seed, else 0, which no quote moves (see TRADE_MODEL.md, "Price discovery");
 ## [b]ask[/b] / [b]bid[/b] — the current-quarter top-of-book, 0 for an empty side.
 ## [member instruments] also carries per-instrument top-of-book for every quarter. What a
 ## locus's facilities buy and sell here is their own, summed on [LocusProxy] (see
@@ -154,7 +154,7 @@ func get_market() -> MarketProxy:
 
 
 ## Returns the price in trade units of the instrument [param type] at [param ordinal_quarter]:
-## for the current quarter [method get_unit_price], and for a later one its own last trade, held
-## inside its book, or where it has none the price of the quarter before it as its book opened.
+## for the current quarter [method get_unit_price], and for a later one the volume-weighted price
+## of its own fills, or where it has none the nearest sooner quarter's as its book last changed.
 ## 0 where it has none, nor any order (TRADE_MODEL.md, "Price discovery").
 @abstract func get_instrument_unit_price(type: int, ordinal_quarter: int) -> int
