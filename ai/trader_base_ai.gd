@@ -383,8 +383,8 @@ func process_ai_interval(_delta: float) -> void:
 ## price). Its facility's price is its local price in the current quarter, and in a later one what
 ## its curve says a lot more of that quarter's flow is worth. It takes another's quote within that
 ## price, and otherwise opens a search where others trade, at the quarter's own price (see
-## [method MarketProxy.get_instrument_unit_price]) or the best quote another trader stands at on the
-## other side there or in a sooner quarter where that is better, or where nothing has traded at its
+## [method MarketProxy.get_instrument_unit_price]) held within the best bid and ask other traders
+## stand at there or in a sooner quarter, or where nothing has traded at those quotes or its
 ## facility's price, and as long as the market leaves its want unanswered it concedes toward its
 ## facility's price, evenly in ratio over the time until the quarter opens and the facility's
 ## horizon past that; answered, it starts again where the market then stands. A bid is no more than
@@ -563,20 +563,23 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 				(netted + lot) * multiplier - step, foreseen, multiplier)
 		var bid_reservation := own_price if is_current else lot_bid_price
 		var ask_reservation := own_price if is_current else lot_ask_price
-		# A quote opens where others trade: a bid at the quarter's own price, its last sale, or at
-		# the best ask another trader stands at there or in a sooner quarter where that is lower, a
-		# price a trade can be made at now; an ask at the quarter's price or the best bid where
-		# higher; and where nothing has traded, at its facility's price. Each quarter wants what its
-		# facility's flow would be at the price its quote opens at, the quarter's own: at the
-		# current quarter's, a later quarter's price moved and no quantity answered it. Read at the
-		# last sale alone, a price no trade could be made at, every trader of a market whose sale
-		# stood past all their facilities' prices quoted one side and nothing filled
-		# (TRADE_MODEL.md, "What was tried", the price moved only by fills).
-		var bid_open := float(quarter_price) if quarter_price > 0 else bid_reservation
-		if sooner_ask:
-			bid_open = minf(bid_open, sooner_ask)
-		var ask_open := maxf(float(quarter_price) if quarter_price > 0 else ask_reservation,
-				sooner_bid)
+		# A quote opens where others trade: at the quarter's own price, its last sale, held within
+		# the best bid and ask other traders stand at there or in a sooner quarter, the prices a
+		# trade can be made at now; where nothing has traded, at those quotes, and where none
+		# stands, at its facility's price. Each quarter wants what its facility's flow would be at
+		# the price its quote opens at, the quarter's own: at the current quarter's, a later
+		# quarter's price moved and no quantity answered it. Read at the last sale alone, a price no
+		# trade could be made at, every trader of a market whose sale stood past all their
+		# facilities' prices quoted one side and nothing filled (TRADE_MODEL.md, "What was tried",
+		# the price moved only by fills); held within the best bid alone, a seller opened at the
+		# last sale above the asks it competed with.
+		var open := float(quarter_price) if quarter_price > 0 else NAN
+		if sooner_ask and !(open <= sooner_ask):
+			open = sooner_ask
+		elif sooner_bid and !(open >= sooner_bid):
+			open = sooner_bid
+		var bid_open := open if open > 0.0 else bid_reservation
+		var ask_open := open if open > 0.0 else ask_reservation
 		var bid := maxi(roundi(_get_wanted(desired_flows, curve_prices, bid_open / multiplier,
 				foreseen, step, must, buys, sells) / multiplier - netted), 0)
 		var ask := 0
