@@ -458,13 +458,59 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 		# A buyer takes all it contracted, and a need contracted at once for a year held a spike
 		# of a month's use for all of it. What a quarter holds counts as far as its facility
 		# foresees it.
-		var foreseen := 0.0
+		var foreseen := held
 		if held > 0.0:
 			foreseen = (TraderProxy.get_foreseen_span(start + held - now, horizon)
 					- TraderProxy.get_foreseen_span(start - now, horizon))
 		start = quarter_end
 		quarter += 1
-		if held <= 0.0 and !standing:
+		if held <= 0.0:
+			if !standing:
+				continue
+			# Past the window, where a trader contracting far ahead looks for a lot and its facility
+			# foresees nothing, a lot stands where its facility could spare or use one over the
+			# quarter, no more than a lot each way, which its gap covers or unwinds as the window
+			# reaches the quarter: allowed within the window too, makers sold past what their
+			# facilities could spare there twice as often. It stands where its facility's flow over
+			# the whole quarter would trade it, and no better for the other side than the market's
+			# price, where the trader expects to cover what it sells or resell what it buys: held to
+			# a far quarter's own price, which nothing had traded since its book opened, a quarter of
+			# far asks stood past a thousand times what the market traded at.
+			var far_position: PackedFloat64Array = _positions_by_instrument.get(key,
+					PackedFloat64Array())
+			var far_quantity := far_position[0] if far_position else 0.0
+			var far_netted := far_quantity
+			if key[1] == current_quarter + 1:
+				far_netted += carried / multiplier
+			var far_ask := 0
+			if sells and far_quantity >= 0.0 and spare * quarter_span / multiplier >= lot:
+				far_ask = lot
+			var far_bid := 0
+			if buys and far_quantity <= 0.0 and use * quarter_span / multiplier >= lot:
+				far_bid = lot
+			_ask_searches.erase(key)
+			_bid_searches.erase(key)
+			if !(far_ask or far_bid):
+				continue
+			var far_bid_price := floori(minf(_get_flow_price(desired_flows,
+					(far_netted + lot) * multiplier, quarter_span, curve_price, multiplier),
+					reference_price))
+			var far_ask_price := maxi(maxi(ceili(maxf(_get_flow_price(desired_flows,
+					(far_netted - lot) * multiplier, quarter_span, curve_price, multiplier),
+					reference_price)), far_bid_price + 1), 1)
+			if far_ask:
+				far_bid_price = mini(far_bid_price, far_ask_price - 1)
+			if far_bid_price < 1:
+				far_bid = 0
+			_plan_keys.append(key)
+			_plan_asks.append(0)
+			_plan_bids.append(0)
+			_plan_standing_asks.append(far_ask)
+			_plan_standing_bids.append(far_bid)
+			_plan_ask_prices.append(far_ask_price)
+			_plan_bid_prices.append(far_bid_price)
+			_plan_defs.append(def)
+			_plan_lots.append(lot)
 			continue
 		# What a later quarter trades is its own price: priced off the current quarter's, a book a
 		# quarter ahead moved no price at all.
@@ -492,32 +538,20 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 			must += critical_step
 		var wanted := _get_wanted(desired_flows, quarter_price / multiplier / curve_price, foreseen,
 				step, must, buys, sells)
-		var want := 0 # past the window a quarter holds what its lots sold until the window reaches it
-		if held > 0.0:
-			want = roundi(wanted / multiplier - netted)
+		var want := roundi(wanted / multiplier - netted)
 		var ask := maxi(-want, 0)
 		var bid := maxi(want, 0)
 		var standing_ask := 0
 		var standing_bid := 0
 		# A bid where the facility uses nothing is demand nobody has, which held a good nobody used
-		# at whatever its makers last traded it among themselves. Within the window a lot stands as
-		# far as what its facility foresees of the quarter allows: read over the quarter's whole
-		# span, a lot standing sold every later quarter out to all it could spare (TRADE_MODEL.md,
-		# "What was tried", market makers and the floor). Past the window, where a trader contracting
-		# far ahead looks for one, a lot stands where its facility could spare or use one over the
-		# quarter, no more than a lot each way, which its gap covers or unwinds as the window reaches
-		# the quarter: allowed within the window too, the gap bought each such lot straight back.
-		var past_window := held <= 0.0
-		var stands_ask := position_quantity + spare * foreseen / multiplier >= lot
-		var stands_bid := use * foreseen / multiplier >= lot
-		if past_window:
-			stands_ask = spare * quarter_span / multiplier >= lot and position_quantity >= 0.0
-			stands_bid = use * quarter_span / multiplier >= lot and position_quantity <= 0.0
+		# at whatever its makers last traded it among themselves.
+		# Read over the quarter's whole span rather than what its facility foresees of it, as its
+		# bounds are, a lot standing sold every later quarter out to all it could spare.
 		if standing:
-			if sells and ask < lot and stands_ask:
+			if sells and ask < lot and position_quantity + spare * foreseen / multiplier >= lot:
 				standing_ask = lot
 				ask = 0
-			if buys and bid < lot and stands_bid:
+			if buys and bid < lot and use * foreseen / multiplier >= lot:
 				standing_bid = lot
 				bid = 0
 		# What the market shows of this quarter and the sooner ones is in other traders' quotes: a
@@ -596,22 +630,10 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 		# its own plan would trade that lot, read off its facility's curve: stood between the
 		# market's price and its facility's local price, which its last fill had moved, the next lot
 		# filled on the other side, every other interval where nothing stores the resource
-		# (TRADE_MODEL.md, "Market makers"). Past the window its facility foresees nothing of the
-		# quarter, so a lot stands where its facility's flow over the whole quarter would trade it,
-		# and no better for the other side than the market's price, where the trader expects to cover
-		# what it sells there or resell what it buys. Held to a far quarter's own price instead,
-		# which nothing had traded since its book opened, a far lot asked hundreds of times what the
-		# market traded at. A standing quote stays clear of the trader's own on the other side,
-		# which wouldn't trade.
-		var ask_lot_price := lot_ask_price
-		var bid_lot_price := lot_bid_price
-		if past_window:
-			ask_lot_price = maxf(_get_flow_price(desired_flows, (netted - lot) * multiplier - step,
-					quarter_span, curve_price, multiplier), reference_price)
-			bid_lot_price = minf(_get_flow_price(desired_flows, (netted + lot) * multiplier - step,
-					quarter_span, curve_price, multiplier), reference_price)
-		var standing_ask_price := maxi(ceili(ask_lot_price), 1)
-		var standing_bid_price := floori(bid_lot_price)
+		# (TRADE_MODEL.md, "Market makers"). A standing quote stays clear of the trader's own on the
+		# other side, which wouldn't trade.
+		var standing_ask_price := maxi(ceili(lot_ask_price), 1)
+		var standing_bid_price := floori(lot_bid_price)
 		if standing_ask:
 			ask_price = maxi(standing_ask_price, (bid_price if bid else standing_bid_price) + 1)
 		if standing_bid:
