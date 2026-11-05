@@ -374,12 +374,10 @@ func process_ai_interval(_delta: float) -> void:
 ## current quarter D's step besides, once, net of the position there and of what its facility's
 ## transit buffer holds, counted in the quarter it comes in: in the current quarter all it holds
 ## but what it will still hold when the quarter ends ([method FacilityProxy.get_inventory_carried]),
-## and that in the next. It bids where its facility would take at the price it could buy at now, the
-## best ask another trader stands at there or in a sooner quarter, and otherwise asks where its
-## facility would give at the price it could sell at, the best bid; where no such quote stands, at
-## the quarter's own price, and where it has none at its facility's. Each quarter's target is held
-## to the def's sides, never below what the facility could spare (-C, the critical rate, its flow
-## and step alike) and at least C where the facility must take.[br][br]
+## and that in the next. It bids where its facility would take at the price its bid opens at, and
+## otherwise asks where it would give at the price its ask opens at (below). Each quarter's target
+## is held to the def's sides, never below what the facility could spare (-C, the critical rate,
+## its flow and step alike) and at least C where the facility must take.[br][br]
 ##
 ## Each quote is priced in the facility's interest (TRADE_MODEL.md, "The facility trader", the
 ## price). Its facility's price is its local price in the current quarter, and in a later one what
@@ -547,25 +545,43 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 		if others_ask > 0 and (!sooner_ask or others_ask < sooner_ask):
 			sooner_ask = others_ask
 		sooner_bid = maxi(sooner_bid, others_bid)
+		# Its facility's own price is the most it would pay or the least it would take, never what
+		# it quotes: a seller takes a bid at the bid's price, and an agency out of power that bid
+		# toward its own paid ten thousand times power's worth. Bidding the market's price where its
+		# facility priced the good below it, every buyer carried a price one trader had lifted into
+		# the next contracts, and asking it where above, a seller sold what its own facility needed
+		# more (TRADE_MODEL.md, "What was tried", the price). For a later quarter its facility's
+		# price is what its curve says a lot more of that quarter's flow is worth, within the curve's
+		# range, not what its stock sets this week, which would buy months ahead of a passing
+		# shortage at the shortage's price. A position it closes trades at the market's price at
+		# least: a buy-back held to its facility's left a seller owing past what it could spare for
+		# longer.
 		var own_price := maxf(local_price, OWN_PRICE_FLOOR * quarter_price)
-		# Each quarter wants what its facility's flow would be where it could trade now: it buys
-		# where its facility would take at the best ask another trader stands at, and otherwise
-		# sells where it would give at the best bid; where none stands, at the quarter's own
-		# price, at the current quarter's a later quarter's price moved and no quantity answered
-		# it. Read at the quarter's last sale alone, a price no trade could be made at, every
-		# trader of a market whose sale stood past all their facilities' prices quoted one side
-		# and nothing filled (TRADE_MODEL.md, "What was tried", the price moved only by fills).
-		var buy_price := float(sooner_ask if sooner_ask else quarter_price)
-		if !(buy_price > 0.0):
-			buy_price = own_price
-		var sell_price := float(sooner_bid if sooner_bid else quarter_price)
-		if !(sell_price > 0.0):
-			sell_price = own_price
-		var bid := maxi(roundi(_get_wanted(desired_flows, curve_prices, buy_price / multiplier,
+		var lot_ask_price := _get_flow_price(desired_flows, curve_prices,
+				(netted - lot) * multiplier - step, foreseen, multiplier)
+		var lot_bid_price := _get_flow_price(desired_flows, curve_prices,
+				(netted + lot) * multiplier - step, foreseen, multiplier)
+		var bid_reservation := own_price if is_current else lot_bid_price
+		var ask_reservation := own_price if is_current else lot_ask_price
+		# A quote opens where others trade: a bid at the quarter's own price, its last sale, or at
+		# the best ask another trader stands at there or in a sooner quarter where that is lower, a
+		# price a trade can be made at now; an ask at the quarter's price or the best bid where
+		# higher; and where nothing has traded, at its facility's price. Each quarter wants what its
+		# facility's flow would be at the price its quote opens at, the quarter's own: at the
+		# current quarter's, a later quarter's price moved and no quantity answered it. Read at the
+		# last sale alone, a price no trade could be made at, every trader of a market whose sale
+		# stood past all their facilities' prices quoted one side and nothing filled
+		# (TRADE_MODEL.md, "What was tried", the price moved only by fills).
+		var bid_open := float(quarter_price) if quarter_price > 0 else bid_reservation
+		if sooner_ask:
+			bid_open = minf(bid_open, sooner_ask)
+		var ask_open := maxf(float(quarter_price) if quarter_price > 0 else ask_reservation,
+				sooner_bid)
+		var bid := maxi(roundi(_get_wanted(desired_flows, curve_prices, bid_open / multiplier,
 				foreseen, step, must, buys, sells) / multiplier - netted), 0)
 		var ask := 0
 		if !bid:
-			ask = maxi(-roundi(_get_wanted(desired_flows, curve_prices, sell_price / multiplier,
+			ask = maxi(-roundi(_get_wanted(desired_flows, curve_prices, ask_open / multiplier,
 					foreseen, step, must, buys, sells) / multiplier - netted), 0)
 		var standing_ask := 0
 		var standing_bid := 0
@@ -580,32 +596,14 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 			if buys and bid < lot and use * foreseen / multiplier >= lot:
 				standing_bid = lot
 				bid = 0
-		# Its facility's own price is the most it would pay or the least it would take, never what
-		# it quotes: a seller takes a bid at the bid's price, and an agency out of power that bid
-		# toward its own paid ten thousand times power's worth. Bidding the market's price where its
-		# facility priced the good below it, every buyer carried a price one trader had lifted into
-		# the next contracts, and asking it where above, a seller sold what its own facility needed
-		# more (TRADE_MODEL.md, "What was tried", the price). For a later quarter its facility's
-		# price is what its curve says a lot more of that quarter's flow is worth, within the curve's
-		# range, not what its stock sets this week, which would buy months ahead of a passing
-		# shortage at the shortage's price. A position it closes trades at the market's price at
-		# least: a buy-back held to its facility's left a seller owing past what it could spare for
-		# longer.
-		var lot_ask_price := _get_flow_price(desired_flows, curve_prices,
-				(netted - lot) * multiplier - step, foreseen, multiplier)
-		var lot_bid_price := _get_flow_price(desired_flows, curve_prices,
-				(netted + lot) * multiplier - step, foreseen, multiplier)
 		var time_span := maxf(opens_in + horizon, INTERVAL)
 		var bid_price := 1
 		var ask_price := 1
 		if bid:
 			var search := _get_search(_bid_searches, key, now, time_span, position_quantity, 1.0,
 					lot)
-			var reservation := own_price if is_current else lot_bid_price
-			var start_price := float(quarter_price) if quarter_price > 0 else reservation
-			if sooner_ask:
-				start_price = minf(start_price, sooner_ask)
-			search[2] = minf(search[2], start_price) if search[2] else start_price
+			var reservation := bid_reservation
+			search[2] = minf(search[2], bid_open) if search[2] else bid_open
 			if position_quantity < 0.0:
 				reservation = maxf(reservation, search[2])
 			var limit := reservation
@@ -621,10 +619,8 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 		if ask:
 			var search := _get_search(_ask_searches, key, now, time_span, position_quantity, -1.0,
 					lot)
-			var reservation := own_price if is_current else lot_ask_price
-			var start_price := maxf(float(quarter_price) if quarter_price > 0 else reservation,
-					sooner_bid)
-			search[2] = maxf(search[2], start_price)
+			var reservation := ask_reservation
+			search[2] = maxf(search[2], ask_open)
 			if position_quantity > 0.0:
 				reservation = minf(reservation, search[2])
 			var limit := reservation
