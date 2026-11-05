@@ -129,6 +129,11 @@ const OWN_PRICE_FLOOR := 0.001
 ## Earth, further for one resupplied seldom, as far as [constant TraderProxy.MAX_FORWARD_QUARTERS]
 ## reaches. The current quarter is always held whole.
 const CONTRACT_HORIZONS := 12.0
+## How many quarters ahead a two-sided posture keeps its lots standing (def key
+## [code]standing_quarters[/code] overrides per posture), within
+## [constant TraderProxy.MAX_FORWARD_QUARTERS]: three years, so that a transport contracting a
+## resupply a voyage ahead finds a lot to take.
+const STANDING_QUARTERS := 12
 ## Share of its facility's credit a trader may commit: what its open longs and resting bids will
 ## cost less what its open shorts will earn (def key [code]credit_share[/code] overrides per
 ## posture).
@@ -146,7 +151,8 @@ const QTY_TOLERANCE := 0.1
 ## [constant CREDIT_SHARE]). The [code]two_sided[/code] switch makes markets in every resource the
 ## facility deals in (see [method is_market_resource]), for which the facility AI holds stock
 ## against its market's swings: the trader keeps a quote standing on the side its gap doesn't ask
-## for (see [method _plan_resource]).
+## for, [code]standing_quarters[/code] ahead (see [constant STANDING_QUARTERS] and
+## [method _plan_resource]).
 static var trader_strategy_defs: Array[Dictionary] = [
 	{}, # INIT
 	{}, # FACILITY_SUPPORT
@@ -343,7 +349,9 @@ func process_ai_interval(_delta: float) -> void:
 	_drop_expired_memory()
 	_clear_plan()
 	var posture_def := trader_strategy_defs[trader_strategy]
-	var two_sided: bool = posture_def.get(&"two_sided", false)
+	var standing_quarters := 0
+	if posture_def.get(&"two_sided", false):
+		standing_quarters = posture_def.get(&"standing_quarters", STANDING_QUARTERS)
 	for resource_type in resource_strategies.size():
 		if _stop:
 			return # cooperative bail; nothing placed, so the last interval's quotes stand
@@ -352,7 +360,8 @@ func process_ai_interval(_delta: float) -> void:
 		if !(flags & TRADABLE):
 			continue
 		var def := resource_strategy_defs[resource_strategies[resource_type]]
-		_plan_resource(resource_type, market, def, two_sided and is_market_resource(flags))
+		_plan_resource(resource_type, market, def,
+				standing_quarters if is_market_resource(flags) else 0)
 	_bound_commitments(posture_def)
 	_place_quotes()
 
@@ -383,13 +392,18 @@ func process_ai_interval(_delta: float) -> void:
 ## facility's curve wants at the price it quotes.[br][br]
 ##
 ## No order is smaller than a lot, what its facility moves of the resource in an [constant INTERVAL]
-## and no less than the def's [code]min_lot[/code]. With [param standing], a two-sided posture's,
-## each quarter also keeps a lot standing on the side its gap doesn't ask for, where the def trades
-## that side: an ask where the facility could spare a lot over the quarter's part of the window, a
-## bid where it uses one, each at the price where this plan would trade that lot, read off its
-## facility's curve within the curve's range (TRADE_MODEL.md, "Market makers").
-func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, standing: bool
-		) -> void:
+## and no less than the def's [code]min_lot[/code]. A two-sided posture, [param standing_quarters]
+## more than none, also keeps a lot standing on the side its gap doesn't ask for in each quarter
+## out to that many ahead, where the def trades that side: within the window, an ask where the
+## facility could spare a lot over the part of the quarter it foresees and a bid where it uses one,
+## each where this plan would trade that lot; past the window, where no gap is traded, an ask
+## where it could spare a lot over the quarter and a bid where it uses one, no more than a lot each
+## way, each where its facility's flow over the quarter would trade it and no better for the other
+## side than the market's price. All are read off its facility's curve within the curve's range
+## (TRADE_MODEL.md, "Market makers").
+func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
+		standing_quarters: int) -> void:
+	var standing := standing_quarters > 0
 	var buys: bool = def.get(&"buy", false)
 	var sells: bool = def.get(&"sell", false)
 	var desired_step := _facility.get_inventory_desired_step(resource_type)
@@ -429,11 +443,15 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 	var quarter_price := reference_price # this quarter's own, or the quarter before it's
 	var sooner_ask := 0 # the lowest ask of another trader's in this quarter or a sooner one
 	var sooner_bid := 0 # the highest bid, as sooner_ask
+	var reach := end
+	if standing:
+		reach = maxf(end, Utils.get_time_at_ordinal_quarter(current_quarter + standing_quarters))
 	var quarter := current_quarter
 	var start := now
-	while start < end and quarter < current_quarter + TraderProxy.MAX_FORWARD_QUARTERS:
+	while start < reach and quarter < current_quarter + TraderProxy.MAX_FORWARD_QUARTERS:
 		var quarter_end := Utils.get_time_at_ordinal_quarter(quarter + 1)
-		var held := minf(end, quarter_end) - start
+		var held := minf(end, quarter_end) - start # its part of the window
+		var quarter_span := quarter_end - start # what is left of it
 		var key := PackedInt32Array([resource_type, quarter])
 		var is_current := quarter == current_quarter
 		var opens_in := start - now # until the quarter's delivery begins; nothing in the current
@@ -447,6 +465,52 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 		start = quarter_end
 		quarter += 1
 		if held <= 0.0:
+			if !standing:
+				continue
+			# Past the window, where a trader contracting far ahead looks for a lot and its facility
+			# foresees nothing, a lot stands where its facility could spare or use one over the
+			# quarter, no more than a lot each way, which its gap covers or unwinds as the window
+			# reaches the quarter: allowed within the window too, makers sold past what their
+			# facilities could spare there twice as often. It stands where its facility's flow over
+			# the whole quarter would trade it, and no better for the other side than the market's
+			# price, where the trader expects to cover what it sells or resell what it buys: held to
+			# a far quarter's own price, which nothing had traded since its book opened, a quarter of
+			# far asks stood past a thousand times what the market traded at.
+			var far_position: PackedFloat64Array = _positions_by_instrument.get(key,
+					PackedFloat64Array())
+			var far_quantity := far_position[0] if far_position else 0.0
+			var far_netted := far_quantity
+			if key[1] == current_quarter + 1:
+				far_netted += carried / multiplier
+			var far_ask := 0
+			if sells and far_quantity >= 0.0 and spare * quarter_span / multiplier >= lot:
+				far_ask = lot
+			var far_bid := 0
+			if buys and far_quantity <= 0.0 and use * quarter_span / multiplier >= lot:
+				far_bid = lot
+			_ask_searches.erase(key)
+			_bid_searches.erase(key)
+			if !(far_ask or far_bid):
+				continue
+			var far_bid_price := floori(minf(_get_flow_price(desired_flows,
+					(far_netted + lot) * multiplier, quarter_span, curve_price, multiplier),
+					reference_price))
+			var far_ask_price := maxi(maxi(ceili(maxf(_get_flow_price(desired_flows,
+					(far_netted - lot) * multiplier, quarter_span, curve_price, multiplier),
+					reference_price)), far_bid_price + 1), 1)
+			if far_ask:
+				far_bid_price = mini(far_bid_price, far_ask_price - 1)
+			if far_bid_price < 1:
+				far_bid = 0
+			_plan_keys.append(key)
+			_plan_asks.append(0)
+			_plan_bids.append(0)
+			_plan_standing_asks.append(far_ask)
+			_plan_standing_bids.append(far_bid)
+			_plan_ask_prices.append(far_ask_price)
+			_plan_bid_prices.append(far_bid_price)
+			_plan_defs.append(def)
+			_plan_lots.append(lot)
 			continue
 		# What a later quarter trades is its own price: priced off the current quarter's, a book a
 		# quarter ahead moved no price at all.
@@ -509,11 +573,10 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary, st
 		# shortage at the shortage's price. A position it closes trades at the market's price at
 		# least: a buy-back held to its facility's left a seller owing past what it could spare for
 		# longer.
-		var span := maxf(foreseen, 1.0)
-		var lot_ask_price := FacilityProxy.get_curve_factor(desired_flows,
-				((netted - lot) * multiplier - step) / span) * curve_price * multiplier
-		var lot_bid_price := FacilityProxy.get_curve_factor(desired_flows,
-				((netted + lot) * multiplier - step) / span) * curve_price * multiplier
+		var lot_ask_price := _get_flow_price(desired_flows, (netted - lot) * multiplier - step,
+				foreseen, curve_price, multiplier)
+		var lot_bid_price := _get_flow_price(desired_flows, (netted + lot) * multiplier - step,
+				foreseen, curve_price, multiplier)
 		var own_price := maxf(local_price, OWN_PRICE_FLOOR * quarter_price)
 		var time_span := maxf(opens_in + horizon, INTERVAL)
 		var bid_price := 1
@@ -764,6 +827,14 @@ func _market_locus_id(market_id: int) -> int:
 	var market_proxy: MarketProxy = Proxy.proxy_bus.market_proxies[market_id]
 	assert(market_proxy and market_proxy.locus, "delivery market/locus not resolved")
 	return market_proxy.locus.locus_id
+
+
+# The price a trade unit at which its facility's desired flow over [param span] comes to
+# [param quantity], read off [param desired_flows] within the curve's range.
+static func _get_flow_price(desired_flows: PackedFloat64Array, quantity: float, span: float,
+		curve_price: float, multiplier: float) -> float:
+	return (FacilityProxy.get_curve_factor(desired_flows, quantity / maxf(span, 1.0)) * curve_price
+			* multiplier)
 
 
 # What its facility wants over [param foreseen] of a quarter at [param factor] times its curve's
