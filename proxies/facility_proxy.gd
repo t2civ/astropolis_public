@@ -386,11 +386,6 @@ func is_operations_target_spending_share_held(operation_type: int) -> bool:
 	return held_target_spending_shares.has(operation_type)
 
 
-## Returns the AI/player-set target run rate of operation [param operation_type]
-## (NAN = not in effect).
-@abstract func get_operations_target_run_rate(operation_type: int) -> float
-
-
 ## Returns the build/decommission lever for [param module_type]; see
 ## [method set_operations_module_buildout] for what the value means.
 @abstract func get_operations_module_buildout(module_type: int) -> float
@@ -808,11 +803,6 @@ func get_market() -> MarketProxy:
 ## [method set_operations_target_spending_share] sets it again. It keeps its share until then.
 func release_operations_target_spending_share(type: int) -> void:
 	held_target_spending_shares.erase(type)
-
-
-## Sets the target run rate for operation [param type] (absolute rate, or NAN = not
-## in effect). Proxy-authoritative; flows proxy -> server.
-@abstract func set_operations_target_run_rate(type: int, value: float) -> void
 
 
 ## Overrides the server's autonomous build/decommission decision for

@@ -247,8 +247,7 @@ static var facility_resource_strategy_defs: Array[Dictionary] = [
 ## [code]shortage_priority[/code], [code]strategic_floor[/code], and
 ## [code]clearance_limited[/code]. Empty entries take no gate (AUTO). Several entries
 ## are deliberately AUTO-equivalent for now; the universal margin floor (per-op target
-## margin, default 0.0) handles profitability gating and the run-rate target is
-## server-authoritative (Tier-3 controller, later stage).
+## margin, default 0.0) handles profitability gating, and the server sets each run rate.
 static var operation_strategy_defs: Array[Dictionary] = [
 	{}, # AUTO — full target, server reactive gating only
 	{}, # PROFIT_MAXIMIZE (margin floor is now the universal base mode)
@@ -667,8 +666,8 @@ func _reconcile_operation_strategy() -> int:
 
 
 ## Translates the operation's strategy def into the operation gate-flag bits (flags
-## written only on change; preserves any other FROM_PROXY bits). The run-rate target
-## itself is now server-authoritative (set by the Tier-3 controller, later stage).
+## written only on change; preserves any other FROM_PROXY bits). The server sets the run
+## rate itself.
 func _apply_operation_knobs(operation_type: int, strategy: int) -> void:
 	const SHORTAGE_PRIORITY := FacilityProxy.OperationsFlags.SHORTAGE_PRIORITY
 	const STRATEGIC_FLOOR := FacilityProxy.OperationsFlags.STRATEGIC_FLOOR
