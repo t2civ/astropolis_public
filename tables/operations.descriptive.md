@@ -116,7 +116,7 @@ Notes:
 
 ## Manufacturing
 
-- **Construction** — On-site assembly, installation, and finishing of fixed structures: buildings, roads, bridges, tunnels, landing pads, launch infrastructure, power distribution networks, pipelines, life-support systems, radiation shielding, and pressurized habitats.
+- **Construction** — On-site assembly, installation, and finishing of fixed structures: buildings, roads, bridges, tunnels, landing pads, launch infrastructure, power distribution networks, pipelines, life-support systems, radiation shielding, and pressurized habitats; and the inspection, testing, commissioning, overhaul, and dismantling of plant where it stands. Draws the design it builds to and wears site instruments.
 - **Space Yards & Assembly** — Design, fabrication, and final assembly of heavy-lift launch vehicles and large interplanetary transports at dedicated yard facilities (analogous to naval shipyards). Encompasses hull and tank fabrication, main propulsion integration, power systems, avionics, life-support outfitting, and thermal protection installation at scales requiring heavy tooling, large-bay construction halls, and orbital or surface assembly infrastructure. Includes both ground-based launch-vehicle production and in-space assembly of interplanetary vessels.
 - **Transport Manufacturing** — Design, fabrication, and final assembly of ground vehicles, aircraft, marine vessels, small-to-medium spacecraft, EVA mobility units, and spacesuits. Integrates structural, propulsion, avionics, and life-support subsystems. Excludes final assembly of heavy-lift launch vehicles and large interplanetary transports.
 - **Steel Structures Manufacturing** — Cutting, welding, forming, galvanizing, and assembly of steel plate, beams, pipe, pressure vessels, and prefabricated modules for structural applications.
@@ -180,7 +180,6 @@ Notes:
 - **Financial Services** — Banking, lending, payments, and investment and asset management. Compute- and information-intensive.
 - **Insurance & Risk** — Underwriting of risk and provision of coverage against loss, including actuarial assessment and reinsurance. Accelerated-compute-intensive for risk modeling.
 - **Engineering Design** — Design and technical specification of structures, vehicles, and systems. Compute- and simulation-intensive; its design output is taken up by construction and fabrication.
-- **Field Engineering** — Engineers and inspectors on site: surveys, supervision, inspection, testing, and overhaul. Consumes instruments.
 - **Research & Development** — Scientific and engineering investigation: experimentation, modeling, design, and prototyping. Intensive in computing — increasingly accelerated and AI compute — and in instruments and specialized materials; yields new knowledge and designs.
 - **Exchange Operations** — Operation of trading venues and central clearing: order matching, settlement guarantee, and coordination of delivery load-out for traded goods. Compute- and communications-intensive.
 - **Passenger Services** — Movement of people within a body via transit and carriers. Consumes transport vehicles and energy.
