@@ -154,6 +154,24 @@ enum BudgetLines {
 }
 
 
+## A buildout's kind, what its units are for (see [method get_operations_buildouts] and
+## PRODUCTION_MODEL.md, "Buildouts").
+enum BuildoutKinds {
+	## A module's standing buildout, which rebuilds what wears of its plant still needed.
+	BUILDOUT_REPLACEMENT,
+	## Units of a module past what replacement rebuilds, for an operation's room.
+	BUILDOUT_EXPANSION,
+}
+
+
+## Who ordered a buildout (see [method get_operations_buildouts]).
+enum BuildoutOrderers {
+	ORDERER_PLANNER, ## The server's planner, for a module on auto.
+	ORDERER_AI, ## The facility's AI.
+	ORDERER_PLAYER, ## Its player, from the Build tab.
+}
+
+
 ## The number of prices a facility's desired flow is given at (see
 ## [method get_inventory_desired_flow_curve]).
 const N_CURVE_POINTS := 3
@@ -389,6 +407,25 @@ func is_operations_target_spending_share_held(operation_type: int) -> bool:
 ## Returns the build/decommission lever for [param module_type]; see
 ## [method set_operations_module_buildout] for what the value means.
 @abstract func get_operations_module_buildout(module_type: int) -> float
+
+
+## Returns whether the server's planner plans [param module_type]'s buildouts (see
+## [method set_operations_module_auto]); false for an index out of range.
+@abstract func is_operations_module_auto(module_type: int) -> bool
+
+
+## Returns the facility's buildouts, its capital projects (PRODUCTION_MODEL.md, "Buildouts"), as
+## of its last interval and in the order they were opened: each a dictionary of its "id", unique
+## in the game; "module" (a [code]modules[/code] row) and "operation", the operation its units go
+## to, -1 for a replacement, whose units go back to the operations of its module that lost them;
+## "kind" ([enum BuildoutKinds]) and "orderer" ([enum BuildoutOrderers]); "units" planned, 0.0 for
+## a replacement, which stands, "built" and "left"; "rate", its schedule in units a second,
+## "start", the game time it was opened, and "pace", the share of its schedule it built over about
+## a quarter; "binding", the resource of which least could be had for its schedule, -1 for none;
+## "spent" and "borrowed", in dollars; and "return", what its units would return a year at
+## capital's prices, and "unit_cost", what a unit costs at them. A new array each call; empty but
+## at a facility. Proxy thread only!
+@abstract func get_operations_buildouts() -> Array[Dictionary]
 
 
 ## Returns the capitalized book value (historical cost) of [param module_type].
@@ -805,25 +842,23 @@ func release_operations_target_spending_share(type: int) -> void:
 	held_target_spending_shares.erase(type)
 
 
-## Overrides the server's autonomous build/decommission decision for
-## [param module_type]. Pass [code]NAN[/code] (the default) to leave the module
-## on auto: the facility builds each of its operations as far as its room, what
-## its outputs' users would still take where a new unit would pay, each output's
-## room going to the operation whose new unit would pay at the least price,
-## wherever its return clears the cost of capital, within the buildout budget and
-## the construction yards. Pass a number to override just this module:[br]
-## - NAN (default): auto, as above.[br]
-## - 0.0: leave this module alone; the yards build none of it.[br]
-## - 0.0 to 1.0 (exclusive): build its operations to that fraction of their
-##   rooms.[br]
-## - 1.0: as auto.[br]
-## - >1.0: build its operations to that multiple of their rooms, and first claim
-##   a flat slice of the yards and the budget, its value over the sum of every
-##   module's (1.0 for a module on auto). *This is the only way to build a module
-##   none of whose operations has room.*[br]
-## - <0.0: decommission instead, reclaiming materials, with a slice of the yards
-##   sized the same way.
+## Tears [param module_type] down where [param value] is below 0.0, reclaiming materials, its
+## laid-up units first, with a flat slice of the construction yards, its size over the sum of every
+## module's (1.0 for a module with none); NAN (the default) or 0.0 or more tears nothing down.
+## Its buildouts build a module ([method set_operations_module_auto]). Planned to go once
+## teardowns are built, the owner's buildouts that take units down (PRODUCTION_MODEL.md,
+## "Buildouts").
 @abstract func set_operations_module_buildout(module_type: int, value: float) -> void
+
+
+## Sets whether the server's planner plans [param module_type]'s buildouts, true by default. On
+## auto, it reviews the facility's buildouts once a quarter: it sets each module's replacement to
+## what wears of the plant still needed, and opens an expansion for each operation whose room past
+## what is in flight is more than what its units wear in a quarter, where its return beats the cost
+## of capital (PRODUCTION_MODEL.md, "Buildouts", the planner and the AI). Off auto, it opens
+## nothing for the module. Proxy-authoritative: this change flows proxy -> server. No-op on an
+## out-of-range index.
+@abstract func set_operations_module_auto(module_type: int, is_auto: bool) -> void
 
 
 ## Fills the entire per-module build/decommission override array with
