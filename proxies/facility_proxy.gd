@@ -435,7 +435,8 @@ func is_operations_target_spending_share_held(operation_type: int) -> bool:
 ## "kind" ([enum BuildoutKinds]) and "orderer" ([enum BuildoutOrderers]); "units" planned, 0.0 for
 ## a replacement, which stands, "built" and "left"; "rate", its schedule in units a second,
 ## "start", the game time it was opened, and "pace", the share of its schedule it built over about
-## a quarter; "binding", the resource of which least could be had for its schedule, -1 for none;
+## a quarter; "binding", the resource of which least could be had for its schedule, -1 for none,
+## and "lack", what of it the buildout went without a second, which counts as its unmet use;
 ## "spent" and "borrowed", in dollars; "return", what its units would return a year at capital's
 ## prices, and "unit_cost", what a unit costs at them; and "paused". A new array each call; empty
 ## but at a facility. Proxy thread only!
