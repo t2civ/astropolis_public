@@ -11,16 +11,16 @@ extends MarginContainer
 ## "Build" tab subpanel for [InfoPanel]. Shows what the selected facility builds.
 ##
 ## The Projects subtab lists the facility's buildouts, its capital projects
-## ([method FacilityProxy.get_operations_buildouts]), in two groups, each a line summed over its
-## buildouts and a row each when unfolded: its expansions, unfolded at first, and its replacement,
-## its standing buildouts, folded at first. A row shows
-## its units built of those planned, or a replacement's schedule a year; its pace, the draw that
-## bound it in the pace's tooltip; when it would be done at that pace and how far it has slipped
-## past its schedule; what it has spent; and what its units would return a year at capital's
-## prices, or that it waits, its units earning nothing past their keep, or is paused. A row's
-## tooltip names who ordered it and the operation its units go to. Read-only: ordering, pausing
-## and cancelling from a row wait for the player's orders, and the Modules subtab, each module's
-## plant, is a placeholder (PRODUCTION_MODEL.md, "Buildouts", the Build tab).
+## ([method FacilityProxy.get_operations_buildouts]), in three groups, each a line summed over its
+## buildouts and a row each when unfolded: its expansions, unfolded at first; its replacement, its
+## standing buildouts, folded at first; and its teardowns, unfolded at first. A row shows its units
+## built, or taken down, of those planned, or a replacement's schedule a year; its pace, the draw
+## that bound it in the pace's tooltip; when it would be done at that pace and how far it has
+## slipped past its schedule; what it has spent; and what its units would return a year at
+## capital's prices, or that it waits, its units earning nothing past their keep, or is paused. A
+## row's tooltip names who ordered it and the operation its units go to. Read-only: ordering,
+## pausing and cancelling from a row wait for the player's orders, and the Modules subtab, each
+## module's plant, is a placeholder (PRODUCTION_MODEL.md, "Buildouts", the Build tab).
 
 const SCENE := "res://public/ui/itab_build.tscn"  ## Scene file for instancing.
 
@@ -69,6 +69,7 @@ var _header_labels: Array[Label] = []
 var _empty_label: Label
 var _expansions_group: ProjectGroup
 var _replacement_group: ProjectGroup
+var _teardowns_group: ProjectGroup
 
 @warning_ignore("unsafe_property_access")
 @onready var _memory: Dictionary = get_parent().memory # group open states
@@ -143,6 +144,8 @@ func _build_ui() -> void:
 	groups.add_child(_expansions_group)
 	_replacement_group = ProjectGroup.new(_memory, &"build_replacement", true, base_column_width)
 	groups.add_child(_replacement_group)
+	_teardowns_group = ProjectGroup.new(_memory, &"build_teardowns", false, base_column_width)
+	groups.add_child(_teardowns_group)
 	_empty_label = Label.new()
 	_empty_label.text = "No buildouts."
 	_empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -194,18 +197,21 @@ func _settings_listener(setting: StringName, value: Variant) -> void:
 # ProjectRow.set_row reads them.
 func _get_proxy_data(target_name: StringName) -> void:
 	const BUILDOUT_EXPANSION := FacilityProxy.BuildoutKinds.BUILDOUT_EXPANSION
+	const BUILDOUT_REPLACEMENT := FacilityProxy.BuildoutKinds.BUILDOUT_REPLACEMENT
+	const GROUP_NAMES: Array[String] = ["Expansions", "Replacement", "Teardowns"]
 	var proxy := Proxy.get_proxy_by_name(target_name)
 	if !(proxy is FacilityProxy):
 		_update_no_projects.call_deferred()
 		return
 	var facility_proxy: FacilityProxy = proxy
 	var now := facility_proxy.interval_time
-	var groups := [[], []] # expansions, replacements
-	var spents := PackedFloat64Array([0.0, 0.0])
-	var paceds := PackedFloat64Array([0.0, 0.0])
-	var costs := PackedFloat64Array([0.0, 0.0])
+	var groups := [[], [], []] # expansions, replacements, teardowns
+	var spents := PackedFloat64Array([0.0, 0.0, 0.0])
+	var paceds := PackedFloat64Array([0.0, 0.0, 0.0])
+	var costs := PackedFloat64Array([0.0, 0.0, 0.0])
 	for buildout in facility_proxy.get_operations_buildouts():
-		var group := 0 if buildout[&"kind"] == BUILDOUT_EXPANSION else 1
+		var kind: int = buildout[&"kind"]
+		var group := 0 if kind == BUILDOUT_EXPANSION else (1 if kind == BUILDOUT_REPLACEMENT else 2)
 		var rows: Array = groups[group]
 		rows.append(_get_row(buildout, now))
 		var spent: float = buildout[&"spent"]
@@ -217,10 +223,10 @@ func _get_proxy_data(target_name: StringName) -> void:
 			costs[group] += rate * unit_cost
 			paceds[group] += rate * unit_cost * pace
 	var lines := []
-	for group in 2:
+	for group in 3:
 		var rows: Array = groups[group]
 		lines.append([
-			"Expansions" if group == 0 else "Replacement", "", "%d" % rows.size(),
+			GROUP_NAMES[group], "", "%d" % rows.size(),
 			paceds[group] / costs[group] if costs[group] > 0.0 else NAN, &"", NAN, NAN,
 			spents[group] / IVUnits.unit_multipliers[&"$M"], NAN, "",
 		])
@@ -230,7 +236,9 @@ func _get_proxy_data(target_name: StringName) -> void:
 # One buildout's row: its name, its tooltip, what it built, its pace and what bound it, when it
 # would be done and how far it slipped, what it spent, what it returns and its state.
 func _get_row(buildout: Dictionary, now: float) -> Array:
-	const BUILDOUT_EXPANSION := FacilityProxy.BuildoutKinds.BUILDOUT_EXPANSION
+	const BUILDOUT_REPLACEMENT := FacilityProxy.BuildoutKinds.BUILDOUT_REPLACEMENT
+	const BUILDOUT_TEARDOWN := FacilityProxy.BuildoutKinds.BUILDOUT_TEARDOWN
+	var kind: int = buildout[&"kind"]
 	var module_type: int = buildout[&"module"]
 	var op_type: int = buildout[&"operation"]
 	var orderer: int = buildout[&"orderer"]
@@ -251,7 +259,7 @@ func _get_row(buildout: Dictionary, now: float) -> Array:
 	var built_text := ""
 	var done_in := NAN
 	var slip := NAN
-	if buildout[&"kind"] == BUILDOUT_EXPANSION:
+	if kind != BUILDOUT_REPLACEMENT:
 		built_text = "%s/%s" % [IVQFormat.metric_number(built), IVQFormat.metric_number(units)]
 		var paced := rate * pace
 		done_in = left / paced if paced > 0.0 else INF
@@ -264,7 +272,7 @@ func _get_row(buildout: Dictionary, now: float) -> Array:
 	var state := ""
 	if is_paused:
 		state = "paused"
-	elif !(return_rate > 0.0):
+	elif kind != BUILDOUT_TEARDOWN and !(return_rate > 0.0):
 		state = "waits"
 	return [
 		_module_names[module_type], tooltip, built_text, pace,
@@ -285,13 +293,18 @@ func _update_display(lines: Array, groups: Array) -> void:
 	_tab_container.show()
 	var expansions: Array = groups[0]
 	var replacements: Array = groups[1]
+	var teardowns: Array = groups[2]
 	var expansions_line: Array = lines[0]
 	var replacement_line: Array = lines[1]
+	var teardowns_line: Array = lines[2]
 	_expansions_group.set_lines(expansions_line, expansions)
 	_expansions_group.visible = !expansions.is_empty()
 	_replacement_group.set_lines(replacement_line, replacements)
 	_replacement_group.visible = !replacements.is_empty()
-	_empty_label.visible = expansions.is_empty() and replacements.is_empty()
+	_teardowns_group.set_lines(teardowns_line, teardowns)
+	_teardowns_group.visible = !teardowns.is_empty()
+	_empty_label.visible = (expansions.is_empty() and replacements.is_empty()
+			and teardowns.is_empty())
 	_header.visible = !_empty_label.visible
 
 

@@ -45,8 +45,7 @@ enum FacilityFlags {
 	## capacity a facility lays up, its mothballed units, which it keeps without maintenance).
 	MODE_SHUTDOWN = 1 << 33,
 	## Inventory drawdown: no stock may rise, so each operation runs only as far as the
-	## facility itself uses what it makes (distinct from the DECOMMISSIONING operation, which
-	## tears down modules).
+	## facility itself uses what it makes (distinct from a teardown, which takes modules down).
 	MODE_DRAWDOWN = 1 << 34,
 	## Mask of all AI-command bits.
 	FROM_PROXY_MASK = ~((1 << 32) - 1),
@@ -161,6 +160,9 @@ enum BuildoutKinds {
 	BUILDOUT_REPLACEMENT,
 	## Units of a module past what replacement rebuilds, for an operation's room.
 	BUILDOUT_EXPANSION,
+	## Units of a module taken down, its owner's: what they recover is made, and their construction
+	## drawn ([method order_operations_teardown]).
+	BUILDOUT_TEARDOWN,
 }
 
 
@@ -230,6 +232,11 @@ var cash_reserve := 0.0
 ## are paid it (FINANCIAL_MODEL.md, "The credit market"). Its owners' payout policy; 0.0 by default.
 ## Use [method set_required_return].
 var required_return := 0.0
+## The share of what its budget leaves past its committed lines, its replacement of what wears out
+## among them, that its owners leave in it for expansion, which its expansion buildouts spend
+## (FINANCIAL_MODEL.md, "Budgets"; see [member budget_lines]); the server holds it below one. 0.0
+## by default. Use [method set_expansion_share].
+var expansion_share := 0.0
 ## Its available credit: what the facility may spend past what it holds, as of its last interval:
 ## its cash less what it owes, and what more it could owe before its interest at its own rate
 ## passed what its income carries, and what is left of each funding line that funds it, as far as
@@ -253,9 +260,8 @@ var trader: TraderProxy  ## Paired [TraderProxy]; set when TraderProxy registers
 var trader_id := -1  ## [member TraderProxy.trader_id] of [member trader].
 var joins: Array[JoinProxy] = []  ## [JoinProxy] aggregates this facility belongs to.
 var market: MarketProxy  ## Set after init. Lives on markets thread!
-## The operations' target spending shares held off auto, by operation type, each at its share (see
-## [method hold_operations_target_spending_share]). Resizable container — not threadsafe!
-var held_target_spending_shares: Dictionary[int, float] = {}
+## The expansion share held off auto (see [method hold_expansion_share]); NAN where none is.
+var held_expansion_share := NAN
 ## The resources' research shares held off auto, by resource type, each at its share (see
 ## [method hold_inventory_research_share]). Resizable container — not threadsafe!
 var held_research_shares: Dictionary[int, float] = {}
@@ -407,22 +413,6 @@ func get_budget_line(line: int) -> float:
 @abstract func get_operations_target_margin(operation_type: int) -> float
 
 
-## Returns the AI/player-set target spending share of operation [param operation_type]
-## (NAN = not in effect).
-@abstract func get_operations_target_spending_share(operation_type: int) -> float
-
-
-## Returns true if operation [param operation_type]'s target spending share is held off auto (see
-## [method hold_operations_target_spending_share]). proxy thread only!
-func is_operations_target_spending_share_held(operation_type: int) -> bool:
-	return held_target_spending_shares.has(operation_type)
-
-
-## Returns the build/decommission lever for [param module_type]; see
-## [method set_operations_module_buildout] for what the value means.
-@abstract func get_operations_module_buildout(module_type: int) -> float
-
-
 ## Returns whether the server's planner plans [param module_type]'s buildouts (see
 ## [method set_operations_module_auto]); false for an index out of range.
 @abstract func is_operations_module_auto(module_type: int) -> bool
@@ -431,15 +421,16 @@ func is_operations_target_spending_share_held(operation_type: int) -> bool:
 ## Returns the facility's buildouts, its capital projects (PRODUCTION_MODEL.md, "Buildouts"), as
 ## of its last interval and in the order they were opened: each a dictionary of its "id", unique
 ## in the game; "module" (a [code]modules[/code] row) and "operation", the operation its units go
-## to, -1 for a replacement, whose units go back to the operations of its module that lost them;
-## "kind" ([enum BuildoutKinds]) and "orderer" ([enum BuildoutOrderers]); "units" planned, 0.0 for
-## a replacement, which stands, "built" and "left"; "rate", its schedule in units a second,
+## to, or a teardown's come from, -1 for a replacement, whose units go back to the operations of
+## its module that lost them, and for a teardown of all its module's; "kind" ([enum BuildoutKinds])
+## and "orderer" ([enum BuildoutOrderers]); "units" planned, 0.0 for a replacement, which stands,
+## "built", a teardown's taken down, and "left"; "rate", its schedule in units a second,
 ## "start", the game time it was opened, and "pace", the share of its schedule it built over about
 ## a quarter; "binding", the resource of which least could be had for its schedule, -1 for none,
 ## and "lack", what of it the buildout went without a second, which counts as its unmet use;
 ## "spent" and "borrowed", in dollars; "return", what its units would return a year at capital's
-## prices, and "unit_cost", what a unit costs at them; and "paused". A new array each call; empty
-## but at a facility. Proxy thread only!
+## prices, NAN for a teardown, and "unit_cost", what a unit costs at them to build or take down;
+## and "paused". A new array each call; empty but at a facility. Proxy thread only!
 @abstract func get_operations_buildouts() -> Array[Dictionary]
 
 
@@ -826,6 +817,29 @@ func get_market() -> MarketProxy:
 @abstract func set_required_return(value: float) -> void
 
 
+## Sets [member expansion_share], from 0.0 to 1.0. Proxy-authoritative: this change flows proxy ->
+## server. No-op on a value out of that range or NAN, or where the share is held (see
+## [method hold_expansion_share]).
+@abstract func set_expansion_share(value: float) -> void
+
+
+## Holds [member expansion_share] off auto at [param value], as [method set_expansion_share] takes
+## it, until [method release_expansion_share].
+@abstract func hold_expansion_share(value: float) -> void
+
+
+## Returns true if [member expansion_share] is held off auto (see [method hold_expansion_share]).
+## Proxy thread only!
+func is_expansion_share_held() -> bool:
+	return !is_nan(held_expansion_share)
+
+
+## Returns [member expansion_share] to auto, where [method set_expansion_share] sets it again. It
+## keeps its share until then.
+func release_expansion_share() -> void:
+	held_expansion_share = NAN
+
+
 ## Sets the [code]FROM_PROXY_MASK[/code] bits of operations flags for
 ## [param operation_type] to [param value]. Proxy-authoritative: this
 ## change flows proxy -> server. No-op on an out-of-range index.
@@ -836,34 +850,6 @@ func get_market() -> MarketProxy:
 ## >= value). Proxy-authoritative: this change flows proxy -> server. No-op on an
 ## out-of-range index or NAN.
 @abstract func set_operations_target_margin(type: int, value: float) -> void
-
-
-## Sets the target spending share for operation [param type] (fraction of what the facility's
-## budget leaves past its committed lines, what wears out among them, or NAN = not in effect; see
-## [member budget_lines]). Proxy-authoritative; flows proxy -> server. No-op where the share is
-## held (see [method hold_operations_target_spending_share]).
-@abstract func set_operations_target_spending_share(type: int, value: float) -> void
-
-
-## Holds the target spending share of operation [param type] off auto at [param value], as
-## [method set_operations_target_spending_share] takes it, until
-## [method release_operations_target_spending_share]. No-op on an out-of-range index.
-@abstract func hold_operations_target_spending_share(type: int, value: float) -> void
-
-
-## Returns the target spending share of operation [param type] to auto, where
-## [method set_operations_target_spending_share] sets it again. It keeps its share until then.
-func release_operations_target_spending_share(type: int) -> void:
-	held_target_spending_shares.erase(type)
-
-
-## Tears [param module_type] down where [param value] is below 0.0, reclaiming materials, its
-## laid-up units first, with a flat slice of the construction yards, its size over the sum of every
-## module's (1.0 for a module with none); NAN (the default) or 0.0 or more tears nothing down.
-## Its buildouts build a module ([method set_operations_module_auto]). Planned to go once
-## teardowns are built, the owner's buildouts that take units down (PRODUCTION_MODEL.md,
-## "Buildouts").
-@abstract func set_operations_module_buildout(module_type: int, value: float) -> void
 
 
 ## Orders a buildout of [param units] units of [param module_type], to go to its operation
@@ -877,6 +863,20 @@ func release_operations_target_spending_share(type: int) -> void:
 ## order flows proxy -> server.
 @abstract func order_operations_buildout(module_type: int, operation_type: int, units: float,
 		build_time := 0.0, orderer := BuildoutOrderers.ORDERER_AI) -> void
+
+
+## Orders a teardown of [param units] units of [param module_type], of its operation
+## [param operation_type] or where that is -1 of all its operations, over [param time] seconds, or
+## where that is nothing or less over the module's build time: its units are taken down, the
+## laid-up first, what they recover made and the construction their teardown takes drawn
+## ([code]teardown_cost[/code] in [code]modules.tsv[/code]; PRODUCTION_MODEL.md, "Buildouts").
+## The server opens it at the facility's next interval and takes down only as far as the step's
+## prices ration that construction; it pays for it from the facility's cash as it is drawn, never
+## from the build budget. [param orderer] is who ordered it. A bad order is dropped, as
+## [method order_operations_buildout] drops one. Proxy-authoritative: this order flows proxy ->
+## server.
+@abstract func order_operations_teardown(module_type: int, operation_type: int, units: float,
+		time := 0.0, orderer := BuildoutOrderers.ORDERER_AI) -> void
 
 
 ## Pauses, resumes or cancels buildout [param id] (see [method get_operations_buildouts]) at the
@@ -894,14 +894,6 @@ func release_operations_target_spending_share(type: int) -> void:
 ## nothing for the module. Proxy-authoritative: this change flows proxy -> server. No-op on an
 ## out-of-range index.
 @abstract func set_operations_module_auto(module_type: int, is_auto: bool) -> void
-
-
-## Fills the entire per-module build/decommission override array with
-## [param value] — the array-wide form of [method set_operations_module_buildout].
-## Pass [code]NAN[/code] to return every module to auto (server-decided)
-## allocation, or e.g. 0.0 to stop all building.
-## Proxy-authoritative: this change flows proxy -> server.
-@abstract func set_operations_module_buildouts_fill(value: float) -> void
 
 
 ## Sets the [code]FROM_PROXY_MASK[/code] bits of inventory flags for

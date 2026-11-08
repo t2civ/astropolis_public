@@ -196,26 +196,26 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 
 
 ## Facility-posture strategy definitions; index = [enum FacilityStrategies] value.
-## The [code]expansion_spending_share[/code] key (read by [method _apply_facility_knobs])
-## is the share of what the facility's budget leaves past its committed lines, its replacement of
-## what wears out among them, that its owners leave in it for expansion (FINANCIAL_MODEL.md,
-## "Budgets"): zero or more builds, the yards replacing what wears out first and expanding within
-## that share, which the server holds below one; a negative value winds capacity down at that rate;
-## and an omitted key (NAN) holds. The [code]research_spending_share[/code] key is the share of the
-## same it spends on research and development, shared among the resources tagged
-## [code]research[/code] (see [method FacilityProxy.set_inventory_research_share]); at an agency,
-## where it spends any, all expansion's share leaves, since it pays nothing out. An omitted key
-## spends none. Postures never selected by [method _reconcile_facility_strategy] are left empty.
+## The [code]expansion_share[/code] key (read by [method _apply_facility_knobs]) is the share of
+## what the facility's budget leaves past its committed lines, its replacement of what wears out
+## among them, that its owners leave in it for expansion ([member FacilityProxy.expansion_share];
+## FINANCIAL_MODEL.md, "Budgets"), which the server holds below one; an omitted key (NAN) holds.
+## The [code]research_spending_share[/code] key is the share of the same it spends on research and
+## development, shared among the resources tagged [code]research[/code] (see
+## [method FacilityProxy.set_inventory_research_share]); at an agency, where it spends any, all
+## expansion's share leaves, since it pays nothing out. An omitted key spends none. The
+## DECOMMISSIONING posture expands nothing and winds the facility down ([method _wind_down]).
+## Postures never selected by [method _reconcile_facility_strategy] are left empty.
 static var facility_strategy_defs: Array[Dictionary] = [
 	{}, # NEUTRAL
-	{&"expansion_spending_share": 0.25, &"research_spending_share": 0.02}, # GROWTH
-	{&"expansion_spending_share": 0.13, &"research_spending_share": 0.02}, # PROFITABILITY
+	{&"expansion_share": 0.25, &"research_spending_share": 0.02}, # GROWTH
+	{&"expansion_share": 0.13, &"research_spending_share": 0.02}, # PROFITABILITY
 	{}, # DIVERSIFICATION
 	{}, # SPECIALIZATION
-	{&"expansion_spending_share": 0.05, &"research_spending_share": 0.02}, # STRATEGIC_OUTPOST
+	{&"expansion_share": 0.05, &"research_spending_share": 0.02}, # STRATEGIC_OUTPOST
 	{}, # DEVELOPMENT
-	{&"expansion_spending_share": 0.08, &"research_spending_share": 0.02}, # STEADY_STATE
-	{&"expansion_spending_share": -0.5}, # DECOMMISSIONING (negative = wind-down)
+	{&"expansion_share": 0.08, &"research_spending_share": 0.02}, # STEADY_STATE
+	{&"expansion_share": 0.0}, # DECOMMISSIONING
 	{}, # EMERGENCY
 ]
 
@@ -509,12 +509,32 @@ func _set_facility_strategy(strategy_id: int) -> void:
 
 ## Authors the facility-wide posture and applies its server buildout knobs — the
 ## facility analog of [method _author_resource_strategies]. Called on init, each
-## quarter, and when the player's directive for this facility changes; the per-module
-## build/decommission decision itself is the server's job, not the AI's.
+## quarter, and when the player's directive for this facility changes; what each module builds is
+## the server's planner's job, not the AI's, but in a wind-down ([method _wind_down]).
 func _author_facility_strategy() -> void:
+	var was_winding_down := facility_strategy == FacilityStrategies.DECOMMISSIONING
 	var strategy := _reconcile_facility_strategy()
 	_set_facility_strategy(strategy)
 	_apply_facility_knobs(strategy)
+	var is_winding_down := strategy == FacilityStrategies.DECOMMISSIONING
+	if is_winding_down != was_winding_down:
+		_wind_down(is_winding_down)
+
+
+## Where [param is_winding_down], takes every module off auto and cancels every buildout, so that
+## the facility replaces nothing and its plant wears away as it runs; where not, puts every module
+## back on auto. A custom AI that would take plant down sooner orders teardowns
+## ([method FacilityProxy.order_operations_teardown]).
+func _wind_down(is_winding_down: bool) -> void:
+	const HOLD_CANCEL := FacilityProxy.BuildoutHolds.HOLD_CANCEL
+	var n_modules: int = IVTableData.table_n_rows[&"modules"]
+	for module_type in n_modules:
+		proxy.set_operations_module_auto(module_type, !is_winding_down)
+	if !is_winding_down:
+		return
+	for buildout in proxy.get_operations_buildouts():
+		var id: int = buildout[&"id"]
+		proxy.hold_operations_buildout(id, HOLD_CANCEL)
 
 
 ## Folds the player's per-facility directive into a facility posture. Contraction
@@ -540,29 +560,28 @@ func _reconcile_facility_strategy() -> int:
 	return FS.GROWTH # NEUTRAL and any add-on directive: autonomous growth
 
 
-## Translates the posture's def into the BUILDOUT operation's target spending share, its expansion
-## share (the share of the facility's budget past its committed lines the yards spend on
-## expansion; NAN holds), and into the research shares of the resources tagged
+## Translates the posture's def into the facility's expansion share (the share of its budget past
+## its committed lines its expansion buildouts spend; NAN holds;
+## [member FacilityProxy.expansion_share]), and into the research shares of the resources tagged
 ## [code]research[/code], at an agency all expansion's share leaves. Where its human holds one,
 ## the other, with the payouts that are their residual where it isn't an agency's, fills what the
 ## held one leaves, in proportion to their shares (FINANCIAL_MODEL.md, "Budgets"). Leaves what is
-## held alone. Both are resolved by tag, so no table entity name is referenced here. Sets the
-## owners' [member required_return].
+## held alone. The research resources are resolved by tag, so no table entity name is referenced
+## here. Sets the owners' [member required_return].
 func _apply_facility_knobs(strategy: int) -> void:
 	proxy.set_required_return(required_return)
 	var def := facility_strategy_defs[strategy]
-	var expansion_share: float = def.get(&"expansion_spending_share", NAN)
+	var expansion_share: float = def.get(&"expansion_share", NAN)
 	var research_share: float = def.get(&"research_spending_share", 0.0)
 	var is_agency := proxy.get_player_class() == Enums.PlayerClasses.PLAYER_CLASS_AGENCY
 	if research_share > 0.0 and is_agency:
 		research_share = 1.0 - expansion_share if expansion_share > 0.0 else 1.0
-	var buildout_ops: PackedInt32Array = _tag_operations.get(&"buildout", PackedInt32Array())
 	var research_resources: PackedInt32Array = _tag_resources.get(&"research",
 			PackedInt32Array())
-	if expansion_share >= 0.0 and !buildout_ops.is_empty() and !research_resources.is_empty():
+	if expansion_share >= 0.0 and !research_resources.is_empty():
 		var held_shares := PackedFloat64Array([NAN, NAN])
-		if proxy.is_operations_target_spending_share_held(buildout_ops[0]):
-			held_shares[0] = proxy.get_operations_target_spending_share(buildout_ops[0])
+		if proxy.is_expansion_share_held():
+			held_shares[0] = proxy.held_expansion_share
 		for resource_type in research_resources:
 			if proxy.is_inventory_research_share_held(resource_type):
 				held_shares[1] = (0.0 if is_nan(held_shares[1]) else held_shares[1]) + maxf(
@@ -572,8 +591,8 @@ func _apply_facility_knobs(strategy: int) -> void:
 					PackedFloat64Array([expansion_share, research_share]), held_shares, !is_agency)
 			expansion_share = shares[0]
 			research_share = shares[1]
-	for operation_type in buildout_ops:
-		proxy.set_operations_target_spending_share(operation_type, expansion_share)
+	if expansion_share >= 0.0:
+		proxy.set_expansion_share(expansion_share)
 	for resource_type in research_resources:
 		proxy.set_inventory_research_share(resource_type,
 				research_share / research_resources.size())

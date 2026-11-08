@@ -153,7 +153,6 @@ var _item_research_development := -1
 var _item_fixed_assets := -1
 var _upkeep_items := PackedInt32Array() # a facility's module maintenance, administration, staffing
 var _treasury_cash_items := PackedInt32Array() # each treasury's balance, by Enums.Accounts
-var _type_buildout := -1 # the operation whose target spending share is the expansion share
 var _research_resources := PackedInt32Array() # those tagged research
 
 var _selection_manager: AstroSelectionManager
@@ -272,8 +271,6 @@ func _precompute_display_names() -> void:
 		_find_item(Enums.UniqueLineItems.GOVERNMENT_CASH),
 		_find_item(Enums.UniqueLineItems.CORPORATE_CASH),
 	])
-	_type_buildout = IVTableData.db_find(&"operations", &"operation_group",
-			Enums.OperationGroup.OPERATION_GROUP_BUILDOUT)
 	var resource_tags: Array[Array] = _db_tables[&"resources"][&"ai_tags"]
 	for resource_type in resource_tags.size():
 		if resource_tags[resource_type].has(&"research"):
@@ -763,8 +760,7 @@ func _collect_facility_budget(facility: FacilityProxy, is_local: bool) -> Array:
 	var research_share := _get_research_share(facility)
 	var expansion_share := _get_expansion_share(facility)
 	var is_research_held := _is_research_held(facility)
-	var is_expansion_held := (_type_buildout != -1
-			and facility.is_operations_target_spending_share_held(_type_buildout))
+	var is_expansion_held := facility.is_expansion_share_held()
 	var has_rest := !_is_agency(facility.player)
 	var research_control := []
 	var expansion_control := []
@@ -772,10 +768,9 @@ func _collect_facility_budget(facility: FacilityProxy, is_local: bool) -> Array:
 		research_control = [Controls.CONTROL_RESEARCH, facility.name, -1, is_research_held,
 				_get_cap(expansion_share if is_expansion_held else 0.0,
 				has_rest or !is_expansion_held)]
-		if _type_buildout != -1:
-			expansion_control = [Controls.CONTROL_EXPANSION, facility.name, _type_buildout,
-					is_expansion_held, _get_cap(research_share if is_research_held else 0.0,
-					has_rest or !is_research_held)]
+		expansion_control = [Controls.CONTROL_EXPANSION, facility.name, -1, is_expansion_held,
+				_get_cap(research_share if is_research_held else 0.0,
+				has_rest or !is_research_held)]
 	# NOTE: What its fixed assets gained, net of what came down, stands in for what its expansion
 	# drew, past what replaced worn plant at its book value (FINANCIAL_MODEL.md, "Budgets, as
 	# built").
@@ -1031,12 +1026,9 @@ func _get_research_share(facility: FacilityProxy) -> float:
 	return minf(share, 1.0)
 
 
-# The share of what [param facility]'s committed lines leave that its expansion is set at, nothing
-# where it builds nothing.
+# The share of what [param facility]'s committed lines leave that its expansion is set at.
 func _get_expansion_share(facility: FacilityProxy) -> float:
-	if _type_buildout == -1:
-		return 0.0
-	return maxf(facility.get_operations_target_spending_share(_type_buildout), 0.0)
+	return maxf(facility.expansion_share, 0.0)
 
 
 func _is_research_held(facility: FacilityProxy) -> bool:
@@ -1105,14 +1097,10 @@ func _hold_budget_share(player: PlayerProxy, key: int, share: float) -> void:
 # the other with its payouts taking up the move as its AI will set them, since a paused game runs
 # no AI, or at an agency's facility, which has no payouts, the other alone, held where it is.
 func _hold_facility_share(facility: FacilityProxy, line: int, share: float) -> void:
-	if line == 1 and !(_type_buildout != -1
-			and facility.get_operations_target_spending_share(_type_buildout) >= 0.0):
-		_set_facility_share(facility, line, share, true) # no expansion to take it up
-		return
 	var other := 1 - line
 	var has_rest := _has_rest(facility.player)
 	var is_other_held := (_is_research_held(facility) if other == 1
-			else facility.is_operations_target_spending_share_held(_type_buildout))
+			else facility.is_expansion_share_held())
 	var shares := PackedFloat64Array([_get_expansion_share(facility),
 			_get_research_share(facility)])
 	var held_shares := PackedFloat64Array([NAN, NAN])
@@ -1129,12 +1117,10 @@ func _hold_facility_share(facility: FacilityProxy, line: int, share: float) -> v
 # held where [param is_held].
 func _set_facility_share(facility: FacilityProxy, line: int, share: float, is_held: bool) -> void:
 	if line == 0:
-		if _type_buildout == -1:
-			return
 		if is_held:
-			facility.hold_operations_target_spending_share(_type_buildout, share)
+			facility.hold_expansion_share(share)
 		else:
-			facility.set_operations_target_spending_share(_type_buildout, share)
+			facility.set_expansion_share(share)
 		return
 	var sum := 0.0
 	for resource_type in _research_resources:
@@ -1176,9 +1162,9 @@ func _set_control_auto(control: Array, auto: bool) -> void:
 		Controls.CONTROL_EXPANSION:
 			var facility := proxy as FacilityProxy
 			if auto:
-				facility.release_operations_target_spending_share(index)
+				facility.release_expansion_share()
 			else:
-				facility.hold_operations_target_spending_share(index, _get_expansion_share(facility))
+				facility.hold_expansion_share(_get_expansion_share(facility))
 		Controls.CONTROL_RESEARCH:
 			var facility := proxy as FacilityProxy
 			for resource_type in _research_resources:
