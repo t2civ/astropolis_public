@@ -172,6 +172,20 @@ enum BuildoutOrderers {
 }
 
 
+## A buildout's flags (see [method get_operations_buildouts]).
+enum BuildoutFlags {
+	BUILDOUT_PAUSED = 1, ## Its owner paused it.
+}
+
+
+## What [method hold_operations_buildout] does to a buildout.
+enum BuildoutHolds {
+	HOLD_RESUME, ## Resumes a paused buildout.
+	HOLD_PAUSE, ## Pauses it: it asks nothing until resumed, and still counts as plant to come.
+	HOLD_CANCEL, ## Cancels it: what it built stays in service.
+}
+
+
 ## The number of prices a facility's desired flow is given at (see
 ## [method get_inventory_desired_flow_curve]).
 const N_CURVE_POINTS := 3
@@ -422,9 +436,9 @@ func is_operations_target_spending_share_held(operation_type: int) -> bool:
 ## a replacement, which stands, "built" and "left"; "rate", its schedule in units a second,
 ## "start", the game time it was opened, and "pace", the share of its schedule it built over about
 ## a quarter; "binding", the resource of which least could be had for its schedule, -1 for none;
-## "spent" and "borrowed", in dollars; and "return", what its units would return a year at
-## capital's prices, and "unit_cost", what a unit costs at them. A new array each call; empty but
-## at a facility. Proxy thread only!
+## "spent" and "borrowed", in dollars; "return", what its units would return a year at capital's
+## prices, and "unit_cost", what a unit costs at them; and "paused". A new array each call; empty
+## but at a facility. Proxy thread only!
 @abstract func get_operations_buildouts() -> Array[Dictionary]
 
 
@@ -849,6 +863,26 @@ func release_operations_target_spending_share(type: int) -> void:
 ## teardowns are built, the owner's buildouts that take units down (PRODUCTION_MODEL.md,
 ## "Buildouts").
 @abstract func set_operations_module_buildout(module_type: int, value: float) -> void
+
+
+## Orders a buildout of [param units] units of [param module_type], to go to its operation
+## [param operation_type], over [param build_time] seconds, or where that is nothing or less over
+## the module's build time ([code]build_time[/code] in [code]modules.tsv[/code]), past what the
+## server's planner opens (PRODUCTION_MODEL.md, "Buildouts", the planner and the AI). The server opens
+## it at the facility's next interval and funds and prices it as any buildout: it runs only as far as
+## its funding carries it and the step's prices ration what it draws. [param orderer] is who ordered
+## it, [constant ORDERER_AI] or [constant ORDERER_PLAYER]. A bad order is dropped: an index out of
+## range, an operation not of the module, or units not above nothing. Proxy-authoritative: this
+## order flows proxy -> server.
+@abstract func order_operations_buildout(module_type: int, operation_type: int, units: float,
+		build_time := 0.0, orderer := BuildoutOrderers.ORDERER_AI) -> void
+
+
+## Pauses, resumes or cancels buildout [param id] (see [method get_operations_buildouts]) at the
+## facility's next interval, as [param hold] says ([enum BuildoutHolds]). Only its owner pauses or
+## cancels a buildout, as only an owner scraps. An id the facility has none of is dropped.
+## Proxy-authoritative: this flows proxy -> server.
+@abstract func hold_operations_buildout(id: int, hold: int) -> void
 
 
 ## Sets whether the server's planner plans [param module_type]'s buildouts, true by default. On
