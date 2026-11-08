@@ -160,7 +160,7 @@ Notes:
 - **Financial Services** — Banking, lending, payments, and investment and asset management — the allocation of capital.
 - **Insurance & Risk** — Underwriting and risk transfer: coverage against loss in exchange for premiums, including actuarial assessment and reinsurance. Used to hedge exposures across operations, transport, and trade.
 - **Engineering Design** — Design, analysis, and planning of buildings, structures, vehicles, and systems — the design product itself, done wherever the designers are, distinct from the construction or fabrication that realizes it.
-- **Field Engineering** — Engineering where the work is: site surveys, adapting a design to local conditions, supervision, inspection and testing, commissioning, and overhaul.
+- **Construction** — Work on plant where it stands: site preparation, assembly, installation and finishing; the site engineering that surveys, supervises, inspects, tests and commissions it; its overhaul; and its dismantling.
 - **Research & Development** — Systematic scientific and engineering investigation yielding new knowledge, designs, materials, and processes. Compute- and instrument-intensive; the wellspring of technological advancement.
 - **Exchange Services** — Operation of trading venues and central clearing: matching buyers and sellers of commodities and contracts, guaranteeing settlement, and coordinating the load-out of traded goods for delivery.
 - **Passenger Services** — Movement of people within a body: transit systems, regional carriers, taxis, and mobility services.

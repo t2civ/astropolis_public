@@ -184,8 +184,6 @@ enum NeedTiers {
 ## operations.schema.md, operation_group).
 enum OperationGroup {
 	OPERATION_GROUP_PRODUCTION,
-	OPERATION_GROUP_BUILDOUT,
-	OPERATION_GROUP_DECOMMISSIONING,
 	OPERATION_GROUP_EXCHANGE,
 	OPERATION_GROUP_DONT_PROCESS, # dev/debug
 }

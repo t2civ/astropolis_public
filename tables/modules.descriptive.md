@@ -83,7 +83,7 @@ Notes:
 
 ## Manufacturing
 
-- **Construction Yards** — On-site assembly, civil engineering, and installation capacity for fixed infrastructure including buildings, roads, tunnels, landing pads, launch facilities, power distribution networks, pipelines, pressurized habitats, and radiation shielding.
+- **Construction Yards** — On-site assembly, civil engineering, and installation capacity for fixed infrastructure including buildings, roads, tunnels, landing pads, launch facilities, power distribution networks, pipelines, pressurized habitats, and radiation shielding, and the crews and site engineers who inspect, overhaul, and dismantle plant.
 - **Space Yards** — Dedicated yard facilities for fabrication and final assembly of heavy-lift launch vehicles and large interplanetary transports, analogous to naval shipyards. Encompasses heavy tooling, large-bay construction halls, and orbital or surface assembly infrastructure.
 - **Transport Factories** — Large-scale fabrication and final assembly facilities for ground vehicles, aircraft, marine vessels, small-to-medium spacecraft, EVA mobility units, and spacesuits, integrating structural, propulsion, avionics, and life-support subsystems.
 - **Metal Fabrication Works** — Cutting, welding, forming, machining, galvanizing, and assembly facilities for steel and aluminium structural products including beams, plate, pipe, pressure vessels, extrusions, and prefabricated modules.
