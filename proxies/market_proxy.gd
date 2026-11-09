@@ -36,7 +36,8 @@ extends Proxy
 ## current quarter has filled, or where it has filled nothing the price of the quarter before
 ## it or the fiat seed, else 0, which no quote moves (see TRADE_MODEL.md, "Price discovery");
 ## [b]ask[/b] / [b]bid[/b] — the current-quarter top-of-book, 0 for an empty side.
-## [member instruments] also carries per-instrument top-of-book for every quarter. What a
+## [member instruments] also carries per-instrument top-of-book for every quarter, and
+## [member price_index] what the market's prices are worth against the game's start. What a
 ## locus's facilities buy and sell here is their own, summed on [LocusProxy] (see
 ## [method Proxy.get_operations_bought_rate]).[br][br]
 ##
@@ -62,6 +63,10 @@ extends Proxy
 var market_id := -1  ## Index into [member ProxyBus.market_proxies].
 var locus_id := -1  ## [member LocusProxy.locus_id] of [member locus].
 var cyber_market_id := -1  ## [member market_id] of the system cyber market (self if this is it).
+## The market's price index: each resource delivered here weighed by its share of what was
+## delivered at its price, chained each quarter since the game's start, 1.0 there; so its prices
+## over it are in game-start dollars (TRADE_MODEL.md, "The price index").
+var price_index := 1.0
 
 # *****************************************************************************
 # persisted
