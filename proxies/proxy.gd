@@ -508,11 +508,11 @@ func get_operations_volume_value(_resource_type: int) -> float:
 	return 0.0
 
 
-## Returns the price level of goods where the facility is, or its facilities are: what the
-## resources with a trade class that move through it, its internal volume and what it bought,
-## are worth at its local prices over what they are worth in game-start dollars. A facility's is
-## its price index, chained each quarter since the game's start; an aggregate's weighs each
-## facility's by what its goods are worth in game-start dollars, so it moves too as their worth
+## Returns the price level of goods where the facility is, or its facilities are: the resources
+## with a trade class that move through it, its internal volume and what it bought. A facility's
+## is its price index, chained each quarter since the game's start, which counts in game-start
+## dollars; an aggregate's averages its facilities' in logs, each weighted by what its goods are
+## worth at its local prices, so no few facilities move it far, though it moves as that worth
 ## shifts among facilities whose levels differ. NAN where none move.
 func get_operations_price_level() -> float:
 	return NAN
