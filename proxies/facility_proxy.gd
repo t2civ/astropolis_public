@@ -243,7 +243,7 @@ var expansion_share := 0.0
 ## the treasury's own such room goes (FINANCIAL_MODEL.md, "Saving and borrowing"). Its trader's
 ## commitments are bound by it.
 var credit := 0.0
-## Its budget a year as of its last interval, by [enum BudgetLines]; empty before its first.
+## Its budget a year as of its last interval, by [enum BudgetLines]; NAN before its first.
 ## Server-authoritative. Use [method get_budget_line].
 var budget_lines := PackedFloat64Array()
 ## The game time of the last interval its ledger is booked through, -INF before its first: what it
@@ -775,7 +775,7 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 
 
 ## Returns the quantity of [param resource_type] this facility owns stored
-## remotely at the given facility.
+## remotely at the given facility. Proxy thread only!
 @abstract func get_inventory_remote_store(facility_id_: int, resource_type: int) -> float
 
 

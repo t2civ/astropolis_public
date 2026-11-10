@@ -723,7 +723,7 @@ func _collect_facility_budget(facility: FacilityProxy, is_local: bool) -> Array:
 	const BUDGET_RESEARCH := FacilityProxy.BudgetLines.BUDGET_RESEARCH
 	const BUDGET_EXPANSION := FacilityProxy.BudgetLines.BUDGET_EXPANSION
 	var lines := facility.budget_lines
-	if lines.size() != FacilityProxy.BudgetLines.size():
+	if is_nan(lines[BUDGET_INCOME]):
 		return []
 	var income := lines[BUDGET_INCOME]
 	var total := maxf(income, 0.0) + lines[BUDGET_FUNDING]
