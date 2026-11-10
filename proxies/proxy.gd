@@ -27,7 +27,10 @@ extends RefCounted
 ## as one (see [AstroSelectionManager]).
 ##
 ## WARNING: Lives on the proxy thread. Containers and many methods are not
-## threadsafe; accessing non-container properties is safe.
+## threadsafe; accessing non-container properties is safe. An array a getter returns by reference
+## is the proxy's own, which the main thread may read as this thread writes it: keep a copy of one
+## with [code]slice()[/code], never [code]duplicate()[/code], which shares its buffer until the
+## proxy next writes it, the array empty to the main thread while that write copies it.
 
 
 ## Field selectors for [method get_operations_items] (bit flags; OR together).
