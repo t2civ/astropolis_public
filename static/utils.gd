@@ -430,27 +430,29 @@ static func multiply_float_array_by_array(base: PackedFloat64Array, multiply: Pa
 		base[i] *= multiply[i]
 
 
-## Returns an array containing element-wise a plus b. Expects float arrays of equal size.
+## Returns an array containing element-wise a plus b. Expects float arrays of equal size. Reads
+## each only by element, so either may be an array another thread writes in place.
 static func add_float_arrays(a: Array[float], b: Array[float]) -> Array[float]:
 	assert(a.size() == b.size())
 	var sum: Array[float] = []
-	sum.assign(a)
+	sum.resize(a.size())
 	var i := a.size()
 	while i > 0:
 		i -= 1
-		sum[i] += b[i]
+		sum[i] = a[i] + b[i]
 	return sum
 
 
-## Returns an array containing element-wise a minus b. Expects float arrays of equal size.
+## Returns an array containing element-wise a minus b. Expects float arrays of equal size. Reads
+## each only by element, so either may be an array another thread writes in place.
 static func subtract_float_arrays(a: Array[float], b: Array[float]) -> Array[float]:
 	assert(a.size() == b.size())
 	var diff: Array[float] = []
-	diff.assign(a)
+	diff.resize(a.size())
 	var i := a.size()
 	while i > 0:
 		i -= 1
-		diff[i] -= b[i]
+		diff[i] = a[i] - b[i]
 	return diff
 
 
