@@ -635,7 +635,7 @@ func _is_market_made(resource_type: int) -> bool:
 ## Folds how far each tradable resource's local price moved over [param delta], since the last
 ## interval, into its swing.
 func _update_price_swings(delta: float) -> void:
-	var weight := minf(delta / SWING_MEMORY, 1.0)
+	var weight := 1.0 - exp(-delta / SWING_MEMORY)
 	for resource_type in _tradable_resources:
 		var price := proxy.get_inventory_local_price(resource_type)
 		var last := _last_prices[resource_type]
