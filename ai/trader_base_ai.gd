@@ -414,7 +414,8 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 		return
 	var critical_step := _facility.get_inventory_critical_step(resource_type)
 	var desired_flows := _facility.get_inventory_desired_flow_curve(resource_type)
-	var reference_price := market.get_unit_price(resource_type) # its last sale; 0 where none
+	# Its last sale, 0 where none, among the traders this one may deal with.
+	var reference_price := market.get_unit_price(resource_type, proxy.player_id)
 	var critical_flow := _facility.get_inventory_critical_flow(resource_type)
 	var critical := _facility.get_inventory_critical_rate(resource_type)
 	var contract_horizons: float = def.get(&"contract_horizons", CONTRACT_HORIZONS)
@@ -518,7 +519,7 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 		# What a later quarter trades is its own price: priced off the current quarter's, a book a
 		# quarter ahead moved no price at all.
 		if !is_current:
-			var own := market.get_instrument_unit_price(resource_type, key[1])
+			var own := market.get_instrument_unit_price(resource_type, key[1], proxy.player_id)
 			if own > 0:
 				quarter_price = own
 		var position: PackedFloat64Array = _positions_by_instrument.get(key, PackedFloat64Array())
@@ -868,7 +869,7 @@ static func _get_wanted(desired_flows: PackedFloat64Array, curve_prices: PackedF
 # The lowest ask resting on the instrument of [param key] but this trader's own, or 0 where none
 # shows: the book shows only its best, so none where that may be this trader's.
 func _get_others_ask(market: MarketProxy, key: PackedInt32Array) -> int:
-	var price := market.get_instrument_ask_unit_price(key[0], key[1])
+	var price := market.get_instrument_ask_unit_price(key[0], key[1], proxy.player_id)
 	if price > 0 and _asks.has(key) and _asks[key][1] <= price:
 		return 0
 	return price
@@ -877,7 +878,7 @@ func _get_others_ask(market: MarketProxy, key: PackedInt32Array) -> int:
 # The highest bid resting on the instrument of [param key] but this trader's own, read as
 # [method _get_others_ask] reads the ask.
 func _get_others_bid(market: MarketProxy, key: PackedInt32Array) -> int:
-	var price := market.get_instrument_bid_unit_price(key[0], key[1])
+	var price := market.get_instrument_bid_unit_price(key[0], key[1], proxy.player_id)
 	if price > 0 and _bids.has(key) and _bids[key][1] >= price:
 		return 0
 	return price

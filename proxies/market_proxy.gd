@@ -50,6 +50,11 @@ extends Proxy
 ## the name ([method get_unit_price]) returns the market-internal trade-unit value. A stored
 ## 0 price means no current price.[br][br]
 ##
+## Under a sanction, a player reads the market as it can trade in it: its getters given the
+## player's [param player_id] read the best orders it may take and the price at which each resource
+## moved among the traders it may deal with (TRADE_MODEL.md, "Sanctions and the screened book").
+## With no sanction touching the player, and with -1, they read the book's own.[br][br]
+##
 ## The read side: AI and GUI read prices and [member instruments] here, and
 ## place or change orders via [method TraderProxy.set_ask] /
 ## [method TraderProxy.set_bid]. Indexed getters are defensive — an out-of-range
@@ -106,8 +111,8 @@ func get_market() -> MarketProxy:
 # All threadsafe. Abstract here; the concrete proxy implements.
 
 ## Returns the current trade price for [param type] in sim units, or 0.0 if
-## no current price.
-@abstract func get_price(type: int) -> float
+## no current price, as the player [param player_id] reads it (see the class doc).
+@abstract func get_price(type: int, player_id := -1) -> float
 
 
 ## Returns the current ask price for [param type] in sim units, or 0.0 if no
@@ -121,8 +126,8 @@ func get_market() -> MarketProxy:
 
 
 ## Returns the Market-internal unit price for [param type], or 0 if no
-## current price.
-@abstract func get_unit_price(type: int) -> int
+## current price, as the player [param player_id] reads it (see the class doc).
+@abstract func get_unit_price(type: int, player_id := -1) -> int
 
 
 ## Returns the Market-internal ask unit price for [param type], or 0 if no
@@ -136,30 +141,34 @@ func get_market() -> MarketProxy:
 
 # Call on proxy thread. Per-instrument top-of-book reads onto [member instruments];
 # any quarter >= the current one is a legitimate query (an absent instrument
-# reads 0).
+# reads 0). Each reads as the player [param player_id] can trade (see the class doc).
 
 ## Returns the lowest resting ask price in trade units for the instrument
 ## [param type] at [param ordinal_quarter], or 0 if no resting ask.
-@abstract func get_instrument_ask_unit_price(type: int, ordinal_quarter: int) -> int
+@abstract func get_instrument_ask_unit_price(type: int, ordinal_quarter: int, player_id := -1
+		) -> int
 
 
 ## Returns the quantity in trade units at the lowest resting ask for the
 ## instrument [param type] at [param ordinal_quarter], or 0 if no resting ask.
-@abstract func get_instrument_ask_unit_quantity(type: int, ordinal_quarter: int) -> int
+@abstract func get_instrument_ask_unit_quantity(type: int, ordinal_quarter: int,
+		player_id := -1) -> int
 
 
 ## Returns the highest resting bid price in trade units for the instrument
 ## [param type] at [param ordinal_quarter], or 0 if no resting bid.
-@abstract func get_instrument_bid_unit_price(type: int, ordinal_quarter: int) -> int
+@abstract func get_instrument_bid_unit_price(type: int, ordinal_quarter: int, player_id := -1
+		) -> int
 
 
 ## Returns the quantity in trade units at the highest resting bid for the
 ## instrument [param type] at [param ordinal_quarter], or 0 if no resting bid.
-@abstract func get_instrument_bid_unit_quantity(type: int, ordinal_quarter: int) -> int
+@abstract func get_instrument_bid_unit_quantity(type: int, ordinal_quarter: int,
+		player_id := -1) -> int
 
 
 ## Returns the price in trade units of the instrument [param type] at [param ordinal_quarter]:
 ## for the current quarter [method get_unit_price], and for a later one the volume-weighted price
 ## of its own fills, or where it has none the nearest sooner quarter's as its book last changed.
 ## 0 where it has none, nor any order (TRADE_MODEL.md, "Price discovery").
-@abstract func get_instrument_unit_price(type: int, ordinal_quarter: int) -> int
+@abstract func get_instrument_unit_price(type: int, ordinal_quarter: int, player_id := -1) -> int

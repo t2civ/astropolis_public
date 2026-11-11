@@ -22,6 +22,13 @@ extends Proxy
 ## threadsafe; accessing non-container properties is safe.
 
 
+## The directions of trade a sanction bars, bits of an element of [member sanctions].
+enum SanctionFlags {
+	SANCTION_EXPORTS = 1, ## What the sanctioning player sells its target.
+	SANCTION_IMPORTS = 1 << 1, ## What the sanctioning player buys from its target.
+}
+
+
 # public read-only
 var player_id := -1 ## Index into [member ProxyBus.player_proxies].
 var player_class := -1 ## Player class index ([code]PlayerClasses[/code] enum).
@@ -52,6 +59,11 @@ var budget_shares: Dictionary[int, float] = {}
 ## [code]Enums.Accounts[/code], NAN where it spends what its revenue gives it (see
 ## [member budgets]). Resizable container — not threadsafe! Use [method set_budget_target].
 var budget_targets := PackedFloat64Array()
+## Its sanctions, by the player_id of each player it sanctions: per resource, the directions of
+## trade it bars, [enum SanctionFlags] bits (TRADE_MODEL.md, "Sanctions and the screened book").
+## A polity's binds every player under it, and one on a polity reaches every player under that
+## polity. Resizable container — not threadsafe! Use [method set_sanction].
+var sanctions: Dictionary[int, PackedByteArray] = {}
 ## What each of its treasuries has to spend a year past what its committed lines take, what its
 ## discretionary lines share, by [code]Enums.Accounts[/code], as of its administrative center's last
 ## interval (FINANCIAL_MODEL.md, "Budgets"); empty where it has none. Server-authoritative.
@@ -150,6 +162,15 @@ func get_budget_target(account: int) -> float:
 	return budget_targets[account]
 
 
+## Returns the [enum SanctionFlags] this player's sanction on [param target_player_id] bars of
+## [param resource_type], 0 where it bars none (see [member sanctions]). proxy thread only!
+func get_sanction(target_player_id: int, resource_type: int) -> int:
+	var flags: PackedByteArray = sanctions.get(target_player_id, PackedByteArray())
+	if resource_type < 0 or resource_type >= flags.size():
+		return 0
+	return flags[resource_type]
+
+
 ## Returns true if the budget line kept under [param key] is held off auto (see
 ## [method hold_budget_share]). proxy thread only!
 func is_budget_share_held(key: int) -> bool:
@@ -171,6 +192,14 @@ func is_budget_target_held(account: int) -> bool:
 ## Removes [param facility] from this player. Updates [member has_facilities]
 ## to reflect whether the player still owns any facilities.
 @abstract func remove_facility(facility: Proxy) -> void
+
+
+## Sanctions the player [param target_player_id], barring the [enum SanctionFlags]
+## [param flags] of [param resource_type], or of every resource where it is -1; flags 0 lifts what
+## it barred there (see [member sanctions]). The exchange enforces it at the match and at delivery.
+## Proxy-authoritative: this change flows proxy -> server. No-op on itself as target, or on an
+## out-of-range player, resource or flags.
+@abstract func set_sanction(target_player_id: int, resource_type: int, flags: int) -> void
 
 
 ## Sets the share of the budget line kept under [param key] (see [member budget_shares]) to
