@@ -33,7 +33,8 @@ extends BaseAI
 ## order[/b]: SET semantics are absolute (a new order replaces the resting one,
 ## quantity 0 cancels), so writing memory at call time is always safe. The market
 ## sends no per-order echoes; instead every position notification carries the
-## trader's current resting ask/bid, which reconciles memory (see
+## trader's ask/bid as it last set them, resting or still waiting for the market's
+## match, which reconciles memory (see
 ## [method _on_positions_changed]). Old-quarter orders are purged by the market
 ## without echoes, so memory self-cleans by the same rule each interval (see
 ## [method _drop_expired_memory]).[br][br]
@@ -222,7 +223,7 @@ var resource_strategies: PackedInt32Array
 ## market per resource makes the locus redundant), or 3-element [resource_type,
 ## ordinal_quarter, locus_id] for a transport trader (which trades a resource at many
 ## loci). Values are [unit_quantity, unit_price] in trade units; unique per key. Mirrors
-## the market's resting ask, refreshed via position notifications.
+## this trader's ask at the market, refreshed via position notifications.
 var _asks: Dictionary[PackedInt32Array, PackedInt64Array] = {}
 
 ## Memory of open bids, keyed like [member _asks] with values [unit_quantity, unit_price]
@@ -1027,7 +1028,7 @@ func _on_facility_resource_strategy_changed(resource_type: int, strategy_id: int
 	resource_strategies[resource_type] = _trader_strategy_for_facility(strategy_id)
 
 
-# Mirrors the trader's resting ask/bid (carried in every notification) into order memory,
+# Mirrors the trader's ask/bid at the market (carried in every notification) into order memory,
 # keyed at this trader's width (2-element instrument for a facility, 3-element with the
 # delivery locus for a transport — see _key_width). The locus-less position view
 # (_positions_by_instrument) is a facility convenience; a transport reads proxy.positions

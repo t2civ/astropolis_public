@@ -16,9 +16,10 @@ extends Proxy
 ## ("spot") case, later quarters forward delivery. Each trader holds at most one
 ## resting ask and one resting bid per instrument. Orders use SET semantics — a new
 ## order replaces the resting one, quantity 0 cancels — and never expire, though an
-## order for a past quarter is dropped at quarter rollover. An order is matched as it
-## arrives against the other side's book, each fill at the resting order's price, as on
-## an exchange, and what isn't filled rests.[br][br]
+## order for a past quarter is dropped at quarter rollover. Orders wait for the market's
+## short interval, up to a day of game time, which places them as their traders last set
+## them, in the order they came: each is matched against the other side's book, each fill
+## at the resting order's price, as on an exchange, and what isn't filled rests.[br][br]
 ##
 ## A match moves no goods; it opens or adjusts a [b]position[/b]: the ask side goes
 ## (more) short (owes delivery at the locus), the bid side (more) long (awaits
