@@ -715,8 +715,9 @@ func _place_quotes() -> void:
 		var bid_price := _plan_bid_prices[i]
 		var bid_price_tol := price_tol
 		if _asks.has(key):
-			# An ask kept within its tolerance can stand below the price planned for it, and the
-			# market removes its own bid at or above it unmatched.
+			# An ask kept within its tolerance can stand below the price planned for it, and a bid
+			# of its own at or above it would stand crossed with it, never matched (TRADE_MODEL.md,
+			# "A trader crossing itself").
 			var ask_price := _asks[key][1]
 			bid_price = mini(bid_price, ask_price - 1)
 			if bid_price < 1:
