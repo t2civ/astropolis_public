@@ -113,15 +113,16 @@ func _clear_for_destruction() -> void:
 @abstract func ai_init() -> void
 
 
-## Required override. Called once per [constant INTERVAL] during AI
-## processing. Most component data changes every [constant INTERVAL], so this
-## is the recommended place for AI logic.
+## Required override. Called once per [constant INTERVAL] of game time, on a grid
+## of this AI's own staggered against every other's, with [param _delta] the game
+## time since the last. Most component data changes every [constant INTERVAL], so
+## this is the recommended place for AI logic.
 @abstract func process_ai_interval(_delta: float) -> void
 
 
-## Optional override. Called by [method process_ai] when the proxy's
-## [member Proxy.ordinal_qtr] advances (after the interval hook, so component
-## histories are current).
+## Optional override. Called when the proxy's [member Proxy.ordinal_qtr] advances
+## (after the interval hook where both come at once, so component histories are
+## current).
 func process_ai_new_quarter() -> void:
 	pass
 
@@ -129,24 +130,38 @@ func process_ai_new_quarter() -> void:
 # **************************** INTERNAL PRIVATE *******************************
 # Don't override!
 
-## Per-tick driver called by ProxyServer with the current time and the proxy's
-## quarter. Schedules [method process_ai_interval] at staggered intervals and
-## fires [method process_ai_new_quarter] when the quarter advances.
-func process_ai(time: float, ordinal_qtr: int) -> void:
-	var is_new_quarter := false
-	if _ordinal_qtr != ordinal_qtr:
-		assert(_ordinal_qtr < ordinal_qtr)
-		is_new_quarter = _ordinal_qtr != -1 # adopt the first quarter without firing
-		_ordinal_qtr = ordinal_qtr
-	if time > _next_interval:
-		if _next_interval == -INF: # init
-			_last_interval = time
-			_next_interval = time + randf_range(0.0, INTERVAL) # stagger AI processing
-		else:
-			var delta := time - _last_interval
-			_last_interval = time
-			while _next_interval < time:
-				_next_interval += INTERVAL
-			process_ai_interval(delta)
+## When this AI's next interval comes due, -INF before its first. Called by
+## ProxyServer.
+func get_next_interval_time() -> float:
+	return _next_interval
+
+
+## Runs [method process_ai_interval] at [param time] where the interval due at
+## [param due] is still this AI's next, and returns when the next comes due; INF
+## where it isn't. The first only staggers this AI's grid, running nothing. Called
+## by ProxyServer as the interval comes due.
+func run_ai_interval(due: float, time: float) -> float:
+	if due != _next_interval:
+		return INF
+	if _next_interval == -INF:
+		_last_interval = time
+		_next_interval = time + randf_range(0.0, INTERVAL) # stagger AI processing
+		return _next_interval
+	var delta := time - _last_interval
+	_last_interval = time
+	while _next_interval <= time:
+		_next_interval += INTERVAL
+	process_ai_interval(delta)
+	return _next_interval
+
+
+## Fires [method process_ai_new_quarter] where [param ordinal_qtr], the proxy's
+## quarter, has advanced since the last call. Called by ProxyServer each tick.
+func check_ai_quarter(ordinal_qtr: int) -> void:
+	if _ordinal_qtr == ordinal_qtr:
+		return
+	assert(_ordinal_qtr < ordinal_qtr)
+	var is_new_quarter := _ordinal_qtr != -1 # adopt the first quarter without firing
+	_ordinal_qtr = ordinal_qtr
 	if is_new_quarter:
 		process_ai_new_quarter()

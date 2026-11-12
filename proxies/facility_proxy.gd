@@ -12,7 +12,7 @@ extends Proxy
 ## [FacilityProxy] represents a [PlayerProxy]'s development at a [LocusProxy].
 ##
 ## A facility runs operations enabled by modules (see corresponding data
-## tables). Server-side automations translate AI intent set here into per-tick
+## tables). Server-side automations translate AI intent set here into per-interval
 ## operation behavior. AI writes FROM_PROXY_MASK flag bits on [member flags],
 ## on per-op operations flags, and on per-resource inventory flags; the server
 ## publishes FROM_SERVER_MASK runtime signals (margin, shortage, surplus) back
