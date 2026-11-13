@@ -680,6 +680,15 @@ func get_inventory_leg(resource_type: int) -> float:
 	return haul * _resource_hauls[resource_type] * get_inventory_local_price(carrier)
 
 
+## Returns the tariff the facility's polity sets on an import of [param resource_type], a share of
+## the price it is bought at (see [member PlayerProxy.tariffs]). The facility expects it on all it
+## imports, since it can't know who will deliver, so its trader reads its curve at what a bid comes
+## to there, the bid landed with the tariff (TRADE_MODEL.md, "The costs of movement"). proxy thread
+## only!
+func get_inventory_tariff(resource_type: int) -> float:
+	return polity.get_tariff(resource_type) if polity else 0.0
+
+
 ## Returns the most recent measured net rate for [param resource_type] (positive
 ## = production, negative = consumption).
 @abstract func get_inventory_rate(resource_type: int) -> float

@@ -446,6 +446,9 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 	# is read there, and an ask stands that much above what its facility would take (TRADE_MODEL.md,
 	# "The costs of movement", the trader's accounting).
 	var leg := _facility.get_inventory_leg(resource_type) * multiplier
+	# What a bid comes to at its facility is the bid landed with its polity's tariff, so the curve
+	# is read there, and a bid stands that much below what its facility would pay.
+	var landed := 1.0 + _facility.get_inventory_tariff(resource_type)
 	var quarter_price := reference_price # this quarter's own, or the quarter before it's
 	var sooner_ask := 0 # the lowest ask of another trader's in this quarter or a sooner one
 	var sooner_bid := 0 # the highest bid, as sooner_ask
@@ -499,7 +502,7 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 			if !(far_ask or far_bid):
 				continue
 			var far_bid_flow_price := _get_flow_price(desired_flows, curve_prices,
-					(far_netted + lot) * multiplier, quarter_span, multiplier)
+					(far_netted + lot) * multiplier, quarter_span, multiplier) / landed
 			var far_ask_flow_price := _get_flow_price(desired_flows, curve_prices,
 					(far_netted - lot) * multiplier, quarter_span, multiplier) + leg
 			if reference_price > 0:
@@ -566,8 +569,8 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 		var lot_ask_price := _get_flow_price(desired_flows, curve_prices,
 				(netted - lot) * multiplier - step, foreseen, multiplier) + leg
 		var lot_bid_price := _get_flow_price(desired_flows, curve_prices,
-				(netted + lot) * multiplier - step, foreseen, multiplier)
-		var bid_reservation := own_price if is_current else lot_bid_price
+				(netted + lot) * multiplier - step, foreseen, multiplier) / landed
+		var bid_reservation := own_price / landed if is_current else lot_bid_price
 		var ask_reservation := own_price + leg if is_current else lot_ask_price
 		# A quote opens where others trade: at the quarter's own price, its last sale, held within
 		# the best bid and ask other traders stand at there or in a sooner quarter, the prices a
@@ -586,8 +589,9 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 			open = sooner_bid
 		var bid_open := open if open > 0.0 else bid_reservation
 		var ask_open := open if open > 0.0 else ask_reservation
-		var bid := maxi(roundi(_get_wanted(desired_flows, curve_prices, bid_open / multiplier,
-				foreseen, step, must, buys, sells) / multiplier - netted), 0)
+		var bid := maxi(roundi(_get_wanted(desired_flows, curve_prices,
+				bid_open * landed / multiplier, foreseen, step, must, buys, sells) / multiplier
+				- netted), 0)
 		var ask := 0
 		if !bid:
 			ask = maxi(-roundi(_get_wanted(desired_flows, curve_prices,
@@ -622,8 +626,9 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 			if others_ask > 0 and others_ask <= reservation:
 				limit = maxf(limit, others_ask) # it is offered within what its facility would pay
 			bid_price = maxi(floori(limit), 1)
-			bid = maxi(roundi(_get_wanted(desired_flows, curve_prices, bid_price / multiplier,
-					foreseen, step, must, buys, sells) / multiplier - netted), 0)
+			bid = maxi(roundi(_get_wanted(desired_flows, curve_prices,
+					bid_price * landed / multiplier, foreseen, step, must, buys, sells) / multiplier
+					- netted), 0)
 		else:
 			_bid_searches.erase(key)
 		if ask:

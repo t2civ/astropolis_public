@@ -64,6 +64,11 @@ var budget_targets := PackedFloat64Array()
 ## A polity's binds every player under it, and one on a polity reaches every player under that
 ## polity. Resizable container — not threadsafe! Use [method set_sanction].
 var sanctions: Dictionary[int, PackedByteArray] = {}
+## A polity's tariffs (FINANCIAL_MODEL.md, "Taxes"; TRADE_MODEL.md, "The costs of movement"): per
+## resource, a share of the price the cash leg pays that its players pay its government treasury on
+## what a seller of another polity delivers them, the same whoever sells. Empty for a player that is
+## not a polity, whose players pay their polity's. Not threadsafe! Use [method set_tariff].
+var tariffs := PackedFloat64Array()
 ## What each of its treasuries has to spend a year past what its committed lines take, what its
 ## discretionary lines share, by [code]Enums.Accounts[/code], as of its administrative center's last
 ## interval (FINANCIAL_MODEL.md, "Budgets"); empty where it has none. Server-authoritative.
@@ -171,6 +176,14 @@ func get_sanction(target_player_id: int, resource_type: int) -> int:
 	return flags[resource_type]
 
 
+## Returns this polity's tariff on [param resource_type] (see [member tariffs]), 0.0 where it sets
+## none. proxy thread only!
+func get_tariff(resource_type: int) -> float:
+	if resource_type < 0 or resource_type >= tariffs.size():
+		return 0.0
+	return tariffs[resource_type]
+
+
 ## Returns true if the budget line kept under [param key] is held off auto (see
 ## [method hold_budget_share]). proxy thread only!
 func is_budget_share_held(key: int) -> bool:
@@ -200,6 +213,13 @@ func is_budget_target_held(account: int) -> bool:
 ## Proxy-authoritative: this change flows proxy -> server. No-op on itself as target, or on an
 ## out-of-range player, resource or flags.
 @abstract func set_sanction(target_player_id: int, resource_type: int, flags: int) -> void
+
+
+## Sets this polity's tariff on [param resource_type], or on every resource traded at a locus's
+## market where it is -1, to [param rate] (see [member tariffs]). The exchange collects it at
+## delivery. Proxy-authoritative: this change flows proxy -> server. No-op on a player that is not
+## a polity, on an out-of-range resource, or on a negative rate or NAN.
+@abstract func set_tariff(resource_type: int, rate: float) -> void
 
 
 ## Sets the share of the budget line kept under [param key] (see [member budget_shares]) to
