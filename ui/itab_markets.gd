@@ -417,6 +417,7 @@ func _get_facility_rows(facility: FacilityProxy, resource_types: PackedInt32Arra
 		row.unmet_rate = facility.get_inventory_unmet_rate(resource_type)
 		row.curtailed_rate = facility.get_inventory_curtailed_rate(resource_type)
 		row.disposal_rate = facility.get_inventory_disposal_rate(resource_type)
+		row.decay_rate = facility.get_inventory_decay_rate(resource_type)
 		row.critical_rate = facility.get_inventory_critical_rate(resource_type)
 		row.desired_rate = facility.get_inventory_desired_rate(resource_type)
 		if row.has_market_price and facility.ordinal_qtr >= 0:
@@ -780,6 +781,8 @@ func _get_local_tooltip(row: RowData, unit: String) -> String:
 		lines.append("Curtailed %s/d" % (_format_rate(row.curtailed_rate, multiplier) + unit))
 	if row.disposal_rate:
 		lines.append("Disposed of %s/d" % (_format_rate(row.disposal_rate, multiplier) + unit))
+	if row.decay_rate:
+		lines.append("Decayed %s/d" % (_format_rate(row.decay_rate, multiplier) + unit))
 	return "\n".join(lines)
 
 
@@ -912,6 +915,7 @@ class RowData extends RefCounted:
 	var unmet_rate: float
 	var curtailed_rate: float
 	var disposal_rate: float
+	var decay_rate: float
 	var critical_rate: float
 	var desired_rate: float # NAN without a market price
 	var window_long: float

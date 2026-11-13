@@ -678,6 +678,17 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 @abstract func get_inventory_disposal_rates() -> PackedFloat64Array
 
 
+## Returns the rate at which [param resource_type] decayed over the last interval at its storage
+## class's rate, from the stock and the transit buffer (>= 0.0): food spoiled, a cryogen boiled
+## off, a battery's charge leaked away. Decay is not counted in [method get_inventory_rate]
+## (PRODUCTION_MODEL.md, "What a facility is", decay).
+@abstract func get_inventory_decay_rate(resource_type: int) -> float
+
+
+## Returns the per-resource decay rates array. Return is proxy array reference; read only!
+@abstract func get_inventory_decay_rates() -> PackedFloat64Array
+
+
 ## Returns the rate at which demand for [param resource_type] went unserved over the last
 ## interval (>= 0.0), counted only where this resource was what held its consumer back: an
 ## operation short of electricity draws less of its other inputs too, and only the
