@@ -5,7 +5,7 @@ Game-wide scalar values that are not properties of any entity. The table is
 row 0.
 
 Values here are game-start seeds at the 2015 vintage, like every other seed in
-`public/tables/`.
+`public/tables/`, except `haul`, which holds through the game.
 
 
 ## Table Data
@@ -18,6 +18,9 @@ Values here are game-start seeds at the 2015 vintage, like every other seed in
   how sampling and shared content work.
 - information_pool — FLOAT in `bit`. The equivalent pool for Shannon information, from
   which `information_fraction` samples.
+- haul — FLOAT, a share. The length of every locus's haul as a share of its body's mean
+  radius, one share for every locus: what a unit moved from a stock to its user draws of
+  its carrier's service (`storage_classes.tsv`, carrier). 0 moves everything for nothing.
 
 
 ## Notes

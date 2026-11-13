@@ -130,15 +130,6 @@ const COLUMN_TOOLTIPS: Array[String] = [ # by COLUMN_
 	"",
 ]
 
-const TRADE_CLASS_TEXTS: Array[String] = [ # by TradeClasses
-	"",
-	"",
-	"ice, ",
-	"liq, ",
-	"cryo, ",
-	"",
-	"",
-]
 const TAB_NAMES: Array[StringName] = [ # by TAB_; node names auto-translate as tab titles
 	&"TAB_MKS_ENERGY",
 	&"TAB_MKS_ORES",
@@ -808,9 +799,7 @@ func _get_row_title(resource_type: int) -> String:
 	var trade_unit := _trade_units[resource_type]
 	if trade_unit == &"1":
 		return title
-	var trade_class := _trade_classes[resource_type]
-	var class_text := TRADE_CLASS_TEXTS[trade_class] if trade_class != -1 else ""
-	return "%s (%s%s)" % [title, class_text, trade_unit]
+	return "%s (%s)" % [title, trade_unit]
 
 
 func _get_unit_text(resource_type: int) -> String:

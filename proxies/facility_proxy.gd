@@ -192,6 +192,8 @@ enum BuildoutHolds {
 ## [method get_inventory_desired_flow_curve]).
 const N_CURVE_POINTS := 3
 
+static var _resource_carriers := PackedInt32Array() # its storage class's carrier; -1: none
+
 
 var facility_id := -1  ## Index into [member ProxyBus.facility_proxies].
 ## Its name among its player's facilities, as in its owners' budget lines: its locus's name, unless
@@ -213,6 +215,9 @@ var closed_cycle_ops: bool
 var solar_correction := 1.0
 var wind_correction := 1.0
 var geothermal_correction := 1.0
+## What moving a unit from a stock to its user draws here of the service of the network that
+## carries it: its locus's haul, a share of its body's radius (see [method get_inventory_leg]).
+var haul := 0.0
 ## Time horizon used by AI and automations (inventory reserves, resupply, etc.).
 var time_horizon: float
 ## Region of its locus the facility stands in, or [code]&""[/code] for none; it stands on the
@@ -269,6 +274,20 @@ var held_research_shares: Dictionary[int, float] = {}
 
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
+
+func _init() -> void:
+	super()
+	if _resource_carriers.is_empty():
+		var resources_table: Dictionary[StringName, Array] = _db_tables[&"resources"]
+		var storage_classes := PackedInt32Array(resources_table[&"storage_class"])
+		var storage_classes_table: Dictionary[StringName, Array] = _db_tables[&"storage_classes"]
+		var class_carriers := PackedInt32Array(storage_classes_table[&"carrier"])
+		_resource_carriers.resize(storage_classes.size())
+		for resource_type in storage_classes.size():
+			var storage_class := storage_classes[resource_type]
+			_resource_carriers[resource_type] = (class_carriers[storage_class]
+					if storage_class != -1 else -1)
+
 
 func _clear_for_destruction() -> void:
 	locus = null
@@ -644,6 +663,17 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 
 ## Returns the per-resource local prices array. Return is proxy array reference; read only!
 @abstract func get_inventory_local_prices() -> PackedFloat64Array
+
+
+## Returns what moving a unit of [param resource_type] from the facility's stock to the border
+## costs it now, an export's leg: the local price of the service that carries it, over
+## [member haul]; 0.0 for a resource that moves for nothing. Its trader reads its curve at what an
+## order comes to at the facility, an ask net of the leg (TRADE_MODEL.md, "The costs of movement").
+func get_inventory_leg(resource_type: int) -> float:
+	var carrier := _resource_carriers[resource_type]
+	if carrier == -1 or !(haul > 0.0):
+		return 0.0
+	return haul * get_inventory_local_price(carrier)
 
 
 ## Returns the most recent measured net rate for [param resource_type] (positive

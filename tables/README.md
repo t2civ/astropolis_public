@@ -382,7 +382,7 @@ Categories for GUI sub-subpanel tabs in the Markets subpanel: Energy, Ores, Vola
 
 Fields:
 * `resource_class` GUI only. Sets the resource subtab under the markets tab.
-* `trade_class` Internal enum that affects physical transport mechanics.
+* `trade_class` Where a resource trades: its locus's market or the cyber market.
 * `trade_unit` Sets display unit in GUI. (May in the future affect trade mechanics.)   
 * `start_price` Estimated 2015 Earth price in USD per `trade_unit` at sim start (an integer derived from a float estimate, so small values round).
 * `mass_err_mult` Mulitiplyer for surveys.tsv `mass_error`.

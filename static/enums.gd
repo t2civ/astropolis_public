@@ -134,16 +134,11 @@ enum UniqueLineItems {
 	PUBLIC_PROVISION_PAID,
 }
 
-## Trade classes group resources by handling (electricity, bulk, cryogenic,
-## etc.) for trade and storage logic.
+## Where a resource trades (the [code]trade_class[/code] column of [code]resources.tsv[/code]);
+## a resource with none can't be traded. How it is held and moved is its storage class's.
 enum TradeClasses {
-	TRADE_CLASS_ELECTRICITY,
-	TRADE_CLASS_BULK,
-	TRADE_CLASS_ICE,
-	TRADE_CLASS_LIQUID,
-	TRADE_CLASS_CRYOGENIC,
-	TRADE_CLASS_PRECIOUS, ## Special handling is required.
-	TRADE_CLASS_CYBER, ## Tradable in the universal cyber market.
+	TRADE_CLASS_LOCUS, ## Traded at its locus's market.
+	TRADE_CLASS_CYBER, ## Traded at the solar-system-wide cyber market.
 }
 
 ## Locus stratum that receives a resource's disposed-of surplus (the
