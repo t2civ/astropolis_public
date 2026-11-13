@@ -171,11 +171,11 @@ enum OperationStrategies {
 }
 
 
-## Time horizons of use a market maker holds past its strategy's level for each e-fold its local
-## price moves from one interval to the next, on average over [constant SWING_MEMORY]: stock held
-## against the swings of the market it makes (PRODUCTION_MODEL.md, "What a facility is").
+## Time horizons of use a port holds past its strategy's level for each e-fold its local price
+## moves from one interval to the next, on average over [constant SWING_MEMORY]: stock held
+## against the swings of the market it trades in (PRODUCTION_MODEL.md, "What a facility is").
 const SWING_HORIZONS := 1.0
-## How long a market maker's reckoning of its prices' swings remembers them.
+## How long a port's reckoning of its prices' swings remembers them.
 const SWING_MEMORY := IVUnits.YEAR
 
 ## Short alias for the per-resource strategy enum, used by the authoring helpers.
@@ -334,7 +334,7 @@ func ai_init() -> void:
 	_player_ai.locus_strategy_changed.connect(_on_player_locus_strategy_changed)
 	# new_quarter does not fire on load or the first adopted quarter, so author once
 	# here to bootstrap (and re-author idempotently after load). The trader's posture
-	# goes first: the resource knobs hold a market maker's stock against its swings from it.
+	# goes first: the resource knobs hold a port's stock against its swings from it.
 	_author_trader_strategy()
 	_author_resource_strategies()
 	_author_facility_strategy()
@@ -481,7 +481,7 @@ func _apply_strategy_knobs(resource_type: int, strategy: int) -> void:
 	var def := facility_resource_strategy_defs[strategy]
 
 	var lever: float = def.get(&"level_lever", 0.0)
-	if _is_market_made(resource_type):
+	if _is_port_resource(resource_type):
 		lever += SWING_HORIZONS * _price_swings[resource_type]
 	proxy.set_inventory_level_lever(resource_type, lever)
 
@@ -615,17 +615,17 @@ func _author_trader_strategy() -> void:
 	_set_trader_strategy(_reconcile_trader_strategy())
 
 
-## Folds the facility's role into its trader's posture: a market-making facility's trader
-## makes its locus's market, and any other supplies its facility. A custom AI overrides
+## Folds the facility's role into its trader's posture: a port's trader is its merchant, and
+## any other supplies its facility. A custom AI overrides
 ## this to weigh a player's directive or the facility's own situation.
 func _reconcile_trader_strategy() -> int:
 	const TS := TraderBaseAI.TraderStrategies
-	return TS.MARKET_MAKING if proxy.market_maker else TS.FACILITY_SUPPORT
+	return TS.MERCHANT if proxy.port else TS.FACILITY_SUPPORT
 
 
-## True if the trader's posture makes a market in [param resource_type] here, for which a
-## market-making facility holds stock against its market's swings.
-func _is_market_made(resource_type: int) -> bool:
+## True if the trader's posture keeps lots standing on [param resource_type] here, for which a
+## port holds stock against its market's swings.
+func _is_port_resource(resource_type: int) -> bool:
 	var posture_def := TraderBaseAI.trader_strategy_defs[trader_strategy]
 	if !posture_def.get(&"two_sided", false):
 		return false

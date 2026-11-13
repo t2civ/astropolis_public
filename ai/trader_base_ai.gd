@@ -60,17 +60,17 @@ enum TraderStrategies {
 	## positions. Analog: utility-style fuel procurement.
 	CONSERVATIVE,
 	## Pursue spreads and arbitrage aggressively; tolerate inventory
-	## volatility. Analog: merchant trader.
+	## volatility. Analog: an arbitrageur.
 	OPPORTUNISTIC,
 	## Subordinate trading to the owning player's policy — embargoes, dumping,
 	## stockpiling — even at facility cost. Analog: state-owned trading
 	## enterprise.
 	POLICY_AGENT,
-	## Make the facility's locus's market, a port's: keep a lot standing on both sides of every
-	## resource the facility deals in, ready to trade in amounts that matter (see TRADE_MODEL.md,
-	## "Market makers"). The posture of a market-making facility's trader. Analog: a wholesale
-	## merchant; a spaceport's commodity desk.
-	MARKET_MAKING,
+	## Trade as its locus's port: keep a lot standing on both sides of every resource the facility
+	## deals in, ready to trade in amounts that matter (see TRADE_MODEL.md, "Ports"). The posture
+	## of a port's trader. Analog: a merchant wholesaler; a ship chandler to the transports that
+	## call.
+	MERCHANT,
 	N_BASE_TRADER_STRATEGIES,
 }
 
@@ -149,8 +149,8 @@ const QTY_TOLERANCE := 0.1
 
 ## Trader-posture strategy definitions; index = [enum TraderStrategies] value.
 ## [code]credit_share[/code] sets the share of its facility's credit the trader may commit (see
-## [constant CREDIT_SHARE]). The [code]two_sided[/code] switch makes markets in every resource the
-## facility deals in (see [method is_market_resource]), for which the facility AI holds stock
+## [constant CREDIT_SHARE]). The [code]two_sided[/code] switch keeps lots standing on every resource
+## the facility deals in (see [method is_market_resource]), for which the facility AI holds stock
 ## against its market's swings: the trader keeps a quote standing on the side its gap doesn't ask
 ## for, [code]standing_quarters[/code] ahead (see [constant STANDING_QUARTERS] and
 ## [method _plan_resource]).
@@ -161,7 +161,7 @@ static var trader_strategy_defs: Array[Dictionary] = [
 	{}, # CONSERVATIVE
 	{}, # OPPORTUNISTIC
 	{}, # POLICY_AGENT
-	{&"two_sided": true}, # MARKET_MAKING
+	{&"two_sided": true}, # MERCHANT
 ]
 
 ## Per-resource strategy definitions; index = [enum ResourceStrategies] value. The switches
@@ -280,8 +280,8 @@ var _expired_keys: Array[PackedInt32Array] = []
 
 # ********************************** STATIC ***********************************
 
-## True if inventory [param flags] mark a resource a market-making posture makes a
-## market in: tradable, and one the facility deals in.
+## True if inventory [param flags] mark a resource a two-sided posture keeps lots standing on:
+## tradable, and one the facility deals in.
 static func is_market_resource(flags: int) -> bool:
 	const TRADABLE := FacilityProxy.InventoryFlags.TRADABLE
 	const IS_MARKET := FacilityProxy.InventoryFlags.IS_MARKET
@@ -401,7 +401,7 @@ func process_ai_interval(_delta: float) -> void:
 ## where it could spare a lot over the quarter and a bid where it uses one, no more than a lot each
 ## way, each where its facility's flow over the quarter would trade it and no better for the other
 ## side than the market's price, where it has one. All are read off its facility's curve within the
-## curve's range (TRADE_MODEL.md, "Market makers").
+## curve's range (TRADE_MODEL.md, "Ports").
 func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 		standing_quarters: int) -> void:
 	var standing := standing_quarters > 0
@@ -429,7 +429,7 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 	var carried := _facility.get_inventory_carried(resource_type)
 	# A lot is what its facility moves of the resource in an interval: one unit a lot, a trader
 	# kept thousands of orders standing at a millionth of its flow, and their fills moved prices
-	# and nothing else (TRADE_MODEL.md, "What was tried", market makers and the floor).
+	# and nothing else (TRADE_MODEL.md, "What was tried", ports and the floor).
 	var min_lot: int = def.get(&"min_lot", MIN_LOT)
 	var lot := maxi(min_lot, roundi(maxf(use, _facility.get_inventory_production_rate(
 			resource_type)) * INTERVAL / multiplier))
@@ -639,11 +639,11 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 		else:
 			_ask_searches.erase(key)
 		# Quoted off the reference alone, a market whose traders' gaps had closed held its last
-		# trade's price while every facility's own moved away from it. A maker's lot stands where
+		# trade's price while every facility's own moved away from it. A port's lot stands where
 		# its own plan would trade that lot, read off its facility's curve: stood between the
 		# market's price and its facility's local price, which its last fill had moved, the next lot
 		# filled on the other side, every other interval where nothing stores the resource
-		# (TRADE_MODEL.md, "Market makers"). A standing quote stays clear of the trader's own on the
+		# (TRADE_MODEL.md, "Ports"). A standing quote stays clear of the trader's own on the
 		# other side, which wouldn't trade.
 		var standing_ask_price := maxi(ceili(lot_ask_price), 1)
 		var standing_bid_price := floori(lot_bid_price)
@@ -995,7 +995,7 @@ func _needs_requote(have_quantity: int, have_price: int, want_quantity: int, wan
 
 ## Translates a facility resource strategy into this trader's per-resource strategy.
 ## The trader consumes facility intent here (and in the init re-sync) and nowhere
-## else — never facility identity such as market_maker.
+## else — never facility identity such as port.
 func _trader_strategy_for_facility(facility_strategy: int) -> int:
 	const PRIMARY_PRODUCT := FacilityBaseAI.FacilityResourceStrategies.PRIMARY_PRODUCT
 	const SECONDARY_PRODUCT := FacilityBaseAI.FacilityResourceStrategies.SECONDARY_PRODUCT

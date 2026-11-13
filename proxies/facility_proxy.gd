@@ -70,9 +70,9 @@ enum InventoryFlags {
 	CAN_HAVE_INPUT = 1 << 6,
 	## A can-have operation at this facility produces or extracts this resource.
 	CAN_HAVE_OUTPUT = 1 << 7,
-	## The facility deals in this resource, and a market-making trader makes a market in it
-	## where it is also [constant TRADABLE]. For now the server sets it exactly where
-	## [constant CAN_HAVE_INPUT] or [constant CAN_HAVE_OUTPUT] is; a market maker is to deal in
+	## The facility deals in this resource, and a port's trader keeps lots standing on it where it
+	## is also [constant TRADABLE]. For now the server sets it exactly where
+	## [constant CAN_HAVE_INPUT] or [constant CAN_HAVE_OUTPUT] is; a port is to deal in
 	## resources it neither makes nor uses as well.
 	IS_MARKET = 1 << 9,
 	## Mask of all server-published signal bits.
@@ -202,10 +202,9 @@ var facility_class := -1  ## [code]facility_classes.tsv[/code] row index.
 var public_sector: float
 ## True if this is a small focused activity (affects stats and tax treatment).
 var unitary: bool
-## True if this facility makes its locus's market, a port's: it warehouses stock and keeps a
-## bid and an ask standing, ready to trade in amounts that matter (see TRADE_MODEL.md, "Market
-## makers").
-var market_maker: bool
+## True if this facility is its locus's port: it warehouses stock and keeps a bid and an ask
+## standing, ready to trade in amounts that matter (see TRADE_MODEL.md, "Ports").
+var port: bool
 ## True if all resource streams flow from/to inventory (no atmosphere/surface
 ## market).
 var closed_cycle_ops: bool
