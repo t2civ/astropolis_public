@@ -164,6 +164,9 @@ Notes:
 - **Research & Development** — Systematic scientific and engineering investigation yielding new knowledge, designs, materials, and processes. Compute- and instrument-intensive; the wellspring of technological advancement.
 - **Exchange Services** — Operation of trading venues and central clearing: matching buyers and sellers of commodities and contracts, guaranteeing settlement, and coordinating the load-out of traded goods for delivery.
 - **Passenger Services** — Movement of people within a body: transit systems, regional carriers, taxis, and mobility services.
+- **Power Transmission** — Moving electricity from where it is made or held to where it is used, over transmission lines and distribution networks, counted in megawatt-hours carried a kilometre.
+- **Pipeline Transport** — Moving fluids through pipes: water mains, oil and product lines, and gas transmission, counted in tonnes carried a kilometre.
+- **Freight Transport** — Moving goods by road, rail and waterway, or on a Moon base's haul roads and a station's carts and arms, counted in tonnes carried a kilometre.
 - **Retail Services** — Sale and last-mile distribution of goods to end consumers through storefronts, markets, and direct fulfillment.
 - **Hospitality** — Lodging, food service, and tourism: hotels, restaurants, and travel accommodation.
 - **Live Entertainment** — Leisure and recreation with the audience or player present: venues, live events, sports, parks, attractions, and gaming halls.

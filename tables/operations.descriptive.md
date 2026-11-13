@@ -183,6 +183,10 @@ Notes:
 - **Research & Development** — Scientific and engineering investigation: experimentation, modeling, design, and prototyping. Intensive in computing — increasingly accelerated and AI compute — and in instruments and specialized materials; yields new knowledge and designs.
 - **Exchange Operations** — Operation of trading venues and central clearing: order matching, settlement guarantee, and coordination of delivery load-out for traded goods. Compute- and communications-intensive.
 - **Passenger Services** — Movement of people within a body via transit and carriers. Consumes transport vehicles and energy.
+- **Power Transmission** — Carrying electricity over a grid's lines and transformers. Loses some of what it carries, about 8% over a few hundred kilometres, the world's transmission and distribution losses. Consumes labor.
+- **Pipeline Transport** — Pumping fluids through mains and pipelines. Consumes electricity and labor.
+- **Fuel Freight** — Carrying goods in trucks, locomotives and barges that burn liquid fuel, about 30 g a tonne-kilometre, a truck's. Consumes fuel, oxygen and labor, and wears its vehicles.
+- **Electric Freight** — Carrying goods in vehicles that run on electricity: battery trucks, electrified rail, and the rovers and carts that move goods where there is no fuel or air to burn it, about 0.08 kWh a tonne-kilometre, a battery truck's. Consumes electricity and labor, and wears its vehicles and their batteries.
 - **Radioactive Storage** — Keeping spent fuel and radioactive waste in dry casks: the space of the radioactive class, made by the watch and handling a store needs. Consumes labor.
 - **Bulk Storage** — Keeping solid goods in warehouses, silos and stockyards: the space of the bulk class, made by the handling a store needs. Consumes labor.
 - **Ice/Volatile Storage** — Keeping water and volatile gases in sealed tanks: the space of the ice and volatile class. Consumes labor.

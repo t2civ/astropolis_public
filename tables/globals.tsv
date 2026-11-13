@@ -1,5 +1,5 @@
 	biodiversity_pool	information_pool	haul
 Type	FLOAT	FLOAT	FLOAT
 Unit	spp	bit	
-	32860	1.8e22	0
+	32860	1.8e22	0.05
 @DB_ANONYMOUS

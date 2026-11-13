@@ -145,3 +145,6 @@ Notes:
 - **Schools & Universities** — Educational establishments: schools, colleges, universities, and vocational and training institutions.
 - **Civic & Government Buildings** — Public administration and service buildings: government offices, courts, security and emergency services, and other civic institutions.
 - **Utility & Sanitation Networks** — Distribution and collection infrastructure: water mains and pumping, power and gas distribution grids, sewerage, and waste-collection and recycling systems serving premises and settlements.
+- **Power Grids** — Transmission lines, towers, substations and transformers, and the distribution networks that carry electricity to its users.
+- **Pipelines** — Water mains, oil and product lines and gas transmission, with their pumping and compressor stations.
+- **Freight Networks** — Roads, railways and waterways with the vehicles that run on them, or a Moon base's haul roads and rovers. Its fleet can run on fuel or on electricity; changing over is replacing much of the fleet.
