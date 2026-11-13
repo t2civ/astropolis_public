@@ -1,9 +1,9 @@
 # Schema for needs.tsv
 
 Each row is a need: something every member of a population type wants filled, such as
-sustenance, room, health or learning. A need is only a tier and a name. What fills it, and
-how much of it each type wants, is `wants.tsv`, and the code never names a need
-(`POPULATION_MODEL.md`, "A population is what it needs" and "Needs").
+sustenance, room, health or learning. A need is a tier, a name and its reach past its want.
+What fills it, and how much of it each type wants, is `wants.tsv`, and the code never names a
+need (`POPULATION_MODEL.md`, "A population is what it needs" and "Needs").
 
 
 ## Table Data
@@ -16,6 +16,12 @@ how much of it each type wants, is `wants.tsv`, and the code never names a need
     `spending_share` (`wants.tsv`).
   - `FULFILLMENT` — What sentient beings require beyond the other two. It is bought as
     wellbeing is.
+- satiation_headroom — FLOAT, the need's reach: the most a want for it satisfies past the
+  want, approached with diminishing returns as a decile buys past it, past a fill f of one a
+  satisfaction of 1 + h(1 − e^(−(f − 1)/h)) (`FINANCIAL_MODEL.md`, "Saving and borrowing").
+  Default `0.1`, where more past the want buys little more life or learning. Room's is long,
+  since a home with room to spare is what a family forms in, and its plenty raises births
+  (`POPULATION_MODEL.md`, "Demographics", the responses' shape).
 
 
 ## Notes

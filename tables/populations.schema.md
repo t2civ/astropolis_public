@@ -13,11 +13,13 @@ own content is written, which comes with the first game that holds them
 
 ## Table Data
 
-- age_group_widths — ARRAY[FLOAT] in years, seven values: how long the type spends in each of its first
-  seven age groups. The eighth, oldest age group has no upper bound. Each unit of time a population
-  moves on the share of an age group's members that is one over the age group's width, which is the whole
-  of aging, so the widths are what make a type long-lived or quick to age. Base humans' age groups are
-  0-4, 5-14, 15-24, 25-39, 40-54, 55-64, 65-79 and 80+ (`POPULATION_MODEL.md`, "Demographics").
+- age_group_widths — ARRAY[FLOAT] in years, seven values: how long the type spends in each of its
+  first seven age groups. The eighth, oldest age group has no upper bound. A population passes an
+  age group's members on to the next as a life table at the age group's death rate has them leave
+  it alive, one over its width where none die, which is the whole of aging, so the widths are what
+  make a type long-lived or quick to age. A population's pace of aging divides its adults' and
+  elders' widths. Base humans' age groups are 0-4, 5-14, 15-24, 25-39, 40-54, 55-64, 65-79 and 80+
+  (`POPULATION_MODEL.md`, "Demographics").
 - first_adult_age_group — INT, the first age group whose members are adults. The age groups below it
   are the young, so a type with no youth, such as one made as an adult, has 0.
 - first_elder_age_group — INT, the first age group whose members are elders.
@@ -42,7 +44,7 @@ inequality, `facilities_populations.tsv`) takes the average over its deciles.
 - mortality_need — TABLE_ROW `needs.tsv`, the need whose satisfaction sets the death rates.
   Blank holds them at their seeds.
 - served_mortalities — ARRAY[FLOAT] per year, eight values: each age group's deaths per head
-  with the need met.
+  with the need met, at a frailty of one.
 - mortality_elasticities — ARRAY[FLOAT], eight values: how steeply each age group's death rate
   rises as the need goes short, the exponent above. The young respond most.
 - mortality_floor — FLOAT, the satisfaction below which going further without kills no
@@ -52,8 +54,8 @@ inequality, `facilities_populations.tsv`) takes the average over its deciles.
 - fertility_needs — ARRAY[TABLE_ROW] `needs.tsv`, the needs whose satisfactions set the
   fertility. Blank holds it at its seed. Base humans' are learning, whose lack raises it,
   and shelter, whose lack, crowding, lowers it.
-- served_fertility — FLOAT per year, the fertility with the needs met: births per head, each
-  weighted by `birth_weights`.
+- served_fertility — FLOAT per year, the fertility with the needs met, at a fecundity and a pace
+  of aging of one: births per head, each weighted by `birth_weights`.
 - fertility_elasticities — ARRAY[FLOAT], one for each of `fertility_needs`: how steeply the
   fertility moves as the need goes short, negative where it falls.
 - fertility_floor — FLOAT, the satisfaction below which going further without moves the
@@ -76,9 +78,6 @@ inequality, `facilities_populations.tsv`) takes the average over its deciles.
   it, and the rest over their other wants in the shares `wants.tsv` sets
   (`POPULATION_MODEL.md`, "Work and pay"). Its inverse is how many years of spending the
   wealth seeded in `facilities_populations.tsv` holds. Default `1/y`.
-- satiation_headroom — FLOAT, the most a want's satisfaction rises past the want, approached with
-  diminishing returns as a decile buys past it: past a fill f of one, a satisfaction of
-  1 + h(1 − e^(−(f − 1)/h)) (`FINANCIAL_MODEL.md`, "Saving and borrowing"). Default `0.1`.
 - work_resource — TABLE_ROW `resources.tsv`, the resource the type's work makes. Default
   `LABOR`, which every operation draws (`POPULATION_MODEL.md`, "Work and pay").
 - work_stage_weights — ARRAY[FLOAT], three values, young, adults and elders: how much of a

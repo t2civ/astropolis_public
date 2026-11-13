@@ -683,6 +683,14 @@ func get_population_life_expectancy(_population_type: int) -> float:
 	return 0.0
 
 
+## Returns [param population_type]'s [param knob], an [enum Enums.PopulationKnobs]: a factor of one
+## where it lives by its type's rates (POPULATION_MODEL.md, "Demographics", the knobs). A
+## facility's own, and at an aggregate its members' averaged over their heads; NAN where none of its
+## people are, or without a population. Safe default on an out-of-range index.
+func get_population_knob(_population_type: int, _knob: int) -> float:
+	return NAN
+
+
 ## Returns migration pressure for [param population_type] (positive = net immigration,
 ## negative = net emigration); facility only. Safe default on an out-of-range index.
 func get_population_migration_pressure(_population_type: int) -> float:
