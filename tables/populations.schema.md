@@ -123,8 +123,9 @@ working there that move it (`catch_up_time`) are better schooled.
   its pace. Default `30 y`, a guess.
 - productivity_factor — FLOAT: what an hour of the type does of a person's at the frontier, at its
   reference schooling, so that its productivity is this times its place's know-how and what its
-  schooling gives; a type that technology improves has its factor raised (`POPULATION_MODEL.md`,
-  "Owned populations", its work). Default `1`.
+  schooling gives. For a made type it is a patch, until the technology system sets what an hour of
+  each type does at each operation (`POPULATION_MODEL.md` in the development repository,
+  "Placeholders"). Default `1`.
 
 The last columns are a made type's: the good its individuals are made of until they are
 commissioned where they will live (`POPULATION_MODEL.md`, "Owned populations"). Blank for a type
