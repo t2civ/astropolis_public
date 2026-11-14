@@ -91,8 +91,8 @@ The last columns are the type's schooling, the years of school its people hold, 
 young and carried as they age, and what it makes of an hour (`POPULATION_MODEL.md`, "Productivity
 and schooling"). An hour of a population makes its type's factor times the know-how of the place
 it works (`facilities_populations.tsv`) times e to the return times its workforce's years of
-schooling past the reference, and a place's know-how closes on the frontier, faster as the
-schooling of the types working there rises.
+schooling past the reference, and a place's know-how closes on the frontier, faster as the types
+working there that move it (`catch_up_time`) are better schooled.
 
 - schooling_need — TABLE_ROW `needs.tsv`, the need whose satisfaction gains the young their
   schooling. Blank: the type gains none and holds what it was seeded with. Default `LEARNING`.
@@ -118,8 +118,9 @@ schooling of the types working there rises.
   the frontier, one, the recipes' own. Each year it closes a share of its gap, what its workforce's
   schooling makes of an hour against the reference schooling over this time, so a population
   schooled to the reference closes about a thirtieth of its gap a year at the default; where
-  several types work, each type's share weighed by the hours its workforce could work. `inf`: its
-  workforce moves no know-how. Default `30 y`, a guess.
+  several types work, each type that moves know-how weighs in by the hours its workforce could
+  work. `inf`, as for a made type: its workforce neither moves the place's know-how nor weighs in
+  its pace. Default `30 y`, a guess.
 - productivity_factor — FLOAT: what an hour of the type does of a person's at the frontier, at its
   reference schooling, so that its productivity is this times its place's know-how and what its
   schooling gives; a type that technology improves has its factor raised (`POPULATION_MODEL.md`,

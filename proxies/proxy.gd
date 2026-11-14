@@ -185,17 +185,11 @@ func has_inventory() -> bool:
 # Development totals. Default 0.0; the developed proxies (Facility, Player,
 # Locus, Join) override with values combined from their components.
 
-## Returns the development "population" total, each person counted once where they belong,
-## optionally of a specific [param population_type] (-1 for total). Staff on loan and crew belong
-## to their home's population and are counted there, never here ([method get_development_staff]).
+## Returns the development "population" total, optionally of a specific [param population_type]
+## (-1 for total), each person counted once, where they are: the residents but for those lent as
+## staff and crew to the facilities their polity staffs from them, and the staff on loan and crew
+## who work here.
 func get_development_population(_population_type := -1) -> float:
-	return 0.0
-
-
-## Returns the staff on loan and crew working here, optionally of a specific
-## [param population_type] (-1 for total): people who belong to another facility's population and
-## are counted there, shown beside this one's.
-func get_development_staff(_population_type := -1) -> float:
 	return 0.0
 
 

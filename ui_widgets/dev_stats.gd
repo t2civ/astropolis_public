@@ -12,9 +12,9 @@ extends MarginContainer
 ## manufacturing, etc. as rows × proxy targets as columns.
 ##
 ## The population line folds: its title holds each target's total, each person counted once where
-## they belong, and it unfolds to each type's. The staff on loan and crew show on a row beside it,
-## never in it, since they belong to their home's population. Value columns are of a fixed width,
-## right aligned, so every row's line up with the population line's title.
+## they are, the staff on loan and crew where they work, and it unfolds to each type's. Value
+## columns are of a fixed width, right aligned, so every row's line up with the population line's
+## title.
 ##
 ## Used by [ITabDevelopment] and the standalone development panel. Calls
 ## proxy methods on the proxy thread, then builds the rows on the main
@@ -47,12 +47,12 @@ var min_columns := 3
 var required_component := &"operations"
 ## Min width of each target's column, before the GUI size's multiplier.
 var column_width := 80.0
-## Format of the population line, its types' rows and the staff and crew row.
+## Format of the population line and its types' rows.
 var population_format := IVQFormat.named_number.bind(3, IVQFormat.TextFormat.SHORT_MIXED_CASE,
 		true)
 
 
-## Per-row spec of the rows below the population line and the staff and crew row:
+## Per-row spec of the rows below the population line:
 ## [code][label, getter_method, format_callable][/code]. Override to add or remove development
 ## metrics.
 var content: Array[Array] = [
@@ -84,7 +84,6 @@ var fallback_names: Array[StringName] = [&"", &""]
 var _rows := VBoxContainer.new()
 var _header: StatsRow
 var _population: PopulationLine
-var _staff: StatsRow
 var _stats_rows: Array[StatsRow] = []
 
 
@@ -177,8 +176,6 @@ func _set_data(targets_: Array[StringName], column_names_: Array[StringName],
 		&"population": _format_cells(_get_values(proxies, &"get_development_population"),
 				population_format, n_spacers),
 		&"population_rows": population_rows,
-		&"staff": _format_cells(_get_values(proxies, &"get_development_staff"),
-				population_format, n_spacers),
 		&"stats_rows": stats_rows,
 	}
 	_build.call_deferred(data)
@@ -224,18 +221,14 @@ func _build(data: Dictionary) -> void:
 	var headers: PackedStringArray = data[&"headers"]
 	var population: PackedStringArray = data[&"population"]
 	var population_rows: Array[Array] = data[&"population_rows"]
-	var staff: PackedStringArray = data[&"staff"]
 	var stats_rows: Array[Array] = data[&"stats_rows"]
 	if !_header: # the rows read the GUI size, a setting there is only once the game runs
 		_header = StatsRow.new(FOLD_INDENT, column_width)
 		_rows.add_child(_header)
 		_population = PopulationLine.new(FOLD_INDENT, column_width)
 		_rows.add_child(_population)
-		_staff = StatsRow.new(FOLD_INDENT, column_width)
-		_rows.add_child(_staff)
 	_header.set_row("", headers)
 	_population.set_line(tr(&"LABEL_POPULATION"), population, population_rows)
-	_staff.set_row(tr(&"LABEL_STAFF_AND_CREW"), staff)
 	var n_rows := stats_rows.size()
 	while _stats_rows.size() < n_rows:
 		var row := StatsRow.new(FOLD_INDENT, column_width)
