@@ -266,8 +266,10 @@ static var operation_strategy_defs: Array[Dictionary] = [
 
 ## The owners' required return: the least interest rate, a year, at which they lend what the
 ## facility's budget leaves unspent (see [member FacilityProxy.required_return]), rather than be
-## paid it.
-static var required_return := 0.04
+## paid it. Nothing, what the money earns held, so they lend at any rate that pays that; an AI may
+## require more, its owners taking what no borrower pays it for (FINANCIAL_MODEL.md, "A glut of
+## saving").
+static var required_return := 0.0
 
 static var _table_n_rows := IVTableData.table_n_rows
 static var _tradable_resources: PackedInt32Array

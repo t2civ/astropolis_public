@@ -78,6 +78,12 @@ inequality, `facilities_populations.tsv`) takes the average over its deciles.
   it, and the rest over their other wants in the shares `wants.tsv` sets
   (`POPULATION_MODEL.md`, "Work and pay"). Its inverse is how many years of spending the
   wealth seeded in `facilities_populations.tsv` holds. Default `1/y`.
+- past_want_elasticity — FLOAT from 0 to 1, how a decile buys past a want. What each input's budget
+  would buy over the decile's part of it at the input's price is its reach, and past the part it
+  buys the part times its reach raised to this: at `0.5` a budget that would buy a hundred parts
+  buys ten, and what it doesn't spend it keeps, offered to the credit market. At `1` it spends its
+  budget at any price, and at `0` it buys its part and no more. One for every need for now
+  (`FINANCIAL_MODEL.md`, "A glut of saving"). Default `0.5`.
 - work_resource — TABLE_ROW `resources.tsv`, the resource the type's work makes. Default
   `LABOR`, which every operation draws (`POPULATION_MODEL.md`, "Work and pay").
 - work_stage_weights — ARRAY[FLOAT], three values, young, adults and elders: how much of a
