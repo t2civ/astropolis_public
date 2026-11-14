@@ -134,6 +134,9 @@ enum UniqueLineItems {
 	PUBLIC_PROVISION_PAID,
 	TARIFFS_PAID,
 	TARIFFS_RECEIVED,
+	KEEP,
+	OWNED_WORK,
+	OWNED_STAFF_RECEIPTS,
 }
 
 ## Where a resource trades (the [code]trade_class[/code] column of [code]resources.tsv[/code]);

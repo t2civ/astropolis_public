@@ -89,9 +89,10 @@ inequality, `facilities_populations.tsv`) takes the average over its deciles.
 
 The last columns are the type's schooling, the years of school its people hold, gained by the
 young and carried as they age, and what it makes of an hour (`POPULATION_MODEL.md`, "Productivity
-and schooling"). An hour of a population makes its know-how (`facilities_populations.tsv`) times
-e to the return times its workforce's years of schooling past the reference, and its know-how
-closes on the frontier, faster as its schooling rises.
+and schooling"). An hour of a population makes its type's factor times the know-how of the place
+it works (`facilities_populations.tsv`) times e to the return times its workforce's years of
+schooling past the reference, and a place's know-how closes on the frontier, faster as the
+schooling of the types working there rises.
 
 - schooling_need — TABLE_ROW `needs.tsv`, the need whose satisfaction gains the young their
   schooling. Blank: the type gains none and holds what it was seeded with. Default `LEARNING`.
@@ -107,16 +108,22 @@ closes on the frontier, faster as its schooling rises.
   about two thirds of their years.
 - schooling_return — FLOAT per year of schooling: how much more an hour makes for each year its
   workforce holds, e to it times the years, the Mincerian return. Zero leaves the hour at the
-  know-how, whatever the schooling. Default `0.1/y`.
+  know-how, whatever the schooling, as for a made type, which counts as schooled to its
+  reference. Default `0.1/y`.
 - reference_schooling — FLOAT in years: the workforce's schooling at which an hour makes the
   know-how, its people weighted as `work_stage_weights` counts them. Base humans' is the USA's as
   seeded for 2015, at whose know-how of one an hour makes what the recipes assume. Default
   `13.57 y`.
-- catch_up_time — FLOAT in years: how fast a population's know-how closes on the frontier, one,
-  the recipes' own. Each year it closes a share of its gap, what its workforce's schooling makes of
-  an hour against the reference schooling over this time, so a population schooled to the
-  reference closes about a thirtieth of its gap a year at the default. `inf`: its know-how holds.
-  Default `30 y`, a guess.
+- catch_up_time — FLOAT in years: how fast the know-how of the place a population works closes on
+  the frontier, one, the recipes' own. Each year it closes a share of its gap, what its workforce's
+  schooling makes of an hour against the reference schooling over this time, so a population
+  schooled to the reference closes about a thirtieth of its gap a year at the default; where
+  several types work, each type's share weighed by the hours its workforce could work. `inf`: its
+  workforce moves no know-how. Default `30 y`, a guess.
+- productivity_factor — FLOAT: what an hour of the type does of a person's at the frontier, at its
+  reference schooling, so that its productivity is this times its place's know-how and what its
+  schooling gives; a type that technology improves has its factor raised (`POPULATION_MODEL.md`,
+  "Owned populations", its work). Default `1`.
 
 
 ## Notes
