@@ -53,6 +53,7 @@ var base_column_width := 55.0  ## Min width of each value column, before the GUI
 # table indexing, cached so proxy-thread reads stay safe
 var _db_tables := IVTableData.db_tables
 var _module_names: Array[StringName] = _db_tables[&"modules"][&"name"]
+var _population_names: Array[StringName] = _db_tables[&"populations"][&"name"]
 var _operation_names: Array[StringName] = _db_tables[&"operations"][&"name"]
 var _operation_sublabels: Array[StringName] = _db_tables[&"operations"][&"sublabel"]
 var _resource_names: Array[StringName] = _db_tables[&"resources"][&"name"]
@@ -241,6 +242,7 @@ func _get_row(buildout: Dictionary, now: float) -> Array:
 	var kind: int = buildout[&"kind"]
 	var module_type: int = buildout[&"module"]
 	var op_type: int = buildout[&"operation"]
+	var population_type: int = buildout[&"population"]
 	var orderer: int = buildout[&"orderer"]
 	var binding: int = buildout[&"binding"]
 	var units: float = buildout[&"units"]
@@ -274,8 +276,10 @@ func _get_row(buildout: Dictionary, now: float) -> Array:
 		state = "paused"
 	elif kind != BUILDOUT_TEARDOWN and !(return_rate > 0.0):
 		state = "waits"
+	# A commissioning's units are a made population type's individuals.
 	return [
-		_module_names[module_type], tooltip, built_text, pace,
+		_module_names[module_type] if module_type != -1 else _population_names[population_type],
+		tooltip, built_text, pace,
 		_resource_names[binding] if binding != -1 and pace < 1.0 else &"",
 		done_in, slip, spent / IVUnits.unit_multipliers[&"$M"], return_rate, state,
 	]

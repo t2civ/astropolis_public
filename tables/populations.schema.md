@@ -126,6 +126,18 @@ working there that move it (`catch_up_time`) are better schooled.
   schooling gives; a type that technology improves has its factor raised (`POPULATION_MODEL.md`,
   "Owned populations", its work). Default `1`.
 
+The last columns are a made type's: the good its individuals are made of until they are
+commissioned where they will live (`POPULATION_MODEL.md`, "Owned populations"). Blank for a type
+that is born.
+
+- good — TABLE_ROW `resources.tsv`, the manufactured good a made type's individuals are made of,
+  traded and moved as any good until its owner commissions them: capital commissions as many as
+  their work would pay for, as it builds plant. Blank for a type that is born.
+- good_qty — FLOAT in tonnes: how much of its good one individual is made of, what a
+  commissioning draws for each.
+- commissioning_time — FLOAT in years: how long a commissioning of a type's room takes on its
+  schedule, as a module's `build_time` is for its buildouts.
+
 
 ## Notes
 

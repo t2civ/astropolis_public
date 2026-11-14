@@ -156,9 +156,11 @@ enum BudgetLines {
 ## A buildout's kind, what its units are for (see [method get_operations_buildouts] and
 ## PRODUCTION_MODEL.md, "Buildouts").
 enum BuildoutKinds {
-	## A module's standing buildout, which rebuilds what wears of its plant still needed.
+	## A module's standing buildout, which rebuilds what wears of its plant still needed, or a made
+	## population type's, which commissions what dies of its people still needed.
 	BUILDOUT_REPLACEMENT,
-	## Units of a module past what replacement rebuilds, for an operation's room.
+	## Units of a module past what replacement rebuilds, for an operation's room, or individuals of a
+	## made population type for its room.
 	BUILDOUT_EXPANSION,
 	## Units of a module taken down, its owner's: what they recover is made, and their construction
 	## drawn ([method order_operations_teardown]).
@@ -443,7 +445,10 @@ func get_budget_line(line: int) -> float:
 ## of its last interval and in the order they were opened: each a dictionary of its "id", unique
 ## in the game; "module" (a [code]modules[/code] row) and "operation", the operation its units go
 ## to, or a teardown's come from, -1 for a replacement, whose units go back to the operations of
-## its module that lost them, and for a teardown of all its module's; "kind" ([enum BuildoutKinds])
+## its module that lost them, and for a teardown of all its module's; "population", for a
+## commissioning, whose units are a made population type's individuals, that type (a
+## [code]populations[/code] row), its module and operation -1, and -1 for a module's buildout
+## (POPULATION_MODEL.md, "Owned populations"); "kind" ([enum BuildoutKinds])
 ## and "orderer" ([enum BuildoutOrderers]); "units" planned, 0.0 for a replacement, which stands,
 ## "built", a teardown's taken down, and "left"; "rate", its schedule in units a second,
 ## "start", the game time it was opened, and "pace", the share of its schedule it built over about
