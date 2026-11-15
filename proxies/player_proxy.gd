@@ -28,6 +28,13 @@ enum SanctionFlags {
 	SANCTION_IMPORTS = 1 << 1, ## What the sanctioning player buys from its target.
 }
 
+## The taxes a polity's AI and player set, each a rate a year and a threshold, a share of its
+## residents' mean wealth (FINANCIAL_MODEL.md, "A government's taxes and transfers").
+enum Taxes {
+	TAX_WEALTH, ## On what each decile holds past the threshold.
+	TAX_REVERSE, ## Paid to each decile holding short of the threshold, out of the transfers.
+}
+
 
 # public read-only
 var player_id := -1 ## Index into [member ProxyBus.player_proxies].
@@ -35,15 +42,19 @@ var player_class := -1 ## Player class index ([code]PlayerClasses[/code] enum).
 var homeworld := "" ## Name of this player's homeworld locus.
 ## A polity's taxes (FINANCIAL_MODEL.md, "Taxes"): its corporate tax, a share of its facilities'
 ## private operating income; its income tax on wages, the payroll tax, a share of the wages they
-## pay, and on the interest and the dividends its residents are paid; and its wealth tax, a share a
-## year of what its residents hold past [member wealth_tax_threshold], a share of their mean wealth.
-## Its agencies' and companies' facilities pay its rates.
+## pay, and on the interest and the dividends its residents are paid; its wealth tax, a share a year
+## of what its residents hold past [member wealth_tax_threshold], a share of their mean wealth; and
+## its reverse tax, a share a year of what they hold short of [member reverse_tax_threshold], paid
+## them out of its transfers. Its agencies' and companies' facilities pay its rates. Its wealth and
+## reverse taxes are its AI's and its player's: use [method set_tax].
 var corporate_tax_rate := 0.0
 var payroll_tax_rate := 0.0 ## See [member corporate_tax_rate].
 var interest_tax_rate := 0.0 ## See [member corporate_tax_rate].
 var dividend_tax_rate := 0.0 ## See [member corporate_tax_rate].
 var wealth_tax_rate := 0.0 ## See [member corporate_tax_rate].
 var wealth_tax_threshold := 0.0 ## See [member corporate_tax_rate].
+var reverse_tax_rate := 0.0 ## See [member corporate_tax_rate].
+var reverse_tax_threshold := 0.0 ## See [member corporate_tax_rate].
 ## True if a human plays this player, as set when the game started; only a playable player may be.
 ## Its AI still runs, and sets whatever its human leaves on auto. Whether this machine's human
 ## plays it is [method is_local_human].
@@ -96,6 +107,9 @@ var held_budget_shares: Dictionary[int, float] = {}
 ## The budget targets held off auto, by [code]Enums.Accounts[/code], each at its target (see
 ## [method hold_budget_target]). Resizable container — not threadsafe!
 var held_budget_targets: Dictionary[int, float] = {}
+## The taxes held off auto, by [enum Taxes], each its rate and threshold (see [method hold_tax]).
+## Resizable container — not threadsafe!
+var held_taxes: Dictionary[int, PackedFloat64Array] = {}
 
 # *****************************************************************************
 
@@ -184,6 +198,34 @@ func get_tariff(resource_type: int) -> float:
 	return tariffs[resource_type]
 
 
+## Returns this polity's rate a year of [param tax], an [enum Taxes] (see
+## [member corporate_tax_rate]); 0.0 on an out-of-range tax. proxy thread only!
+func get_tax_rate(tax: int) -> float:
+	match tax:
+		Taxes.TAX_WEALTH:
+			return wealth_tax_rate
+		Taxes.TAX_REVERSE:
+			return reverse_tax_rate
+	return 0.0
+
+
+## Returns this polity's threshold of [param tax], an [enum Taxes], a share of its residents' mean
+## wealth (see [member corporate_tax_rate]); 0.0 on an out-of-range tax. proxy thread only!
+func get_tax_threshold(tax: int) -> float:
+	match tax:
+		Taxes.TAX_WEALTH:
+			return wealth_tax_threshold
+		Taxes.TAX_REVERSE:
+			return reverse_tax_threshold
+	return 0.0
+
+
+## Returns true if [param tax], an [enum Taxes], is held off auto (see [method hold_tax]). proxy
+## thread only!
+func is_tax_held(tax: int) -> bool:
+	return held_taxes.has(tax)
+
+
 ## Returns true if the budget line kept under [param key] is held off auto (see
 ## [method hold_budget_share]). proxy thread only!
 func is_budget_share_held(key: int) -> bool:
@@ -220,6 +262,27 @@ func is_budget_target_held(account: int) -> bool:
 ## delivery. Proxy-authoritative: this change flows proxy -> server. No-op on a player that is not
 ## a polity, on an out-of-range resource, or on a negative rate or NAN.
 @abstract func set_tariff(resource_type: int, rate: float) -> void
+
+
+## Sets this polity's [param tax], an [enum Taxes], to [param rate] a year, past or short of
+## [param threshold], a share of its residents' mean wealth (see [member corporate_tax_rate]). Its
+## residents pay or are paid it at each settlement. Proxy-authoritative: this change flows
+## proxy -> server. No-op on a player that is not a polity, on an out-of-range tax, on a negative,
+## infinite or NAN rate, on a negative or NAN threshold, or where the tax is held (see
+## [method hold_tax]).
+@abstract func set_tax(tax: int, rate: float, threshold: float) -> void
+
+
+## Holds [param tax], an [enum Taxes], off auto at [param rate] and [param threshold], as
+## [method set_tax] takes them, until [method release_tax]. No-op where [method set_tax] would be
+## but for a hold.
+@abstract func hold_tax(tax: int, rate: float, threshold: float) -> void
+
+
+## Returns [param tax], an [enum Taxes], to auto, where [method set_tax] sets it again. It keeps its
+## rate and threshold until then.
+func release_tax(tax: int) -> void:
+	held_taxes.erase(tax)
 
 
 ## Sets the share of the budget line kept under [param key] (see [member budget_shares]) to

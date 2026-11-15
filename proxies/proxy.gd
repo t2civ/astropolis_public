@@ -63,6 +63,9 @@ enum OperationsItems {
 
 
 const INTERVAL := 7.0 * IVUnits.DAY ## AI tick interval. See [constant BaseAI.INTERVAL].
+## The deciles a population's people are divided into by their means, equal in heads; a decile's
+## index runs best off first (POPULATION_MODEL.md, "Demographics", inequality).
+const N_DECILES := 10
 
 ## ivoyager save/load category. A Proxy persists NONE of its server data — Net
 ## components and scalar fields all re-flow from the server entity via
@@ -646,6 +649,13 @@ func get_population_number(_population_type := -1) -> float:
 	return 0.0
 
 
+## Returns how many of [param population_type] are owned, or of all types if -1: an owned
+## population's means are its owner's, and its treasuries' transfers pass it by
+## (POPULATION_MODEL.md, "Owned populations"). Safe default on an out-of-range index.
+func get_population_owned_number(_population_type := -1) -> float:
+	return 0.0
+
+
 ## Returns how many of [param population_type] are in its [param age_group], one of the
 ## type's eight (see POPULATION_MODEL.md, "Demographics"). Safe default on an out-of-range
 ## index.
@@ -708,6 +718,23 @@ func get_population_migration_pressure(_population_type: int) -> float:
 ## index.
 func get_population_satisfaction(_population_type: int, _need: int) -> float:
 	return 1.0
+
+
+## Returns the share of its want for [param need] that [param decile] of [param population_type]
+## got, one of [constant N_DECILES], best off first, smoothed as
+## [method get_population_satisfaction] is: how well its worse off are served beside its better
+## off. Facility only; 1.0 elsewhere. Safe default on an out-of-range index.
+func get_population_decile_satisfaction(_population_type: int, _need: int, _decile: int
+		) -> float:
+	return 1.0
+
+
+## Returns what [param population_type]'s wants for [param need] cost a second at the long prices,
+## each local price averaged over a decade, or all types' if -1, in dollars: the weight its
+## satisfaction carries where several types' or facilities' are combined. 0.0 without a
+## population. Safe default on an out-of-range index.
+func get_population_want_value(_population_type: int, _need: int) -> float:
+	return 0.0
 
 
 ## Returns [param population_type]'s wealth, or all types' if -1, in dollars; a facility's
@@ -804,6 +831,21 @@ func get_population_spending(_population_type := -1) -> float:
 ## corporate dividends, less what either drew from them where it was short (FINANCIAL_MODEL.md,
 ## "Ownership, as built"). 0.0 without a population.
 func get_population_dividends(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns what [param population_type]'s residents offered the credit market in their last
+## interval, or all types' if -1, in dollars per second: what they saved of what they were paid and
+## of their budgets (FINANCIAL_MODEL.md, "Saving and borrowing"). 0.0 without a population.
+func get_population_saving_offered(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns what the credit market lent of what [param population_type]'s residents offered it in
+## their last interval, or all types' if -1, in dollars per second: none where the interest rate
+## doesn't pay what holding their money earns them, and less than all where the borrowers took up
+## less than was offered (FINANCIAL_MODEL.md, "A glut of saving"). 0.0 without a population.
+func get_population_saving_lent(_population_type := -1) -> float:
 	return 0.0
 
 

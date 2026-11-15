@@ -141,6 +141,7 @@ var _item_returns := PackedInt32Array()
 var _committed_items := PackedInt32Array() # a treasury's committed lines
 var _funding_items := PackedInt32Array() # a treasury's funding of a facility, by Enums.Accounts
 var _item_transfers_paid := -1
+var _item_reverse_tax_paid := -1
 var _item_dividends_paid := -1
 var _item_appropriations_paid := -1
 var _item_public_provision_paid := -1
@@ -254,6 +255,7 @@ func _precompute_display_names() -> void:
 		_find_item(Enums.UniqueLineItems.CORPORATE_INTEREST_PAID),
 	])
 	_item_transfers_paid = _find_item(Enums.UniqueLineItems.TRANSFERS_PAID)
+	_item_reverse_tax_paid = _find_item(Enums.UniqueLineItems.REVERSE_TAX_PAID)
 	_item_dividends_paid = _find_item(Enums.UniqueLineItems.DIVIDENDS_PAID)
 	_item_funding_received = _find_item(Enums.UniqueLineItems.FUNDING_RECEIVED)
 	_item_loan_proceeds = _find_item(Enums.UniqueLineItems.LOAN_PROCEEDS)
@@ -665,16 +667,16 @@ func _subtract_series(a: PackedFloat64Array, b: PackedFloat64Array) -> PackedFlo
 
 
 func _collect_funding(proxy: Proxy) -> Array:
-	# [[title, total, committed_rows, discretionary_rows, control], ...], each row [name, share,
-	# line, draws, base, control], its draws what it drew last quarter and this quarter's pace, as
-	# rates a year (_get_draws), and its base what its share is of: at an administrative center
-	# or for a player, each of the player's treasuries that has a budget or a line; at a facility
-	# its own budget, after its owners' lines for it where it isn't its player's center and what
-	# its expansion borrows where it borrows. A control
-	# is empty where this machine's human can't set the line or budget, and else [Controls, proxy
-	# name, index, is held, limit], its index a budget line's key, a treasury's account or the
-	# build share's operation, and its limit the most a line's share may be set at or a budget's
-	# total now.
+	# [[title, total, committed_rows, discretionary_rows, control, taxes], ...], each row [name,
+	# share, line, draws, base, control], its draws what it drew last quarter and this quarter's
+	# pace, as rates a year (_get_draws), and its base what its share is of: at an administrative
+	# center or for a player, each of the player's treasuries that has a budget or a line; at a
+	# facility its own budget, after its owners' lines for it where it isn't its player's center
+	# and what its expansion borrows where it borrows. A control is empty where this machine's
+	# human can't set the line or budget, and else [Controls, proxy name, index, is held, limit],
+	# its index a budget line's key, a treasury's account or the build share's operation, and its
+	# limit the most a line's share may be set at or a budget's total now. A polity's government
+	# treasury's panel has its taxes, each [tax, rate, threshold], shown under its title.
 	var player: PlayerProxy
 	var facility: FacilityProxy
 	if proxy is PlayerProxy:
@@ -838,10 +840,25 @@ func _collect_treasury(player: PlayerProxy, center: FacilityProxy, account: int,
 		var line: float = row[2]
 		row[1] = line / total if total > 0.0 else NAN
 		row[4] = total
+	var is_government := account == Enums.Accounts.ACCOUNT_GOVERNMENT
 	if _has_rest(player):
-		var rest_key := (_item_transfers_paid if account == Enums.Accounts.ACCOUNT_GOVERNMENT
-				else _item_dividends_paid)
+		var rest_key := _item_transfers_paid if is_government else _item_dividends_paid
 		var rest_share := maxf(1.0 - share_sum, 0.0) if budget > 0.0 else NAN
+		if is_government:
+			# Its reverse tax is paid out of the rest before the transfers (FINANCIAL_MODEL.md, "A
+			# government's taxes and transfers"), so its share is what it drew, at the quarter's
+			# pace or else last quarter's.
+			var reverse_draws := _get_draws(center, _item_reverse_tax_paid, false)
+			var drawn := reverse_draws[1] if is_finite(reverse_draws[1]) else reverse_draws[0]
+			if player.get_tax_rate(PlayerProxy.Taxes.TAX_REVERSE) > 0.0 or drawn > 0.0:
+				var reverse_share := NAN
+				if is_finite(rest_share):
+					reverse_share = 0.0
+					if is_finite(drawn):
+						reverse_share = clampf(drawn / budget, 0.0, rest_share)
+					rest_share -= reverse_share
+				discretionary_rows.append([_item_keys[_item_reverse_tax_paid], reverse_share,
+						reverse_share * budget, reverse_draws, budget, []])
 		discretionary_rows.append([_item_keys[rest_key], rest_share, rest_share * budget,
 				_get_draws(center, rest_key, false), budget, []])
 	var budget_control := []
@@ -849,8 +866,9 @@ func _collect_treasury(player: PlayerProxy, center: FacilityProxy, account: int,
 		var target := player.get_budget_target(account)
 		budget_control = [Controls.CONTROL_BUDGET_TARGET, player.name, account,
 				player.is_budget_target_held(account), target if target >= 0.0 else total]
+	var taxes := _get_taxes(player) if is_government and player.polity == player else []
 	return [_get_account_name(player, account), total, committed_rows, discretionary_rows,
-			budget_control]
+			budget_control, taxes]
 
 
 func _collect_owner_lines(facility: FacilityProxy, player: PlayerProxy,
@@ -996,6 +1014,31 @@ static func _format_share(share: float) -> String:
 	if percent > 0.0 and percent < 1.0:
 		return "%.2f%%" % percent
 	return "%.f%%" % percent
+
+
+# [param player]'s wealth and reverse taxes, each [tax, rate, threshold], those it levies or pays.
+static func _get_taxes(player: PlayerProxy) -> Array:
+	var taxes := []
+	for tax: int in PlayerProxy.Taxes.values():
+		var rate := player.get_tax_rate(tax)
+		if rate > 0.0:
+			taxes.append([tax, rate, player.get_tax_threshold(tax)])
+	return taxes
+
+
+# [param taxes], as [method _get_taxes] gives them, in words: each its rate a year and its
+# threshold, a multiple of its residents' mean wealth.
+func _format_taxes(taxes: Array) -> String:
+	var parts: Array[String] = []
+	for entry: Array in taxes:
+		var is_wealth_tax: bool = entry[0] == PlayerProxy.Taxes.TAX_WEALTH
+		var rate: float = entry[1]
+		var threshold: float = entry[2]
+		var form := tr(&"LABEL_TAX_PAST_MEAN") if is_wealth_tax else tr(&"LABEL_TAX_SHORT_OF_MEAN")
+		parts.append("%s: %s" % [tr(&"LABEL_WEALTH_TAX") if is_wealth_tax
+				else tr(&"LABEL_REVERSE_TAX"), form % [IVQFormat.number(rate * 100.0, 2) + "%",
+				IVQFormat.number(threshold, 2)]])
+	return "    ".join(parts)
 
 
 # Whether [param player]'s budgets have a rest, which an agency's, given its money to spend, don't.
@@ -1415,6 +1458,10 @@ func _update_funding_display(panels: Array) -> void:
 			var budget_total: float = panel_control[4]
 			title_row.set_total_edit(_format_money(budget_total))
 		n_rows += 1
+		var taxes: Array = panel[5] if panel.size() > 5 else []
+		if !taxes.is_empty():
+			_get_funding_row(n_rows, has_controls).set_section(_format_taxes(taxes))
+			n_rows += 1
 		if !committed_rows.is_empty():
 			_get_funding_row(n_rows, has_controls).set_section(tr(&"LABEL_COMMITTED"))
 			n_rows += 1
