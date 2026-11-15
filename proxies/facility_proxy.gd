@@ -493,11 +493,11 @@ func get_budget_line(line: int) -> float:
 
 ## Returns what this facility's transit buffer will still hold of [param resource_type], of what
 ## is to come into its stock, when the current quarter ends (always >= 0.0): the interval of what is
-## contracted to come in that it holds back to take up uneven deliveries, and what its pacing leaves
-## of the rest; once its facility has no step left in the quarter, all it holds and all still to
-## arrive before the quarter ends. Its trader counts what its buffer holds against the current
-## quarter less this, and this against the next (PRODUCTION_MODEL.md, "The local price: two flows
-## and a stock").
+## contracted to come in that it holds back to take up uneven deliveries, what its pacing leaves of
+## the rest, all it holds once its facility has no step left in the quarter, and what is to arrive
+## after its facility's last step in the quarter. Its trader counts what its buffer holds against
+## the current quarter less this, and this against the next (PRODUCTION_MODEL.md, "The local price:
+## two flows and a stock").
 @abstract func get_inventory_carried(resource_type: int) -> float
 
 

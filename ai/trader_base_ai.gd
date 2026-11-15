@@ -259,6 +259,9 @@ var _key_width := 2
 # Per resource, the span of its flow this interval's quotes contract, what its facility foresees of
 # how far ahead they reach, in sim time; 0.0 where it isn't traded.
 var _windows: PackedFloat64Array
+# Per resource, this interval's positions of quarters past, net, trade units: settlement goes on
+# delivering them at its pace, so they count in the current quarter.
+var _past_dues: PackedFloat64Array
 # This interval's quotes, one entry per instrument: its key, the ask and the bid its gap wants and
 # those a two-sided posture keeps standing on the other side (trade units), the ask's and the bid's
 # price, the resource's def and its lot (trade units). Built by _plan_resource, cut by
@@ -295,6 +298,7 @@ func _init() -> void:
 	var n_resources: int = _table_n_rows[&"resources"]
 	resource_strategies.resize(n_resources)
 	_windows.resize(n_resources)
+	_past_dues.resize(n_resources)
 	if _cyber_resource.is_empty():
 		const TRADE_CLASS_CYBER := Enums.TradeClasses.TRADE_CLASS_CYBER
 		var resources_table: Dictionary[StringName, Array] = IVTableData.db_tables[&"resources"]
@@ -349,6 +353,11 @@ func process_ai_interval(_delta: float) -> void:
 		return # no market yet, or transport trader (transport strategies TBD)
 	_drop_expired_memory()
 	_clear_plan()
+	_past_dues.fill(0.0)
+	var current_quarter := proxy.ordinal_qtr
+	for key in _positions_by_instrument:
+		if key[1] < current_quarter:
+			_past_dues[key[0]] += _positions_by_instrument[key][0]
 	var posture_def := trader_strategy_defs[trader_strategy]
 	var standing_quarters := 0
 	if posture_def.get(&"two_sided", false):
@@ -372,11 +381,12 @@ func process_ai_interval(_delta: float) -> void:
 ## time horizon, and the rest of the current quarter at least, toward the desired rate D: each
 ## quarter the window spans wants D's flow, read off its curve over price at the price its order
 ## would trade at, times what its facility foresees of the part of the window it holds, and the
-## current quarter D's step besides, once, net of the position there and of what its facility's
-## transit buffer holds, counted in the quarter it comes in: in the current quarter all it holds
-## but what it will still hold when the quarter ends ([method FacilityProxy.get_inventory_carried]),
-## and that in the next. It bids where its facility would take at the price its bid opens at, and
-## otherwise asks where it would give at the price its ask opens at (below). Each quarter's target
+## current quarter D's step besides, once, net of the position there, in the current quarter with
+## those of quarters past that settlement still delivers, and of what its facility's transit buffer
+## holds, counted in the quarter it comes in: in the current quarter all it holds but what it will
+## still hold when the quarter ends ([method FacilityProxy.get_inventory_carried]), and that in the
+## next. It bids where its facility would take at the price its bid opens at, and otherwise asks
+## where it would give at the price its ask opens at (below). Each quarter's target
 ## is held to the def's sides, never below what the facility could spare (-C, the critical rate,
 ## its flow and step alike) and at least C where the facility must take.[br][br]
 ##
@@ -439,8 +449,9 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 		use = 0.0
 	var now := _last_interval
 	var current_quarter := proxy.ordinal_qtr
-	# Settlement delivers a current quarter's position by the quarter's end, so the window holds that
-	# time whole and what deliveries draw from it falls out of the target with them.
+	# Settlement delivers what a current quarter's position held as the quarter opened by its end, so
+	# the window holds that time whole and what deliveries draw from it falls out of the target with
+	# them.
 	var end := maxf(now + window, Utils.get_time_at_ordinal_quarter(current_quarter + 1))
 	_windows[resource_type] = TraderProxy.get_foreseen_span(end - now, horizon)
 	var local_price := _facility.get_inventory_local_price(resource_type) * multiplier
@@ -541,7 +552,7 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 		# (PRODUCTION_MODEL.md, "The local price: two flows and a stock").
 		var netted := position_quantity
 		if is_current:
-			netted += (buffered - carried) / multiplier
+			netted += _past_dues[resource_type] + (buffered - carried) / multiplier
 		elif key[1] == current_quarter + 1:
 			netted += carried / multiplier
 		var step := desired_step if is_current else 0.0
