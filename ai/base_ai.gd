@@ -41,6 +41,14 @@ const INTERVAL := Proxy.INTERVAL
 const PERSIST_MODE := IVGlobal.PERSIST_PROCEDURAL
 
 
+## True where every base AI holds each knob it would set from what the markets bring at its seed,
+## deciding only from what its entity is: its capability, its role and its player's directives. A
+## bench's option, so that a check of self-regulation reads the server alone (AI_ARCHITECTURE.md,
+## "Proving an AI"); a custom AI's decisions honor it as the base AIs' do. The traders trade as
+## ever: their orders are trade itself, and no trade at all is a diagnostic, never a test. Set it
+## before a game starts, or with the sim paused.
+static var held_at_seeds := false
+
 @warning_ignore_start("unused_private_class_variable") # used by subclasses
 ## Mirrors the proxy thread's stop state, set by the proxy server from the engine's
 ## thread-stop signals. A long-running AI override (e.g. a heavy per-resource loop) should

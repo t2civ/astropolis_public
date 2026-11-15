@@ -436,8 +436,9 @@ func _capability_strategy(resource_type: int) -> int:
 ## capability default. Own crisis is per resource: a resource the facility uses more of
 ## than it makes, whose stock falls below its critical level, escalates to CRITICAL_INPUT,
 ## and stays there until its stock refills the desired level that sets. One it makes more of
-## than it uses is never in crisis: its stock runs low because it sells. A custom AI overrides
-## this to change reconciliation.
+## than it uses is never in crisis: its stock runs low because it sells. A crisis is read from
+## what the market brings, so none escalates where [member BaseAI.held_at_seeds]. A custom AI
+## overrides this to change reconciliation.
 func _reconcile_resource_strategy(resource_type: int, capability: int) -> int:
 	const CAN_HAVE_INPUT := FacilityProxy.InventoryFlags.CAN_HAVE_INPUT
 	const OPS_RESERVE_BREACHED := FacilityProxy.InventoryFlags.OPS_RESERVE_BREACHED
@@ -448,7 +449,8 @@ func _reconcile_resource_strategy(resource_type: int, capability: int) -> int:
 	# (1) Own crisis: a resource used here beyond what is made here, in shortage, prioritizes
 	# supply continuity.
 	var inv_flags := proxy.get_inventory_flags(resource_type)
-	if inv_flags & CAN_HAVE_INPUT and proxy.get_inventory_expected_rate(resource_type) < 0.0:
+	if (!held_at_seeds and inv_flags & CAN_HAVE_INPUT
+			and proxy.get_inventory_expected_rate(resource_type) < 0.0):
 		if inv_flags & OPS_RESERVE_BREACHED:
 			return _RS.CRITICAL_INPUT
 		# Hold until the desired level refills, or the escalation ends the interval stock
@@ -473,8 +475,9 @@ func _reconcile_resource_strategy(resource_type: int, capability: int) -> int:
 	return capability
 
 
-## Translates the resource's strategy def into server knobs: the level lever and the PROHIBIT
-## inventory flag bits (flags written only on change; preserves any other FROM_PROXY bits).
+## Translates the resource's strategy def into server knobs: the level lever, a port's holding more
+## against its prices' swings except where [member BaseAI.held_at_seeds], and the PROHIBIT inventory
+## flag bits (flags written only on change; preserves any other FROM_PROXY bits).
 func _apply_strategy_knobs(resource_type: int, strategy: int) -> void:
 	const PROHIBIT_CONSUMPTION := FacilityProxy.InventoryFlags.PROHIBIT_CONSUMPTION
 	const PROHIBIT_PRODUCTION := FacilityProxy.InventoryFlags.PROHIBIT_PRODUCTION
@@ -483,7 +486,7 @@ func _apply_strategy_knobs(resource_type: int, strategy: int) -> void:
 	var def := facility_resource_strategy_defs[strategy]
 
 	var lever: float = def.get(&"level_lever", 0.0)
-	if _is_port_resource(resource_type):
+	if !held_at_seeds and _is_port_resource(resource_type):
 		lever += SWING_HORIZONS * _price_swings[resource_type]
 	proxy.set_inventory_level_lever(resource_type, lever)
 
