@@ -547,7 +547,7 @@ func _add_aggregate_quarters(row: RowData, market: MarketProxy, locus: LocusProx
 
 
 # A quarter's book and price at [param market], and its days from [param from] to its end:
-# the current quarter's published price, or a later quarter's book midpoint.
+# the market price in the current quarter, or a later quarter's book midpoint.
 func _make_quarter(market: MarketProxy, resource_type: int, ordinal_qtr: int, current_qtr: int,
 		from: float, end: float) -> QuarterData:
 	var quarter := QuarterData.new()

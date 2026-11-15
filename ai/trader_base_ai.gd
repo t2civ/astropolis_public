@@ -383,14 +383,15 @@ func process_ai_interval(_delta: float) -> void:
 ## Each quote is priced in the facility's interest (TRADE_MODEL.md, "The facility trader", the
 ## price). Its facility's price is its local price in the current quarter, and in a later one what
 ## its curve says a lot more of that quarter's flow is worth. It takes another's quote within that
-## price, and otherwise opens a search where others trade, at the quarter's own price (see
-## [method MarketProxy.get_instrument_unit_price]) held within the best bid and ask other traders
-## stand at there or in a sooner quarter, or where nothing has traded at those quotes or its
-## facility's price, and as long as the market leaves its want unanswered it concedes toward its
-## facility's price, evenly in ratio over the time until the quarter opens and the facility's
-## horizon past that; answered, it starts again where the market then stands. A bid is no more than
-## the facility's price unless it buys back a short, and an ask no less unless it offers back a
-## long, and each quote trades what its facility's curve wants at the price it quotes.[br][br]
+## price, and otherwise opens a search where others trade, at the market price in the current
+## quarter and a later quarter's own price (see [method MarketProxy.get_instrument_unit_price]),
+## held within the best bid and ask other traders stand at there or in a sooner quarter, or where
+## nothing has traded at those quotes or its facility's price, and as long as the market leaves its
+## want unanswered it concedes toward its facility's price, evenly in ratio over the time until the
+## quarter opens and the facility's horizon past that; answered, it starts again where the market
+## then stands. A bid is no more than the facility's price unless it buys back a short, and an ask
+## no less unless it offers back a long, and each quote trades what its facility's curve wants at
+## the price it quotes.[br][br]
 ##
 ## No order is smaller than a lot, what its facility moves of the resource in an [constant INTERVAL]
 ## and no less than the def's [code]min_lot[/code]. A two-sided posture, [param standing_quarters]
@@ -415,7 +416,8 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 		return
 	var critical_step := _facility.get_inventory_critical_step(resource_type)
 	var desired_flows := _facility.get_inventory_desired_flow_curve(resource_type)
-	# Its last sale, 0 where none, among the traders this one may deal with.
+	# The market price, its last real trade of any quarter, 0 where none, among the traders this one
+	# may deal with.
 	var reference_price := market.get_unit_price(resource_type, proxy.player_id)
 	var critical_flow := _facility.get_inventory_critical_flow(resource_type)
 	var critical := _facility.get_inventory_critical_rate(resource_type)
@@ -449,7 +451,7 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 	# What a bid comes to at its facility is the bid landed with its polity's tariff, so the curve
 	# is read there, and a bid stands that much below what its facility would pay.
 	var landed := 1.0 + _facility.get_inventory_tariff(resource_type)
-	var quarter_price := reference_price # this quarter's own, or the quarter before it's
+	var quarter_price := reference_price # the market price, or a later quarter's own
 	var sooner_ask := 0 # the lowest ask of another trader's in this quarter or a sooner one
 	var sooner_bid := 0 # the highest bid, as sooner_ask
 	var reach := end
@@ -572,10 +574,10 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 				(netted + lot) * multiplier - step, foreseen, multiplier) / landed
 		var bid_reservation := own_price / landed if is_current else lot_bid_price
 		var ask_reservation := own_price + leg if is_current else lot_ask_price
-		# A quote opens where others trade: at the quarter's own price, its last sale, held within
-		# the best bid and ask other traders stand at there or in a sooner quarter, the prices a
-		# trade can be made at now; where nothing has traded, at those quotes, and where none
-		# stands, at its facility's price. Each quarter wants what its facility's flow would be at
+		# A quote opens where others trade: at the market price, its last real trade, or a later
+		# quarter's own, held within the best bid and ask other traders stand at there or in a
+		# sooner quarter, the prices a trade can be made at now; where nothing has traded, at those
+		# quotes, and where none stands, at its facility's price. Each quarter wants what its facility's flow would be at
 		# the price its quote opens at, the quarter's own: at the current quarter's, a later
 		# quarter's price moved and no quantity answered it. Read at the last sale alone, a price no
 		# trade could be made at, every trader of a market whose sale stood past all their
