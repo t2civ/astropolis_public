@@ -334,32 +334,14 @@ func ai_init() -> void:
 	_player_ai.player_resource_strategy_changed.connect(_on_player_resource_strategy_changed)
 	_player_ai.player_facility_strategy_changed.connect(_on_player_facility_strategy_changed)
 	_player_ai.locus_strategy_changed.connect(_on_player_locus_strategy_changed)
-	# new_quarter does not fire on load or the first adopted quarter, so author once
-	# here to bootstrap (and re-author idempotently after load). The trader's posture
-	# goes first: the resource knobs hold a port's stock against its swings from it.
-	_author_trader_strategy()
-	_author_resource_strategies()
-	_author_facility_strategy()
-	_author_operation_strategies()
+	_author_strategies()
 
 
-## Re-author each interval (the prior cadence): identity from sticky capability is
-## cheap and change-guarded, so this stays responsive to capability changes and
-## keeps reserves tracking live throughput, without the rate-based / write-only smell.
+## Authors every strategy again, so that a change of the capability, directive or stock one is read
+## from reaches it within an interval; a strategy's signal fires only on its change.
 func process_ai_interval(delta: float) -> void:
 	_update_price_swings(delta)
-	_author_resource_strategies()
-	# Its human may have returned a knob to auto since the quarter's authoring.
-	_apply_facility_knobs(facility_strategy)
-
-
-## Strategic, forward-looking reassessment of sticky policy. Same authoring pass;
-## the change guard makes the quarter-boundary call a no-op when nothing changed.
-func process_ai_new_quarter() -> void:
-	_author_trader_strategy()
-	_author_resource_strategies()
-	_author_facility_strategy()
-	_author_operation_strategies()
+	_author_strategies()
 
 
 # **************************** STRATEGY LISTENERS *****************************
@@ -374,10 +356,7 @@ func _on_player_resource_strategy_changed(_resource_type: int, _strategy_id: int
 
 func _on_player_facility_strategy_changed(facility_id: int, _strategy_id: int) -> void:
 	if facility_id == proxy.facility_id:
-		_author_trader_strategy()
-		_author_resource_strategies()
-		_author_facility_strategy()
-		_author_operation_strategies()
+		_author_strategies()
 
 
 func _on_player_locus_strategy_changed(_target_locus_id: int, _strategy_id: int) -> void:
@@ -385,6 +364,17 @@ func _on_player_locus_strategy_changed(_target_locus_id: int, _strategy_id: int)
 
 
 # **************************** INTERNAL PRIVATE *******************************
+
+## Authors the trader's posture, then every resource's, the facility's and every operation's
+## strategy, and applies their server knobs: the one pass at init, after a load, each interval and
+## on a change of the player's directive for this facility. The trader's posture goes first: the
+## resource knobs hold a port's stock against its swings from it.
+func _author_strategies() -> void:
+	_author_trader_strategy()
+	_author_resource_strategies()
+	_author_facility_strategy()
+	_author_operation_strategies()
+
 
 ## Sets [member facility_resource_strategies] for [param resource_type],
 ## emitting [signal facility_resource_strategy_changed] only on change.
@@ -396,8 +386,8 @@ func _set_facility_resource_strategy(resource_type: int, strategy_id: int) -> vo
 
 
 ## Authors sticky per-resource policy for every tradable resource and applies the
-## resulting server knobs. The single authoring path for init, interval, quarter,
-## and player-strategy changes.
+## resulting server knobs. Run by [method _author_strategies], and on a change of the
+## player's global or resource directives.
 func _author_resource_strategies() -> void:
 	for resource_type in _tradable_resources:
 		var capability := _capability_strategy(resource_type)
@@ -513,9 +503,9 @@ func _set_facility_strategy(strategy_id: int) -> void:
 
 
 ## Authors the facility-wide posture and applies its server buildout knobs — the
-## facility analog of [method _author_resource_strategies]. Called on init, each
-## quarter, and when the player's directive for this facility changes; what each module builds is
-## the server's planner's job, not the AI's, but in a wind-down ([method _wind_down]).
+## facility analog of [method _author_resource_strategies], run by
+## [method _author_strategies]. What each module builds is the server's planner's job, not the
+## AI's, but in a wind-down ([method _wind_down]).
 func _author_facility_strategy() -> void:
 	var was_winding_down := facility_strategy == FacilityStrategies.DECOMMISSIONING
 	var strategy := _reconcile_facility_strategy()
@@ -613,9 +603,8 @@ func _set_trader_strategy(strategy_id: int) -> void:
 
 
 ## Authors the posture the paired trader trades in — the trader analog of
-## [method _author_facility_strategy]. Called on init, each quarter, and when the
-## player's directive for this facility changes. Author it before the resource
-## strategies, whose knobs depend on it.
+## [method _author_facility_strategy], run by [method _author_strategies] before the
+## resource strategies, whose knobs depend on it.
 func _author_trader_strategy() -> void:
 	_set_trader_strategy(_reconcile_trader_strategy())
 
