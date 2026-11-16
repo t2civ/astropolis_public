@@ -295,7 +295,7 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"locus_strategies",
 	&"counterparty_strategies",
 	&"_reverse_tax_line",
-	&"_policy_quarters",
+	&"_next_budget",
 	&"_read_time",
 	&"_read_shortfall",
 	&"_read_offered",
@@ -305,7 +305,9 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 ## The share of the way toward what a year's readings ask that a government's budget moves its
 ## wealth tax, a legislature's step (FINANCIAL_MODEL.md, "A government's taxes and transfers").
 const WEALTH_TAX_PACE := 0.5
-## Quarters between a government's budgets.
+## Time between a government's budgets.
+const BUDGET_PERIOD := IVUnits.YEAR
+## The ended quarters a government's budget reads its accounts over, a year.
 const BUDGET_QUARTERS := 4
 ## The poorest decile, whose needs a government's reverse tax answers.
 const POOREST_DECILE := Proxy.N_DECILES - 1
@@ -340,7 +342,7 @@ var counterparty_strategies: Dictionary[int, int]
 # persisted
 
 var _reverse_tax_line := 0.0 # in years of its residents' wants
-var _policy_quarters := 0 # since its last budget
+var _next_budget := -INF # when its next budget comes, -INF before its first interval
 var _read_time := 0.0 # what its readings since its last budget span, in seconds
 var _read_shortfall := 0.0 # its poorest decile's share of its needs gone without, times time
 var _read_offered := 0.0 # what its residents offered the credit market, in dollars
@@ -378,15 +380,8 @@ func process_ai_interval(delta: float) -> void:
 	_author_budget_shares()
 	_author_budget_targets()
 	_read_residents(delta)
+	_run_budget(_last_interval)
 	_author_taxes()
-
-
-func process_ai_new_quarter() -> void:
-	_policy_quarters += 1
-	if _policy_quarters < BUDGET_QUARTERS:
-		return
-	_policy_quarters = 0
-	_decide_taxes()
 
 
 # ***************************** INTERNAL PRIVATE ******************************
@@ -489,6 +484,20 @@ func _read_residents(delta: float) -> void:
 		_read_shortfall += short / want * delta
 	_read_offered += center.get_population_saving_offered() * delta
 	_read_lent += center.get_population_saving_lent() * delta
+
+
+# Decides its taxes ([method _decide_taxes]) once a [constant BUDGET_PERIOD] at [param time], the
+# first a time in the period after its first interval: every polity's budget on a clock from the
+# game's start would move every polity's taxes in one interval each year, at a quarter's turn.
+func _run_budget(time: float) -> void:
+	if _next_budget == -INF:
+		_next_budget = time + randf_range(0.0, BUDGET_PERIOD)
+		return
+	if time < _next_budget:
+		return
+	while _next_budget <= time:
+		_next_budget += BUDGET_PERIOD
+	_decide_taxes()
 
 
 # Moves a polity's taxes as its government's budget does once a year, on the year past
