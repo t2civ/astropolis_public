@@ -7,16 +7,16 @@ are derived from these leaves in code
 (hard-coded `SUBTOTAL_*` constants in the financials components), not stored as rows. See
 `FINANCIAL_MODEL.md` for the model.
 
-A leaf holds one direction and never goes negative, except `TRADE_RECEIVABLES` and the cash
-balances, `CASH`, `GOVERNMENT_CASH` and `CORPORATE_CASH`, which may run below nothing between an
-account's settlements, where what it is short is booked as its debt (`DEBT`, `GOVERNMENT_DEBT`,
-`CORPORATE_DEBT`). An event that can go either way books its size to one of a pair by its sign: `TRADING_GAINS` / `TRADING_LOSSES`, `DISPOSAL_GAINS` /
-`DISPOSAL_LOSSES`, `EXCHANGE_CLEARING_GAINS` / `EXCHANGE_TAKE_COGS`, and on the cash-flow
-statement `PL_SETTLEMENTS` / `PL_PAYMENTS`, `EXCHANGE_TAKE_RECEIVED` / `EXCHANGE_TAKE_PAID`,
-`PAYOUTS_PAID` / `FUNDING_RECEIVED` and each treasury's side of them,
-at an agency `APPROPRIATIONS_RECEIVED` / `APPROPRIATION_LAPSES_PAID` and at its polity
-`APPROPRIATION_LAPSES_RECEIVED` / `APPROPRIATIONS_PAID`, and `BORROWED` / `REPAID` and each
-treasury's.
+A leaf holds one direction and never goes negative, except the cash balances, `CASH`,
+`GOVERNMENT_CASH` and `CORPORATE_CASH`, which may run below nothing between an account's
+settlements, where what it is short is booked as its debt (`DEBT`, `GOVERNMENT_DEBT`,
+`CORPORATE_DEBT`). An event that can go either way books its size to one of a pair by its sign:
+`TRADING_GAINS` / `TRADING_LOSSES`, `DISPOSAL_GAINS` / `DISPOSAL_LOSSES`, `EXCHANGE_CLEARING_GAINS`
+/ `EXCHANGE_TAKE_COGS`, and on the cash-flow statement `PL_SETTLEMENTS` / `PL_PAYMENTS`,
+`EXCHANGE_TAKE_RECEIVED` / `EXCHANGE_TAKE_PAID`, `PAYOUTS_PAID` / `FUNDING_RECEIVED` and each
+treasury's side of them, at an agency `APPROPRIATIONS_RECEIVED` / `APPROPRIATION_LAPSES_PAID` and
+at its polity `APPROPRIATION_LAPSES_RECEIVED` / `APPROPRIATIONS_PAID`, and `BORROWED` / `REPAID`
+and each treasury's.
 
 ## Fields
 

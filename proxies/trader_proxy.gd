@@ -100,7 +100,9 @@ func get_market() -> MarketProxy:
 ## near-immediate ("spot") case; later quarters are forward delivery, accepted
 ## up to (excluding) ordinal_qtr + [constant MAX_FORWARD_QUARTERS]. [param
 ## delivery_market_id] is the market at the delivery locus; the caller already
-## holds it, since it must query that market to see available instruments.
+## holds it, since it must query that market to see available instruments. The
+## market matches the order at its next short interval, up to a day of game time
+## later (see [MarketProxy]).
 @abstract func set_ask(instrument: PackedInt32Array, unit_quantity: int,
 		unit_price: int, delivery_market_id: int) -> void
 

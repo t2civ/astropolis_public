@@ -16,8 +16,10 @@ extends Proxy
 ## ("spot") case, later quarters forward delivery. Each trader holds at most one
 ## resting ask and one resting bid per instrument. Orders use SET semantics — a new
 ## order replaces the resting one, quantity 0 cancels — and never expire, though an
-## order for a past quarter is dropped at quarter rollover. Crossing asks and bids
-## match at the midpoint price.[br][br]
+## order for a past quarter is dropped at quarter rollover. Orders wait for the market's
+## short interval, up to a day of game time, which places them as their traders last set
+## them, in the order they came: each is matched against the other side's book, each fill
+## at the resting order's price, as on an exchange, and what isn't filled rests.[br][br]
 ##
 ## A match moves no goods; it opens or adjusts a [b]position[/b]: the ask side goes
 ## (more) short (owes delivery at the locus), the bid side (more) long (awaits
@@ -31,11 +33,12 @@ extends Proxy
 ## The market is the central counterparty; only the cash leg would be centrally
 ## novated, and cash is not implemented yet (TODO).[br][br]
 ##
-## Published per-resource values: [b]price[/b] — the last current-quarter trade or
-## fiat seed, held between the current-quarter best bid and best ask (see
-## TRADE_MODEL.md, "Price discovery"), or the best ask where neither exists, else 0;
-## [b]ask[/b] / [b]bid[/b] — the current-quarter top-of-book, 0 for an empty side.
-## [member instruments] also carries per-instrument top-of-book for every quarter. What a
+## Published per-resource values: [b]price[/b] — the market price, the price of the last real
+## trade of any quarter, which no quote moves and no calendar period turns, none where nothing has
+## traded (see TRADE_MODEL.md, "Price discovery"); [b]ask[/b] / [b]bid[/b] — the current-quarter
+## top-of-book, 0 for an empty side.
+## [member instruments] also carries per-instrument top-of-book for every quarter, and
+## [member price_index] what the market's prices are worth against the game's start. What a
 ## locus's facilities buy and sell here is their own, summed on [LocusProxy] (see
 ## [method Proxy.get_operations_bought_rate]).[br][br]
 ##
@@ -46,7 +49,12 @@ extends Proxy
 ## resource passes 2^31 trade units — so hold them in [PackedInt64Array], never
 ## [PackedInt32Array]. A [code]get_*_price[/code] getter returns sim units; "unit" in
 ## the name ([method get_unit_price]) returns the market-internal trade-unit value. A stored
-## 0 price means no current price.[br][br]
+## 0 price means none, as NAN does in sim units.[br][br]
+##
+## Under a sanction, a player reads the market as it can trade in it: its getters given the
+## player's [param player_id] read the best orders it may take and the price at which each resource
+## moved among the traders it may deal with (TRADE_MODEL.md, "Sanctions and the screened book").
+## With no sanction touching the player, and with -1, they read the book's own.[br][br]
 ##
 ## The read side: AI and GUI read prices and [member instruments] here, and
 ## place or change orders via [method TraderProxy.set_ask] /
@@ -61,6 +69,10 @@ extends Proxy
 var market_id := -1  ## Index into [member ProxyBus.market_proxies].
 var locus_id := -1  ## [member LocusProxy.locus_id] of [member locus].
 var cyber_market_id := -1  ## [member market_id] of the system cyber market (self if this is it).
+## The market's price index: each resource delivered here weighed by its share of what was
+## delivered at its price, chained each quarter since the game's start, 1.0 there; so its prices
+## over it are in game-start dollars (TRADE_MODEL.md, "The price index").
+var price_index := 1.0
 
 # *****************************************************************************
 # persisted
@@ -73,7 +85,7 @@ var cyber_market: MarketProxy ## The one system-wide cyber market (self if this 
 ## Top-of-book per instrument, keyed by [resource_type, ordinal_quarter] (delivery
 ## at this market's locus). Value is [lowest_ask_price, lowest_ask_quantity,
 ## highest_bid_price, highest_bid_quantity, price] in trade units; an empty side reads 0.
-## The price is the published price for the current quarter, and a later quarter's own (see
+## The price is the market price for the current quarter, and a later quarter's own (see
 ## [method get_instrument_unit_price]). An instrument is present while it has a resting
 ## order or a price of its own. Server-set;
 ## read-only here. WARNING: resizable container maintained on the proxy thread —
@@ -99,9 +111,9 @@ func get_market() -> MarketProxy:
 
 # All threadsafe. Abstract here; the concrete proxy implements.
 
-## Returns the current trade price for [param type] in sim units, or 0.0 if
-## no current price.
-@abstract func get_price(type: int) -> float
+## Returns the market price of [param type], the price of its last real trade, in sim units, or
+## NAN where none, as the player [param player_id] reads it (see the class doc).
+@abstract func get_price(type: int, player_id := -1) -> float
 
 
 ## Returns the current ask price for [param type] in sim units, or 0.0 if no
@@ -114,9 +126,9 @@ func get_market() -> MarketProxy:
 @abstract func get_bid_price(type: int) -> float
 
 
-## Returns the Market-internal unit price for [param type], or 0 if no
-## current price.
-@abstract func get_unit_price(type: int) -> int
+## Returns the Market-internal unit market price for [param type], or 0 if none, as the player
+## [param player_id] reads it (see the class doc).
+@abstract func get_unit_price(type: int, player_id := -1) -> int
 
 
 ## Returns the Market-internal ask unit price for [param type], or 0 if no
@@ -130,30 +142,35 @@ func get_market() -> MarketProxy:
 
 # Call on proxy thread. Per-instrument top-of-book reads onto [member instruments];
 # any quarter >= the current one is a legitimate query (an absent instrument
-# reads 0).
+# reads 0). Each reads as the player [param player_id] can trade (see the class doc).
 
 ## Returns the lowest resting ask price in trade units for the instrument
 ## [param type] at [param ordinal_quarter], or 0 if no resting ask.
-@abstract func get_instrument_ask_unit_price(type: int, ordinal_quarter: int) -> int
+@abstract func get_instrument_ask_unit_price(type: int, ordinal_quarter: int, player_id := -1
+		) -> int
 
 
 ## Returns the quantity in trade units at the lowest resting ask for the
 ## instrument [param type] at [param ordinal_quarter], or 0 if no resting ask.
-@abstract func get_instrument_ask_unit_quantity(type: int, ordinal_quarter: int) -> int
+@abstract func get_instrument_ask_unit_quantity(type: int, ordinal_quarter: int,
+		player_id := -1) -> int
 
 
 ## Returns the highest resting bid price in trade units for the instrument
 ## [param type] at [param ordinal_quarter], or 0 if no resting bid.
-@abstract func get_instrument_bid_unit_price(type: int, ordinal_quarter: int) -> int
+@abstract func get_instrument_bid_unit_price(type: int, ordinal_quarter: int, player_id := -1
+		) -> int
 
 
 ## Returns the quantity in trade units at the highest resting bid for the
 ## instrument [param type] at [param ordinal_quarter], or 0 if no resting bid.
-@abstract func get_instrument_bid_unit_quantity(type: int, ordinal_quarter: int) -> int
+@abstract func get_instrument_bid_unit_quantity(type: int, ordinal_quarter: int,
+		player_id := -1) -> int
 
 
 ## Returns the price in trade units of the instrument [param type] at [param ordinal_quarter]:
-## for the current quarter [method get_unit_price], and for a later one its own last trade, held
-## inside its book, or where it has none the price of the quarter before it as its book opened.
-## 0 where it has none, nor any order (TRADE_MODEL.md, "Price discovery").
-@abstract func get_instrument_unit_price(type: int, ordinal_quarter: int) -> int
+## for the current quarter [method get_unit_price], and for a later one its own last real trade, its
+## point on the forward curve, or where it has none the nearest sooner quarter's, or the market
+## price, as its book last changed. 0 where it has none, nor any order (TRADE_MODEL.md, "Price
+## discovery").
+@abstract func get_instrument_unit_price(type: int, ordinal_quarter: int, player_id := -1) -> int

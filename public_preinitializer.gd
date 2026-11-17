@@ -45,6 +45,9 @@ func _init() -> void:
 	# to prevent update storm. Also check all `_process(delta: float)` for usage
 	# of `delta`, but I don't think there is any.
 	IVCoreSettings.manage_engine_time_scale = false
+	# A debug build adds Maximum after the player's speeds, at which the clock waits for the
+	# servers and runs as fast as they keep up.
+	IVCoreSettings.allow_maximum_speed = true
 	# Photometric sunlight with a compensating camera. The user can still turn it
 	# off at runtime via the "Physical Light" Options row this setting surfaces.
 	IVCoreSettings.enable_physical_light = true
@@ -146,4 +149,9 @@ func _on_program_objects_instantiated() -> void:
 	# program object changes
 
 	var speed_manager: IVSpeedManager = IVGlobal.program.SpeedManager
+	# The player's speeds stop at 100,000x, where the servers keep their pace with room to spare
+	# (TESTING.md, "The pace check").
+	speed_manager.speeds = [IVUnits.SECOND, IVUnits.SECOND * 10, IVUnits.SECOND * 100,
+			IVUnits.SECOND * 1e3, IVUnits.SECOND * 1e4, IVUnits.SECOND * 1e5]
+	speed_manager.speed_names = [&"1x", &"10x", &"100x", &"1000x", &"10,000x", &"100,000x"]
 	speed_manager.start_speed = 0

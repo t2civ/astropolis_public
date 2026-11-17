@@ -8,13 +8,15 @@ saturation level, and what differs from place to place is what a population gets
 
 A want's recipe is written as an operation's is (`operations.schema.md`, "Flow Fields"),
 with its target lists and none of its driver lists. Each of the residents' deciles buys it
-at local prices from its spending, up to its share of their head count in each life stage
-times `stage_weights`: its existence wants first, as one bundle, then each input of each other
-want with its share of the want's `spending_share` of what is left, the input's share by its
-value at the facility's long prices, its local prices averaged over a decade, and its substitution
-group one input, valued at its members' soft minimum ("Work and pay" in `POPULATION_MODEL.md`). What they buy of each input is a draw of its own in the facility's
-clear, shared in a shortage with the operations', and what they give off follows what they drew
-("The residents' draw, as built" there).
+at local prices from its spending, its part its share of their head count in each life stage
+times `stage_weights`: its existence wants first, as one bundle, as far as its part, then each
+input of each other want with its share of the want's `spending_share` of what is left, the
+input's share by its value at the facility's long prices, its local prices averaged over a decade,
+and its substitution group one input, valued at its members' soft minimum, each spent at whatever
+the input costs, past the decile's part as it costs less ("Work and pay" in
+`POPULATION_MODEL.md`). What they buy of each input is a draw of its own in the facility's clear,
+shared in a shortage with the operations', and what they give off follows what they drew ("The
+residents' draw, as built" there).
 
 
 ## Table Data
@@ -26,10 +28,10 @@ clear, shared in a shortage with the operations', and what they give off follows
   stage (young, adults, elders; `Enums.LifeStages`) draws, relative to the rates. Default
   `1;1;1`.
 - spending_share — FLOAT, the share of what a decile has left after its existence wants that
-  it spends on this want, none past the want. Blank for an existence want, which comes
-  first. The shares are relative: a type's are scaled to sum to one. Where public provision buys
-  part of a want, its share shrinks with what is left to the decile to buy, and the others take up
-  what it no longer spends.
+  it spends on this want, at whatever its inputs cost, past the want as they cost less. Blank for
+  an existence want, which comes first. The shares are relative: a type's are scaled to sum to one.
+  Where public provision buys part of a want, its share shrinks with what is left to the decile to
+  buy, and the others take up what it no longer spends.
 - public_share — FLOAT, the share of the want that a polity's public provision buys for every
   decile alike, as far as the line of its government treasury's budget for it goes
   (`FINANCIAL_MODEL.md`, "The treasuries' budgets"); each decile buys the rest. Blank: none, a

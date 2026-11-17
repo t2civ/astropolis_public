@@ -130,15 +130,6 @@ const COLUMN_TOOLTIPS: Array[String] = [ # by COLUMN_
 	"",
 ]
 
-const TRADE_CLASS_TEXTS: Array[String] = [ # by TradeClasses
-	"",
-	"",
-	"ice, ",
-	"liq, ",
-	"cryo, ",
-	"",
-	"",
-]
 const TAB_NAMES: Array[StringName] = [ # by TAB_; node names auto-translate as tab titles
 	&"TAB_MKS_ENERGY",
 	&"TAB_MKS_ORES",
@@ -417,6 +408,7 @@ func _get_facility_rows(facility: FacilityProxy, resource_types: PackedInt32Arra
 		row.unmet_rate = facility.get_inventory_unmet_rate(resource_type)
 		row.curtailed_rate = facility.get_inventory_curtailed_rate(resource_type)
 		row.disposal_rate = facility.get_inventory_disposal_rate(resource_type)
+		row.decay_rate = facility.get_inventory_decay_rate(resource_type)
 		row.critical_rate = facility.get_inventory_critical_rate(resource_type)
 		row.desired_rate = facility.get_inventory_desired_rate(resource_type)
 		if row.has_market_price and facility.ordinal_qtr >= 0:
@@ -555,7 +547,7 @@ func _add_aggregate_quarters(row: RowData, market: MarketProxy, locus: LocusProx
 
 
 # A quarter's book and price at [param market], and its days from [param from] to its end:
-# the current quarter's published price, or a later quarter's book midpoint.
+# the market price in the current quarter, or a later quarter's book midpoint.
 func _make_quarter(market: MarketProxy, resource_type: int, ordinal_qtr: int, current_qtr: int,
 		from: float, end: float) -> QuarterData:
 	var quarter := QuarterData.new()
@@ -780,6 +772,8 @@ func _get_local_tooltip(row: RowData, unit: String) -> String:
 		lines.append("Curtailed %s/d" % (_format_rate(row.curtailed_rate, multiplier) + unit))
 	if row.disposal_rate:
 		lines.append("Disposed of %s/d" % (_format_rate(row.disposal_rate, multiplier) + unit))
+	if row.decay_rate:
+		lines.append("Decayed %s/d" % (_format_rate(row.decay_rate, multiplier) + unit))
 	return "\n".join(lines)
 
 
@@ -805,9 +799,7 @@ func _get_row_title(resource_type: int) -> String:
 	var trade_unit := _trade_units[resource_type]
 	if trade_unit == &"1":
 		return title
-	var trade_class := _trade_classes[resource_type]
-	var class_text := TRADE_CLASS_TEXTS[trade_class] if trade_class != -1 else ""
-	return "%s (%s%s)" % [title, class_text, trade_unit]
+	return "%s (%s)" % [title, trade_unit]
 
 
 func _get_unit_text(resource_type: int) -> String:
@@ -912,6 +904,7 @@ class RowData extends RefCounted:
 	var unmet_rate: float
 	var curtailed_rate: float
 	var disposal_rate: float
+	var decay_rate: float
 	var critical_rate: float
 	var desired_rate: float # NAN without a market price
 	var window_long: float

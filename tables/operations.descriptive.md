@@ -116,9 +116,9 @@ Notes:
 
 ## Manufacturing
 
-- **Construction** — On-site assembly, installation, and finishing of fixed structures: buildings, roads, bridges, tunnels, landing pads, launch infrastructure, power distribution networks, pipelines, life-support systems, radiation shielding, and pressurized habitats.
+- **Construction** — On-site assembly, installation, and finishing of fixed structures: buildings, roads, bridges, tunnels, landing pads, launch infrastructure, power distribution networks, pipelines, life-support systems, radiation shielding, and pressurized habitats; and the inspection, testing, commissioning, overhaul, and dismantling of plant where it stands. Wears site instruments.
 - **Space Yards & Assembly** — Design, fabrication, and final assembly of heavy-lift launch vehicles and large interplanetary transports at dedicated yard facilities (analogous to naval shipyards). Encompasses hull and tank fabrication, main propulsion integration, power systems, avionics, life-support outfitting, and thermal protection installation at scales requiring heavy tooling, large-bay construction halls, and orbital or surface assembly infrastructure. Includes both ground-based launch-vehicle production and in-space assembly of interplanetary vessels.
-- **Transport Manufacturing** — Design, fabrication, and final assembly of ground vehicles, aircraft, marine vessels, small-to-medium spacecraft, EVA mobility units, and spacesuits. Integrates structural, propulsion, avionics, and life-support subsystems. Excludes final assembly of heavy-lift launch vehicles and large interplanetary transports.
+- **Transport Manufacturing** — Design, fabrication, and final assembly of ground vehicles, aircraft, marine vessels, small-to-medium spacecraft, EVA mobility units, and spacesuits. Integrates structural, propulsion, battery, avionics, and life-support subsystems. Excludes final assembly of heavy-lift launch vehicles and large interplanetary transports.
 - **Steel Structures Manufacturing** — Cutting, welding, forming, galvanizing, and assembly of steel plate, beams, pipe, pressure vessels, and prefabricated modules for structural applications.
 - **Aluminium Structures Manufacturing** — Extrusion, rolling, machining, and joining of aluminium alloys into structural members, pressure shells, and lightweight frames.
 - **Composite Structures Manufacturing** — Autoclave and out-of-autoclave layup, filament winding, and assembly of composite panels, overwrapped pressure vessels, fairings, and inflatable habitat shells.
@@ -133,6 +133,7 @@ Notes:
 - **Precision Equipment Manufacturing** — Fabrication and assembly of scientific instruments, medical devices, CNC machine tools, lithography systems, optical systems, and navigation and guidance hardware. Requires tight tolerances and specialty materials.
 - **Electronics Manufacturing** — Semiconductor packaging, printed-circuit-board fabrication, surface-mount assembly, display production, and system integration for general-purpose computing, communications, and sensor hardware.
 - **Robotics Manufacturing** — Fabrication and assembly of robotic manipulators, autonomous mobile platforms, and AI-hardware systems. Integrates structural elements, actuators, sensors, and advanced processors.
+- **Android Manufacturing** — Fabrication and assembly of androids, humanoid robot bodies: frames, actuated joints, battery packs, sensor suites and their onboard scalar and tensor processors, integrated, programmed and tested.
 - **Tensor Processor Fabrication** — Advanced-node semiconductor lithography, high-bandwidth memory stacking, and advanced packaging for GPU and TPU accelerator modules. Consumes ultra-high-purity semiconductor wafers and precious-metal interconnects.
 - **Neuromorphic Processor Fabrication** — Fabrication of programmable neuromorphic computing hardware using advanced semiconductor and novel device architectures. Speculative at production scale; input profile similar to tensor processors.
 - **Consumer Goods Manufacturing** — Mass production of furniture, clothing, housewares, paper products, hygiene products, and building finishes from polymers, steel, textiles, wood products, and glass.
@@ -180,10 +181,13 @@ Notes:
 - **Financial Services** — Banking, lending, payments, and investment and asset management. Compute- and information-intensive.
 - **Insurance & Risk** — Underwriting of risk and provision of coverage against loss, including actuarial assessment and reinsurance. Accelerated-compute-intensive for risk modeling.
 - **Engineering Design** — Design and technical specification of structures, vehicles, and systems. Compute- and simulation-intensive; its design output is taken up by construction and fabrication.
-- **Field Engineering** — Engineers and inspectors on site: surveys, supervision, inspection, testing, and overhaul. Consumes instruments.
 - **Research & Development** — Scientific and engineering investigation: experimentation, modeling, design, and prototyping. Intensive in computing — increasingly accelerated and AI compute — and in instruments and specialized materials; yields new knowledge and designs.
 - **Exchange Operations** — Operation of trading venues and central clearing: order matching, settlement guarantee, and coordination of delivery load-out for traded goods. Compute- and communications-intensive.
 - **Passenger Services** — Movement of people within a body via transit and carriers. Consumes transport vehicles and energy.
+- **Power Transmission** — Carrying electricity over a grid's lines and transformers. Loses some of what it carries, about 8% over a few hundred kilometres, the world's transmission and distribution losses. Consumes labor.
+- **Pipeline Transport** — Pumping fluids through mains and pipelines. Consumes electricity and labor.
+- **Fuel Freight** — Carrying goods in trucks, locomotives and barges that burn liquid fuel, about 30 g a tonne-kilometre, a truck's. Consumes fuel, oxygen and labor, and wears its vehicles.
+- **Electric Freight** — Carrying goods in vehicles that run on electricity: battery trucks, electrified rail, and the rovers and carts that move goods where there is no fuel or air to burn it, about 0.08 kWh a tonne-kilometre, a battery truck's. Consumes electricity and labor, and wears its vehicles and their batteries.
 - **Radioactive Storage** — Keeping spent fuel and radioactive waste in dry casks: the space of the radioactive class, made by the watch and handling a store needs. Consumes labor.
 - **Bulk Storage** — Keeping solid goods in warehouses, silos and stockyards: the space of the bulk class, made by the handling a store needs. Consumes labor.
 - **Ice/Volatile Storage** — Keeping water and volatile gases in sealed tanks: the space of the ice and volatile class. Consumes labor.

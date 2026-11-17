@@ -83,7 +83,7 @@ Notes:
 
 ## Manufacturing
 
-- **Construction Yards** — On-site assembly, civil engineering, and installation capacity for fixed infrastructure including buildings, roads, tunnels, landing pads, launch facilities, power distribution networks, pipelines, pressurized habitats, and radiation shielding.
+- **Construction Yards** — On-site assembly, civil engineering, and installation capacity for fixed infrastructure including buildings, roads, tunnels, landing pads, launch facilities, power distribution networks, pipelines, pressurized habitats, and radiation shielding, and the crews and site engineers who inspect, overhaul, and dismantle plant.
 - **Space Yards** — Dedicated yard facilities for fabrication and final assembly of heavy-lift launch vehicles and large interplanetary transports, analogous to naval shipyards. Encompasses heavy tooling, large-bay construction halls, and orbital or surface assembly infrastructure.
 - **Transport Factories** — Large-scale fabrication and final assembly facilities for ground vehicles, aircraft, marine vessels, small-to-medium spacecraft, EVA mobility units, and spacesuits, integrating structural, propulsion, avionics, and life-support subsystems.
 - **Metal Fabrication Works** — Cutting, welding, forming, machining, galvanizing, and assembly facilities for steel and aluminium structural products including beams, plate, pipe, pressure vessels, extrusions, and prefabricated modules.
@@ -145,3 +145,6 @@ Notes:
 - **Schools & Universities** — Educational establishments: schools, colleges, universities, and vocational and training institutions.
 - **Civic & Government Buildings** — Public administration and service buildings: government offices, courts, security and emergency services, and other civic institutions.
 - **Utility & Sanitation Networks** — Distribution and collection infrastructure: water mains and pumping, power and gas distribution grids, sewerage, and waste-collection and recycling systems serving premises and settlements.
+- **Power Grids** — Transmission lines, towers, substations and transformers, and the distribution networks that carry electricity to its users.
+- **Pipelines** — Water mains, oil and product lines and gas transmission, with their pumping and compressor stations.
+- **Freight Networks** — Roads, railways and waterways with the vehicles that run on them, or a Moon base's haul roads and rovers. Its fleet can run on fuel or on electricity; changing over is replacing much of the fleet.

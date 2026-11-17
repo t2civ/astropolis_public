@@ -11,6 +11,12 @@ extends BaseAI
 ## Default AI for every player. A human player's runs too, and sets whatever its human leaves on
 ## auto (see [Proxy]).
 ##
+## A polity's is its government (AI_ARCHITECTURE.md, "Who each AI is"). Its first policy is its
+## taxes and transfers (FINANCIAL_MODEL.md, "A government's taxes and transfers"): once a year, on
+## the year past, it raises the line below which its reverse tax pays its residents' deciles by what
+## its poorest decile went without, and moves its wealth tax with what its residents offered the
+## credit market and it didn't lend.
+##
 ## To implement a custom player AI, extend this class and add
 ## [code]const OVERRIDE_AI := true[/code].[br][br]
 ##
@@ -197,9 +203,19 @@ enum CounterpartyStrategies {
 }
 
 
-## Grand-strategy definitions; index = [enum GlobalStrategies] value.
+## Grand-strategy definitions; index = [enum GlobalStrategies] value. A polity's taxes and transfers
+## read five keys (FINANCIAL_MODEL.md, "A government's taxes and transfers"):
+## [code]reverse_tax_rate[/code], its reverse tax's rate a year, one closing a decile's shortfall
+## within about a year; [code]reverse_tax_step[/code], how far a year its line rises, in years of
+## its residents' wants, where its poorest decile met none of its needs;
+## [code]wealth_tax_most[/code], the most a year its wealth tax levies, where all its residents
+## offer the credit market goes unlent; and the wealth tax's threshold, past both
+## [code]wealth_tax_years[/code] of a decile's wants and [code]wealth_tax_mean[/code] times their
+## mean wealth, so that it falls on the better off's idle money however rich all of them are. An
+## omitted key levies or pays none.
 static var global_strategy_defs: Array[Dictionary] = [
-	{}, # NEUTRAL
+	{&"reverse_tax_rate": 1.0, &"reverse_tax_step": 1.0, &"wealth_tax_most": 0.05,
+			&"wealth_tax_years": 3.0, &"wealth_tax_mean": 2.0}, # NEUTRAL
 	{}, # HEGEMONY
 	{}, # BALANCING
 	{}, # AUTONOMY
@@ -278,10 +294,28 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"player_facility_strategies",
 	&"locus_strategies",
 	&"counterparty_strategies",
+	&"_reverse_tax_line",
+	&"_next_budget",
+	&"_read_time",
+	&"_read_shortfall",
+	&"_read_offered",
+	&"_read_lent",
 ]
+
+## The share of the way toward what a year's readings ask that a government's budget moves its
+## wealth tax, a legislature's step (FINANCIAL_MODEL.md, "A government's taxes and transfers").
+const WEALTH_TAX_PACE := 0.5
+## Time between a government's budgets.
+const BUDGET_PERIOD := IVUnits.YEAR
+## The ended quarters a government's budget reads its accounts over, a year.
+const BUDGET_QUARTERS := 4
+## The poorest decile, whose needs a government's reverse tax answers.
+const POOREST_DECILE := Proxy.N_DECILES - 1
 
 
 static var _table_n_rows := IVTableData.table_n_rows
+static var _item_transfers_paid := -1
+static var _item_reverse_tax_paid := -1
 
 
 var proxy: PlayerProxy
@@ -305,6 +339,16 @@ var locus_strategies: Dictionary[int, int]
 var counterparty_strategies: Dictionary[int, int]
 
 # *****************************************************************************
+# persisted
+
+var _reverse_tax_line := 0.0 # in years of its residents' wants
+var _next_budget := -INF # when its next budget comes, -INF before its first interval
+var _read_time := 0.0 # what its readings since its last budget span, in seconds
+var _read_shortfall := 0.0 # its poorest decile's share of its needs gone without, times time
+var _read_offered := 0.0 # what its residents offered the credit market, in dollars
+var _read_lent := 0.0 # what the credit market lent of that, in dollars
+
+# *****************************************************************************
 
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
@@ -313,6 +357,11 @@ func _init() -> void:
 	super()
 	var n_resources: int = _table_n_rows[&"resources"]
 	player_resource_strategies.resize(n_resources)
+	if _item_transfers_paid == -1:
+		_item_transfers_paid = IVTableData.db_find(&"line_items", &"unique_type",
+				Enums.UniqueLineItems.TRANSFERS_PAID)
+		_item_reverse_tax_paid = IVTableData.db_find(&"line_items", &"unique_type",
+				Enums.UniqueLineItems.REVERSE_TAX_PAID)
 
 
 func _clear_for_destruction() -> void:
@@ -327,9 +376,12 @@ func ai_init() -> void:
 	pass
 
 
-func process_ai_interval(_delta: float) -> void:
+func process_ai_interval(delta: float) -> void:
 	_author_budget_shares()
 	_author_budget_targets()
+	_read_residents(delta)
+	_run_budget(_last_interval)
+	_author_taxes()
 
 
 # ***************************** INTERNAL PRIVATE ******************************
@@ -406,3 +458,146 @@ func _author_budget_shares() -> void:
 func _author_budget_targets() -> void:
 	for account in Enums.Accounts.size():
 		proxy.set_budget_target(account, NAN)
+
+
+# Reads, over [param delta], how much of their needs its residents' poorest decile went without
+# and what its residents offered the credit market and what it lent of that: the year's
+# statistics its budget answers ([method _decide_taxes]). A polity's at its administrative center.
+func _read_residents(delta: float) -> void:
+	var center := proxy.administrative_center
+	if proxy.player_class != Enums.PlayerClasses.PLAYER_CLASS_POLITY or !center:
+		return
+	var want := 0.0
+	var short := 0.0
+	for population_type in _table_n_rows[&"populations"]:
+		if !_is_free(center, population_type):
+			continue
+		for need in _table_n_rows[&"needs"]:
+			var value := center.get_population_want_value(population_type, need)
+			if !(value > 0.0):
+				continue
+			want += value
+			short += value * maxf(1.0 - center.get_population_decile_satisfaction(population_type,
+					need, POOREST_DECILE), 0.0)
+	if want > 0.0:
+		_read_time += delta
+		_read_shortfall += short / want * delta
+	_read_offered += center.get_population_saving_offered() * delta
+	_read_lent += center.get_population_saving_lent() * delta
+
+
+# Decides its taxes ([method _decide_taxes]) once a [constant BUDGET_PERIOD] at [param time], the
+# first a time in the period after its first interval: every polity's budget on a clock from the
+# game's start would move every polity's taxes in one interval each year, at a quarter's turn.
+func _run_budget(time: float) -> void:
+	if _next_budget == -INF:
+		_next_budget = time + randf_range(0.0, BUDGET_PERIOD)
+		return
+	if time < _next_budget:
+		return
+	while _next_budget <= time:
+		_next_budget += BUDGET_PERIOD
+	_decide_taxes()
+
+
+# Moves a polity's taxes as its government's budget does once a year, on the year past
+# (FINANCIAL_MODEL.md, "A government's taxes and transfers"): its reverse tax's line rises by the
+# share of its needs its poorest decile went without, the less the more of what it passes on the
+# reverse tax already takes, and never falls, since a benefit once paid is seldom taken back; and
+# its wealth tax moves part of the way toward the most it levies times the share of what its
+# residents offered the credit market that went unlent. Held at its seeds, it moves neither.
+func _decide_taxes() -> void:
+	const TAX_WEALTH := PlayerProxy.Taxes.TAX_WEALTH
+	var center := proxy.administrative_center
+	if proxy.player_class == Enums.PlayerClasses.PLAYER_CLASS_POLITY and center and !held_at_seeds:
+		var def := global_strategy_defs[global_strategy]
+		if _read_time > 0.0:
+			var step: float = def.get(&"reverse_tax_step", 0.0)
+			_reverse_tax_line += (step * _read_shortfall / _read_time
+					* (1.0 - _get_reverse_tax_take(center)))
+		if _read_offered > 0.0:
+			var most: float = def.get(&"wealth_tax_most", 0.0)
+			var idle := clampf(1.0 - _read_lent / _read_offered, 0.0, 1.0)
+			var rate := proxy.wealth_tax_rate
+			proxy.set_tax(TAX_WEALTH, rate + WEALTH_TAX_PACE * (most * idle - rate),
+					proxy.wealth_tax_threshold)
+	_read_time = 0.0
+	_read_shortfall = 0.0
+	_read_offered = 0.0
+	_read_lent = 0.0
+
+
+# Sets a polity's taxes each interval, so that one its human returns to auto goes back to its AI's
+# and each threshold follows the residents' means: at their seeds where the AI is held; else its
+# wealth tax at its rate past [code]wealth_tax_years[/code] of its residents' wants and
+# [code]wealth_tax_mean[/code] times their mean wealth, and its reverse tax at
+# [code]reverse_tax_rate[/code] short of its line, each turned into a share of their mean wealth.
+func _author_taxes() -> void:
+	const TAX_WEALTH := PlayerProxy.Taxes.TAX_WEALTH
+	const TAX_REVERSE := PlayerProxy.Taxes.TAX_REVERSE
+	var center := proxy.administrative_center
+	if proxy.player_class != Enums.PlayerClasses.PLAYER_CLASS_POLITY or !center:
+		return
+	if held_at_seeds:
+		var row := IVTableData.get_row(proxy.name)
+		if row == -1:
+			return
+		var players_table: Dictionary[StringName, Array] = IVTableData.db_tables[&"players"]
+		var wealth_tax_rates: Array[float] = players_table[&"wealth_tax_rate"]
+		var wealth_tax_thresholds: Array[float] = players_table[&"wealth_tax_threshold"]
+		var reverse_tax_rates: Array[float] = players_table[&"reverse_tax_rate"]
+		var reverse_tax_thresholds: Array[float] = players_table[&"reverse_tax_threshold"]
+		proxy.set_tax(TAX_WEALTH, wealth_tax_rates[row], wealth_tax_thresholds[row])
+		proxy.set_tax(TAX_REVERSE, reverse_tax_rates[row], reverse_tax_thresholds[row])
+		return
+	var years := _get_free_years_of_wants(center)
+	if !(years > 0.0):
+		return
+	var def := global_strategy_defs[global_strategy]
+	var wealth_tax_years: float = def.get(&"wealth_tax_years", INF)
+	var wealth_tax_mean: float = def.get(&"wealth_tax_mean", 0.0)
+	proxy.set_tax(TAX_WEALTH, proxy.wealth_tax_rate,
+			maxf(wealth_tax_years / years, wealth_tax_mean))
+	var reverse_tax_rate: float = def.get(&"reverse_tax_rate", 0.0)
+	if !(_reverse_tax_line > 0.0):
+		reverse_tax_rate = 0.0
+	proxy.set_tax(TAX_REVERSE, reverse_tax_rate, _reverse_tax_line / years)
+
+
+# What a head of [param center]'s free residents holds, in years of their wants: the means its
+# taxes' thresholds are set in. Nothing where none holds anything.
+func _get_free_years_of_wants(center: FacilityProxy) -> float:
+	var wealth := 0.0
+	var year_cost := 0.0
+	for population_type in _table_n_rows[&"populations"]:
+		if !_is_free(center, population_type):
+			continue
+		var years := center.get_population_years_of_wants(population_type)
+		if !(years > 0.0):
+			continue
+		var type_wealth := center.get_population_wealth(population_type)
+		wealth += type_wealth
+		year_cost += type_wealth / years
+	return wealth / year_cost if year_cost > 0.0 else 0.0
+
+
+# The share of what [param center]'s government treasury passed on over the last year that its
+# reverse tax took; all of it where it passed nothing on, since then it has nothing to pay one
+# from.
+func _get_reverse_tax_take(center: FacilityProxy) -> float:
+	var reverse := 0.0
+	var passed := 0.0
+	var reverses := center.get_financials_accounting_history(_item_reverse_tax_paid)
+	var transfers := center.get_financials_accounting_history(_item_transfers_paid)
+	for q in mini(BUDGET_QUARTERS, reverses.size()):
+		reverse += reverses[-1 - q]
+		passed += reverses[-1 - q] + transfers[-1 - q]
+	if !(passed > 0.0):
+		return 1.0
+	return clampf(reverse / passed, 0.0, 1.0)
+
+
+# True if [param center] has free people of [param population_type], whose means are their own.
+func _is_free(center: FacilityProxy, population_type: int) -> bool:
+	return (center.get_population_number(population_type)
+			> center.get_population_owned_number(population_type))

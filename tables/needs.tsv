@@ -1,8 +1,9 @@
-name\Field	tier
-Type	Enums.NeedTiers
-Prefix/NEED_	NEED_TIER_
+name\Field	tier	satiation_headroom
+Type	Enums.NeedTiers	FLOAT
+Default		0.1
+Prefix/NEED_	NEED_TIER_	
 SUSTENANCE	EXISTENCE
-SHELTER	WELLBEING
+SHELTER	WELLBEING	1
 UTILITIES	WELLBEING
 HEALTH	WELLBEING
 ORDER	WELLBEING

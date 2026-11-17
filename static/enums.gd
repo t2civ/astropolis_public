@@ -81,7 +81,6 @@ enum UniqueLineItems {
 	EXCHANGE_TAKE_PAID,
 	CASH,
 	BOND_ESCROW,
-	TRADE_RECEIVABLES,
 	FIXED_ASSETS,
 	INCOME_TAX,
 	TAX_REVENUE,
@@ -132,18 +131,19 @@ enum UniqueLineItems {
 	INTEREST_RECEIVED,
 	PUBLIC_PROVISION_RECEIPTS,
 	PUBLIC_PROVISION_PAID,
+	TARIFFS_PAID,
+	TARIFFS_RECEIVED,
+	KEEP,
+	OWNED_WORK,
+	OWNED_STAFF_RECEIPTS,
+	REVERSE_TAX_PAID,
 }
 
-## Trade classes group resources by handling (electricity, bulk, cryogenic,
-## etc.) for trade and storage logic.
+## Where a resource trades (the [code]trade_class[/code] column of [code]resources.tsv[/code]);
+## a resource with none can't be traded. How it is held and moved is its storage class's.
 enum TradeClasses {
-	TRADE_CLASS_ELECTRICITY,
-	TRADE_CLASS_BULK,
-	TRADE_CLASS_ICE,
-	TRADE_CLASS_LIQUID,
-	TRADE_CLASS_CRYOGENIC,
-	TRADE_CLASS_PRECIOUS, ## Special handling is required.
-	TRADE_CLASS_CYBER, ## Tradable in the universal cyber market.
+	TRADE_CLASS_LOCUS, ## Traded at its locus's market.
+	TRADE_CLASS_CYBER, ## Traded at the solar-system-wide cyber market.
 }
 
 ## Locus stratum that receives a resource's disposed-of surplus (the
@@ -171,6 +171,20 @@ enum LifeStages {
 	LIFE_STAGE_ELDER,
 }
 
+## A population's knobs: what medicine, culture or a player changes about how it lives and renews
+## itself, each a factor of one where it lives by its type's rates (POPULATION_MODEL.md,
+## "Demographics", the knobs).
+enum PopulationKnobs {
+	## How fast its adults and elders pass their age groups against its type's widths. Its births
+	## and its adults' schooling a year go with it, so that it moves how long its people live and
+	## work and not how many children or how much schooling each has.
+	POPULATION_KNOB_PACE_OF_AGING,
+	## A factor on its type's death rates with its needs met, at every age.
+	POPULATION_KNOB_FRAILTY,
+	## A factor on its type's fertility with its needs met.
+	POPULATION_KNOB_FECUNDITY,
+}
+
 ## Tier of a need (the [code]tier[/code] column of [code]needs.tsv[/code]): what going without
 ## it does and how fast. The residents secure their existence first (POPULATION_MODEL.md,
 ## "Needs").
@@ -184,8 +198,6 @@ enum NeedTiers {
 ## operations.schema.md, operation_group).
 enum OperationGroup {
 	OPERATION_GROUP_PRODUCTION,
-	OPERATION_GROUP_BUILDOUT,
-	OPERATION_GROUP_DECOMMISSIONING,
 	OPERATION_GROUP_EXCHANGE,
 	OPERATION_GROUP_DONT_PROCESS, # dev/debug
 }

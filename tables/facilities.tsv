@@ -1,4 +1,4 @@
-name\Field	start	locus	player	region	unitary	market_maker	closed_cycle_ops	public_sector	funding_share	population	staff	constructions	biomass	bioproductivity	biodiversity_fraction	information_fraction	nominal_information	solar_correction	wind_correction	geothermal_correction	time_horizon	facility_class	short_name
+name\Field	start	locus	player	region	unitary	port	closed_cycle_ops	public_sector	funding_share	population	staff	constructions	biomass	bioproductivity	biodiversity_fraction	information_fraction	nominal_information	solar_correction	wind_correction	geothermal_correction	time_horizon	facility_class	short_name
 Type	BOOL	STRING_NAME	TABLE_ROW	STRING_NAME	BOOL	BOOL	BOOL	FLOAT	FLOAT	ARRAY[FLOAT]	ARRAY[FLOAT]	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	FLOAT	TABLE_ROW	STRING_NAME
 Unit												t	t	t/h			Tbit				d		
 Default	TRUE							0		0	0	0	0	0	0	0	0	1.0	1.0	1.0			

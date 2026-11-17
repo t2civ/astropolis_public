@@ -12,7 +12,7 @@ extends Proxy
 ## [FacilityProxy] represents a [PlayerProxy]'s development at a [LocusProxy].
 ##
 ## A facility runs operations enabled by modules (see corresponding data
-## tables). Server-side automations translate AI intent set here into per-tick
+## tables). Server-side automations translate AI intent set here into per-interval
 ## operation behavior. AI writes FROM_PROXY_MASK flag bits on [member flags],
 ## on per-op operations flags, and on per-resource inventory flags; the server
 ## publishes FROM_SERVER_MASK runtime signals (margin, shortage, surplus) back
@@ -45,8 +45,7 @@ enum FacilityFlags {
 	## capacity a facility lays up, its mothballed units, which it keeps without maintenance).
 	MODE_SHUTDOWN = 1 << 33,
 	## Inventory drawdown: no stock may rise, so each operation runs only as far as the
-	## facility itself uses what it makes (distinct from the DECOMMISSIONING operation, which
-	## tears down modules).
+	## facility itself uses what it makes (distinct from a teardown, which takes modules down).
 	MODE_DRAWDOWN = 1 << 34,
 	## Mask of all AI-command bits.
 	FROM_PROXY_MASK = ~((1 << 32) - 1),
@@ -71,9 +70,9 @@ enum InventoryFlags {
 	CAN_HAVE_INPUT = 1 << 6,
 	## A can-have operation at this facility produces or extracts this resource.
 	CAN_HAVE_OUTPUT = 1 << 7,
-	## The facility deals in this resource, and a market-making trader makes a market in it
-	## where it is also [constant TRADABLE]. For now the server sets it exactly where
-	## [constant CAN_HAVE_INPUT] or [constant CAN_HAVE_OUTPUT] is; a market maker is to deal in
+	## The facility deals in this resource, and a port's trader keeps lots standing on it where it
+	## is also [constant TRADABLE]. For now the server sets it exactly where
+	## [constant CAN_HAVE_INPUT] or [constant CAN_HAVE_OUTPUT] is; a port is to deal in
 	## resources it neither makes nor uses as well.
 	IS_MARKET = 1 << 9,
 	## Mask of all server-published signal bits.
@@ -154,9 +153,49 @@ enum BudgetLines {
 }
 
 
-## The multiples of the market's price, lowest first, that a facility's desired flow is given at
-## (see [method get_inventory_desired_flow_curve]); the middle one is the market's price itself.
-const FLOW_CURVE_FACTORS: PackedFloat64Array = [0.5, 1.0, 2.0]
+## A buildout's kind, what its units are for (see [method get_operations_buildouts] and
+## PRODUCTION_MODEL.md, "Buildouts").
+enum BuildoutKinds {
+	## A module's standing buildout, which rebuilds what wears of its plant still needed, or a made
+	## population type's, which commissions what dies of its people still needed.
+	BUILDOUT_REPLACEMENT,
+	## Units of a module past what replacement rebuilds, for an operation's room, or individuals of a
+	## made population type for its room.
+	BUILDOUT_EXPANSION,
+	## Units of a module taken down, its owner's: what they recover is made, and their construction
+	## drawn ([method order_operations_teardown]).
+	BUILDOUT_TEARDOWN,
+}
+
+
+## Who ordered a buildout (see [method get_operations_buildouts]).
+enum BuildoutOrderers {
+	ORDERER_PLANNER, ## The server's planner, for a module on auto.
+	ORDERER_AI, ## The facility's AI.
+	ORDERER_PLAYER, ## Its player, from the Build tab.
+}
+
+
+## A buildout's flags (see [method get_operations_buildouts]).
+enum BuildoutFlags {
+	BUILDOUT_PAUSED = 1, ## Its owner paused it.
+}
+
+
+## What [method hold_operations_buildout] does to a buildout.
+enum BuildoutHolds {
+	HOLD_RESUME, ## Resumes a paused buildout.
+	HOLD_PAUSE, ## Pauses it: it asks nothing until resumed, and still counts as plant to come.
+	HOLD_CANCEL, ## Cancels it: what it built stays in service.
+}
+
+
+## The number of prices a facility's desired flow is given at (see
+## [method get_inventory_desired_flow_curve]).
+const N_CURVE_POINTS := 3
+
+static var _resource_carriers := PackedInt32Array() # its storage class's carrier; -1: none
+static var _resource_hauls := PackedFloat64Array() # of the haul, what moving a unit of it covers
 
 
 var facility_id := -1  ## Index into [member ProxyBus.facility_proxies].
@@ -168,10 +207,9 @@ var facility_class := -1  ## [code]facility_classes.tsv[/code] row index.
 var public_sector: float
 ## True if this is a small focused activity (affects stats and tax treatment).
 var unitary: bool
-## True if this facility makes its locus's market, a port's: it warehouses stock and keeps a
-## bid and an ask standing, ready to trade in amounts that matter (see TRADE_MODEL.md, "Market
-## makers").
-var market_maker: bool
+## True if this facility is its locus's port: it warehouses stock and keeps a bid and an ask
+## standing, ready to trade in amounts that matter (see TRADE_MODEL.md, "Ports").
+var port: bool
 ## True if all resource streams flow from/to inventory (no atmosphere/surface
 ## market).
 var closed_cycle_ops: bool
@@ -180,6 +218,10 @@ var closed_cycle_ops: bool
 var solar_correction := 1.0
 var wind_correction := 1.0
 var geothermal_correction := 1.0
+## What moving a unit from a stock to its user draws here of the service of the network that
+## carries it, for a resource that moves the whole haul: its locus's haul, a share of its body's
+## radius (see [method get_inventory_leg]).
+var haul := 0.0
 ## Time horizon used by AI and automations (inventory reserves, resupply, etc.).
 var time_horizon: float
 ## Region of its locus the facility stands in, or [code]&""[/code] for none; it stands on the
@@ -198,13 +240,18 @@ var cash_reserve := 0.0
 ## are paid it (FINANCIAL_MODEL.md, "The credit market"). Its owners' payout policy; 0.0 by default.
 ## Use [method set_required_return].
 var required_return := 0.0
+## The share of what its budget leaves past its committed lines, its replacement of what wears out
+## among them, that its owners leave in it for expansion, which its expansion buildouts spend
+## (FINANCIAL_MODEL.md, "Budgets"; see [member budget_lines]); the server holds it below one. 0.0
+## by default. Use [method set_expansion_share].
+var expansion_share := 0.0
 ## Its available credit: what the facility may spend past what it holds, as of its last interval:
 ## its cash less what it owes, and what more it could owe before its interest at its own rate
 ## passed what its income carries, and what is left of each funding line that funds it, as far as
 ## the treasury's own such room goes (FINANCIAL_MODEL.md, "Saving and borrowing"). Its trader's
 ## commitments are bound by it.
 var credit := 0.0
-## Its budget a year as of its last interval, by [enum BudgetLines]; empty before its first.
+## Its budget a year as of its last interval, by [enum BudgetLines]; NAN before its first.
 ## Server-authoritative. Use [method get_budget_line].
 var budget_lines := PackedFloat64Array()
 ## The game time of the last interval its ledger is booked through, -INF before its first: what it
@@ -221,9 +268,8 @@ var trader: TraderProxy  ## Paired [TraderProxy]; set when TraderProxy registers
 var trader_id := -1  ## [member TraderProxy.trader_id] of [member trader].
 var joins: Array[JoinProxy] = []  ## [JoinProxy] aggregates this facility belongs to.
 var market: MarketProxy  ## Set after init. Lives on markets thread!
-## The operations' target spending shares held off auto, by operation type, each at its share (see
-## [method hold_operations_target_spending_share]). Resizable container — not threadsafe!
-var held_target_spending_shares: Dictionary[int, float] = {}
+## The expansion share held off auto (see [method hold_expansion_share]); NAN where none is.
+var held_expansion_share := NAN
 ## The resources' research shares held off auto, by resource type, each at its share (see
 ## [method hold_inventory_research_share]). Resizable container — not threadsafe!
 var held_research_shares: Dictionary[int, float] = {}
@@ -232,6 +278,21 @@ var held_research_shares: Dictionary[int, float] = {}
 
 
 # ************************* VIRTUAL & IMPLEMENTATION **************************
+
+func _init() -> void:
+	super()
+	if _resource_carriers.is_empty():
+		var resources_table: Dictionary[StringName, Array] = _db_tables[&"resources"]
+		var storage_classes := PackedInt32Array(resources_table[&"storage_class"])
+		var storage_classes_table: Dictionary[StringName, Array] = _db_tables[&"storage_classes"]
+		var class_carriers := PackedInt32Array(storage_classes_table[&"carrier"])
+		_resource_hauls = PackedFloat64Array(resources_table[&"haul"])
+		_resource_carriers.resize(storage_classes.size())
+		for resource_type in storage_classes.size():
+			var storage_class := storage_classes[resource_type]
+			_resource_carriers[resource_type] = (class_carriers[storage_class]
+					if storage_class != -1 else -1)
+
 
 func _clear_for_destruction() -> void:
 	locus = null
@@ -253,39 +314,39 @@ func remove() -> void:
 
 # ********************************** STATIC ***********************************
 
-## Returns what a curve of [constant FLOW_CURVE_FACTORS] points, starting at [param start] in
-## [param curve], gives at [param factor] times the price it was read at: linear in the log of
-## price between the points, and the end point's value past either end.
-static func get_curve_value(curve: PackedFloat64Array, factor: float, start := 0) -> float:
-	const FACTORS := FLOW_CURVE_FACTORS
-	var last := FACTORS.size() - 1
-	if !(factor > FACTORS[0]):
-		return curve[start]
-	if factor >= FACTORS[last]:
-		return curve[start + last]
-	var k := 1
-	while FACTORS[k] < factor:
+## Returns what a curve of [constant N_CURVE_POINTS] [param values] at [param prices], rising, each
+## starting at [param start], gives at [param price]: linear in the log of price between the points,
+## and the end point's value past either end.
+static func get_curve_value(values: PackedFloat64Array, prices: PackedFloat64Array, price: float,
+		start := 0) -> float:
+	var last := start + N_CURVE_POINTS - 1
+	if !(price > prices[start]):
+		return values[start]
+	if price >= prices[last]:
+		return values[last]
+	var k := start + 1
+	while prices[k] < price:
 		k += 1
-	var t := log(factor / FACTORS[k - 1]) / log(FACTORS[k] / FACTORS[k - 1])
-	return lerpf(curve[start + k - 1], curve[start + k], t)
+	var t := log(price / prices[k - 1]) / log(prices[k] / prices[k - 1])
+	return lerpf(values[k - 1], values[k], t)
 
 
-## Returns the factor of the price it was read at where a curve of [constant FLOW_CURVE_FACTORS]
-## points, starting at [param start] in [param curve], gives [param value]: the inverse of
-## [method get_curve_value] for a curve that falls as the price rises, the end factor past either
+## Returns the price at which a curve of [constant N_CURVE_POINTS] [param values] at
+## [param prices], each starting at [param start], gives [param value]: the inverse of
+## [method get_curve_value] for a curve that falls as the price rises, the end price past either
 ## end.
-static func get_curve_factor(curve: PackedFloat64Array, value: float, start := 0) -> float:
-	const FACTORS := FLOW_CURVE_FACTORS
-	var last := FACTORS.size() - 1
-	if !(value < curve[start]):
-		return FACTORS[0]
-	if !(value > curve[start + last]):
-		return FACTORS[last]
-	var k := 1
-	while curve[start + k] > value:
+static func get_curve_price(values: PackedFloat64Array, prices: PackedFloat64Array, value: float,
+		start := 0) -> float:
+	var last := start + N_CURVE_POINTS - 1
+	if !(value < values[start]):
+		return prices[start]
+	if !(value > values[last]):
+		return prices[last]
+	var k := start + 1
+	while values[k] > value:
 		k += 1
-	var t := (curve[start + k - 1] - value) / (curve[start + k - 1] - curve[start + k])
-	return FACTORS[k - 1] * pow(FACTORS[k] / FACTORS[k - 1], t)
+	var t := (values[k - 1] - value) / (values[k - 1] - values[k])
+	return prices[k - 1] * pow(prices[k] / prices[k - 1], t)
 
 
 # ***************************** THREAD-SAFE READ ******************************
@@ -375,25 +436,28 @@ func get_budget_line(line: int) -> float:
 @abstract func get_operations_target_margin(operation_type: int) -> float
 
 
-## Returns the AI/player-set target spending share of operation [param operation_type]
-## (NAN = not in effect).
-@abstract func get_operations_target_spending_share(operation_type: int) -> float
+## Returns whether the server's planner plans [param module_type]'s buildouts (see
+## [method set_operations_module_auto]); false for an index out of range.
+@abstract func is_operations_module_auto(module_type: int) -> bool
 
 
-## Returns true if operation [param operation_type]'s target spending share is held off auto (see
-## [method hold_operations_target_spending_share]). proxy thread only!
-func is_operations_target_spending_share_held(operation_type: int) -> bool:
-	return held_target_spending_shares.has(operation_type)
-
-
-## Returns the AI/player-set target run rate of operation [param operation_type]
-## (NAN = not in effect).
-@abstract func get_operations_target_run_rate(operation_type: int) -> float
-
-
-## Returns the build/decommission lever for [param module_type]; see
-## [method set_operations_module_buildout] for what the value means.
-@abstract func get_operations_module_buildout(module_type: int) -> float
+## Returns the facility's buildouts, its capital projects (PRODUCTION_MODEL.md, "Buildouts"), as
+## of its last interval and in the order they were opened: each a dictionary of its "id", unique
+## in the game; "module" (a [code]modules[/code] row) and "operation", the operation its units go
+## to, or a teardown's come from, -1 for a replacement, whose units go back to the operations of
+## its module that lost them, and for a teardown of all its module's; "population", for a
+## commissioning, whose units are a made population type's individuals, that type (a
+## [code]populations[/code] row), its module and operation -1, and -1 for a module's buildout
+## (POPULATION_MODEL.md, "Owned populations"); "kind" ([enum BuildoutKinds])
+## and "orderer" ([enum BuildoutOrderers]); "units" planned, 0.0 for a replacement, which stands,
+## "built", a teardown's taken down, and "left"; "rate", its schedule in units a second,
+## "start", the game time it was opened, and "pace", the share of its schedule it built over about
+## a quarter; "binding", the resource of which least could be had for its schedule, -1 for none,
+## and "lack", what of it the buildout went without a second, which counts as its unmet use;
+## "spent" and "borrowed", in dollars; "return", what its units would return a year at capital's
+## prices, NAN for a teardown, and "unit_cost", what a unit costs at them to build or take down;
+## and "paused". A new array each call; empty but at a facility. Proxy thread only!
+@abstract func get_operations_buildouts() -> Array[Dictionary]
 
 
 ## Returns the capitalized book value (historical cost) of [param module_type].
@@ -429,11 +493,11 @@ func is_operations_target_spending_share_held(operation_type: int) -> bool:
 
 ## Returns what this facility's transit buffer will still hold of [param resource_type], of what
 ## is to come into its stock, when the current quarter ends (always >= 0.0): the interval of what is
-## contracted to come in that it holds back to take up uneven deliveries, and what its pacing leaves
-## of the rest; once its facility has no step left in the quarter, all it holds and all still to
-## arrive before the quarter ends. Its trader counts what its buffer holds against the current
-## quarter less this, and this against the next (PRODUCTION_MODEL.md, "The local price: two flows
-## and a stock").
+## contracted to come in that it holds back to take up uneven deliveries, what its pacing leaves of
+## the rest, all it holds once its facility has no step left in the quarter, and what is to arrive
+## after its facility's last step in the quarter. Its trader counts what its buffer holds against
+## the current quarter less this, and this against the next (PRODUCTION_MODEL.md, "The local price:
+## two flows and a stock").
 @abstract func get_inventory_carried(resource_type: int) -> float
 
 
@@ -525,9 +589,10 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 
 ## Returns the critical rate of [param resource_type], smoothed over the time horizon: the trade
 ## the facility must have (positive), what its operations and its residents' existence use past
-## all its producers could make, or the most it can spare (negative). A trader secures at least
-## this where it is positive, and never commits to give more than it allows. 0.0 for a resource
-## that can't be traded. See PRODUCTION_MODEL.md, "A facility's flows with the market".
+## all its producers could make, or the most it can spare (negative), read where its trader could
+## trade now as the desired rate is (see [method get_inventory_desired_rate]). A trader secures at
+## least this where it is positive, and never commits to give more than it allows. 0.0 for a
+## resource that can't be traded. See PRODUCTION_MODEL.md, "A facility's flows with the market".
 @abstract func get_inventory_critical_rate(resource_type: int) -> float
 
 
@@ -536,11 +601,13 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 
 
 ## Returns the desired rate of [param resource_type], smoothed over the time horizon: the trade
-## the facility wants at the locus market's price, positive to take and negative to give, where
-## its whole use and the step toward its desired level would meet what its producers make at that
-## price. NAN where the market has no price; 0.0 for a resource that can't be traded. Until trade
-## returns, the market's prices stand at their seeds. See PRODUCTION_MODEL.md, "A facility's
-## flows with the market".
+## the facility wants, positive to take and negative to give, where its whole use and the step
+## toward its desired level would meet what its producers make, read where its trader could trade
+## now: at the ask its trader expects where the facility would take there, at the bid where it
+## would give there, and nothing between; where its trader expects no quote, at the market's last
+## sale, and where the market has none, at the facility's own price. NAN where it has no price at
+## all; 0.0 for a resource that can't be traded. See PRODUCTION_MODEL.md, "A facility's flows with
+## the market".
 @abstract func get_inventory_desired_rate(resource_type: int) -> float
 
 
@@ -548,39 +615,40 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 @abstract func get_inventory_desired_rates() -> PackedFloat64Array
 
 
-## Returns the flow in the critical rate of [param resource_type] at the market's price: the rate
+## Returns the flow in the critical rate of [param resource_type], read as the rate is: the rate
 ## without its step to the critical level (see [method get_inventory_critical_step]), so what the
 ## facility must have over a span longer than its horizon is this flow over the span plus that
 ## step, once. Smoothed over the time horizon as the rate is.
 @abstract func get_inventory_critical_flow(resource_type: int) -> float
 
 
-## Returns the step in the critical rate of [param resource_type]: what the facility's stock must
-## gain to reach its critical level at the market's price, a quantity, negative for what it holds
+## Returns the step in the critical rate of [param resource_type], read as the rate is: what the
+## facility's stock must gain to reach its critical level, a quantity, negative for what it holds
 ## past it. Smoothed over the time horizon as the rate is.
 @abstract func get_inventory_critical_step(resource_type: int) -> float
 
 
-## Returns the step in the desired rate of [param resource_type]: what the facility's holder would
-## add to its stock at the market's price, a quantity, negative for what it would give. Smoothed
-## over the time horizon as the rate is. NAN where the market has no price.
+## Returns the step in the desired rate of [param resource_type], read as the rate is: what the
+## facility's holder would add to its stock, a quantity, negative for what it would give. Smoothed
+## over the time horizon as the rate is. NAN where the facility has no price at all.
 @abstract func get_inventory_desired_step(resource_type: int) -> float
 
 
 ## Returns the flow in the desired rate of [param resource_type], the rate without its step toward
 ## the desired levels (see [method get_inventory_desired_step]), as a curve over price: at each of
-## [constant FLOW_CURVE_FACTORS] times [method get_inventory_curve_price], smoothed over the time
-## horizon. What the facility wants over a span longer than its horizon is this flow over the span
-## plus that step, once; a trader contracting a quarter ahead reads it at that quarter's price (see
-## [method get_curve_value]). NANs where the market has no price; empty for an index out of
-## range.
+## the prices [method get_inventory_curve_prices] gives, smoothed over the time horizon. What the
+## facility wants over a span longer than its horizon is this flow over the span plus that step,
+## once; a trader reads it at the price its order would trade at (see [method get_curve_value]).
+## NANs where the facility has no price at all; empty for an index out of range.
 @abstract func get_inventory_desired_flow_curve(resource_type: int) -> PackedFloat64Array
 
 
-## Returns the market's price of [param resource_type], in [method MarketProxy.get_price] units,
-## that the flow curves were last read at (see [method get_inventory_desired_flow_curve]). NAN
-## where the market has no price.
-@abstract func get_inventory_curve_price(resource_type: int) -> float
+## Returns the prices, rising and in [method MarketProxy.get_price] units, that the desired flow's
+## curve of [param resource_type] is given at (see [method get_inventory_desired_flow_curve]): the
+## facility's own price between the lowest and the highest of half and twice it, the market's last
+## sale and the quotes its trader expects. NANs where the facility has no price at all; empty for an
+## index out of range.
+@abstract func get_inventory_curve_prices(resource_type: int) -> PackedFloat64Array
 
 
 ## Returns what the facility used of [param resource_type] per unit time, averaged over its
@@ -603,6 +671,27 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 
 ## Returns the per-resource local prices array. Return is proxy array reference; read only!
 @abstract func get_inventory_local_prices() -> PackedFloat64Array
+
+
+## Returns what moving a unit of [param resource_type] from the facility's stock to the border
+## costs it now, an export's leg: the local price of the service that carries it, over its share
+## of [member haul] (resources.tsv, haul); 0.0 for a resource that moves for nothing. Its trader
+## reads its curve at what an order comes to at the facility, an ask net of the leg
+## (TRADE_MODEL.md, "The costs of movement").
+func get_inventory_leg(resource_type: int) -> float:
+	var carrier := _resource_carriers[resource_type]
+	if carrier == -1 or !(haul > 0.0):
+		return 0.0
+	return haul * _resource_hauls[resource_type] * get_inventory_local_price(carrier)
+
+
+## Returns the tariff the facility's polity sets on an import of [param resource_type], a share of
+## the price it is bought at (see [member PlayerProxy.tariffs]). The facility expects it on all it
+## imports, since it can't know who will deliver, so its trader reads its curve at what a bid comes
+## to there, the bid landed with the tariff (TRADE_MODEL.md, "The costs of movement"). proxy thread
+## only!
+func get_inventory_tariff(resource_type: int) -> float:
+	return polity.get_tariff(resource_type) if polity else 0.0
 
 
 ## Returns the most recent measured net rate for [param resource_type] (positive
@@ -635,6 +724,17 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 ## Returns the per-resource disposal rates array. Return is proxy array
 ## reference; read only!
 @abstract func get_inventory_disposal_rates() -> PackedFloat64Array
+
+
+## Returns the rate at which [param resource_type] decayed over the last interval at its storage
+## class's rate, from the stock and the transit buffer (>= 0.0): food spoiled, a cryogen boiled
+## off, a battery's charge leaked away. Decay is not counted in [method get_inventory_rate]
+## (PRODUCTION_MODEL.md, "What a facility is", decay).
+@abstract func get_inventory_decay_rate(resource_type: int) -> float
+
+
+## Returns the per-resource decay rates array. Return is proxy array reference; read only!
+@abstract func get_inventory_decay_rates() -> PackedFloat64Array
 
 
 ## Returns the rate at which demand for [param resource_type] went unserved over the last
@@ -733,7 +833,7 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 
 
 ## Returns the quantity of [param resource_type] this facility owns stored
-## remotely at the given facility.
+## remotely at the given facility. Proxy thread only!
 @abstract func get_inventory_remote_store(facility_id_: int, resource_type: int) -> float
 
 
@@ -775,6 +875,29 @@ func get_market() -> MarketProxy:
 @abstract func set_required_return(value: float) -> void
 
 
+## Sets [member expansion_share], from 0.0 to 1.0. Proxy-authoritative: this change flows proxy ->
+## server. No-op on a value out of that range or NAN, or where the share is held (see
+## [method hold_expansion_share]).
+@abstract func set_expansion_share(value: float) -> void
+
+
+## Holds [member expansion_share] off auto at [param value], as [method set_expansion_share] takes
+## it, until [method release_expansion_share].
+@abstract func hold_expansion_share(value: float) -> void
+
+
+## Returns true if [member expansion_share] is held off auto (see [method hold_expansion_share]).
+## Proxy thread only!
+func is_expansion_share_held() -> bool:
+	return !is_nan(held_expansion_share)
+
+
+## Returns [member expansion_share] to auto, where [method set_expansion_share] sets it again. It
+## keeps its share until then.
+func release_expansion_share() -> void:
+	held_expansion_share = NAN
+
+
 ## Sets the [code]FROM_PROXY_MASK[/code] bits of operations flags for
 ## [param operation_type] to [param value]. Proxy-authoritative: this
 ## change flows proxy -> server. No-op on an out-of-range index.
@@ -787,57 +910,48 @@ func get_market() -> MarketProxy:
 @abstract func set_operations_target_margin(type: int, value: float) -> void
 
 
-## Sets the target spending share for operation [param type] (fraction of what the facility's
-## budget leaves past its committed lines, what wears out among them, or NAN = not in effect; see
-## [member budget_lines]). Proxy-authoritative; flows proxy -> server. No-op where the share is
-## held (see [method hold_operations_target_spending_share]).
-@abstract func set_operations_target_spending_share(type: int, value: float) -> void
+## Orders a buildout of [param units] units of [param module_type], to go to its operation
+## [param operation_type], over [param build_time] seconds, or where that is nothing or less over
+## the module's build time ([code]build_time[/code] in [code]modules.tsv[/code]), past what the
+## server's planner opens (PRODUCTION_MODEL.md, "Buildouts", the planner and the AI). The server opens
+## it at the facility's next interval and funds and prices it as any buildout: it runs only as far as
+## its funding carries it and the step's prices ration what it draws. [param orderer] is who ordered
+## it, [constant ORDERER_AI] or [constant ORDERER_PLAYER]. A bad order is dropped: an index out of
+## range, an operation not of the module, or units not above nothing. Proxy-authoritative: this
+## order flows proxy -> server.
+@abstract func order_operations_buildout(module_type: int, operation_type: int, units: float,
+		build_time := 0.0, orderer := BuildoutOrderers.ORDERER_AI) -> void
 
 
-## Holds the target spending share of operation [param type] off auto at [param value], as
-## [method set_operations_target_spending_share] takes it, until
-## [method release_operations_target_spending_share]. No-op on an out-of-range index.
-@abstract func hold_operations_target_spending_share(type: int, value: float) -> void
+## Orders a teardown of [param units] units of [param module_type], of its operation
+## [param operation_type] or where that is -1 of all its operations, over [param time] seconds, or
+## where that is nothing or less over the module's build time: its units are taken down, the
+## laid-up first, what they recover made and the construction their teardown takes drawn
+## ([code]teardown_cost[/code] in [code]modules.tsv[/code]; PRODUCTION_MODEL.md, "Buildouts").
+## The server opens it at the facility's next interval and takes down only as far as the step's
+## prices ration that construction; it pays for it from the facility's cash as it is drawn, never
+## from the build budget. [param orderer] is who ordered it. A bad order is dropped, as
+## [method order_operations_buildout] drops one. Proxy-authoritative: this order flows proxy ->
+## server.
+@abstract func order_operations_teardown(module_type: int, operation_type: int, units: float,
+		time := 0.0, orderer := BuildoutOrderers.ORDERER_AI) -> void
 
 
-## Returns the target spending share of operation [param type] to auto, where
-## [method set_operations_target_spending_share] sets it again. It keeps its share until then.
-func release_operations_target_spending_share(type: int) -> void:
-	held_target_spending_shares.erase(type)
+## Pauses, resumes or cancels buildout [param id] (see [method get_operations_buildouts]) at the
+## facility's next interval, as [param hold] says ([enum BuildoutHolds]). Only its owner pauses or
+## cancels a buildout, as only an owner scraps. An id the facility has none of is dropped.
+## Proxy-authoritative: this flows proxy -> server.
+@abstract func hold_operations_buildout(id: int, hold: int) -> void
 
 
-## Sets the target run rate for operation [param type] (absolute rate, or NAN = not
-## in effect). Proxy-authoritative; flows proxy -> server.
-@abstract func set_operations_target_run_rate(type: int, value: float) -> void
-
-
-## Overrides the server's autonomous build/decommission decision for
-## [param module_type]. Pass [code]NAN[/code] (the default) to leave the module
-## on auto: the facility builds each of its operations as far as its room, what
-## its outputs' users would still take where a new unit would pay, each output's
-## room going to the operation whose new unit would pay at the least price,
-## wherever its return clears the cost of capital, within the buildout budget and
-## the construction yards. Pass a number to override just this module:[br]
-## - NAN (default): auto, as above.[br]
-## - 0.0: leave this module alone; the yards build none of it.[br]
-## - 0.0 to 1.0 (exclusive): build its operations to that fraction of their
-##   rooms.[br]
-## - 1.0: as auto.[br]
-## - >1.0: build its operations to that multiple of their rooms, and first claim
-##   a flat slice of the yards and the budget, its value over the sum of every
-##   module's (1.0 for a module on auto). *This is the only way to build a module
-##   none of whose operations has room.*[br]
-## - <0.0: decommission instead, reclaiming materials, with a slice of the yards
-##   sized the same way.
-@abstract func set_operations_module_buildout(module_type: int, value: float) -> void
-
-
-## Fills the entire per-module build/decommission override array with
-## [param value] — the array-wide form of [method set_operations_module_buildout].
-## Pass [code]NAN[/code] to return every module to auto (server-decided)
-## allocation, or e.g. 0.0 to stop all building.
-## Proxy-authoritative: this change flows proxy -> server.
-@abstract func set_operations_module_buildouts_fill(value: float) -> void
+## Sets whether the server's planner plans [param module_type]'s buildouts, true by default. On
+## auto, it reviews the facility's buildouts once a quarter: it sets each module's replacement to
+## what wears of the plant still needed, and opens an expansion for each operation whose room past
+## what is in flight is more than what its units wear in a quarter, where its return beats the cost
+## of capital (PRODUCTION_MODEL.md, "Buildouts", the planner and the AI). Off auto, it opens
+## nothing for the module. Proxy-authoritative: this change flows proxy -> server. No-op on an
+## out-of-range index.
+@abstract func set_operations_module_auto(module_type: int, is_auto: bool) -> void
 
 
 ## Sets the [code]FROM_PROXY_MASK[/code] bits of inventory flags for

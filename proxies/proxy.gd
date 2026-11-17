@@ -27,7 +27,12 @@ extends RefCounted
 ## as one (see [AstroSelectionManager]).
 ##
 ## WARNING: Lives on the proxy thread. Containers and many methods are not
-## threadsafe; accessing non-container properties is safe.
+## threadsafe; accessing non-container properties is safe. An array a getter returns by reference
+## is the proxy's own, which another thread may read while this one writes it: copy one only with
+## [code]slice()[/code], and off this thread read it only by element. A [code]duplicate()[/code]
+## shares its buffer, empty to other threads while the proxy's next write copies it; and
+## [code]str()[/code], JSON, [code]var_to_bytes()[/code] or an engine call that takes it off this
+## thread shares it too, which can corrupt memory.
 
 
 ## Field selectors for [method get_operations_items] (bit flags; OR together).
@@ -58,6 +63,9 @@ enum OperationsItems {
 
 
 const INTERVAL := 7.0 * IVUnits.DAY ## AI tick interval. See [constant BaseAI.INTERVAL].
+## The deciles a population's people are divided into by their means, equal in heads; a decile's
+## index runs best off first (POPULATION_MODEL.md, "Demographics", inequality).
+const N_DECILES := 10
 
 ## ivoyager save/load category. A Proxy persists NONE of its server data — Net
 ## components and scalar fields all re-flow from the server entity via
@@ -180,8 +188,10 @@ func has_inventory() -> bool:
 # Development totals. Default 0.0; the developed proxies (Facility, Player,
 # Locus, Join) override with values combined from their components.
 
-## Returns the development "population" total, optionally filtered to a
-## specific [param population_type] (-1 for total).
+## Returns the development "population" total, optionally of a specific [param population_type]
+## (-1 for total), each person counted once, where they are: the residents but for those lent as
+## staff and crew to the facilities their polity staffs from them, and the staff on loan and crew
+## who work here.
 func get_development_population(_population_type := -1) -> float:
 	return 0.0
 
@@ -508,11 +518,12 @@ func get_operations_volume_value(_resource_type: int) -> float:
 	return 0.0
 
 
-## Returns the price level of goods where the facility is, or its facilities are: what the
-## resources with a trade class that move through it, its internal volume and what it bought,
-## are worth at its local prices over what they would be at its long prices, each local price
-## averaged over a decade: how far its prices stand from what they have cost lately. An
-## aggregate weighs each facility by its volumes. NAN where none move.
+## Returns the price level of goods where the facility is, or its facilities are: the resources
+## with a trade class that move through it, its internal volume and what it bought. A facility's
+## is its price index, chained each quarter since the game's start, which counts in game-start
+## dollars; an aggregate's averages its facilities' in logs, each weighted by what its goods are
+## worth at its local prices, so no few facilities move it far, though it moves as that worth
+## shifts among facilities whose levels differ. NAN where none move.
 func get_operations_price_level() -> float:
 	return NAN
 
@@ -638,6 +649,13 @@ func get_population_number(_population_type := -1) -> float:
 	return 0.0
 
 
+## Returns how many of [param population_type] are owned, or of all types if -1: an owned
+## population's means are its owner's, and its treasuries' transfers pass it by
+## (POPULATION_MODEL.md, "Owned populations"). Safe default on an out-of-range index.
+func get_population_owned_number(_population_type := -1) -> float:
+	return 0.0
+
+
 ## Returns how many of [param population_type] are in its [param age_group], one of the
 ## type's eight (see POPULATION_MODEL.md, "Demographics"). Safe default on an out-of-range
 ## index.
@@ -677,6 +695,14 @@ func get_population_life_expectancy(_population_type: int) -> float:
 	return 0.0
 
 
+## Returns [param population_type]'s [param knob], an [enum Enums.PopulationKnobs]: a factor of one
+## where it lives by its type's rates (POPULATION_MODEL.md, "Demographics", the knobs). A
+## facility's own, and at an aggregate its members' averaged over their heads; NAN where none of its
+## people are, or without a population. Safe default on an out-of-range index.
+func get_population_knob(_population_type: int, _knob: int) -> float:
+	return NAN
+
+
 ## Returns migration pressure for [param population_type] (positive = net immigration,
 ## negative = net emigration); facility only. Safe default on an out-of-range index.
 func get_population_migration_pressure(_population_type: int) -> float:
@@ -692,6 +718,23 @@ func get_population_migration_pressure(_population_type: int) -> float:
 ## index.
 func get_population_satisfaction(_population_type: int, _need: int) -> float:
 	return 1.0
+
+
+## Returns the share of its want for [param need] that [param decile] of [param population_type]
+## got, one of [constant N_DECILES], best off first, smoothed as
+## [method get_population_satisfaction] is: how well its worse off are served beside its better
+## off. Facility only; 1.0 elsewhere. Safe default on an out-of-range index.
+func get_population_decile_satisfaction(_population_type: int, _need: int, _decile: int
+		) -> float:
+	return 1.0
+
+
+## Returns what [param population_type]'s wants for [param need] cost a second at the long prices,
+## each local price averaged over a decade, or all types' if -1, in dollars: the weight its
+## satisfaction carries where several types' or facilities' are combined. 0.0 without a
+## population. Safe default on an out-of-range index.
+func get_population_want_value(_population_type: int, _need: int) -> float:
+	return 0.0
 
 
 ## Returns [param population_type]'s wealth, or all types' if -1, in dollars; a facility's
@@ -752,6 +795,31 @@ func get_population_productivity(_population_type := -1) -> float:
 	return NAN
 
 
+## Returns the work an hour of [param population_type] makes with a workforce of its type's
+## reference schooling, its know-how, 1.0 being the frontier's (POPULATION_MODEL.md, "Productivity
+## and schooling"). A facility's type holds its own; elsewhere it is the productivity over what
+## the workforce's schooling gives. NAN where no one worked, without a population or on an
+## out-of-range index.
+func get_population_know_how(_population_type: int) -> float:
+	return NAN
+
+
+## Returns the schooling [param population_type]'s people hold, in seconds: those of its
+## [param age_group], one of the type's eight, an age group that gains schooling counting what its
+## people will carry out of it, or with -1 its workforce's, each life stage weighted as its type
+## counts it a working head. NAN where no one is, without a population or on an out-of-range
+## index.
+func get_population_schooling(_population_type: int, _age_group := -1) -> float:
+	return NAN
+
+
+## Returns the schooling a newborn of [param population_type] would gain over its life at the
+## learning its young were served in their last interval, in seconds: its expected schooling. NAN
+## where none of its people gain schooling now, without a population or on an out-of-range index.
+func get_population_expected_schooling(_population_type: int) -> float:
+	return NAN
+
+
 ## Returns what [param _population_type]'s residents paid in their last interval for what they
 ## drew, or all types' if -1, in dollars per second. 0.0 without a population.
 func get_population_spending(_population_type := -1) -> float:
@@ -763,6 +831,21 @@ func get_population_spending(_population_type := -1) -> float:
 ## corporate dividends, less what either drew from them where it was short (FINANCIAL_MODEL.md,
 ## "Ownership, as built"). 0.0 without a population.
 func get_population_dividends(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns what [param population_type]'s residents offered the credit market in their last
+## interval, or all types' if -1, in dollars per second: what they saved of what they were paid and
+## of their budgets (FINANCIAL_MODEL.md, "Saving and borrowing"). 0.0 without a population.
+func get_population_saving_offered(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns what the credit market lent of what [param population_type]'s residents offered it in
+## their last interval, or all types' if -1, in dollars per second: none where the interest rate
+## doesn't pay what holding their money earns them, and less than all where the borrowers took up
+## less than was offered (FINANCIAL_MODEL.md, "A glut of saving"). 0.0 without a population.
+func get_population_saving_lent(_population_type := -1) -> float:
 	return 0.0
 
 
