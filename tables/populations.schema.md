@@ -86,8 +86,8 @@ inequality, `facilities_populations.tsv`) takes the average over its deciles.
   (`FINANCIAL_MODEL.md`, "A glut of saving"). Default `0.5`.
 - work_resources — ARRAY[TABLE_ROW] `resources.tsv`, the kinds of work the type makes, each a
   resource an operation's recipe or staffing draws. Its hours are shared among them, each kind
-  offered and paid at its own price (`POPULATION_MODEL.md`, "Kinds of work"). Default `LABOR`,
-  which every operation draws.
+  offered and paid at its own price (`POPULATION_MODEL.md` in the development repository,
+  "Kinds of work, as built"). Default `LABOR`, which every operation draws.
 - work_response_time — FLOAT in years, how long the type's people take to move their hours to a
   kind of work that pays better, as people change trades: a share moves at most its own size over
   this time. Read only where the type makes more than one kind. Default `5 y`.
