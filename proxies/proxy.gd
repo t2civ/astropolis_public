@@ -750,6 +750,15 @@ func get_population_participation(_population_type := -1) -> float:
 	return 0.0
 
 
+## Returns the share of [param population_type]'s hours that its [param kind] of work takes, its
+## kinds those its type's work_resources (populations.tsv) list, in their order: how its people
+## are spread over the trades it can work, moving toward those that pay better over years
+## (POPULATION_MODEL.md, "Kinds of work"). A facility's own; NAN elsewhere, without a population or
+## on an out-of-range index.
+func get_population_work_share(_population_type: int, _kind: int) -> float:
+	return NAN
+
+
 ## Returns what [param population_type]'s wealth buys, or all types' if -1: the years of its
 ## wants it would pay for at local prices. The true measure of its wealth, which compares
 ## across places; 0.0 without a population.

@@ -124,7 +124,7 @@ var _age_group_widths: Array[Array] = _db_tables[&"populations"][&"age_group_wid
 var _first_adult_age_groups: Array[int] = _db_tables[&"populations"][&"first_adult_age_group"]
 var _first_elder_age_groups: Array[int] = _db_tables[&"populations"][&"first_elder_age_group"]
 var _starvation_thresholds: Array[float] = _db_tables[&"populations"][&"starvation_threshold"]
-var _work_resources: Array[int] = _db_tables[&"populations"][&"work_resource"]
+var _work_resources: Array[Array] = _db_tables[&"populations"][&"work_resources"] # its kinds
 var _need_names: Array[StringName] = _db_tables[&"needs"][&"name"]
 var _need_tiers: Array[int] = _db_tables[&"needs"][&"tier"]
 var _resource_names: Array[StringName] = _db_tables[&"resources"][&"name"]
@@ -376,6 +376,22 @@ func _get_column(proxy: Proxy, type: int, types: Array[int]) -> ColumnData:
 	var work_resource := _get_work_resource(type, types)
 	column.work_price = (facility.get_inventory_local_price(work_resource)
 			if facility and work_resource != -1 else NAN)
+	if facility:
+		for each_type: int in ([type] if type != -1 else types):
+			var kinds: Array = _work_resources[each_type]
+			for kind in kinds.size():
+				var resource_type: int = kinds[kind]
+				column.kind_prices[resource_type] = facility.get_inventory_local_price(
+						resource_type)
+				if type != -1:
+					column.kind_shares[resource_type] = facility.get_population_work_share(type,
+							kind)
+		# Where the type works several kinds, its work's price is theirs at its shares.
+		if type != -1 and _work_resources[type].size() > 1:
+			column.work_price = 0.0
+			for resource_type: int in column.kind_shares:
+				column.work_price += (column.kind_shares[resource_type]
+						* column.kind_prices[resource_type])
 	column.spending = proxy.get_population_spending(type)
 	column.dividends = proxy.get_population_dividends(type)
 	column.price_level = proxy.get_population_price_level(type)
@@ -599,7 +615,8 @@ func _get_work_lines(data: PopulationsData) -> Array[LineData]:
 			"What an hour of the residents' work was paid in their last interval: the price of\n"
 			+ "work times their productivity and the share of it their facility pays.")
 	var work_price := _make_line("Price of work ($/%s)" % unit,
-			"The local price of work, an hour at productivity 1, in the residents' last interval.")
+			"The local price of work, an hour at productivity 1, in the residents' last interval;\n"
+			+ "where they work several kinds, the kinds' at the shares of their hours.")
 	var paid_share := _make_line("Paid of its price (%)",
 			"The share of the price of their work the residents were paid in their last interval:\n"
 			+ "all of it while their facility can still borrow, and less once it owes all its own\n"
@@ -633,6 +650,40 @@ func _get_work_lines(data: PopulationsData) -> Array[LineData]:
 		_add_age_group_schoolings(schooling, columns[0])
 	lines.append_array([productivity, know_how, schooling, expected, participation, offered,
 			unemployment, wage, work_price, paid_share])
+	lines.append_array(_get_kind_lines(data))
+	return lines
+
+
+# A share and a price line for each kind of work some type here works among others.
+func _get_kind_lines(data: PopulationsData) -> Array[LineData]:
+	var lines: Array[LineData] = []
+	var kinds: Array[int] = []
+	for type in data.types:
+		var type_kinds: Array = _work_resources[type]
+		if type_kinds.size() < 2:
+			continue
+		for resource_type: int in type_kinds:
+			if !kinds.has(resource_type):
+				kinds.append(resource_type)
+	for resource_type in kinds:
+		var kind_name := tr(_resource_names[resource_type])
+		var multiplier := _trade_unit_multipliers[resource_type]
+		var share := _make_line("%s (%% of hours)" % kind_name,
+				"The share of the residents' hours in this kind of work, which moves toward the\n"
+				+ "kinds that pay better over years, as people change trades.")
+		var price := _make_line("Price of %s ($/%s)" % [kind_name, _get_work_unit(resource_type)],
+				"The local price of this kind of work, an hour at productivity 1, in the\n"
+				+ "residents' last interval.")
+		for column in data.columns:
+			if !data.at_facility:
+				_add_cell(share, NOT_APPLICABLE)
+				_add_cell(price, NOT_APPLICABLE)
+				continue
+			_add_cell(share, _format_percent(column.kind_shares[resource_type])
+					if column.kind_shares.has(resource_type) else NOT_APPLICABLE)
+			_add_cell(price, _format_price(column.kind_prices[resource_type] * multiplier
+					if column.kind_prices.has(resource_type) else NAN))
+		lines.append_array([share, price])
 	return lines
 
 
@@ -729,14 +780,13 @@ func _get_satisfaction_tone(type: int, types: Array[int], need: int, satisfactio
 	return TONE_NORMAL
 
 
-# The work resource of [param type], or of the first of [param types] that makes one if -1;
+# The first kind of work of [param type], or of the first of [param types] that makes one if -1;
 # -1 if none does.
 func _get_work_resource(type: int, types: Array[int]) -> int:
-	if type != -1:
-		return _work_resources[type]
-	for each_type in types:
-		if _work_resources[each_type] != -1:
-			return _work_resources[each_type]
+	for each_type: int in ([type] if type != -1 else types):
+		var kinds: Array = _work_resources[each_type]
+		if kinds:
+			return kinds[0]
 	return -1
 
 
@@ -892,7 +942,9 @@ class ColumnData extends RefCounted:
 	var schooling := NAN # the workforce's, in seconds; NAN for all types
 	var expected_schooling := NAN # a newborn's at the young's learning, in seconds
 	var age_group_schoolings := PackedFloat64Array() # in seconds; empty for all types
-	var work_price: float # the local price of its work resource at a facility; NAN elsewhere
+	var work_price: float # the local price of its work at a facility; NAN elsewhere
+	var kind_shares: Dictionary[int, float] = {} # by kind; of its hours, at a facility, one type
+	var kind_prices: Dictionary[int, float] = {} # by kind; its local price, at a facility
 	var spending: float # dollars a second
 	var dividends: float # dollars a second, less what was drawn
 	var price_level: float # of the residents' wants; NAN where nothing is wanted

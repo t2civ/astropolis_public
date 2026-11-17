@@ -84,8 +84,16 @@ inequality, `facilities_populations.tsv`) takes the average over its deciles.
   buys ten, and what it doesn't spend it keeps, offered to the credit market. At `1` it spends its
   budget at any price, and at `0` it buys its part and no more. One for every need for now
   (`FINANCIAL_MODEL.md`, "A glut of saving"). Default `0.5`.
-- work_resource — TABLE_ROW `resources.tsv`, the resource the type's work makes. Default
-  `LABOR`, which every operation draws (`POPULATION_MODEL.md`, "Work and pay").
+- work_resources — ARRAY[TABLE_ROW] `resources.tsv`, the kinds of work the type makes, each a
+  resource an operation's recipe or staffing draws. Its hours are shared among them, each kind
+  offered and paid at its own price (`POPULATION_MODEL.md`, "Kinds of work"). Default `LABOR`,
+  which every operation draws.
+- work_response_time — FLOAT in years, how long the type's people take to move their hours to a
+  kind of work that pays better, as people change trades: a share moves at most its own size over
+  this time. Read only where the type makes more than one kind. Default `5 y`.
+- work_share_floor — FLOAT from 0 to 1, the least share of the type's hours each kind keeps, so a
+  kind newly wanted can always draw some. Read only where the type makes more than one kind.
+  Default `0.002`.
 - work_stage_weights — ARRAY[FLOAT], three values, young, adults and elders: how much of a
   working head each member of a life stage counts as. Default `0;1;0.2`.
 - work_hours — FLOAT in hours per year, the hours a working head works. A population's able
