@@ -26,15 +26,10 @@ HINT_MODULE_PHARMACEUTICAL_PLANTS,Pharmaceutical Plants
 HINT_STRATUM_FORMAT_1,%s\n\nRadius:           %s\nVolume:         %s\nDensity:          %s\nTotal Mass:   %s
 HINT_STRATUM_FORMAT_2,%s\n\nThickness:     %s\nVolume:         %s\nDensity:          %s\nTotal Mass:   %s
 HINT_5_QUARTERS,past 4 quarters / current estimate
-HINT_AI,Singular artificial intelligences that may or may not manefest in physical form(s) 
-HINT_CYBORG,"Cyborgs are mechanically transformed persons that retain only a small biological part,  possibly only a brain or parts of a brain"
-HINT_EMBODIED,Embodied are uploaded persons generally (re-)manefesting in a physical body of some sort
 HINT_IN_ORBIT,"Satellites including minor moons, but not major moons nor their satellites"
 HINT_LARGE_BODIES,Planets and their satellites
-HINT_ORGANIC,"Organic persons are primarily biological,  but may be modified in form or mechanically augmented"
 HINT_SMALL_BODIES,"Asteroids,  comets and spacecraft in heliocentric orbit"
 HINT_SUBORBITAL,"Subsurface,  surface and atomosphere (if any)"
-HINT_UPLOADED,"Uploaded are electronic copies of living biological persons and the electronic offspring of such persons,  generally existing in virtual reality only"
 HINT_QUICK_START,Start a new game with the last single-player choices
 HINT_SANDBOX_FREE_NEW_FACILITIES,"Your players found new facilities for free. (Nothing founds a facility yet.)"
 HINT_SANDBOX_UNLIMITED_MONEY,Your players' treasuries are never short; you set what each spends a year

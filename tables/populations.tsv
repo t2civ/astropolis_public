@@ -5,11 +5,4 @@ Default	5;10;10;15;15;10;15	2	6	0;0;0.35;0.6;0.05;0;0;0	4	0.8	HEALTH	0.0009708;0
 Prefix/POPULATION_							NEED_					NEED_					NEED_							RESOURCE_			NEED_							RESOURCE_			
 BASE_HUMAN																																					
 SERVITOR	1;1;1;2;2;2;3	0	6	0;0;0;0;0;0;0;0	1			0.02;0.02;0.02;0.03;0.04;0.06;0.1;0.3	1;1;1;1;1;1;1;1		2							0.95			1				0;1;0.5	6000		0;0;0;0;0;0;0;0		0		inf	0.3	ANDROIDS	0.07	0.25	# early nonsentient androids, made and owned
-SENTIENT_AGI																																					
-VIRTUAL_HUMAN																																					# Uploaded human or approximate simulation
-CYBORG																																					# Extensively mechanized, but w/ bio brain
-EMBODIED_ANDROID																																					# AGI or approximate human sim in mech body
-EMBODIED_HUMAN																																					# A "downloaded" person
-MOD_AQUATIC																																					# Modified for Earth aquatic environment
-MOD_AMPHIBIOUS																																					# Modified for Earth land or aquatic environment
 # max 63																																					
