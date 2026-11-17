@@ -153,6 +153,21 @@ that is born.
 - commissioning_time — FLOAT in years: how long a commissioning of a type's room takes on its
   schedule, as a module's `build_time` is for its buildouts.
 
+The last columns are the type's migration (`POPULATION_MODEL.md`, "Migration"): how readily its
+people move among the places of a locus toward where their type is better served, as far as their
+polities' borders let them (`players.tsv`, `border_openness`).
+
+- mobility — FLOAT per year: the share of a population's people who move a year for each unit of
+  the gap between its attractiveness, how well its needs are met, and its locus's prospect, the
+  attractiveness of the places that let a mover in, where its border is open. Zero for a type that
+  goes only where it is sent; an owned population of any type moves only as its owner sends it.
+  Default `0`. Base humans' `0.03/y`, from recall: about a hundredth of a poorer place's people a
+  year, at an open border, where its needs are met a third less than where they go.
+- migration_weights — ARRAY[FLOAT], eight values: how readily each age group's people move,
+  relative to one another. Needed where `mobility` is above zero. Base humans' are mostly young
+  adults', their children with them, few of the old, from recall of the shape of the model schedule
+  (Rogers and Castro).
+
 
 ## Notes
 

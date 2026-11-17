@@ -703,9 +703,18 @@ func get_population_knob(_population_type: int, _knob: int) -> float:
 	return NAN
 
 
-## Returns migration pressure for [param population_type] (positive = net immigration,
-## negative = net emigration); facility only. Safe default on an out-of-range index.
-func get_population_migration_pressure(_population_type: int) -> float:
+## Returns the movers who arrived per second at [param population_type], or of all types if -1,
+## from elsewhere at their locus, smoothed over about a quarter (POPULATION_MODEL.md, "Migration").
+## At an aggregate, its members' movers to one another count too. Safe default on an out-of-range
+## index.
+func get_population_arrival_rate(_population_type := -1) -> float:
+	return 0.0
+
+
+## Returns the movers who left [param population_type] per second, or of all types if -1, for
+## elsewhere at their locus, smoothed over about a quarter (see
+## [method get_population_arrival_rate]). Safe default on an out-of-range index.
+func get_population_departure_rate(_population_type := -1) -> float:
 	return 0.0
 
 

@@ -12,8 +12,9 @@ extends MarginContainer
 ## or the facilities a locus, player or join aggregates, one population type at a time or, where
 ## several live, all together, in four views.
 ##
-## [b]Demog[/b]: the head count, the share in each life stage, and the vital rates; a type's life
-## stages unfold to its age groups. [b]Needs[/b]: how well each need is met, by tier; at a
+## [b]Demog[/b]: the head count, the share in each life stage, and the vital rates with the movers
+## who arrived and left; a type's life stages unfold to its age groups. [b]Needs[/b]: how well
+## each need is met, by tier; at a
 ## facility, a type's needs unfold to their satisfiers, with the facility's unmet rate and local
 ## price for each. [b]Means[/b]: the residents' wealth, what it buys and how unevenly it is
 ## held, the price level of their wants, and the money that moves their wealth: what their work
@@ -353,6 +354,8 @@ func _get_column(proxy: Proxy, type: int, types: Array[int]) -> ColumnData:
 	column.birth_rate = proxy.get_population_birth_rate(type)
 	column.death_rate = proxy.get_population_death_rate(type)
 	column.starvation_rate = proxy.get_population_starvation_rate(type)
+	column.arrival_rate = proxy.get_population_arrival_rate(type)
+	column.departure_rate = proxy.get_population_departure_rate(type)
 	column.life_expectancy = proxy.get_population_life_expectancy(type) if type != -1 else NAN
 	column.satisfactions.resize(_n_needs)
 	for need in _n_needs:
@@ -488,6 +491,12 @@ func _get_demography_lines(data: PopulationsData) -> Array[LineData]:
 			"Deaths a year per thousand heads for want of life support, over about a quarter.")
 	var increase := _make_line("Natural increase (%/y)",
 			"Births less deaths, a percent of the heads a year.")
+	var arrivals := _make_line("Arrivals (/k·y)",
+			"Movers who came from elsewhere at their locus, a year per thousand heads, over about a"
+			+ " quarter.\nAt a locus or a player, its places' movers to one another count too.")
+	var departures := _make_line("Departures (/k·y)",
+			"Movers who left for elsewhere at their locus, a year per thousand heads, over about a"
+			+ " quarter.")
 	var expectancy := _make_line("Life expectancy (y)",
 			"The mean lifetime of a newborn at the present death rates, a type's own.\n"
 			+ "Unknown where one of its age groups is empty.")
@@ -500,9 +509,11 @@ func _get_demography_lines(data: PopulationsData) -> Array[LineData]:
 				TONE_ALERT if starvation_rate > 0.0 else TONE_NORMAL)
 		_add_cell(increase, _format_value((column.birth_rate - column.death_rate)
 				* per_thousand / 10.0, true))
+		_add_cell(arrivals, _format_value(column.arrival_rate * per_thousand))
+		_add_cell(departures, _format_value(column.departure_rate * per_thousand))
 		_add_cell(expectancy, NOT_APPLICABLE if column.population_type == -1
 				else _format_value(column.life_expectancy / YEAR))
-	lines.append_array([births, deaths, starvation, increase, expectancy])
+	lines.append_array([births, deaths, starvation, increase, arrivals, departures, expectancy])
 	return lines
 
 
@@ -928,6 +939,8 @@ class ColumnData extends RefCounted:
 	var birth_rate: float
 	var death_rate: float
 	var starvation_rate: float
+	var arrival_rate: float
+	var departure_rate: float
 	var life_expectancy: float
 	var satisfactions := PackedFloat64Array() # by need; NAN where the type has no want for it
 	var wealth: float
