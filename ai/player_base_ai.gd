@@ -17,7 +17,7 @@ extends BaseAI
 ## poorest decile went without and moving its wealth tax with what its residents offered the credit
 ## market and it didn't lend; and its border (POPULATION_MODEL.md, "A government's border"), moving
 ## its immigration openness toward what would bring the intake its levels plan sets by its
-## residents' work.
+## residents' work, its plan's share its law, players.tsv's immigration_most at the game's start.
 ##
 ## To implement a custom player AI, extend this class and add
 ## [code]const OVERRIDE_AI := true[/code].[br][br]
@@ -205,10 +205,11 @@ enum CounterpartyStrategies {
 }
 
 
-## Grand-strategy definitions; index = [enum GlobalStrategies] value. A polity's border reads
-## [code]immigration_most[/code], the most of its free people a year its levels plan takes in, while
-## all the hours they offer are worked (POPULATION_MODEL.md, "A government's border"). Its taxes and
-## transfers read five keys (FINANCIAL_MODEL.md, "A government's taxes and transfers"):
+## Grand-strategy definitions; index = [enum GlobalStrategies] value. A polity's border plans at
+## [code]immigration_most[/code], the most of its free people a year its levels plan takes in while
+## all the hours they offer are worked, where players.tsv seeds no law of its own
+## (POPULATION_MODEL.md, "A government's border"). Its taxes and transfers read five keys
+## (FINANCIAL_MODEL.md, "A government's taxes and transfers"):
 ## [code]reverse_tax_rate[/code], its reverse tax's rate a year, one closing a decile's shortfall
 ## within about a year; [code]reverse_tax_step[/code], how far a year its line rises, in years of
 ## its residents' wants, where its poorest decile met none of its needs;
@@ -305,6 +306,7 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"_read_shortfall",
 	&"_read_offered",
 	&"_read_lent",
+	&"_immigration_most",
 	&"_read_span",
 	&"_read_people",
 	&"_read_arrived",
@@ -362,6 +364,7 @@ var _read_time := 0.0 # what its readings since its last budget span, in seconds
 var _read_shortfall := 0.0 # its poorest decile's share of its needs gone without, times time
 var _read_offered := 0.0 # what its residents offered the credit market, in dollars
 var _read_lent := 0.0 # what the credit market lent of that, in dollars
+var _immigration_most := NAN # its levels plan's most a year, its law; NAN before its first init
 var _read_span := 0.0 # what its readings of its people since its last budget span, in seconds
 var _read_people := 0.0 # its free people times time, in person-seconds
 var _read_arrived := 0.0 # its free people's arrivals
@@ -393,7 +396,8 @@ func bind_proxy(proxy_: Proxy) -> void:
 
 
 func ai_init() -> void:
-	pass
+	if is_nan(_immigration_most):
+		_immigration_most = _get_seeded_immigration_most()
 
 
 func process_ai_interval(delta: float) -> void:
@@ -561,8 +565,8 @@ func _decide_taxes() -> void:
 
 # Moves a polity's border as its government's levels plan does once a year, on the year past
 # (POPULATION_MODEL.md, "A government's border"): its immigration openness halfway toward what
-# would have brought the year's planned intake, [code]immigration_most[/code] of its free people
-# times the share of the hours they offered that were worked, arrivals rising with the openness.
+# would have brought the year's planned intake, its law's share of its free people a year times
+# the share of the hours they offered that were worked, arrivals rising with the openness.
 # Where no one arrived, or its readings span less than [constant BORDER_LEAST_READ], it holds its
 # law, and held at its seeds it moves nothing. Its emigration openness stays where it is.
 func _decide_border() -> void:
@@ -570,10 +574,8 @@ func _decide_border() -> void:
 	if (proxy.player_class == Enums.PlayerClasses.PLAYER_CLASS_POLITY and center and !held_at_seeds
 			and _read_span >= BORDER_LEAST_READ and _read_arrived > 0.0
 			and _read_offered_hours > 0.0):
-		var def := global_strategy_defs[global_strategy]
-		var most: float = def.get(&"immigration_most", 0.0)
-		var planned := (most * _read_worked_hours / _read_offered_hours * _read_people
-				/ IVUnits.YEAR)
+		var planned := (_immigration_most * _read_worked_hours / _read_offered_hours
+				* _read_people / IVUnits.YEAR)
 		var openness := proxy.immigration_openness
 		var wanted := minf(openness * planned / _read_arrived, 1.0)
 		proxy.set_border(openness + LEGISLATIVE_PACE * (wanted - openness),
@@ -653,6 +655,18 @@ func _get_reverse_tax_take(center: FacilityProxy) -> float:
 	if !(passed > 0.0):
 		return 1.0
 	return clampf(reverse / passed, 0.0, 1.0)
+
+
+# Its levels plan's most a year at the game's start (POPULATION_MODEL.md, "A government's border"):
+# its players.tsv seed, or its strategy's [code]immigration_most[/code] where the tables seed none.
+func _get_seeded_immigration_most() -> float:
+	var row := IVTableData.get_row(proxy.name)
+	if row != -1:
+		var seeds: Array[float] = IVTableData.db_tables[&"players"][&"immigration_most"]
+		if !is_nan(seeds[row]):
+			return seeds[row]
+	var def := global_strategy_defs[global_strategy]
+	return def.get(&"immigration_most", 0.0)
 
 
 # True if [param center] has free people of [param population_type], whose means are their own.
