@@ -13,4 +13,4 @@ An empty cell means the module can't work the stratum: a facility standing on it
 ## Notes
 
 1. The factors are geology only: how deep and hard a stratum's deposits lie. What a unit takes in labor, administration and upkeep is its population's and its technology's, never a stratum's.
-2. Not yet read: the yield. A module whose cell is filled runs at its operations' own values.
+2. The yield scales what each of the module's operations extracts of its `target_deposits` (operations.tsv), as the quality of a site scales what a plant makes; what drives it is unchanged.
