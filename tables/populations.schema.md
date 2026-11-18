@@ -155,7 +155,8 @@ that is born.
 
 The last columns are the type's migration (`POPULATION_MODEL.md`, "Migration"): how readily its
 people move among the places of a locus toward where their type is better served, as far as their
-polities' borders let them (`players.tsv`, `border_openness`).
+polities' borders let them (`players.tsv`, `immigration_openness` and
+`emigration_openness`).
 
 - mobility — FLOAT per year: the share of a population's people who move a year for each unit of
   the gap between its attractiveness, how well its needs are met, and its locus's prospect, the

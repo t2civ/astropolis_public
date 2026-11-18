@@ -80,6 +80,12 @@ var sanctions: Dictionary[int, PackedByteArray] = {}
 ## what a seller of another polity delivers them, the same whoever sells. Empty for a player that is
 ## not a polity, whose players pay their polity's. Not threadsafe! Use [method set_tariff].
 var tariffs := PackedFloat64Array()
+## A polity's border (POPULATION_MODEL.md, "Migration"): the share of an open border's flow of
+## movers it lets in, from nothing to one; [member emigration_openness] is the share it lets out.
+## A player that is not a polity has none, its places behind its polity's. Its AI's and its
+## player's: use [method set_border].
+var immigration_openness := 0.0
+var emigration_openness := 1.0 ## See [member immigration_openness].
 ## What each of its treasuries has to spend a year past what its committed lines take, what its
 ## discretionary lines share, by [code]Enums.Accounts[/code], as of its administrative center's last
 ## interval (FINANCIAL_MODEL.md, "Budgets"); empty where it has none. Server-authoritative.
@@ -110,6 +116,9 @@ var held_budget_targets: Dictionary[int, float] = {}
 ## The taxes held off auto, by [enum Taxes], each its rate and threshold (see [method hold_tax]).
 ## Resizable container — not threadsafe!
 var held_taxes: Dictionary[int, PackedFloat64Array] = {}
+## The border held off auto, its immigration and emigration openness, or empty where it is on auto
+## (see [method hold_border]). Not threadsafe!
+var held_border := PackedFloat64Array()
 
 # *****************************************************************************
 
@@ -226,6 +235,12 @@ func is_tax_held(tax: int) -> bool:
 	return held_taxes.has(tax)
 
 
+## Returns true if this polity's border is held off auto (see [method hold_border]). proxy thread
+## only!
+func is_border_held() -> bool:
+	return !held_border.is_empty()
+
+
 ## Returns true if the budget line kept under [param key] is held off auto (see
 ## [method hold_budget_share]). proxy thread only!
 func is_budget_share_held(key: int) -> bool:
@@ -283,6 +298,26 @@ func is_budget_target_held(account: int) -> bool:
 ## rate and threshold until then.
 func release_tax(tax: int) -> void:
 	held_taxes.erase(tax)
+
+
+## Sets this polity's border to let in [param immigration] and let out [param emigration], each the
+## share of an open border's flow of movers, from 0.0, closed, to 1.0 (see
+## [member immigration_openness]). Its locus's migration step moves its people by them.
+## Proxy-authoritative: this change flows proxy -> server. No-op on a player that is not a polity,
+## on a share outside 0.0 to 1.0 or NAN, or where the border is held (see [method hold_border]).
+@abstract func set_border(immigration: float, emigration: float) -> void
+
+
+## Holds this polity's border off auto at [param immigration] and [param emigration], as
+## [method set_border] takes them, until [method release_border]. No-op where
+## [method set_border] would be but for a hold.
+@abstract func hold_border(immigration: float, emigration: float) -> void
+
+
+## Returns this polity's border to auto, where [method set_border] sets it again. It keeps its
+## openness until then.
+func release_border() -> void:
+	held_border = PackedFloat64Array()
 
 
 ## Sets the share of the budget line kept under [param key] (see [member budget_shares]) to

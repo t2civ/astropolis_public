@@ -11,11 +11,13 @@ extends BaseAI
 ## Default AI for every player. A human player's runs too, and sets whatever its human leaves on
 ## auto (see [Proxy]).
 ##
-## A polity's is its government (AI_ARCHITECTURE.md, "Who each AI is"). Its first policy is its
-## taxes and transfers (FINANCIAL_MODEL.md, "A government's taxes and transfers"): once a year, on
-## the year past, it raises the line below which its reverse tax pays its residents' deciles by what
-## its poorest decile went without, and moves its wealth tax with what its residents offered the
-## credit market and it didn't lend.
+## A polity's is its government (AI_ARCHITECTURE.md, "Who each AI is"). Once a year, on the year
+## past, it decides its taxes and transfers (FINANCIAL_MODEL.md, "A government's taxes and
+## transfers"), raising the line below which its reverse tax pays its residents' deciles by what its
+## poorest decile went without and moving its wealth tax with what its residents offered the credit
+## market and it didn't lend; and its border (POPULATION_MODEL.md, "A government's border"), moving
+## its immigration openness toward what would bring the intake its levels plan sets by its
+## residents' work.
 ##
 ## To implement a custom player AI, extend this class and add
 ## [code]const OVERRIDE_AI := true[/code].[br][br]
@@ -203,8 +205,10 @@ enum CounterpartyStrategies {
 }
 
 
-## Grand-strategy definitions; index = [enum GlobalStrategies] value. A polity's taxes and transfers
-## read five keys (FINANCIAL_MODEL.md, "A government's taxes and transfers"):
+## Grand-strategy definitions; index = [enum GlobalStrategies] value. A polity's border reads
+## [code]immigration_most[/code], the most of its free people a year its levels plan takes in, while
+## all the hours they offer are worked (POPULATION_MODEL.md, "A government's border"). Its taxes and
+## transfers read five keys (FINANCIAL_MODEL.md, "A government's taxes and transfers"):
 ## [code]reverse_tax_rate[/code], its reverse tax's rate a year, one closing a decile's shortfall
 ## within about a year; [code]reverse_tax_step[/code], how far a year its line rises, in years of
 ## its residents' wants, where its poorest decile met none of its needs;
@@ -215,7 +219,8 @@ enum CounterpartyStrategies {
 ## omitted key levies or pays none.
 static var global_strategy_defs: Array[Dictionary] = [
 	{&"reverse_tax_rate": 1.0, &"reverse_tax_step": 1.0, &"wealth_tax_most": 0.05,
-			&"wealth_tax_years": 3.0, &"wealth_tax_mean": 2.0}, # NEUTRAL
+			&"wealth_tax_years": 3.0, &"wealth_tax_mean": 2.0,
+			&"immigration_most": 0.005}, # NEUTRAL
 	{}, # HEGEMONY
 	{}, # BALANCING
 	{}, # AUTONOMY
@@ -300,15 +305,25 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 	&"_read_shortfall",
 	&"_read_offered",
 	&"_read_lent",
+	&"_read_span",
+	&"_read_people",
+	&"_read_arrived",
+	&"_read_offered_hours",
+	&"_read_worked_hours",
 ]
 
 ## The share of the way toward what a year's readings ask that a government's budget moves its
-## wealth tax, a legislature's step (FINANCIAL_MODEL.md, "A government's taxes and transfers").
-const WEALTH_TAX_PACE := 0.5
+## wealth tax and its border, a legislature's step (FINANCIAL_MODEL.md, "A government's taxes and
+## transfers").
+const LEGISLATIVE_PACE := 0.5
 ## Time between a government's budgets.
 const BUDGET_PERIOD := IVUnits.YEAR
 ## The ended quarters a government's budget reads its accounts over, a year.
 const BUDGET_QUARTERS := 4
+## The least time a government's readings of its people must span for its budget to move its
+## border: its arrivals are published smoothed over a quarter, from none at the game's start, so a
+## first budget that falls early in the first year would read too few.
+const BORDER_LEAST_READ := 0.75 * BUDGET_PERIOD
 ## The poorest decile, whose needs a government's reverse tax answers.
 const POOREST_DECILE := Proxy.N_DECILES - 1
 
@@ -347,6 +362,11 @@ var _read_time := 0.0 # what its readings since its last budget span, in seconds
 var _read_shortfall := 0.0 # its poorest decile's share of its needs gone without, times time
 var _read_offered := 0.0 # what its residents offered the credit market, in dollars
 var _read_lent := 0.0 # what the credit market lent of that, in dollars
+var _read_span := 0.0 # what its readings of its people since its last budget span, in seconds
+var _read_people := 0.0 # its free people times time, in person-seconds
+var _read_arrived := 0.0 # its free people's arrivals
+var _read_offered_hours := 0.0 # the hours its free residents offered
+var _read_worked_hours := 0.0 # the hours they worked
 
 # *****************************************************************************
 
@@ -460,9 +480,10 @@ func _author_budget_targets() -> void:
 		proxy.set_budget_target(account, NAN)
 
 
-# Reads, over [param delta], how much of their needs its residents' poorest decile went without
-# and what its residents offered the credit market and what it lent of that: the year's
-# statistics its budget answers ([method _decide_taxes]). A polity's at its administrative center.
+# Reads, over [param delta], how much of their needs its residents' poorest decile went without,
+# what its residents offered the credit market and what it lent of that, and its free people, their
+# arrivals and the hours they offered and worked: the year's statistics its budget answers
+# ([method _decide_taxes], [method _decide_border]). A polity's at its administrative center.
 func _read_residents(delta: float) -> void:
 	var center := proxy.administrative_center
 	if proxy.player_class != Enums.PlayerClasses.PLAYER_CLASS_POLITY or !center:
@@ -484,11 +505,21 @@ func _read_residents(delta: float) -> void:
 		_read_shortfall += short / want * delta
 	_read_offered += center.get_population_saving_offered() * delta
 	_read_lent += center.get_population_saving_lent() * delta
+	_read_span += delta
+	for population_type in _table_n_rows[&"populations"]:
+		if !_is_free(center, population_type):
+			continue
+		_read_people += (center.get_population_number(population_type)
+				- center.get_population_owned_number(population_type)) * delta
+		_read_arrived += center.get_population_arrival_rate(population_type) * delta
+		_read_offered_hours += center.get_population_offered_hours(population_type) * delta
+		_read_worked_hours += center.get_population_worked_hours(population_type) * delta
 
 
-# Decides its taxes ([method _decide_taxes]) once a [constant BUDGET_PERIOD] at [param time], the
-# first a time in the period after its first interval: every polity's budget on a clock from the
-# game's start would move every polity's taxes in one interval each year, at a quarter's turn.
+# Decides its taxes and its border ([method _decide_taxes], [method _decide_border]) once a
+# [constant BUDGET_PERIOD] at [param time], the first a time in the period after its first
+# interval: every polity's budget on a clock from the game's start would move every polity's
+# policies in one interval each year, at a quarter's turn.
 func _run_budget(time: float) -> void:
 	if _next_budget == -INF:
 		_next_budget = time + randf_range(0.0, BUDGET_PERIOD)
@@ -498,6 +529,7 @@ func _run_budget(time: float) -> void:
 	while _next_budget <= time:
 		_next_budget += BUDGET_PERIOD
 	_decide_taxes()
+	_decide_border()
 
 
 # Moves a polity's taxes as its government's budget does once a year, on the year past
@@ -519,12 +551,38 @@ func _decide_taxes() -> void:
 			var most: float = def.get(&"wealth_tax_most", 0.0)
 			var idle := clampf(1.0 - _read_lent / _read_offered, 0.0, 1.0)
 			var rate := proxy.wealth_tax_rate
-			proxy.set_tax(TAX_WEALTH, rate + WEALTH_TAX_PACE * (most * idle - rate),
+			proxy.set_tax(TAX_WEALTH, rate + LEGISLATIVE_PACE * (most * idle - rate),
 					proxy.wealth_tax_threshold)
 	_read_time = 0.0
 	_read_shortfall = 0.0
 	_read_offered = 0.0
 	_read_lent = 0.0
+
+
+# Moves a polity's border as its government's levels plan does once a year, on the year past
+# (POPULATION_MODEL.md, "A government's border"): its immigration openness halfway toward what
+# would have brought the year's planned intake, [code]immigration_most[/code] of its free people
+# times the share of the hours they offered that were worked, arrivals rising with the openness.
+# Where no one arrived, or its readings span less than [constant BORDER_LEAST_READ], it holds its
+# law, and held at its seeds it moves nothing. Its emigration openness stays where it is.
+func _decide_border() -> void:
+	var center := proxy.administrative_center
+	if (proxy.player_class == Enums.PlayerClasses.PLAYER_CLASS_POLITY and center and !held_at_seeds
+			and _read_span >= BORDER_LEAST_READ and _read_arrived > 0.0
+			and _read_offered_hours > 0.0):
+		var def := global_strategy_defs[global_strategy]
+		var most: float = def.get(&"immigration_most", 0.0)
+		var planned := (most * _read_worked_hours / _read_offered_hours * _read_people
+				/ IVUnits.YEAR)
+		var openness := proxy.immigration_openness
+		var wanted := minf(openness * planned / _read_arrived, 1.0)
+		proxy.set_border(openness + LEGISLATIVE_PACE * (wanted - openness),
+				proxy.emigration_openness)
+	_read_span = 0.0
+	_read_people = 0.0
+	_read_arrived = 0.0
+	_read_offered_hours = 0.0
+	_read_worked_hours = 0.0
 
 
 # Sets a polity's taxes each interval, so that one its human returns to auto goes back to its AI's
