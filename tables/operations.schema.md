@@ -5,10 +5,10 @@ Operations are described in `operations.descriptive.md`.
 
 ## Common Fields
 
-- name (1st column) — Operation name per data table instructions. For extraction operations, the name is constructed with the `stratum_group` value as a prefix, e.g., `CONT_SURFACE_COAL_MINING`, `OCEAN_DESALINATION`, `ATMOSPHERE_SEPARATION`.
+- name (1st column) — Operation name per data table instructions. An extraction operation is named for its intent, what it does and the zone it works (`zones.tsv`), never for a stratum, e.g., `SURFACE_COAL_MINING`, `DEEP_SUBSURFACE_OIL_DRILLING`, `OCEAN_DESALINATION`, `ATMOSPHERE_SEPARATION`.
 - module — The module that provides capacity for this operation. Each operation belongs to exactly one module (one-to-many relationship from modules to operations).
 - operation_group — How the operation's run is decided (`Enums.OperationGroup`); blank disables the operation.
-  - `PRODUCTION` — Every operation without mechanics of its own, of every op class. It runs at the utilization the facility sets, or a renewable-power operation at the capacity factor its locus and site allow (see `unique_type`), within its margin floor, its storage and its share of the supply of its inputs: what the facility holds and makes over the interval, shared with its other operations. An operation that names a `stratum_group` extracts (see Extraction Fields).
+  - `PRODUCTION` — Every operation without mechanics of its own, of every op class. It runs at the utilization the facility sets, or a renewable-power operation at the capacity factor its locus and site allow (see `unique_type`), within its margin floor, its storage and its share of the supply of its inputs: what the facility holds and makes over the interval, shared with its other operations. An operation that lists `target_deposits` extracts (see Extraction Fields).
   - `EXCHANGE` — Runs the forward market's clearing service at the system's trading activity, earning a share of the exchange's take.
 - unique_type — Marks an operation with unique hard-coded mechanics (`Enums.UniqueOperations`); blank for ordinary operations. The renewable-power operations (SOLAR_POWER, WIND_POWER, HYDROPOWER, GEOTHERMAL_POWER, TIDAL_POWER) are tagged so engine code can resolve them by `db_find(&"operations", &"unique_type", …)` and drive their run rate from a computed environmental capacity factor (by body and site) rather than from the seeded `rate_ppt`. Solar power's run follows its `light_role` instead, its `unique_type` naming it only for the capacity factor it publishes.
 - solar — Direct solar radiation power input to the operation in MW. Non-empty only for operations that directly capture and use solar radiation for their primary process: SOLAR_POWER (photovoltaic/CSP electricity generation), SOLAR_STEELMAKING (concentrated solar thermal reduction), and biological operations using photosynthesis (for which solar represents the optimized photosynthetically active radiation input; in some contexts all or part of light may instead be supplied via additional electricity). Empty (not applicable) for all other operations, including those consuming grid electricity originally generated from solar sources.
@@ -32,7 +32,7 @@ Operations are described in `operations.descriptive.md`.
 
 ## Extraction Fields
 
-A `PRODUCTION` operation that lists `target_deposits` extracts them from the stratum its module stands on (`stratum_group` in modules.tsv), and the other fields here are read only for such an operation.
+A `PRODUCTION` operation that lists `target_deposits` extracts them from the facility's stratum of its module's zone (`zone` in modules.tsv), and the other fields here are read only for such an operation.
 
 - target_deposits — Resources the operation extracts as deposits; blank for an operation that extracts nothing. A deposit its stratum doesn't hold yields nothing. Its module must stand on a stratum.
 - target_rate — Expected extraction rate of target deposit resource(s) in t/h per unit run, which is 1 MW of electricity driver input (see Normalization), at optimal deposit level (see note 1). Sum of all target deposit resources for operations with multiple targets.

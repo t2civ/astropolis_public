@@ -401,6 +401,14 @@ Specific geophysical layers for the purpose of defining Compositions (which defi
 
 Each stratum's capacities at game start. See `strata_capacities.schema.md`.
 
+## strata_modules.tsv
+
+Which modules can work each stratum, and its geology's factors on them. See `strata_modules.schema.md`.
+
+## stratum_groups.tsv
+
+The kinds of strata, each body's layers by name (e.g., `CONT_SURFACE`, `REGOLITH`, `MANTLE`), and the zone each lies in (`zones.tsv`).
+
 ## surveys.tsv
 
 Defines our knowledge about a body's composition/resources in a particular strata: both deposits (if applicable) and estimation errors.
@@ -408,6 +416,10 @@ Defines our knowledge about a body's composition/resources in a particular strat
 ## wants.tsv
 
 What one individual of a population type draws to fill a need, written as an operation's recipe is. Fields in `wants.schema.md`.
+
+## zones.tsv
+
+Where in a body a module works, all an operation knows of the stratum it draws on. See `zones.schema.md`.
 
 ****
 

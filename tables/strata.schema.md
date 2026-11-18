@@ -43,6 +43,7 @@ The `name` field is constructed as follows:
 3. Atmospheres will have tiny mean densities given the volume construction; this is OK.
 4. Don't worry too much about getting survey_level exactly right; these will be cross-calibrated after we have all strata.
 5. Resource compositions of strata are defined in strata_resources.tsv.
+6. Which modules can work a stratum, and its geology's factors on them, are defined in strata_modules.tsv. The zone a stratum lies in is its stratum group's (`zone` in stratum_groups.tsv).
 
 
 ## Tests

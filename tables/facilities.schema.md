@@ -9,7 +9,7 @@ Facilities are described in `facilities.descriptive.md`. Content of this table i
 - start — Always TRUE (by default).
 - locus — The locus the facility stands at, by its body's name (`PLANET_EARTH`).
 - player — Owning or controlling player.
-- region — The region of its locus the facility stands in, or blank for none. It stands on the locus's strata in that region and those that span the locus, one of each stratum group (see `region` in strata.tsv). A space agency's ground facility stands in its polity's region.
+- region — The region of its locus the facility stands in, or blank for none. It stands on the locus's strata in that region and those that span the locus, at most one of each zone (see `region` in strata.tsv and `zone` in stratum_groups.tsv). A space agency's ground facility stands in its polity's region.
 - unitary — True ("x") if the facility can be treated as one activity for economic accounting. If false, each operation is treated as a separate activity for internal mechanics like taxation and gross product calculation.
 - port — True ("x") if the facility is its locus's port: almost anything it deals in can be bought or sold there, at some price and in amounts that matter. It warehouses stock and keeps a bid and an ask standing on the resources it trades, each a lot that matters. The Earth nations are ports; a spaceport will be one, where remote facilities look for their imports and exports. See "Ports" in the development repository's `TRADE_MODEL.md`.
 - closed_cycle_ops — True ("x") if the facility runs operations in a "closed cycle"; i.e., resource streams are entirely from and to inventory.

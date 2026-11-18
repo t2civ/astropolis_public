@@ -1,0 +1,14 @@
+[remap]
+
+importer="ivoyager.tables"
+type="IVTableResource"
+uid="uid://dxb56iqfctd77"
+path="res://.godot/imported/zones.tsv-b2ec32f31877a88c3a3e2e01ec7f1c98.tres"
+
+[deps]
+
+source_file="res://public/tables/zones.tsv"
+dest_files=["res://.godot/imported/zones.tsv-b2ec32f31877a88c3a3e2e01ec7f1c98.tres"]
+
+[params]
+

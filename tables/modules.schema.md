@@ -5,13 +5,13 @@ Modules are described in `modules.descriptive.md`.
 
 ## Fields
 
-- name (1st column) — Module name per data table instructions. For extraction modules, the name is constructed with the `stratum_group` value as a prefix, e.g., `CONT_SURFACE_MINES`, `OCEAN_DESALINATION_PLANTS`, `ATMOSPHERE_PROCESSORS`.
+- name (1st column) — Module name per data table instructions. An extraction module is the infrastructure of its operations' intent, named for it and never for a stratum, e.g., `SURFACE_MINES`, `DEEP_SUBSURFACE_WELLS`, `OCEAN_DESALINATION_PLANTS`, `ATMOSPHERE_PROCESSORS`.
 - op_class — GUI only category for operations display.
 - reconfig_time — Required time in days (d) to fully reconfigure a module from one operation (100%) to another (100%).
 - reconfig_cost — The share of a module-unit that moving it from one operation to another rebuilds (default 0.06): torn out for what it recovers, as a teardown takes a unit down, and built anew, as a build builds one, it draws that share of what the two draw, its `buildout`, `design` and `construction`, and the rest of the unit's plant is kept (`PRODUCTION_MODEL.md` in the development repository, "Reconfiguration: the middle tier"). Large where a move needs new works, as a mine's new holes, and next to nothing where it is a switch. A share holds at whatever resources cost at a later stage of the game, where a sum of money would not.
 - crew — The number of crew a unit of the module houses, the facility's staff who live where they work and work its operations; its operation draws what keeps them (`POPULATION_MODEL.md`, "Staff and crew").
 - crew_population — The population type of the crew a unit houses (default `BASE_HUMAN`).
-- stratum_group — The stratum group the module stands on, or blank for none. Its operations draw on the facility's stratum of that group (see `region` in facilities.tsv), and a facility without one can't have them.
+- zone — The zone the module works (`zones.tsv`), or blank for none. Its operations draw on the facility's stratum of that zone (see `region` in facilities.tsv), and a facility can have them only where that stratum allows the module (`strata_modules.tsv`).
 - occupies — The capacity a unit occupies (`capacities.tsv`), or blank for none. Its units occupy it on the stratum the facility stands on that has it (`strata_capacities.tsv`), units laid up included; a facility that stands on none occupies none.
 - occupancy — How much of that capacity a unit occupies, with its unit inline in the kind `strata_capacities.tsv` gives it in (e.g., `10 km^2` of land, `1 MW` of a power plant's sites).
 - operations — Operations that the module provides capacity for. Each operation belongs to exactly one module (one-to-many relationship from modules to operations).
