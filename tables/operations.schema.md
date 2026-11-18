@@ -6,6 +6,7 @@ Operations are described in `operations.descriptive.md`.
 ## Common Fields
 
 - name (1st column) — Operation name per data table instructions. An extraction operation is named for its intent, what it does and the zone it works (`zones.tsv`), never for a stratum, e.g., `SURFACE_COAL_MINING`, `DEEP_SUBSURFACE_OIL_DRILLING`, `OCEAN_DESALINATION`, `ATMOSPHERE_SEPARATION`.
+- alt_of — The operation this one is an alt of, its primary, or blank (see Alt Zones in `zones.schema.md`). An alt operation's module is its primary's module's alt, and every other cell copies its primary's; `python tests/sync_alt_rows.py` writes the copies. Its name is its primary's with `_ALT`.
 - module — The module that provides capacity for this operation. Each operation belongs to exactly one module (one-to-many relationship from modules to operations).
 - operation_group — How the operation's run is decided (`Enums.OperationGroup`); blank disables the operation.
   - `PRODUCTION` — Every operation without mechanics of its own, of every op class. It runs at the utilization the facility sets, or a renewable-power operation at the capacity factor its locus and site allow (see `unique_type`), within its margin floor, its storage and its share of the supply of its inputs: what the facility holds and makes over the interval, shared with its other operations. An operation that lists `target_deposits` extracts (see Extraction Fields).

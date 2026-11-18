@@ -6,10 +6,10 @@ Facilities are described in `facilities.descriptive.md`. Content of this table i
 ## Fields
 
 - name (1st column) — Constructed by joining locus name (with type prefix) and player name (without type prefix). Examples: PLANET_EARTH_CHINA, PLANET_EARTH_EU, SPACECRAFT_ISS_NASA.
-- start — Always TRUE (by default).
+- start — Whether a new game starts the facility, TRUE by default. A row with FALSE is a facility no game starts on its own, such as a lunar base, which a test may start (`arm_start_facilities` in `tests/astropolis_tests.gd`).
 - locus — The locus the facility stands at, by its body's name (`PLANET_EARTH`).
 - player — Owning or controlling player.
-- region — The region of its locus the facility stands in, or blank for none. It stands on the locus's strata in that region and those that span the locus, at most one of each zone (see `region` in strata.tsv and `zone` in stratum_groups.tsv). A space agency's ground facility stands in its polity's region.
+- region — The region of its locus the facility stands in, or blank for none. It stands on the locus's strata in that region and those that span the locus, at most one of each zone, where an area beside another in a zone is a zone of its own (see `region` in strata.tsv, `zone` in stratum_groups.tsv and Alt Zones in `zones.schema.md`). A space agency's ground facility stands in its polity's region.
 - unitary — True ("x") if the facility can be treated as one activity for economic accounting. If false, each operation is treated as a separate activity for internal mechanics like taxation and gross product calculation.
 - port — True ("x") if the facility is its locus's port: almost anything it deals in can be bought or sold there, at some price and in amounts that matter. It warehouses stock and keeps a bid and an ask standing on the resources it trades, each a lot that matters. The Earth nations are ports; a spaceport will be one, where remote facilities look for their imports and exports. See "Ports" in the development repository's `TRADE_MODEL.md`.
 - closed_cycle_ops — True ("x") if the facility runs operations in a "closed cycle"; i.e., resource streams are entirely from and to inventory.

@@ -5,7 +5,8 @@ Modules are described in `modules.descriptive.md`.
 
 ## Fields
 
-- name (1st column) — Module name per data table instructions. An extraction module is the infrastructure of its operations' intent, named for it and never for a stratum, e.g., `SURFACE_MINES`, `DEEP_SUBSURFACE_WELLS`, `OCEAN_DESALINATION_PLANTS`, `ATMOSPHERE_PROCESSORS`.
+- name (1st column) — Module name per data table instructions. An extraction module is the infrastructure of its operations' intent, named for it and never for a stratum, e.g., `SURFACE_MINES`, `DEEP_SUBSURFACE_WELLS`, `OCEAN_DESALINATION_PLANTS`, `ATMOSPHERE_PROCESSORS`. An alt module is its primary's name with `_ALT`.
+- alt_of — The module this one is an alt of, its primary, or blank (see Alt Zones in `zones.schema.md`). An alt module works an alt of its primary's zone, its `operations` are its primary's alts in the same order, and every other cell copies its primary's; `python tests/sync_alt_rows.py` writes the copies.
 - op_class — GUI only category for operations display.
 - reconfig_time — Required time in days (d) to fully reconfigure a module from one operation (100%) to another (100%).
 - reconfig_cost — The share of a module-unit that moving it from one operation to another rebuilds (default 0.06): torn out for what it recovers, as a teardown takes a unit down, and built anew, as a build builds one, it draws that share of what the two draw, its `buildout`, `design` and `construction`, and the rest of the unit's plant is kept (`PRODUCTION_MODEL.md` in the development repository, "Reconfiguration: the middle tier"). Large where a move needs new works, as a mine's new holes, and next to nothing where it is a switch. A share holds at whatever resources cost at a later stage of the game, where a sum of money would not.

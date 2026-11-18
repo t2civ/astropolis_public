@@ -44,6 +44,7 @@ Notes:
 - **Wells (extreme subsurface)** — Well drilling and completion equipment for hydrocarbon extraction from formations at approximately 5.0–12.0 km depth.
 - **Desalination Plants** — Reverse osmosis, multi-stage flash distillation, or electrodialysis facilities producing fresh water from seawater, brackish water, or brine, with integrated mineral recovery from concentrated reject brine. On ocean worlds, applicable to melt-probe or plume-sourced water.
 - **Volatiles Extraction Plants** — Thermal processing, sublimation trapping, and mechanical extraction facilities for recovering water, carbon dioxide, ammonia, and other volatile species from ice deposits, permafrost, regolith, and brine reservoirs.
+- **Volatiles Extraction Plants (alt)**, **Mines (subsurface alt)** — The same plants and mines working a second area beside the first at the same depth, such as a permanently shadowed polar crater beside the sunlit regolith, or the mare crust beside the highlands.
 - **Hydrocarbon Processors** — Surface collection and primary separation infrastructure for liquid hydrocarbon bodies, principally Titan's methane–ethane seas.
 
 

@@ -419,7 +419,7 @@ What one individual of a population type draws to fill a need, written as an ope
 
 ## zones.tsv
 
-Where in a body a module works, all an operation knows of the stratum it draws on. See `zones.schema.md`.
+Where in a body a module works, all an operation knows of the stratum it draws on, with an alt zone for each area beside another. See `zones.schema.md`, which also maps every stratum group to its zone.
 
 ****
 
