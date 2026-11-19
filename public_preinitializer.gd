@@ -139,6 +139,7 @@ func _on_table_initializer_instantiated(_table_initializer: IVTableInitializer) 
 	tables.facilities_modules = path_format % "facilities_modules"
 	tables.facilities_operations = path_format % "facilities_operations"
 	tables.facilities_populations = path_format % "facilities_populations"
+	tables.players_domains = path_format % "players_domains"
 	tables.strata_capacities = path_format % "strata_capacities"
 	tables.strata_modules = path_format % "strata_modules"
 	tables.strata_resources = path_format % "strata_resources"

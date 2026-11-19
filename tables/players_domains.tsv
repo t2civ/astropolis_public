@@ -1,0 +1,23 @@
+DOMAIN_\PLAYER_	USA	RUSSIA	CHINA	EU	INDIA	JAPAN	OTHER	NASA	ROSCOSMOS	CNSA	ESA	ISRO	JAXA
+MATHEMATICS	0 y;0 y;0.02	1 y;5 y;0.02	3 y;10 y;0.01	0 y;0 y;0.02	3 y;15 y;0.01	1 y;5 y;0.01	3 y;15 y;0.01						
+INFORMATION	0 y;0 y;0.26	4 y;20 y;0.1	3 y;6 y;0.25	1 y;5 y;0.18	4 y;8 y;0.15	2 y;10 y;0.25	3 y;10 y;0.28	1 y;4 y;0.02		3 y;6 y;0.03	1 y;5 y;0.02	4 y;8 y;0.04	
+PHYSICS	0 y;0 y;0.04	2 y;10 y;0.1	3 y;10 y;0.04	0 y;0 y;0.06	5 y;20 y;0.05	0.5 y;3 y;0.05	4 y;20 y;0.04	0 y;2 y;0.05	2 y;10 y;0.03	3 y;10 y;0.04	0 y;1 y;0.06		0.5 y;3 y;0.05
+CHEMISTRY	0 y;0 y;0.04	5 y;25 y;0.06	3 y;30 y;0.07	0 y;1 y;0.07	6 y;35 y;0.07	0 y;3 y;0.08	4 y;25 y;0.07						
+MATERIALS	0 y;0 y;0.03	4 y;20 y;0.06	3 y;15 y;0.07	0 y;2 y;0.04	8 y;40 y;0.03	0 y;2 y;0.07	4 y;25 y;0.05	0 y;3 y;0.03	4 y;20 y;0.04	3 y;12 y;0.03	0 y;2 y;0.02	8 y;35 y;0.04	0 y;2 y;0.05
+ENERGY	0 y;0 y;0.03	2 y;15 y;0.08	3 y;10 y;0.06	0 y;2 y;0.04	8 y;35 y;0.06	1 y;5 y;0.04	4 y;25 y;0.05	1 y;4 y;0.01	2 y;15 y;0.03				
+INDUSTRY	0 y;0 y;0.1	6 y;40 y;0.15	4 y;30 y;0.25	0 y;2 y;0.2	10 y;55 y;0.12	0 y;3 y;0.25	5 y;40 y;0.18						
+SPACE	0 y;0 y;0.03	2 y;8 y;0.04	5 y;12 y;0.02	1 y;5 y;0.02	5 y;10 y;0.02	2 y;8 y;0.01	8 y;30 y;0.01	0 y;4 y;0.75	2 y;6 y;0.85	4 y;8 y;0.85	1 y;4 y;0.75	4 y;8 y;0.8	2 y;5 y;0.8
+EARTH	0 y;0 y;0.02	3 y;25 y;0.03	4 y;30 y;0.03	0 y;3 y;0.03	6 y;40 y;0.03	1 y;10 y;0.02	4 y;35 y;0.03	0 y;3 y;0.12	4 y;25 y;0.05	4 y;25 y;0.05	0 y;3 y;0.15	5 y;30 y;0.12	1 y;8 y;0.1
+LIFE	0 y;0 y;0.06	7 y;40 y;0.05	5 y;60 y;0.05	0 y;8 y;0.06	8 y;75 y;0.1	1 y;30 y;0.04	5 y;55 y;0.06	1 y;4 y;0.01					
+HEALTH	0 y;0 y;0.2	8 y;35 y;0.05	6 y;40 y;0.05	0 y;5 y;0.15	8 y;50 y;0.15	1 y;15 y;0.12	5 y;40 y;0.1	1 y;4 y;0.01					
+MIND	0 y;0 y;0.02	6 y;30 y;0.01	6 y;40 y;0.01	0 y;5 y;0.02	10 y;50 y;0.01	2 y;15 y;0.01	6 y;40 y;0.01						
+SOCIETY	0 y;0 y;0.04	6 y;40 y;0.02	6 y;50 y;0.02	0 y;10 y;0.05	8 y;60 y;0.03	3 y;30 y;0.02	5 y;45 y;0.03						
+SECURITY	0 y;0 y;0.1	1 y;5 y;0.21	6 y;15 y;0.06	2 y;8 y;0.03	8 y;30 y;0.15	5 y;20 y;0.01	6 y;30 y;0.05						
+CULTURE	0 y;0 y;0.01	2 y;10 y;0.02	3 y;20 y;0.01	0 y;2 y;0.03	4 y;30 y;0.02	1 y;5 y;0.02	2 y;20 y;0.03						
+@ENTITY_X_ENTITY
+@DATA_TYPE=ARRAY[FLOAT]
+@TRANSPOSE
+# each cell: the player's gap in the domain's technologies, in years, its research's and
+# its practice's; and its research's share in the domain
+# transposed on import to:
+# table[player_type][domain_type]
