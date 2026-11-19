@@ -1,21 +1,20 @@
 # Schema for facilities_populations.tsv
 
 This Entity x Entity table defines the age structure, vital rates, inequality and its spreads,
-wealth, schooling, know-how and participation of each population at facilities at simulation
-start in 2015. How many a facility holds of each type is `population` in `facilities.tsv`; this
-table says how they are spread over the type's eight age groups, how fast they die and bear
-children, how unevenly they hold their means and are paid, what they hold and save, the schooling
-they hold, what their work makes with it and how much they work. It is the populations' starting
-state: from the first interval their death rates, fertility and participation move with what they
-get, their schooling with the learning their young get and as they age, their know-how toward the
-frontier, and their inequality with how unevenly what they are paid reaches them
-(`populations.schema.md`). Population types are
-described in `populations.schema.md`, and the model in `POPULATION_MODEL.md` ("Demographics").
+wealth, schooling and participation of each population at facilities at simulation start in 2015.
+How many a facility holds of each type is `population` in `facilities.tsv`; this table says how
+they are spread over the type's eight age groups, how fast they die and bear children, how
+unevenly they hold their means and are paid, what they hold and save, the schooling they hold and
+how much they work. It is the populations' starting state: from the first interval their death
+rates, fertility and participation move with what they get, their schooling with the learning
+their young get and as they age, and their inequality with how unevenly what they are paid
+reaches them (`populations.schema.md`). Population types are described in
+`populations.schema.md`, and the model in `POPULATION_MODEL.md` ("Demographics").
 
 
 ## Table Data
 
-The data type is ARRAY[FLOAT]; each cell holds 32 values delimited by semicolons:
+The data type is ARRAY[FLOAT]; each cell holds 31 values delimited by semicolons:
 
 - 8 values — each age group's share of the population, in the order of the type's age groups.
 - 8 values, per year — the deaths per head in each age group.
@@ -35,11 +34,6 @@ The data type is ARRAY[FLOAT]; each cell holds 32 values delimited by semicolons
 - 8 values, with an inline `y` — the years of schooling each age group holds. An age group that
   gains schooling holds what its people will carry out of it (`schooling_rates` in
   `populations.tsv`).
-- 1 value — the know-how: the work an hour of the population makes with a workforce of its type's
-  reference schooling, one being the frontier's, what the recipes assume. With its schooling it
-  makes the population's productivity, the work its hour makes (`POPULATION_MODEL.md`,
-  "Productivity and schooling"). From the first interval it closes on the frontier
-  (`catch_up_time` in `populations.tsv`).
 - 1 value — the participation: the most of its able hours the population offers, its
   weighted heads times `work_hours` (`populations.tsv`) being all of them. From the first
   interval it moves toward what its type's participation response implies.
@@ -60,10 +54,9 @@ must be present for every population that `facilities.tsv` seeds, and is empty o
    (`SPREADS`; `EARTH_CALIBRATION.md`, "Population"). A wealth is a year of what the polity's
    residents drew per head in their first interval at start prices, measured once. A saving rate
    is what the polity's households saved in 2015, from recall (`SAVING_RATES`). The schooling is
-   the polity's attainment by age in 2015, from recall (`SCHOOLINGS`), and the know-how what makes,
-   with it, what an hour worked made there against the USA's in 2015, from recall
-   (`PRODUCTIVITIES`); `seed_demography.py --schooling` rewrites the two alone from the table's own
-   shares. The participation is written by `tests/calibration/seed_labor.py`, from 2015
+   the polity's attainment by age in 2015, from recall (`SCHOOLINGS`), which
+   `seed_demography.py --schooling` rewrites alone from the table's own shares; what an hour
+   worked made there past what its schooling gives is its technology's (`players_domains.tsv`). The participation is written by `tests/calibration/seed_labor.py`, from 2015
    employment and hours from recall, and `seed_demography.py` keeps it.
 2. An agency has no residents: its headcount is staff on loan from its polity (`facilities.tsv`, `staff`).
 3. The shares need not sum exactly to one; the game starts each age group at its share of the

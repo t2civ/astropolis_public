@@ -103,10 +103,9 @@ inequality, `facilities_populations.tsv`) takes the average over its deciles.
 
 The last columns are the type's schooling, the years of school its people hold, gained by the
 young and carried as they age, and what it makes of an hour (`POPULATION_MODEL.md`, "Productivity
-and schooling"). An hour of a population makes its type's factor times the know-how of the place
-it works (`facilities_populations.tsv`) times e to the return times its workforce's years of
-schooling past the reference, and a place's know-how closes on the frontier, faster as the types
-working there that move it (`catch_up_time`) are better schooled.
+and schooling"). An hour of a population makes its type's factor times e to the return times its
+workforce's years of schooling past the reference; each operation draws that work at its owner's
+technology (`labor_saving` in `operations.tsv`).
 
 - schooling_need — TABLE_ROW `needs.tsv`, the need whose satisfaction gains the young their
   schooling. Blank: the type gains none and holds what it was seeded with. Default `LEARNING`.
@@ -121,23 +120,14 @@ working there that move it (`catch_up_time`) are better schooled.
   `0.27`, from recall: India's young, served about a fifth of the learning the USA's are, held
   about two thirds of their years.
 - schooling_return — FLOAT per year of schooling: how much more an hour makes for each year its
-  workforce holds, e to it times the years, the Mincerian return. Zero leaves the hour at the
-  know-how, whatever the schooling, as for a made type, which counts as schooled to its
+  workforce holds, e to it times the years, the Mincerian return. Zero leaves the hour at its
+  type's factor, whatever the schooling, as for a made type, which counts as schooled to its
   reference. Default `0.1/y`.
-- reference_schooling — FLOAT in years: the workforce's schooling at which an hour makes the
-  know-how, its people weighted as `work_stage_weights` counts them. Base humans' is the USA's as
-  seeded for 2015, at whose know-how of one an hour makes what the recipes assume. Default
-  `13.57 y`.
-- catch_up_time — FLOAT in years: how fast the know-how of the place a population works closes on
-  the frontier, one, the recipes' own. Each year it closes a share of its gap, what its workforce's
-  schooling makes of an hour against the reference schooling over this time, so a population
-  schooled to the reference closes about a thirtieth of its gap a year at the default; where
-  several types work, each type that moves know-how weighs in by the hours its workforce could
-  work. `inf`, as for a made type: its workforce neither moves the place's know-how nor weighs in
-  its pace. Default `30 y`, a guess.
-- productivity_factor — FLOAT: what an hour of the type does of a person's at the frontier, at its
-  reference schooling, so that its productivity is this times its place's know-how and what its
-  schooling gives. For a made type it is a patch, until the technology system sets what an hour of
+- reference_schooling — FLOAT in years: the workforce's schooling at which an hour makes its
+  type's factor, its people weighted as `work_stage_weights` counts them. Base humans' is the
+  USA's as seeded for 2015, at which an hour makes what the recipes assume. Default `13.57 y`.
+- productivity_factor — FLOAT: what an hour of the type does of a person's at its reference
+  schooling, so that its productivity is this times what its schooling gives. For a made type it is a patch, until the technology system sets what an hour of
   each type does at each operation (`POPULATION_MODEL.md` in the development repository,
   "Placeholders"). Default `1`.
 
@@ -174,12 +164,12 @@ polities' borders let them (`players.tsv`, `immigration_openness` and
 
 1. The number of age groups, eight, is the model's and not a type's (`POPULATION_MODEL.md`,
    "Demographics"). What a type sets is where its age groups fall in its own lifetime.
-2. A population's own death rates, fertility, inequality, wealth, schooling, know-how and
-   participation are state, seeded per facility in `facilities_populations.tsv`, and so are how
+2. A population's own death rates, fertility, inequality, wealth, schooling and participation are
+   state, seeded per facility in `facilities_populations.tsv`, and so are how
    unevenly its wages and its dividends reach its people. The death rates, fertility and
    participation then move as above; the wealth stays as it is through births and deaths, a death
    leaving its share to the survivors; the schooling moves with its people, the born holding none
-   and the dead taking their age group's; the know-how closes on the frontier; and the inequality
+   and the dead taking their age group's; and the inequality
    moves with how unevenly what the population is paid reaches it (`FINANCIAL_MODEL.md`, "The
    residents and inequality").
 3. Base humans' response columns are fitted on the 2017 cross-section of countries by

@@ -19,7 +19,7 @@ extends MarginContainer
 ## price for each. [b]Means[/b]: the residents' wealth, what it buys and how unevenly it is
 ## held, the price level of their wants, and the money that moves their wealth: what their work
 ## was paid, what they spent and what their facility's owners' settlement paid them. [b]Work[/b]:
-## what an hour of their work makes, its know-how and the schooling the workforce holds, which
+## what an hour of their work makes and the schooling the workforce holds, which
 ## unfolds to each age group's, the hours they offer and those left idle, and what an hour is
 ## paid, against the price of work at a facility. All together
 ## shows a column for each type and one for all of them, where a type with no want for a need
@@ -370,7 +370,6 @@ func _get_column(proxy: Proxy, type: int, types: Array[int]) -> ColumnData:
 	column.wage = proxy.get_population_wage(type)
 	column.productivity = proxy.get_population_productivity(type)
 	if type != -1:
-		column.know_how = proxy.get_population_know_how(type)
 		column.schooling = proxy.get_population_schooling(type)
 		column.expected_schooling = proxy.get_population_expected_schooling(type)
 		for age_group in _age_group_widths[type].size() + 1:
@@ -601,13 +600,10 @@ func _get_work_lines(data: PopulationsData) -> Array[LineData]:
 	var lines: Array[LineData] = []
 	var unit := _get_work_unit(_get_work_resource(-1, data.types))
 	var productivity := _make_line("Productivity",
-			"The work an hour of the residents makes: 1 is an hour at the frontier's know-how\n"
-			+ "with the reference schooling, the USA's of 2015, what the recipes assume. Over\n"
-			+ "several places or types, the work their hours made over those hours.")
-	var know_how := _make_line("Know-how",
-			"The work an hour of the residents would make with the reference schooling: how well\n"
-			+ "their work uses the plant it works, against the frontier's 1. Over several places,\n"
-			+ "their productivity over what their workforce's schooling gives.")
+			"The work an hour of the residents makes: 1 is an hour with the reference schooling,\n"
+			+ "the USA's of 2015, what the recipes assume, which each operation draws at its\n"
+			+ "owner's technology. Over several places or types, the work their hours made over\n"
+			+ "those hours.")
 	var schooling := _make_line("Schooling (y)",
 			"The years of school the residents' workforce holds, each life stage weighted as it\n"
 			+ "works; each year past the reference makes an hour more productive. By age group,\n"
@@ -638,11 +634,9 @@ func _get_work_lines(data: PopulationsData) -> Array[LineData]:
 				else 1.0)
 		_add_cell(productivity, _format_productivity(column.productivity))
 		if column.population_type == -1:
-			_add_cell(know_how, NOT_APPLICABLE)
 			_add_cell(schooling, NOT_APPLICABLE)
 			_add_cell(expected, NOT_APPLICABLE)
 		else:
-			_add_cell(know_how, _format_productivity(column.know_how))
 			_add_cell(schooling, _format_schooling(column.schooling))
 			_add_cell(expected, _format_schooling(column.expected_schooling))
 		_add_cell(participation, _format_percent(column.participation))
@@ -659,7 +653,7 @@ func _get_work_lines(data: PopulationsData) -> Array[LineData]:
 				column.work_price * column.productivity)))
 	if columns.size() == 1 and columns[0].population_type != -1:
 		_add_age_group_schoolings(schooling, columns[0])
-	lines.append_array([productivity, know_how, schooling, expected, participation, offered,
+	lines.append_array([productivity, schooling, expected, participation, offered,
 			unemployment, wage, work_price, paid_share])
 	lines.append_array(_get_kind_lines(data))
 	return lines
@@ -951,7 +945,6 @@ class ColumnData extends RefCounted:
 	var worked_hours: float
 	var wage: float # per hour worked, the work resource's sim unit; NAN where no one worked
 	var productivity: float # the work an hour makes; NAN where no one worked away from a facility
-	var know_how := NAN # the work an hour makes at the reference schooling; NAN for all types
 	var schooling := NAN # the workforce's, in seconds; NAN for all types
 	var expected_schooling := NAN # a newborn's at the young's learning, in seconds
 	var age_group_schoolings := PackedFloat64Array() # in seconds; empty for all types

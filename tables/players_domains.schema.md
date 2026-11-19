@@ -30,7 +30,10 @@ Every polity fills every domain. An agency fills the domains it researches and h
 levels in the rest, blank cells; its shares sum to 1 over the domains it fills.
 
 The gaps are seeded from recall: the research's from where each nation's science and engineering
-stood, the practice's from its know-how in `facilities_populations.tsv`, the years at a
-productivity gain of about 2.5% a year of progress that close it, shaded by which of its sectors
-worked nearer the frontier. The shares are seeded from recall of each nation's government research
+stood; the practice's so that its operations, drawing their work at their labor factors
+(`labor_saving` in `operations.tsv`), take what an hour made in each of its sectors against the
+USA's in 2015 past what its schooling gives, and its plant draws about the USA's share of the work
+its people offer (`tests/calibration/seed_audit.py`): the goods domains' (Industry, Materials,
+Chemistry and Energy) from its manufacturing's labor productivity, Society's from its services',
+and farming's, the widest, named by technology in `players.tsv`. The shares are seeded from recall of each nation's government research
 by field, defense, health, energy and the sciences above all, and an agency's by program.
