@@ -145,6 +145,7 @@ var _item_reverse_tax_paid := -1
 var _item_dividends_paid := -1
 var _item_appropriations_paid := -1
 var _item_public_provision_paid := -1
+var _item_public_research_paid := -1
 var _item_funding_received := -1
 var _item_loan_proceeds := -1
 var _item_payouts_paid := -1
@@ -246,6 +247,7 @@ func _precompute_display_names() -> void:
 	var corporate_funding_paid := _find_item(Enums.UniqueLineItems.CORPORATE_FUNDING_PAID)
 	_item_appropriations_paid = _find_item(Enums.UniqueLineItems.APPROPRIATIONS_PAID)
 	_item_public_provision_paid = _find_item(Enums.UniqueLineItems.PUBLIC_PROVISION_PAID)
+	_item_public_research_paid = _find_item(Enums.UniqueLineItems.PUBLIC_RESEARCH_PAID)
 	_item_returns[funding_paid] = _find_item(Enums.UniqueLineItems.GOVERNMENT_PAYOUTS_RECEIVED)
 	_item_returns[corporate_funding_paid] = _find_item(
 			Enums.UniqueLineItems.CORPORATE_PAYOUTS_RECEIVED)
@@ -273,9 +275,9 @@ func _precompute_display_names() -> void:
 		_find_item(Enums.UniqueLineItems.GOVERNMENT_CASH),
 		_find_item(Enums.UniqueLineItems.CORPORATE_CASH),
 	])
-	var resource_tags: Array[Array] = _db_tables[&"resources"][&"ai_tags"]
-	for resource_type in resource_tags.size():
-		if resource_tags[resource_type].has(&"research"):
+	var researches: Array[bool] = _db_tables[&"resources"][&"research"]
+	for resource_type in researches.size():
+		if researches[resource_type]:
 			_research_resources.append(resource_type)
 
 
@@ -712,16 +714,19 @@ func _collect_funding(proxy: Proxy) -> Array:
 
 func _collect_facility_budget(facility: FacilityProxy, is_local: bool) -> Array:
 	# The facility's budget, or empty before its first interval: its committed lines, its
-	# operations' loss among them where its income is below nothing, as shares of what it has to
-	# spend, and its R&D and expansion at the shares they are set at of what those leave, its
-	# payouts the rest where it isn't an agency's. What its expansion drew is what its fixed assets
-	# gained, net of what came down. Its R&D and expansion are controls where [param is_local].
+	# operations' loss among them where its income is below nothing, and its business research, as
+	# shares of what it has to spend, and its R&D and expansion at the shares they are set at of
+	# what those leave, its payouts the rest where it isn't an agency's. What its expansion drew is
+	# what its fixed assets gained, net of what came down; what its research drew shows on its
+	# business research where it has any, the ledger booking both alike. Its R&D and expansion are
+	# controls where [param is_local].
 	const BUDGET_INCOME := FacilityProxy.BudgetLines.BUDGET_INCOME
 	const BUDGET_FUNDING := FacilityProxy.BudgetLines.BUDGET_FUNDING
 	const BUDGET_UPKEEP := FacilityProxy.BudgetLines.BUDGET_UPKEEP
 	const BUDGET_INTEREST := FacilityProxy.BudgetLines.BUDGET_INTEREST
 	const BUDGET_TAX := FacilityProxy.BudgetLines.BUDGET_TAX
 	const BUDGET_REPLACEMENT := FacilityProxy.BudgetLines.BUDGET_REPLACEMENT
+	const BUDGET_BUSINESS_RESEARCH := FacilityProxy.BudgetLines.BUDGET_BUSINESS_RESEARCH
 	const BUDGET_RESEARCH := FacilityProxy.BudgetLines.BUDGET_RESEARCH
 	const BUDGET_EXPANSION := FacilityProxy.BudgetLines.BUDGET_EXPANSION
 	var lines := facility.budget_lines
@@ -739,6 +744,11 @@ func _collect_facility_budget(facility: FacilityProxy, is_local: bool) -> Array:
 			upkeep_draws[0] += item_draws[0]
 			upkeep_draws[1] += item_draws[1]
 		research_draws = _get_draws(facility, _item_research_development, false)
+	var business_research := lines[BUDGET_BUSINESS_RESEARCH]
+	var business_draws := NO_DRAWS
+	if business_research > 0.0:
+		business_draws = research_draws
+		research_draws = NO_DRAWS
 	var committed_rows := []
 	var committed := 0.0
 	for row: Array in [
@@ -749,6 +759,7 @@ func _collect_facility_budget(facility: FacilityProxy, is_local: bool) -> Array:
 				_get_draws(facility, _item_income_tax, false)],
 		["LABEL_REPLACEMENT", lines[BUDGET_REPLACEMENT], NO_DRAWS],
 		["LABEL_OPERATIONS_LOSS", maxf(-income, 0.0), NO_DRAWS],
+		["LABEL_BUSINESS_RESEARCH", business_research, business_draws],
 	]:
 		var line: float = row[1]
 		if !(line > 0.0):
@@ -969,7 +980,7 @@ func _get_drawn_share(drawn: float, base: float) -> float:
 
 
 # The keys of the treasury [param account]'s lines that have a share: its funding lines, and a
-# government treasury's appropriations and public provision.
+# government treasury's appropriations, public provision and public research.
 func _get_share_keys(player: PlayerProxy, account: int) -> Array[int]:
 	var keys: Array[int] = []
 	for key in player.budget_shares:
@@ -982,8 +993,8 @@ func _get_share_keys(player: PlayerProxy, account: int) -> Array[int]:
 # Whether [param item] is a line of the treasury [param account]'s budget set as a share of it.
 func _is_share_item(item: int, account: int) -> bool:
 	return (item == _funding_items[account]
-			or ((item == _item_appropriations_paid or item == _item_public_provision_paid)
-			and _item_accounts[item] == account))
+			or ((item == _item_appropriations_paid or item == _item_public_provision_paid
+			or item == _item_public_research_paid) and _item_accounts[item] == account))
 
 
 # The most the treasury [param account]'s line kept under [param key] may be set at

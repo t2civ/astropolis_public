@@ -200,21 +200,22 @@ const PERSIST_PROPERTIES: Array[StringName] = [
 ## what the facility's budget leaves past its committed lines, its replacement of what wears out
 ## among them, that its owners leave in it for expansion ([member FacilityProxy.expansion_share];
 ## FINANCIAL_MODEL.md, "Budgets"), which the server holds below one; an omitted key (NAN) holds.
-## The [code]research_spending_share[/code] key is the share of the same it spends on research and
-## development, shared among the resources tagged [code]research[/code] (see
-## [method FacilityProxy.set_inventory_research_share]); at an agency, where it spends any, all
-## expansion's share leaves, since it pays nothing out. An omitted key spends none. The
+## The [code]funds_research[/code] key has an agency's facility spend all expansion's share leaves
+## of the same on research by its agency's allocation, since it pays nothing out, shared among the
+## research resources (see [method FacilityProxy.set_inventory_research_share]); a nation's
+## facility's research is its operations' business research and its polity's public research
+## (TECHNOLOGY_MODEL.md, "Research"), which no share sets. An omitted key spends none. The
 ## DECOMMISSIONING posture expands nothing and winds the facility down ([method _wind_down]).
 ## Postures never selected by [method _reconcile_facility_strategy] are left empty.
 static var facility_strategy_defs: Array[Dictionary] = [
 	{}, # NEUTRAL
-	{&"expansion_share": 0.25, &"research_spending_share": 0.02}, # GROWTH
-	{&"expansion_share": 0.13, &"research_spending_share": 0.02}, # PROFITABILITY
+	{&"expansion_share": 0.25, &"funds_research": true}, # GROWTH
+	{&"expansion_share": 0.13, &"funds_research": true}, # PROFITABILITY
 	{}, # DIVERSIFICATION
 	{}, # SPECIALIZATION
-	{&"expansion_share": 0.05, &"research_spending_share": 0.02}, # STRATEGIC_OUTPOST
+	{&"expansion_share": 0.05, &"funds_research": true}, # STRATEGIC_OUTPOST
 	{}, # DEVELOPMENT
-	{&"expansion_share": 0.08, &"research_spending_share": 0.02}, # STEADY_STATE
+	{&"expansion_share": 0.08, &"funds_research": true}, # STEADY_STATE
 	{&"expansion_share": 0.0}, # DECOMMISSIONING
 	{}, # EMERGENCY
 ]
@@ -273,6 +274,7 @@ static var required_return := 0.0
 
 static var _table_n_rows := IVTableData.table_n_rows
 static var _tradable_resources: PackedInt32Array
+static var _research_resources: PackedInt32Array # research in resources.tsv
 
 var proxy: FacilityProxy
 
@@ -313,9 +315,12 @@ func _init() -> void:
 	_last_prices.resize(n_resources)
 	if !_tradable_resources:
 		var trade_classes: Array[int] = IVTableData.db_tables[&"resources"][&"trade_class"]
+		var researches: Array[bool] = IVTableData.db_tables[&"resources"][&"research"]
 		for resource_type in n_resources:
 			if trade_classes[resource_type] != -1:
 				_tradable_resources.append(resource_type)
+			if researches[resource_type]:
+				_research_resources.append(resource_type)
 
 
 func _clear_for_destruction() -> void:
@@ -557,22 +562,21 @@ func _reconcile_facility_strategy() -> int:
 
 ## Translates the posture's def into the facility's expansion share (the share of its budget past
 ## its committed lines its expansion buildouts spend; NAN holds;
-## [member FacilityProxy.expansion_share]), and into the research shares of the resources tagged
-## [code]research[/code], at an agency all expansion's share leaves. Where its human holds one,
-## the other, with the payouts that are their residual where it isn't an agency's, fills what the
-## held one leaves, in proportion to their shares (FINANCIAL_MODEL.md, "Budgets"). Leaves what is
-## held alone. The research resources are resolved by tag, so no table entity name is referenced
-## here. Sets the owners' [member required_return].
+## [member FacilityProxy.expansion_share]), and into the research shares of the research resources
+## ([code]research[/code] in [code]resources.tsv[/code]), at an agency all expansion's share leaves
+## and elsewhere none. Where its human holds one, the other, with the payouts that are their
+## residual where it isn't an agency's, fills what the held one leaves, in proportion to their
+## shares (FINANCIAL_MODEL.md, "Budgets"). Leaves what is held alone. Sets the owners'
+## [member required_return].
 func _apply_facility_knobs(strategy: int) -> void:
 	proxy.set_required_return(required_return)
 	var def := facility_strategy_defs[strategy]
 	var expansion_share: float = def.get(&"expansion_share", NAN)
-	var research_share: float = def.get(&"research_spending_share", 0.0)
 	var is_agency := proxy.get_player_class() == Enums.PlayerClasses.PLAYER_CLASS_AGENCY
-	if research_share > 0.0 and is_agency:
+	var research_share := 0.0
+	if is_agency and def.get(&"funds_research", false):
 		research_share = 1.0 - expansion_share if expansion_share > 0.0 else 1.0
-	var research_resources: PackedInt32Array = _tag_resources.get(&"research",
-			PackedInt32Array())
+	var research_resources := _research_resources
 	if expansion_share >= 0.0 and !research_resources.is_empty():
 		var held_shares := PackedFloat64Array([NAN, NAN])
 		if proxy.is_expansion_share_held():

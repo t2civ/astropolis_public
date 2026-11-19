@@ -1,5 +1,5 @@
-name\Field	resource_class	unique_type	ai_tags	convert_extraction	trade_class	storage_class	trade_unit	start_price	extraction	volatile	disposal_sink	waste_form	sort_override	mass_err_mult	shade_form	in_house	in_house_rate	overflow	haul
-Type	TABLE_ROW	Enums.UniqueResources	ARRAY[STRING_NAME]	TABLE_ROW	Enums.TradeClasses	TABLE_ROW	STRING_NAME	FLOAT	BOOL	BOOL	Enums.DisposalSinks	TABLE_ROW	INT	FLOAT	TABLE_ROW	TABLE_ROW	FLOAT	FLOAT	FLOAT
+name\Field	resource_class	unique_type	ai_tags	convert_extraction	trade_class	storage_class	trade_unit	start_price	extraction	volatile	disposal_sink	waste_form	sort_override	mass_err_mult	shade_form	in_house	in_house_rate	overflow	haul	research
+Type	TABLE_ROW	Enums.UniqueResources	ARRAY[STRING_NAME]	TABLE_ROW	Enums.TradeClasses	TABLE_ROW	STRING_NAME	FLOAT	BOOL	BOOL	Enums.DisposalSinks	TABLE_ROW	INT	FLOAT	TABLE_ROW	TABLE_ROW	FLOAT	FLOAT	FLOAT	BOOL
 Unit								$											
 Default								0					0	1				0	1
 Prefix/RESOURCE_	RESOURCE_CLASS_			RESOURCE_	TRADE_CLASS_	STORAGE_CLASS_					DISPOSAL_SINK_	RESOURCE_			RESOURCE_	RESOURCE_			
@@ -115,7 +115,7 @@ FINANCIAL_SERVICES	SERVICES				CYBER	PURE_FLOW	h	330								LABOR	14.7 h/h
 INSURANCE_RISK	SERVICES				CYBER	PURE_FLOW	h	250								LABOR	11.1 h/h		
 ENGINEERING_DESIGN	SERVICES				CYBER	PURE_FLOW	h	145								LABOR	6.4 h/h		
 CONSTRUCTION	SERVICES					PURE_FLOW	h	49.4											
-RESEARCH_DEVELOPMENT	SERVICES		research			PURE_FLOW	h	170											
+RESEARCH_DEVELOPMENT	SERVICES					PURE_FLOW	h	170												x
 PASSENGER_SERVICES	SERVICES					PURE_FLOW	h	150											
 POWER_TRANSMISSION	SERVICES					PURE_FLOW	MWh km	0.1										0.05	
 PIPELINE_TRANSPORT	SERVICES					PURE_FLOW	t km	0.008										0.3	

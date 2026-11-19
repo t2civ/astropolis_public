@@ -412,7 +412,8 @@ func process_ai_interval(delta: float) -> void:
 
 # Sets its treasuries' budget lines (FINANCIAL_MODEL.md, "Budgets"): a polity's government
 # treasury's appropriation of each of its agencies, the agency's appropriation_share in
-# players.tsv, and its residents' public provision, its own provision_share there, and its
+# players.tsv, its residents' public provision, its own provision_share there, and its public
+# research, its research_share there (TECHNOLOGY_MODEL.md, "Research"), and its
 # funding of each of its facilities from each treasury that owns it, the
 # facility's funding_share in facilities.tsv, those on auto filling what its human's held lines of
 # the same treasury leave, in proportion to their seeds, with the treasury's residual where it has
@@ -426,8 +427,11 @@ func _author_budget_shares() -> void:
 			Enums.UniqueLineItems.APPROPRIATIONS_PAID)
 	var public_provision_paid := IVTableData.db_find(&"line_items", &"unique_type",
 			Enums.UniqueLineItems.PUBLIC_PROVISION_PAID)
+	var public_research_paid := IVTableData.db_find(&"line_items", &"unique_type",
+			Enums.UniqueLineItems.PUBLIC_RESEARCH_PAID)
 	var appropriation_shares: Array[float] = IVTableData.db_tables[&"players"][&"appropriation_share"]
 	var provision_shares: Array[float] = IVTableData.db_tables[&"players"][&"provision_share"]
+	var research_shares: Array[float] = IVTableData.db_tables[&"players"][&"research_share"]
 	var funding_items: Array[int] = [
 		IVTableData.db_find(&"line_items", &"unique_type",
 				Enums.UniqueLineItems.GOVERNMENT_FUNDING_PAID),
@@ -452,6 +456,9 @@ func _author_budget_shares() -> void:
 			if own_type != -1 and provision_shares[own_type] >= 0.0:
 				keys.append(Utils.get_line_item_key(public_provision_paid))
 				seeds.append(provision_shares[own_type])
+			if own_type != -1 and research_shares[own_type] >= 0.0:
+				keys.append(Utils.get_line_item_key(public_research_paid))
+				seeds.append(research_shares[own_type])
 		for facility in proxy.facilities:
 			var facility_type := IVTableData.get_row(facility.name)
 			if facility_type == -1 or !(funding_shares[facility_type] >= 0.0):
