@@ -102,7 +102,9 @@ func _on_table_initializer_instantiated(_table_initializer: IVTableInitializer) 
 	
 	var path_format := "res://public/tables/%s.tsv"
 	
+	tables.areas = path_format % "areas"
 	tables.capacities = path_format % "capacities"
+	tables.domains = path_format % "domains"
 	tables.facilities = path_format % "facilities"
 	tables.globals = path_format % "globals"
 	tables.facilities_modules = path_format % "facilities_modules"
@@ -124,6 +126,7 @@ func _on_table_initializer_instantiated(_table_initializer: IVTableInitializer) 
 	tables.strata = path_format % "strata"
 	tables.stratum_groups = path_format % "stratum_groups"
 	tables.surveys = path_format % "surveys"
+	tables.technologies = path_format % "technologies"
 	tables.views = path_format % "views" # ivoyager replacement!
 	tables.wants = path_format % "wants"
 	tables.zones = path_format % "zones"
