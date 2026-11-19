@@ -3,13 +3,14 @@
 [General Notes](#General-Notes)  
 [Units](#Units)  
 [achievements.tsv](#achievementstsv)  
-[advancements.tsv](#advancementstsv)  
+[areas.tsv](#areastsv)  
 [asset_adjustments_mod.tsv](#asset_adjustments_modtsv)  
 [capacities.tsv](#capacitiestsv)  
 [compositions.tsv](#compositionstsv)  
 [compositions_resources_deposits.tsv](#compositions_resources_depositstsv)  
 [compositions_resources_proportions.tsv](#compositions_resources_proportionstsv)  
 [compositions_resources_variances.tsv](#compositions_resources_variancestsv)  
+[domains.tsv](#domainstsv)  
 [facilities.tsv](#facilitiestsv)  
 [facilities_inventories.tsv](#facilities_inventoriestsv)  
 [facilities_operations_capacities.tsv](#facilities_operations_capacitiestsv)  
@@ -34,6 +35,7 @@
 [strata.tsv](#stratatsv)  
 [strata_capacities.tsv](#strata_capacitiestsv)  
 [surveys.tsv](#surveystsv)  
+[technologies.tsv](#technologiestsv)  
 [wants.tsv](#wantstsv)  
 
 > **Note (2026-09):** the table set was restructured after much of this file was written: compositions became `strata.tsv` / `strata_resources.tsv`, and the per-facility capacity, extraction and population tables were folded into `facilities.tsv`, `facilities_modules.tsv`, `facilities_operations.tsv` and `facilities_resources.tsv`. The per-table `*.schema.md` and `*.descriptive.md` riders are authoritative for fields and entities; sections below that describe retired tables are kept for their design notes until this file is overhauled.
@@ -76,18 +78,11 @@ _Not yet implemented._
 
 I've added a few to give a basic idea of where we're going. The main achievements involve whole solar system metrics: Population, Economy, Energy (i.e., the Kardashev scale), Manufacturing, Constructions, Computation, Information, Bioproduction, Biomass and Biodiversity. We'll have other achievements that involve single player metrics or playing in more "divergent" ways: e.g., conquest, building static monuments, becoming an all-machine civ, creating the AGI that kills everyone, preserving planets or moons as undeveloped parks, and so on. (These are aspirational but give an idea where I want to stretch the game mechanics.)
 
-## advancements.tsv
+## areas.tsv
 
 _Not yet implemented._
 
-The table is here to help me develop a conceptual framework for the science/tech system. Here are ideas I'm working with:
-
-* I'm avoiding the standard "tech tree" a la Civilization. Instead we will have many ongoing research & development areas like "Information Theory", "Cryptography", "Condensed Matter", "Fusion Power", "Reusable Rockets", and so on. These will range from pure theory to technology to applied engineering. In most cases these areas are never "finished" but just keep advancing.
-* The general progression is theory -> technology -> engineering. E.g., "Reusable Rockets" depends on existing technology and even older theory. However, sometimes application drives new theory: a historical example is steam engines leading to advancements in thermodynamics. Similarly, I suspect that large language models and other new AI applications will drive new theories about information or cognition.
-* The theory-technology-engineering spectrum corresponds (very loosely!) to public versus private funding and also "open source" versus "closed source" (i.e., proprietary) knowledge. There is a sort of knowledge diffusion between entities (nations, space agencies, space companies) that happens quickly on the theory side and more slowly on the engineering side.
-* There will be an element of randomness so that progression will be less than totally predictable. E.g., your researchers keep telling you that "String Theory" someday will lead to new physics, but you just can't know. (But... the math!)
-* Inspirations:
-   * "Map of ..." videos by [Domain of Science](https://www.youtube.com/playlist?list=PLOYRlicwLG3St5aEm02ncj-sPDJwmojIS). 
+The research areas that group `technologies.tsv`, each in a knowledge domain (`domains.tsv`). For display and the allocation of research only. See `areas.schema.md`.
 
 ## asset_adjustments_mod.tsv
 
@@ -168,6 +163,12 @@ Variance is the spatial heterogeneity of resource mass in each composition (as a
 
 
 For undifferentiated asteroids and small moons, spatial heterogeneity is much much smaller. However, the minumum "deposits" level is always the mass proportion of the material. So here the purpose of surveys is to find the asteroid with unusually high abundance (which is a function of error).
+
+## domains.tsv
+
+_Not yet implemented._
+
+The knowledge domains that group the research areas of `areas.tsv`, in display order. See `areas.schema.md`.
 
 ## facilities.tsv
 
@@ -412,6 +413,19 @@ The kinds of strata, each body's layers by name (e.g., `CONT_SURFACE`, `REGOLITH
 ## surveys.tsv
 
 Defines our knowledge about a body's composition/resources in a particular strata: both deposits (if applicable) and estimation errors.
+
+## technologies.tsv
+
+_Not yet implemented._
+
+Every area of knowledge and capability a player can be more or less advanced in, from mathematics to rocketry to governance, each with how open it is, how far it rests on practice, how fast it spreads, and the technologies it builds on, with the expected size and delay of each one's effect and the uncertainty of both, from which each game draws its own. The design is the development repository's `TECHNOLOGY_MODEL.md`; fields are in `technologies.schema.md`, and what each technology is in `technologies.descriptive.md`. The notes below are the early framework the table grew from (it was `advancements.tsv` then).
+
+* I'm avoiding the standard "tech tree" a la Civilization. Instead we will have many ongoing research & development areas like "Information Theory", "Cryptography", "Condensed Matter", "Fusion Power", "Reusable Rockets", and so on. These will range from pure theory to technology to applied engineering. In most cases these areas are never "finished" but just keep advancing.
+* The general progression is theory -> technology -> engineering. E.g., "Reusable Rockets" depends on existing technology and even older theory. However, sometimes application drives new theory: a historical example is steam engines leading to advancements in thermodynamics. Similarly, I suspect that large language models and other new AI applications will drive new theories about information or cognition.
+* The theory-technology-engineering spectrum corresponds (very loosely!) to public versus private funding and also "open source" versus "closed source" (i.e., proprietary) knowledge. There is a sort of knowledge diffusion between entities (nations, space agencies, space companies) that happens quickly on the theory side and more slowly on the engineering side.
+* There will be an element of randomness so that progression will be less than totally predictable. E.g., your researchers keep telling you that "String Theory" someday will lead to new physics, but you just can't know. (But... the math!)
+* Inspirations:
+   * "Map of ..." videos by [Domain of Science](https://www.youtube.com/playlist?list=PLOYRlicwLG3St5aEm02ncj-sPDJwmojIS). 
 
 ## wants.tsv
 

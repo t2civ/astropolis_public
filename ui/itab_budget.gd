@@ -85,9 +85,9 @@ You can assist and (to some degree) influence the
 R & D of your home nation here. (Mainly for agencies.)"""],
 	["R&D", """WIP
 
-Set R & D priorities for your own facilities here.
-Pursue specific advancement in three broad categories:
-Theory, Technology and Engineering."""],
+Set R & D priorities for your own facilities here:
+shares of research across knowledge domains, their
+research areas and their technologies."""],
 ]
 
 const PERSIST_MODE := IVGlobal.PERSIST_PROCEDURAL  ## Save/load mode (procedural node).
