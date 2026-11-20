@@ -32,8 +32,9 @@ levels in the rest, blank cells; its shares sum to 1 over the domains it fills.
 The gaps are seeded from recall: the research's from where each nation's science and engineering
 stood; the practice's so that its operations, drawing their work at their labor factors
 (`labor_saving` in `operations.tsv`), take what an hour made in each of its sectors against the
-USA's in 2015 past what its schooling gives, and its plant draws about the USA's share of the work
-its people offer (`tests/calibration/seed_audit.py`): the goods domains' (Industry, Materials,
+USA's in 2015 past what its schooling gives, its schooling spread over its deciles and its people
+going to the kinds of work by it, and its plant draws about the USA's share of the work its people
+offer (`tests/calibration/seed_audit.py`): the goods domains' (Industry, Materials,
 Chemistry and Energy) from its manufacturing's labor productivity, Society's from its services',
 and farming's, the widest, named by technology in `players.tsv`, split between its industrial and
 traditional techniques. The shares are seeded from recall of each nation's government research by

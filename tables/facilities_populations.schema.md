@@ -14,7 +14,7 @@ reaches them (`populations.schema.md`). Population types are described in
 
 ## Table Data
 
-The data type is ARRAY[FLOAT]; each cell holds 31 values delimited by semicolons:
+The data type is ARRAY[FLOAT]; each cell holds 32 values delimited by semicolons:
 
 - 8 values — each age group's share of the population, in the order of the type's age groups.
 - 8 values, per year — the deaths per head in each age group.
@@ -31,9 +31,13 @@ The data type is ARRAY[FLOAT]; each cell holds 31 values delimited by semicolons
 - 1 value — the saving rate: the share of what its residents are paid, wages, transfers and
   dividends, that they save and offer the credit market, kept as the population's own
   (`FINANCIAL_MODEL.md`, "Saving and borrowing").
-- 8 values, with an inline `y` — the years of schooling each age group holds. An age group that
-  gains schooling holds what its people will carry out of it (`schooling_rates` in
+- 8 values, with an inline `y` — the years of schooling each age group holds on average. An age
+  group that gains schooling holds what its people will carry out of it (`schooling_rates` in
   `populations.tsv`).
+- 1 value, with an inline `y` — the schooling spread: how widely each age group's schooling is
+  spread over its deciles, the most to the best off, as the standard deviation of its people's
+  years: each decile stands at the mean plus the spread times its place in a normal distribution,
+  none below nothing and the mean kept.
 - 1 value — the participation: the most of its able hours the population offers, its
   weighted heads times `work_hours` (`populations.tsv`) being all of them. From the first
   interval it moves toward what its type's participation response implies.
@@ -57,8 +61,9 @@ must be present for every population that `facilities.tsv` seeds, and is empty o
    rates, from recall (`HOUSEHOLD_SPENDINGS`), since start prices price a poorer polity's in-person
    services at the USA's wage. A saving rate
    is what the polity's households saved in 2015, from recall (`SAVING_RATES`). The schooling is
-   the polity's attainment by age in 2015, from recall (`SCHOOLINGS`), which
-   `seed_demography.py --schooling` rewrites alone from the table's own shares; what an hour
+   the polity's attainment by age in 2015, and its spread from the shares holding each level of
+   school, from recall (`SCHOOLINGS`, `SCHOOLING_SPREADS`), which `seed_demography.py --schooling`
+   rewrites alone from the table's own shares; what an hour
    worked made there past what its schooling gives is its technology's (`players_domains.tsv`). The participation is written by `tests/calibration/seed_labor.py`, from 2015
    employment and hours from recall, and `seed_demography.py` keeps it.
 2. An agency has no residents: its headcount is staff on loan from its polity (`facilities.tsv`, `staff`).

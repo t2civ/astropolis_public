@@ -126,9 +126,11 @@ that work at its owner's technology (`labor_saving` in `operations.tsv`).
   primary to six years, secondary to twelve and tertiary past it.
 - reference_schooling — FLOAT in years: the workforce's schooling at which an hour makes its
   type's factor at every kind of work, its people weighted as `work_stage_weights` counts them.
-  Base humans' is the USA's as seeded for 2015, at which an hour makes what the recipes assume. A
-  made type holds no schooling and has none for its reference, so its hour makes its factor
-  whatever its kind. Default `13.57 y`.
+  Base humans' is where the USA's workforce as seeded for 2015, its schooling spread over its
+  deciles, makes an hour of labor at its factor, what the recipes assume: above its mean of 13.57
+  years, since a return that compounds gives a spread more than its mean. A made type holds no
+  schooling and has none for its reference, so its hour makes its factor whatever its kind.
+  Default `13.99 y`.
 - productivity_factor — FLOAT: what an hour of the type does of a person's at its reference
   schooling, so that its productivity is this times what its schooling gives. For a made type it is a patch, until the technology system sets what an hour of
   each type does at each operation (`POPULATION_MODEL.md` in the development repository,
