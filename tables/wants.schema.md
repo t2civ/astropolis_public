@@ -9,11 +9,12 @@ saturation level, and what differs from place to place is what a population gets
 A want's recipe is written as an operation's is (`operations.schema.md`, "Flow Fields"),
 with its target lists and none of its driver lists. Each of the residents' deciles buys it
 at local prices from its spending, its part its share of their head count in each life stage
-times `stage_weights`: its existence wants first, as one bundle, as far as its part, then each
-input of each other want with its share of the want's `spending_share` of what is left, the
-input's share by its value at the facility's long prices, its local prices averaged over a decade,
-and its substitution group one input, valued at its members' soft minimum, each spent at whatever
-the input costs, past the decile's part as it costs less ("Work and pay" in
+times `stage_weights`: its existence wants first, as one bundle, as far as its part, then every
+other want's `committed_share` of its part, as one bundle, with what existence leaves, then the
+rest of each input of each other want with its share of the want's `spending_share` of what is
+left, the input's share by its value at the facility's long prices, its local prices averaged over
+a decade, and its substitution group one input, valued at its members' soft minimum, each spent at
+whatever the input costs, past the decile's part as it costs less ("Work and pay" in
 `POPULATION_MODEL.md`). What they buy of each input is a draw of its own in the facility's clear,
 shared in a shortage with the operations', and what they give off follows what they drew ("The
 residents' draw, as built" there).
@@ -27,11 +28,18 @@ residents' draw, as built" there).
 - stage_weights — ARRAY[FLOAT], three values: how much of the want an individual of each life
   stage (young, adults, elders; `Enums.LifeStages`) draws, relative to the rates. Default
   `1;1;1`.
-- spending_share — FLOAT, the share of what a decile has left after its existence wants that
-  it spends on this want, at whatever its inputs cost, past the want as they cost less. Blank for
-  an existence want, which comes first. The shares are relative: a type's are scaled to sum to one.
-  Where public provision buys part of a want, its share shrinks with what is left to the decile to
-  buy, and the others take up what it no longer spends.
+- spending_share — FLOAT, the want's share of what a decile spends past its existence wants where
+  it buys every want whole. Past its committed parts a decile spends what is left over its wants in
+  these shares, each times the part of its want its committed share leaves, at whatever its inputs
+  cost, past the want as they cost less. Blank for an existence want, which comes first. The shares
+  are relative: a type's are scaled to sum to one. Where public provision buys part of a want, its
+  share shrinks with what is left to the decile to buy, and the others take up what it no longer
+  spends.
+- committed_share — FLOAT, the share of the want a decile buys before it spends at its discretion:
+  every want's committed part is bought together, as one bundle, from what its existence wants
+  leave, all of it where that buys it, and the same share of each where it doesn't. Of what public
+  provision leaves the decile to buy. Blank: none. Blank for an existence want, bought whole
+  first.
 - public_share — FLOAT, the share of the want that a polity's public provision buys for every
   decile alike, as far as the line of its government treasury's budget for it goes
   (`FINANCIAL_MODEL.md`, "The treasuries' budgets"); each decile buys the rest. Blank: none, a
@@ -63,14 +71,20 @@ residents' draw, as built" there).
    beyond subsistence, under goods, and the biowaste of the food is split between the two by
    mass.
 3. The rates are sizing, recorded in the development repository's `EARTH_CALIBRATION.md`
-   ("Base humans' wants"): the food, water, air, goods, private cars and household
-   electricity of the basket `URBAN_OPERATIONS` drew per person before the model; healthcare
-   and education at the flat of the cross-section of countries, where more stops buying longer lives or
-   fewer births (`POPULATION_MODEL.md`, "Needs"); and the other services at the USA's seeded
-   output per head.
+   ("Base humans' wants"): sustenance's food, water and air of the basket `URBAN_OPERATIONS`
+   drew per person before the model; food beyond subsistence, goods, private cars and household
+   electricity at the USA's consumption a head, the best-served polity's, since a want is a
+   saturation level; healthcare and education at the flat of the cross-section of countries,
+   where more stops buying longer lives or fewer births (`POPULATION_MODEL.md`, "Needs"); and the
+   other services at the USA's seeded output per head.
 4. Base humans' spending shares are each want's value per head at start prices, over the
    world's life stages in 2015, as a share of all but their existence want's.
 5. Base humans' order is two wants, public administration, policing and the courts, which the
    state provides, and law and insurance, which households buy. Their public shares are about
    the most of each want any state provides in 2015: nearly all of public administration, nine
    tenths of schooling and a little less of health care, from recall.
+6. Base humans' committed shares are what the poorest of the seeded nations, India, consumed
+   of each want per head in 2015, in volume, over the want: from the International Comparison
+   Program's consumption by purpose against the USA's, and household electricity and private
+   cars, which its purposes don't part from housing and transport, from their quantities (the
+   development repository's `EARTH_CALIBRATION.md`, "Base humans' wants").

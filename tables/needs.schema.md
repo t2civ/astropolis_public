@@ -12,8 +12,8 @@ need (`POPULATION_MODEL.md`, "A population is what it needs" and "Needs").
   - `EXISTENCE` — Without it an individual stops. The residents buy it first, with all they
     spend if it takes that, and its satisfaction is smoothed over about a month; below its
     type's `starvation_threshold` (`populations.tsv`) people starve.
-  - `WELLBEING` — Going without is chronic. It is bought from what existence leaves, by
-    `spending_share` (`wants.tsv`).
+  - `WELLBEING` — Going without is chronic. It is bought from what existence leaves, its
+    `committed_share` first with every other want's, then by `spending_share` (`wants.tsv`).
   - `FULFILLMENT` — What sentient beings require beyond the other two. It is bought as
     wellbeing is.
 - satiation_headroom — FLOAT, the need's reach: the most a want for it satisfies past the
