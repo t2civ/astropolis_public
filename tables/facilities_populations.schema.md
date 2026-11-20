@@ -55,11 +55,11 @@ must be present for every population that `facilities.tsv` seeds, and is empty o
    by the Theil index with their consumption per head (`EARTH_CALIBRATION.md`, "Population"). The
    spreads hold each population nearest its inequality over what its residents were paid in the
    game's first decade, measured once, ownership's Gini a multiple of labor's from recall
-   (`SPREADS`; `EARTH_CALIBRATION.md`, "Population"). A wealth is, at the USA, a year of what its
-   residents drew per head in their first interval at start prices, measured once; at every other
-   polity, the USA's times what its households spent a head in 2015 against the USA's at market
-   rates, from recall (`HOUSEHOLD_SPENDINGS`), since start prices price a poorer polity's in-person
-   services at the USA's wage. A saving rate
+   (`SPREADS`; `EARTH_CALIBRATION.md`, "Population"). A wealth is, at the USA, the one at which
+   its residents' deciles buy their wants whole a year at start prices, public provision buying
+   its share (`--wealth`); at every other polity, the USA's times what its households spent a head
+   in 2015 against the USA's at market rates, from recall (`HOUSEHOLD_SPENDINGS`), since start
+   prices price a poorer polity's in-person services at the USA's wage. A saving rate
    is what the polity's households saved in 2015, from recall (`SAVING_RATES`). The schooling is
    the polity's attainment by age in 2015, and its spread from the shares holding each level of
    school, from recall (`SCHOOLINGS`, `SCHOOLING_SPREADS`), which `seed_demography.py --schooling`
