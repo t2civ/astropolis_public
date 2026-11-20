@@ -4,7 +4,7 @@ Facilities are the economic, industrial and scientific "activity" units of each 
 
 Notes:
 
-1. For national polities on Earth, each facility represents the full territory and all economic, industrial, and scientific activity of that polity.
+1. For national polities on Earth, a facility represents the territory and the economic, industrial and scientific activity of that polity but its countryside's, which is a facility of its own: its farms, forests and fisheries, the households who work them and the local services they use.
 2. For agencies on Earth, each facility represents all of the agency's ground-based operations.
 3. Spacecraft facilities represent a player's segment or contribution aboard a specific station.
 
@@ -18,6 +18,7 @@ Simulation start facilities:
 - **Earth India**
 - **Earth Japan**
 - **Earth Other**
+- **Earth USA, Russia, China, EU+, India, Japan and Other, Countryside** — Each nation's farm economy: its farms, the households who work them, and the schools, clinics, shops and housing they use, at a wage of their own.
 - **Earth NASA**
 - **Earth Roscosmos**
 - **Earth CNSA**

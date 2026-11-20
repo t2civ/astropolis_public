@@ -30,6 +30,11 @@ Facilities are described in `facilities.descriptive.md`. Content of this table i
 - facility_class — `facility_classes.tsv` row classifying this facility. For unitary facilities it supplies the revenue/cost line items (the facility is one activity); for non-unitary facilities it is descriptive (they book per operation). Current values: POLITY (the nations), GROUND_FACILITIES (Earth space agencies), RESEARCH_STATION (ISS / Tiangong slices).
 
 
+
+## Countryside
+
+Each Earth nation's countryside, `PLANET_EARTH_<NATION>_RURAL`, is a facility of its own of the nation's player and region: its farms, the households who work them and the local services they draw (`POPULATION_MODEL.md` in the development repository, "The countryside"). Its row here and its columns in `facilities_modules.tsv`, `facilities_operations.tsv`, `facilities_resources.tsv` and `facilities_populations.tsv` are written from its nation's by `tests/calibration/seed_countryside.py`, after the other seed scripts, which read each nation whole once it has folded the countryside back in (`--merge`). Its row follows the nations', so each nation's city stays its administrative center.
+
 ## Information & Biodiversity 
 
 "Information" here refers to the Shannon information content (or "Shannon entropy") represented in all computer systems. This is a measure of unique knowledge and unpredictable state, not physical hardware bits. "Biodiversity" is measured in effective species of macroscopic organisms (equal to the number of species if all were equally represented), which is the exponential of the Shannon index. These concepts are mathematically related and modeled internally as Shannon entropy with shared content (mutual information) among facilities.
