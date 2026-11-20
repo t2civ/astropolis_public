@@ -212,7 +212,7 @@ The former `facilities_operations_capacities.tsv`, `facilities_operations_capaci
 
 Definitions that still apply:
 
-* Capacity is "peak", "nominal", "nameplate" or similar; utilization is capacity factor (see https://en.wikipedia.org/wiki/Capacity_factor). Internally, capacity x utilization = run_rate. For extractions, the extraction rate for each output resource is further multiplied by the deposits fraction.
+* Capacity is what an operation makes at its full run: renewable power's nameplate, and for every other operation what it makes, since it runs at its whole capacity wherever it pays (`facilities_modules.schema.md` note 1); utilization is capacity factor (see https://en.wikipedia.org/wiki/Capacity_factor). Internally, capacity x utilization = run_rate. For extractions, the extraction rate for each output resource is further multiplied by the deposits fraction.
 * Capacities are determined by modules; game-start code sets module numbers to achieve the specified capacities.
 * Renewable capacity factors are location-dependent: solar from irradiance with per-locus shade and transmission factors, wind and geothermal from authored locus factors, with per-facility `*_correction` multipliers on top.
 * ISS and Tiangong solar panels are modeled at 50% capacity factor (shaded half the time at 1 AU), consistent with NASA's 75-90 kW figure for the USOS segment.
