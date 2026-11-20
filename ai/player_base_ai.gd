@@ -494,37 +494,39 @@ func _author_budget_targets() -> void:
 # Reads, over [param delta], how much of their needs its residents' poorest decile went without,
 # what its residents offered the credit market and what it lent of that, and its free people, their
 # arrivals and the hours they offered and worked: the year's statistics its budget answers
-# ([method _decide_taxes], [method _decide_border]). A polity's at its administrative center.
+# ([method _decide_taxes], [method _decide_border]). A polity's residents at every place it holds,
+# each place's poorest decile weighed by what its wants cost.
 func _read_residents(delta: float) -> void:
-	var center := proxy.administrative_center
-	if proxy.player_class != Enums.PlayerClasses.PLAYER_CLASS_POLITY or !center:
+	if (proxy.player_class != Enums.PlayerClasses.PLAYER_CLASS_POLITY
+			or !proxy.administrative_center):
 		return
 	var want := 0.0
 	var short := 0.0
-	for population_type in _table_n_rows[&"populations"]:
-		if !_is_free(center, population_type):
-			continue
-		for need in _table_n_rows[&"needs"]:
-			var value := center.get_population_want_value(population_type, need)
-			if !(value > 0.0):
+	for place in _get_places():
+		for population_type in _table_n_rows[&"populations"]:
+			if !_is_free(place, population_type):
 				continue
-			want += value
-			short += value * maxf(1.0 - center.get_population_decile_satisfaction(population_type,
-					need, POOREST_DECILE), 0.0)
+			for need in _table_n_rows[&"needs"]:
+				var value := place.get_population_want_value(population_type, need)
+				if !(value > 0.0):
+					continue
+				want += value
+				short += value * maxf(1.0 - place.get_population_decile_satisfaction(
+						population_type, need, POOREST_DECILE), 0.0)
+		_read_offered += place.get_population_saving_offered() * delta
+		_read_lent += place.get_population_saving_lent() * delta
+		for population_type in _table_n_rows[&"populations"]:
+			if !_is_free(place, population_type):
+				continue
+			_read_people += (place.get_population_number(population_type)
+					- place.get_population_owned_number(population_type)) * delta
+			_read_arrived += place.get_population_arrival_rate(population_type) * delta
+			_read_offered_hours += place.get_population_offered_hours(population_type) * delta
+			_read_worked_hours += place.get_population_worked_hours(population_type) * delta
 	if want > 0.0:
 		_read_time += delta
 		_read_shortfall += short / want * delta
-	_read_offered += center.get_population_saving_offered() * delta
-	_read_lent += center.get_population_saving_lent() * delta
 	_read_span += delta
-	for population_type in _table_n_rows[&"populations"]:
-		if !_is_free(center, population_type):
-			continue
-		_read_people += (center.get_population_number(population_type)
-				- center.get_population_owned_number(population_type)) * delta
-		_read_arrived += center.get_population_arrival_rate(population_type) * delta
-		_read_offered_hours += center.get_population_offered_hours(population_type) * delta
-		_read_worked_hours += center.get_population_worked_hours(population_type) * delta
 
 
 # Decides its taxes and its border ([method _decide_taxes], [method _decide_border]) once a
@@ -617,7 +619,7 @@ func _author_taxes() -> void:
 		proxy.set_tax(TAX_WEALTH, wealth_tax_rates[row], wealth_tax_thresholds[row])
 		proxy.set_tax(TAX_REVERSE, reverse_tax_rates[row], reverse_tax_thresholds[row])
 		return
-	var years := _get_free_years_of_wants(center)
+	var years := _get_free_years_of_wants()
 	if !(years > 0.0):
 		return
 	var def := global_strategy_defs[global_strategy]
@@ -631,21 +633,33 @@ func _author_taxes() -> void:
 	proxy.set_tax(TAX_REVERSE, reverse_tax_rate, _reverse_tax_line / years)
 
 
-# What a head of [param center]'s free residents holds, in years of their wants: the means its
-# taxes' thresholds are set in. Nothing where none holds anything.
-func _get_free_years_of_wants(center: FacilityProxy) -> float:
+# What a head of its free residents at every place it holds has, in years of their wants: the means
+# its taxes' thresholds are set in. Nothing where none holds anything.
+func _get_free_years_of_wants() -> float:
 	var wealth := 0.0
 	var year_cost := 0.0
-	for population_type in _table_n_rows[&"populations"]:
-		if !_is_free(center, population_type):
-			continue
-		var years := center.get_population_years_of_wants(population_type)
-		if !(years > 0.0):
-			continue
-		var type_wealth := center.get_population_wealth(population_type)
-		wealth += type_wealth
-		year_cost += type_wealth / years
+	for place in _get_places():
+		for population_type in _table_n_rows[&"populations"]:
+			if !_is_free(place, population_type):
+				continue
+			var years := place.get_population_years_of_wants(population_type)
+			if !(years > 0.0):
+				continue
+			var type_wealth := place.get_population_wealth(population_type)
+			wealth += type_wealth
+			year_cost += type_wealth / years
 	return wealth / year_cost if year_cost > 0.0 else 0.0
+
+
+# Its facilities that house people: a polity's, the places its residents live
+# (FINANCIAL_MODEL.md, "Ownership, as built").
+func _get_places() -> Array[FacilityProxy]:
+	var places: Array[FacilityProxy] = []
+	for facility in proxy.facilities:
+		var place := facility as FacilityProxy
+		if place and place.get_population_number(-1) > 0.0:
+			places.append(place)
+	return places
 
 
 # The share of what [param center]'s government treasury passed on over the last year that its
