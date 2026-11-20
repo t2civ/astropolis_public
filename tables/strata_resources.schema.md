@@ -8,7 +8,7 @@ This Entity x Entity table defines resource abundance and distribution in each s
 The data type is VECTOR4. Each cell contains the following 4 float values delimited by commas:
 
 - relative_abundance — This is %wt of the resource in the stratum. The sum of all values in a stratum should be 100 ± 1; we don't need exact summation to 100 because values are normalized internally. IMPORTANT: Include resources at very low abundance if their extraction might be economically significant. E.g., we include Helium in Earth subsurface strata because it is an important byproduct in gas drilling.
-- mass_cv — Epistemic uncertainty (CV) about the mass abundance.
+- mass_cv — Epistemic uncertainty (CV) about the mass abundance. Each game draws a stratum's true abundance and dispersion from these two uncertainties; the player sees the table's values.
 - dispersion — Standard deviation of the lognormal distribution of the resource in log₁₀ units, simplified to cover all spatial scales. This is the principle factor that allows economical extraction of low `relative_abundance` resources in heterogeneous strata (e.g., for mining and drilling). For mostly homogeneous strata like atmospheres and oceans, dispersion is 0 for most resources but may be positive for specific resources (e.g., Water in Earth's atmosphere or Wild Fisheries in Earth's ocean).
 - dispersion_sd — Epistemic uncertainty (SD) about the dispersion.
 
@@ -20,7 +20,8 @@ The table default value is "0,0,0,0". Hence, zero-abundance cells can be left em
 1. Consider `resources.descriptive.md` notes 2 and 3 when setting `relative_abundance`. IMPORTANT: `relative_abundance` here reflects total mass, not extractable mass (the latter is accounted for by dispersion and other factors). Some real-world composition substances may be borderline between stone, regolith, industrial minerals, or other resource categories; in these cases, assign to the closest resource category by extraction context.
 2. `dispersion` should be set with strong consideration of its practical effect on extraction operations such as mining (see Practical Effect of Dispersion below).
 3. Cross-check: Always verify relative_abundance values against the stratum's total mass from strata.tsv. Multiply `relative_abundance / 100 * mass` to obtain the implied absolute mass in kg, then compare against known real-world estimates. Strata masses can be very large, so volatiles and biosphere resources will typically have very small relative_abundance values.
-4. Prefer 1 or 2 significant digits. Use 3 for "filler" resources (usually stone and regolith) to help normalize the total abundance to ~100. Use more when mean abundance of a resource is precisely known (e.g., atmospheric components).
+4. A deposit an Earth nation's seeded extraction works takes a mass_cv of at most 0.05 and a dispersion_sd of at most 0.015, what 2015's mines and wells knew of what they drew; `tests/calibration/seed_worked_deposits.py` writes them.
+5. Prefer 1 or 2 significant digits. Use 3 for "filler" resources (usually stone and regolith) to help normalize the total abundance to ~100. Use more when mean abundance of a resource is precisely known (e.g., atmospheric components).
  
  
 ## Practical Effect of Dispersion
