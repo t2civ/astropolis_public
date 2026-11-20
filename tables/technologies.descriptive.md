@@ -699,6 +699,7 @@ Engineering living things.
 Growing crops and raising animals.
 
 - **Agronomy** — The science of field crops and their yields.
+- **Smallholder Farming** — Growing crops and keeping animals on small family plots by hand and draught animal, as most of the world's farmers do: an art learned by doing and passed down, which improves little and is lost where no one farms so.
 - **Plant Breeding** — Developing better crop varieties.
 - **Genetically Modified Crops** — Crops with engineered or edited genes.
 - **Precision Agriculture** — Farming field by field and plant by plant, with sensors, data and autonomous machines.
@@ -717,6 +718,9 @@ Fish, forests and the new ways of making food.
 - **Aquaculture** — Farming fish, shellfish and seaweed.
 - **Fisheries Science** — Managing wild fisheries for a sustainable catch.
 - **Forestry** — Growing and harvesting forests.
+- **Small-Scale Aquaculture** — Raising fish in household and village ponds and paddies, as most of the world's farmed fish are raised.
+- **Small-Scale Fishing** — Fishing from small boats with nets, lines and traps near shore, the livelihood of most of the world's fishers.
+- **Smallholder Forestry** — Tending and cutting village woodlots and farm trees for fuel, timber and fodder by hand.
 - **Cellular Agriculture** — Meat and other animal products grown from cells.
 - **Precision Fermentation** — Microbes engineered to make proteins and fats for food.
 - **Algaculture** — Farming algae for food, feed and fuel.

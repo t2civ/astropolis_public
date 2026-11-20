@@ -106,13 +106,17 @@ Notes:
 - **Crew Systems** — Integrated environmental control and life support hardware for crewed spacecraft, stations, and surface habitats, including atmosphere processors, water recovery units, thermal control systems, fire suppression, and radiation protection.
 - **Cities & Towns** — Built environment of human settlements encompassing residential, commercial, transportation, utility, and public-service infrastructure from small outposts to major metropolitan areas.
 - **Industrial Farms** — Large-scale mechanized farms for conventional crop cultivation and livestock raising on open land under ambient atmospheric conditions.
+- **Smallholdings** — Small family farm plots with their hand tools, sheds, wells and terraces.
 - **Controlled-Environment Farms** — Sealed pressurized greenhouses or habitat grow modules for crop cultivation and animal husbandry with artificial or filtered lighting, active atmosphere management, water recycling, and nutrient delivery.
 - **Artisanal Farms** — Small-scale family farms for artisanal and specialty food production including cheeses, preserves, craft beverages, and baked goods.
 - **Artisanal Workshops** — Small-scale handcraft workshops for pottery, handmade textiles, woodcraft, leatherwork, and other artisanal non-food goods.
 - **Commercial Fishing Fleets** — Marine and freshwater wild-capture fishing vessels with shore-side landing and processing infrastructure.
+- **Small Fishing Boats** — Small wooden and fiberglass boats with outboard motors and simple gear.
 - **Aquaculture Farms** — Open-water marine or freshwater farming installations for fish, shellfish, and seaweed using net pens, longlines, or pond systems.
+- **Small Fish Ponds** — Earthen household and village fish ponds with simple nets and pens.
 - **Controlled-Environment Aquaculture Facilities** — Sealed recirculating aquaculture systems for fish, shellfish, and algae production in isolated or off-Earth installations where open-water farming is unavailable.
 - **Forestry Operations** — Managed tree plantations and harvest operations producing timber, pulp, and biomass feedstock under open atmospheric conditions.
+- **Smallholder Woodlots** — Village and farm woodlots with hand tools and carts.
 - **Algal Cultivation Facilities** — Photobioreactor and open-pond installations for microalgae and cyanobacteria cultivation. Produce food-grade biomass and industrial biofeedstock; co-produce oxygen via photosynthesis.
 - **Bioreactor Facilities** — Industrial bioreactor installations for cellular agriculture, ethanol fermentation, and general-purpose fermentation of enzymes, amino acids, organic acids, and biopolymers.
 - **Food Processing Plants** — Cooking, preservation, and packaging facilities for converting agricultural and aquacultural products into shelf-stable prepared meals and food products. Critical for space operations where fresh-food supply is intermittent.
