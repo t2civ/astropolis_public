@@ -1,7 +1,7 @@
-name\Field	resource_class	unique_type	ai_tags	convert_extraction	trade_class	storage_class	trade_unit	start_price	extraction	volatile	disposal_sink	waste_form	sort_override	mass_err_mult	shade_form	in_house	in_house_rate	overflow	haul	research
-Type	TABLE_ROW	Enums.UniqueResources	ARRAY[STRING_NAME]	TABLE_ROW	Enums.TradeClasses	TABLE_ROW	STRING_NAME	FLOAT	BOOL	BOOL	Enums.DisposalSinks	TABLE_ROW	INT	FLOAT	TABLE_ROW	TABLE_ROW	FLOAT	FLOAT	FLOAT	BOOL
-Unit								$											
-Default								0					0	1				0	1
+name\Field	resource_class	unique_type	ai_tags	convert_extraction	trade_class	storage_class	trade_unit	start_price	extraction	volatile	disposal_sink	waste_form	sort_override	mass_err_mult	shade_form	in_house	in_house_rate	overflow	haul	research	schooling_returns
+Type	TABLE_ROW	Enums.UniqueResources	ARRAY[STRING_NAME]	TABLE_ROW	Enums.TradeClasses	TABLE_ROW	STRING_NAME	FLOAT	BOOL	BOOL	Enums.DisposalSinks	TABLE_ROW	INT	FLOAT	TABLE_ROW	TABLE_ROW	FLOAT	FLOAT	FLOAT	BOOL	ARRAY[FLOAT]
+Unit								$													1/y
+Default								0					0	1				0	1		
 Prefix/RESOURCE_	RESOURCE_CLASS_			RESOURCE_	TRADE_CLASS_	STORAGE_CLASS_					DISPOSAL_SINK_	RESOURCE_			RESOURCE_	RESOURCE_			
 ELECTRICITY	ENERGY	ELECTRICITY	electricity		LOCUS	ELECTRICITY	MWh	38							SHADE_ELECTRICITY				
 SHADE_ELECTRICITY	ENERGY					PURE_FLOW	MWh	38											
@@ -97,9 +97,9 @@ SOIL_GROWTH_MEDIA	BIOLOGICALS				LOCUS	BULK	t	30				BIOWASTE
 BIOWASTE	BIOLOGICALS				LOCUS	BULK	t	10	x		SURFACE								0.1
 WILD_FISHERIES	BIOLOGICALS			ANIMAL_PROD					x										
 TIMBER	BIOLOGICALS			LUMBER_WOOD_PROD		PURE_FLOW	t	50	x		SURFACE								
-LABOR	SERVICES					PURE_FLOW	h	45											
-ARTISAN_LABOR	SERVICES					PURE_FLOW	h	45											
-FARM_LABOR	SERVICES					PURE_FLOW	h	45											
+LABOR	SERVICES					PURE_FLOW	h	45													0.1;0.1;0.1
+ARTISAN_LABOR	SERVICES					PURE_FLOW	h	45													0.05;0.03;0.01
+FARM_LABOR	SERVICES					PURE_FLOW	h	45													0.02;0.01;0
 SCALAR_COMPUTE	SERVICES				CYBER	PURE_FLOW	Zflop	10000								LABOR	444 h/Zflop		
 TENSOR_COMPUTE	SERVICES				CYBER	PURE_FLOW	Zflop	500								LABOR	22 h/Zflop		
 NEUROMORPHIC_COMPUTE	SERVICES				CYBER	PURE_FLOW	Zflop	10000											

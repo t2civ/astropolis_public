@@ -768,6 +768,15 @@ func get_population_work_share(_population_type: int, _kind: int) -> float:
 	return NAN
 
 
+## Returns the work an hour of [param population_type] makes at its [param kind] of work, its kinds
+## those its type's work_resources (populations.tsv) list, in their order: its type's factor on an
+## hour times what its workforce's schooling gives at that kind, each kind's returns by level of
+## school its own (POPULATION_MODEL.md, "Productivity and schooling"). A facility's own; NAN
+## elsewhere, without a population or on an out-of-range index.
+func get_population_work_productivity(_population_type: int, _kind: int) -> float:
+	return NAN
+
+
 ## Returns what [param population_type]'s wealth buys, or all types' if -1: the years of its
 ## wants it would pay for at local prices. The true measure of its wealth, which compares
 ## across places; 0.0 without a population.
@@ -806,7 +815,8 @@ func get_population_wage(_population_type := -1) -> float:
 
 
 ## Returns the work an hour of [param population_type] makes, its productivity, or of all types'
-## if -1: 1.0 is the hour its work resource's recipes assume. A facility's type holds its own;
+## if -1: 1.0 is the hour its work resources' recipes assume. A facility's type holds its own, at
+## its kinds of work at their shares of its hours ([method get_population_work_productivity]);
 ## elsewhere it is the work its residents' hours made in their last interval over those hours. NAN
 ## where no one worked or without a population.
 func get_population_productivity(_population_type := -1) -> float:

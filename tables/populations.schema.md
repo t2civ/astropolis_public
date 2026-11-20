@@ -103,9 +103,10 @@ inequality, `facilities_populations.tsv`) takes the average over its deciles.
 
 The last columns are the type's schooling, the years of school its people hold, gained by the
 young and carried as they age, and what it makes of an hour (`POPULATION_MODEL.md`, "Productivity
-and schooling"). An hour of a population makes its type's factor times e to the return times its
-workforce's years of schooling past the reference; each operation draws that work at its owner's
-technology (`labor_saving` in `operations.tsv`).
+and schooling"). An hour of a population at each kind of work it makes makes its type's factor
+times what its workforce's years of schooling give at that kind past the reference, each kind's
+returns by level of school its own (`schooling_returns` in `resources.tsv`); each operation draws
+that work at its owner's technology (`labor_saving` in `operations.tsv`).
 
 - schooling_need — TABLE_ROW `needs.tsv`, the need whose satisfaction gains the young their
   schooling. Blank: the type gains none and holds what it was seeded with. Default `LEARNING`.
@@ -119,13 +120,15 @@ technology (`labor_saving` in `operations.tsv`).
   deciles, as the slow responses average theirs. One gains in proportion to the need met. Default
   `0.27`, from recall: India's young, served about a fifth of the learning the USA's are, held
   about two thirds of their years.
-- schooling_return — FLOAT per year of schooling: how much more an hour makes for each year its
-  workforce holds, e to it times the years, the Mincerian return. Zero leaves the hour at its
-  type's factor, whatever the schooling, as for a made type, which counts as schooled to its
-  reference. Default `0.1/y`.
+- schooling_levels — ARRAY[FLOAT] in years: where each of the type's levels of school ends but
+  the last, which has no end; each kind of work it makes names its return to a year in each level
+  (`schooling_returns` in `resources.tsv`), so one more return than these values. Default `6;12`:
+  primary to six years, secondary to twelve and tertiary past it.
 - reference_schooling — FLOAT in years: the workforce's schooling at which an hour makes its
-  type's factor, its people weighted as `work_stage_weights` counts them. Base humans' is the
-  USA's as seeded for 2015, at which an hour makes what the recipes assume. Default `13.57 y`.
+  type's factor at every kind of work, its people weighted as `work_stage_weights` counts them.
+  Base humans' is the USA's as seeded for 2015, at which an hour makes what the recipes assume. A
+  made type holds no schooling and has none for its reference, so its hour makes its factor
+  whatever its kind. Default `13.57 y`.
 - productivity_factor — FLOAT: what an hour of the type does of a person's at its reference
   schooling, so that its productivity is this times what its schooling gives. For a made type it is a patch, until the technology system sets what an hour of
   each type does at each operation (`POPULATION_MODEL.md` in the development repository,

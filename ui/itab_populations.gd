@@ -388,6 +388,8 @@ func _get_column(proxy: Proxy, type: int, types: Array[int]) -> ColumnData:
 				if type != -1:
 					column.kind_shares[resource_type] = facility.get_population_work_share(type,
 							kind)
+					column.kind_productivities[resource_type] = (
+							facility.get_population_work_productivity(type, kind))
 		# Where the type works several kinds, its work's price is theirs at its shares.
 		if type != -1 and _work_resources[type].size() > 1:
 			column.work_price = 0.0
@@ -600,14 +602,15 @@ func _get_work_lines(data: PopulationsData) -> Array[LineData]:
 	var lines: Array[LineData] = []
 	var unit := _get_work_unit(_get_work_resource(-1, data.types))
 	var productivity := _make_line("Productivity",
-			"The work an hour of the residents makes: 1 is an hour with the reference schooling,\n"
-			+ "the USA's of 2015, what the recipes assume, which each operation draws at its\n"
-			+ "owner's technology. Over several places or types, the work their hours made over\n"
-			+ "those hours.")
+			"The work an hour of the residents makes, at their kinds of work at their shares of\n"
+			+ "the hours: 1 is an hour with the reference schooling, the USA's of 2015, what the\n"
+			+ "recipes assume, which each operation draws at its owner's technology. Over several\n"
+			+ "places or types, the work their hours made over those hours.")
 	var schooling := _make_line("Schooling (y)",
 			"The years of school the residents' workforce holds, each life stage weighted as it\n"
-			+ "works; each year past the reference makes an hour more productive. By age group,\n"
-			+ "the young count what they will hold as they leave theirs.")
+			+ "works; each year past the reference makes an hour more productive, as far as each\n"
+			+ "kind of work uses it. By age group, the young count what they will hold as they\n"
+			+ "leave theirs.")
 	var expected := _make_line("Expected schooling (y)",
 			"The years of school a newborn would gain at the learning the young were served in\n"
 			+ "their last interval.")
@@ -659,7 +662,8 @@ func _get_work_lines(data: PopulationsData) -> Array[LineData]:
 	return lines
 
 
-# A share and a price line for each kind of work some type here works among others.
+# A share, a productivity and a price line for each kind of work some type here works among
+# others.
 func _get_kind_lines(data: PopulationsData) -> Array[LineData]:
 	var lines: Array[LineData] = []
 	var kinds: Array[int] = []
@@ -675,20 +679,26 @@ func _get_kind_lines(data: PopulationsData) -> Array[LineData]:
 		var multiplier := _trade_unit_multipliers[resource_type]
 		var share := _make_line("%s (%% of hours)" % kind_name,
 				"The share of the residents' hours in this kind of work, which moves toward the\n"
-				+ "kinds that pay better over years, as people change trades.")
+				+ "kinds that pay better an hour over years, as people change trades.")
+		var productivity := _make_line("Productivity at %s" % kind_name,
+				"The work an hour of the residents makes at this kind: 1.0 is the hour its\n"
+				+ "recipes assume. Each kind gains from each level of school as it uses it.")
 		var price := _make_line("Price of %s ($/%s)" % [kind_name, _get_work_unit(resource_type)],
 				"The local price of this kind of work, an hour at productivity 1, in the\n"
 				+ "residents' last interval.")
 		for column in data.columns:
 			if !data.at_facility:
 				_add_cell(share, NOT_APPLICABLE)
+				_add_cell(productivity, NOT_APPLICABLE)
 				_add_cell(price, NOT_APPLICABLE)
 				continue
 			_add_cell(share, _format_percent(column.kind_shares[resource_type])
 					if column.kind_shares.has(resource_type) else NOT_APPLICABLE)
+			_add_cell(productivity, _format_productivity(column.kind_productivities[resource_type])
+					if column.kind_productivities.has(resource_type) else NOT_APPLICABLE)
 			_add_cell(price, _format_price(column.kind_prices[resource_type] * multiplier
 					if column.kind_prices.has(resource_type) else NAN))
-		lines.append_array([share, price])
+		lines.append_array([share, productivity, price])
 	return lines
 
 
@@ -950,6 +960,7 @@ class ColumnData extends RefCounted:
 	var age_group_schoolings := PackedFloat64Array() # in seconds; empty for all types
 	var work_price: float # the local price of its work at a facility; NAN elsewhere
 	var kind_shares: Dictionary[int, float] = {} # by kind; of its hours, at a facility, one type
+	var kind_productivities: Dictionary[int, float] = {} # by kind; an hour's work, as kind_shares
 	var kind_prices: Dictionary[int, float] = {} # by kind; its local price, at a facility
 	var spending: float # dollars a second
 	var dividends: float # dollars a second, less what was drawn
