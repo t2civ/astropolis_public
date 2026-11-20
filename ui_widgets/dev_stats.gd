@@ -11,10 +11,10 @@ extends MarginContainer
 ## Multi-target development-stats table. Shows population, economy, power,
 ## manufacturing, etc. as rows × proxy targets as columns.
 ##
-## The population line folds: its title holds each target's total, each person counted once where
-## they are, the staff on loan and crew where they work, and it unfolds to each type's. Value
-## columns are of a fixed width, right aligned, so every row's line up with the population line's
-## title.
+## The population line folds: its title holds each target's total of the sentient, each person
+## counted once where they are, the staff on loan and crew where they work, and it unfolds to every
+## type's, a type the populations table labels nonsentient in parentheses. Value columns are of a
+## fixed width, right aligned, so every row's line up with the population line's title.
 ##
 ## Used by [ITabDevelopment] and the standalone development panel. Calls
 ## proxy methods on the proxy thread, then builds the rows on the main
@@ -150,16 +150,17 @@ func _set_data(targets_: Array[StringName], column_names_: Array[StringName],
 			use_name = targets_[i]
 		headers.append(use_name)
 
+	var populations_table: Dictionary[StringName, Array] = IVTableData.db_tables[&"populations"]
+	var population_names: Array[StringName] = populations_table[&"name"]
+	var nonsentients: Array[bool] = populations_table[&"nonsentient"]
 	var population_rows: Array[Array] = []
-	var population_names: Array[StringName] = IVTableData.db_tables[&"populations"][&"name"]
 	for population_type in population_names.size():
-		var values := _get_values(proxies, &"get_development_population", population_type)
-		var has_people := false
-		for value: Variant in values:
-			has_people = has_people or (value != null and value)
-		if has_people:
-			population_rows.append([population_names[population_type],
-					_format_cells(values, population_format, n_spacers)])
+		var nonsentient := nonsentients[population_type]
+		var cells := _format_cells(_get_values(proxies, &"get_development_population",
+				[population_type]), population_format, n_spacers)
+		if nonsentient: # its parentheses close after its last target's value
+			cells[n_proxies - 1] += ")"
+		population_rows.append([population_names[population_type], cells, nonsentient])
 
 	var stats_rows: Array[Array] = []
 	for line_array in content:
@@ -173,23 +174,19 @@ func _set_data(targets_: Array[StringName], column_names_: Array[StringName],
 
 	var data := {
 		&"headers": _pad(headers, n_spacers),
-		&"population": _format_cells(_get_values(proxies, &"get_development_population"),
-				population_format, n_spacers),
+		&"population": _format_cells(_get_values(proxies, &"get_development_population",
+				[-1, false]), population_format, n_spacers),
 		&"population_rows": population_rows,
 		&"stats_rows": stats_rows,
 	}
 	_build.call_deferred(data)
 
 
-# Each proxy's value of [param method], with [param argument] where it is given, null for a
-# missing proxy.
-func _get_values(proxies: Array[Proxy], method: StringName, argument: Variant = null) -> Array:
+# Each proxy's value of [param method] called with [param arguments], null for a missing proxy.
+func _get_values(proxies: Array[Proxy], method: StringName, arguments := []) -> Array:
 	var values := []
 	for proxy in proxies:
-		var value: Variant = null
-		if proxy:
-			value = proxy.call(method) if argument == null else proxy.call(method, argument)
-		values.append(value)
+		values.append(proxy.callv(method, arguments) if proxy else null)
 	return values
 
 
@@ -312,17 +309,14 @@ class StatsRow extends HBoxContainer:
 class PopulationLine extends FoldableContainer:
 	# The population: the native title shows its label, a right-aligned title control each target's
 	# total, and it unfolds to each type's row. No style box insets its title or its rows, so their
-	# cells line up with the table's other rows. With no one of any type it gets a blank fold-icon
-	# substitute and can't be unfolded, as the budget tab's leafless groups can't.
+	# cells line up with the table's other rows.
 
 	var _block := HBoxContainer.new()
 	var _cells: Array[Label] = []
 	var _rows_vbox := VBoxContainer.new()
 	var _type_rows: Array[StatsRow] = []
-	var _fold_icon_substitute := MeshTexture.new()
 	var _indent: float
 	var _column_width: float
-	var _singular := false
 
 
 	func _init(indent: float, column_width: float) -> void:
@@ -339,23 +333,15 @@ class PopulationLine extends FoldableContainer:
 		_rows_vbox.add_theme_constant_override(&"separation", 0)
 		add_child(_rows_vbox)
 		folded = true
-		_fold_icon_substitute.image_size.x = 16  # match the fold-arrow width
-		folding_changed.connect(_on_folding_changed)
 		IVSettingsManager.changed.connect(_settings_listener)
 
 
+	# Each of [param type_rows] is its type's name, its cells and whether it is nonsentient, whose
+	# row opens with a parenthesis its cells close.
 	func set_line(title_text: String, cells: PackedStringArray, type_rows: Array[Array]) -> void:
 		title = title_text
 		DevStats._set_cells(_block, _cells, cells, _column_width)
 		var n_rows := type_rows.size()
-		var singular := n_rows == 0
-		if singular != _singular:
-			_singular = singular
-			if singular:
-				add_theme_icon_override(&"folded_arrow", _fold_icon_substitute)
-				folded = true
-			else:
-				remove_theme_icon_override(&"folded_arrow")
 		while _type_rows.size() < n_rows:
 			var row := StatsRow.new(2.0 * _indent, _column_width)
 			_rows_vbox.add_child(row)
@@ -366,12 +352,8 @@ class PopulationLine extends FoldableContainer:
 			if i < n_rows:
 				var label: StringName = type_rows[i][0]
 				var row_cells: PackedStringArray = type_rows[i][1]
-				row.set_row(tr(label), row_cells)
-
-
-	func _on_folding_changed(is_folded_: bool) -> void:
-		if _singular and !is_folded_:  # no one to list
-			fold()
+				var nonsentient: bool = type_rows[i][2]
+				row.set_row(("(" + tr(label)) if nonsentient else tr(label), row_cells)
 
 
 	func _settings_listener(setting: StringName, value: Variant) -> void:

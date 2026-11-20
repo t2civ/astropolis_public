@@ -191,8 +191,9 @@ func has_inventory() -> bool:
 ## Returns the development "population" total, optionally of a specific [param population_type]
 ## (-1 for total), each person counted once, where they are: the residents but for those lent as
 ## staff and crew to the facilities their polity staffs from them, and the staff on loan and crew
-## who work here.
-func get_development_population(_population_type := -1) -> float:
+## who work here. A type the populations table labels [code]nonsentient[/code] counts only if
+## [param _include_nonsentient]; the development panel's total leaves those types out.
+func get_development_population(_population_type := -1, _include_nonsentient := true) -> float:
 	return 0.0
 
 
@@ -641,18 +642,23 @@ func get_financials_counterparty_keys(_line_item_type: int) -> Array[int]:
 # Population data (read-only). Default 0.0/empty; developed proxies override. A facility
 # answers for its residents, and a locus, player or join for those of the facilities it
 # aggregates, its rates and shares derived from their sums (POPULATION_MODEL.md, "What players
-# and AIs do"). Where population_type may be -1, the getter answers for all types together.
+# and AIs do"). Where population_type may be -1, the getter answers for all types together. A
+# getter that counts people takes include_nonsentient, true by default: a type the populations
+# table labels nonsentient counts only where it is true (POPULATION_MODEL.md, "Kinds of
+# population"), and the label is read nowhere else.
 
 ## Returns the population count for [param population_type], or the total across
-## all types if -1. Safe default on an out-of-range index.
-func get_population_number(_population_type := -1) -> float:
+## all types if -1, a nonsentient type's people only if [param _include_nonsentient]. Safe
+## default on an out-of-range index.
+func get_population_number(_population_type := -1, _include_nonsentient := true) -> float:
 	return 0.0
 
 
 ## Returns how many of [param population_type] are owned, or of all types if -1: an owned
 ## population's means are its owner's, and its treasuries' transfers pass it by
-## (POPULATION_MODEL.md, "Owned populations"). Safe default on an out-of-range index.
-func get_population_owned_number(_population_type := -1) -> float:
+## (POPULATION_MODEL.md, "Owned populations"). A nonsentient type's people count only if
+## [param _include_nonsentient]. Safe default on an out-of-range index.
+func get_population_owned_number(_population_type := -1, _include_nonsentient := true) -> float:
 	return 0.0
 
 
@@ -664,8 +670,10 @@ func get_population_age_group_number(_population_type: int, _age_group: int) -> 
 
 
 ## Returns how many of [param population_type] are in life [param stage], an
-## [enum Enums.LifeStages], or of all types if -1. Safe default on an out-of-range index.
-func get_population_stage_number(_population_type: int, _stage: int) -> float:
+## [enum Enums.LifeStages], or of all types if -1, a nonsentient type's people only if
+## [param _include_nonsentient]. Safe default on an out-of-range index.
+func get_population_stage_number(_population_type: int, _stage: int,
+		_include_nonsentient := true) -> float:
 	return 0.0
 
 

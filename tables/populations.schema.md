@@ -1,10 +1,10 @@
 # Schema for populations.tsv
 
 Each row is a population type: base humans, and the made, modified and virtual kinds a
-game can come to hold. A type is only numbers. The code never asks what a type is, only
-what it needs and how its numbers behave, so the columns below are the whole of a type's
-difference from another (`POPULATION_MODEL.md`, "A population is what it needs" and
-"Kinds of population").
+game can come to hold. A type is numbers and one label. The model never asks what a type is,
+only what it needs and how its numbers behave, and its label, `nonsentient`, is read only where
+people are counted, so the columns below are the whole of a type's difference from another
+(`POPULATION_MODEL.md`, "A population is what it needs" and "Kinds of population").
 
 The `Default` row holds base humans' values, and the other types inherit them until their
 own content is written, which comes with the first game that holds them
@@ -13,6 +13,11 @@ own content is written, which comes with the first game that holds them
 
 ## Table Data
 
+- nonsentient — BOOL, the label the societies in the game give a type with no wants for the needs
+  of fulfillment, as servitors' are, `x` where it is held. A count reads it, and nothing else: the
+  development panel's total counts the sentient, its types each listed as it unfolds, the
+  nonsentient in parentheses, and every count a proxy gives takes `include_nonsentient`, true by
+  default, for the GUI, a player or an AI to act on (`POPULATION_MODEL.md`, "Kinds of population").
 - age_group_widths — ARRAY[FLOAT] in years, seven values: how long the type spends in each of its
   first seven age groups. The eighth, oldest age group has no upper bound. A population passes an
   age group's members on to the next as a life table at the age group's death rate has them leave
@@ -186,3 +191,5 @@ polities' borders let them (`players.tsv`, `immigration_openness` and
 4. What a type needs, and where it can live, are its wants (`wants.tsv`): room is the want of its
    shelter need, a draw on the habitation its environments' housing makes, and an individual that
    takes less room wants less of it (`POPULATION_MODEL.md`, "Where populations live").
+5. The GUI lists types in the table's order, so the sentient types come first and the nonsentient
+   after every one of them, servitors before AI agents.
