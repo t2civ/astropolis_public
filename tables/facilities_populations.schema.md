@@ -22,8 +22,9 @@ The data type is ARRAY[FLOAT]; each cell holds 32 values delimited by semicolons
   `birth_weights` in `populations.tsv`.
 - 1 value — the inequality: how unevenly the population's people hold their means, as the
   standard deviation of the log of their wealth. Zero holds all alike.
-- 1 value — the labor spread: how unevenly its wages reach its people, in the same measure,
-  standing in for skill (`FINANCIAL_MODEL.md`, "The residents and inequality").
+- 1 value — the labor spread: what its people's schooling doesn't explain of what an hour of
+  theirs makes, spread over its deciles as their means are, in the same measure
+  (`POPULATION_MODEL.md`, "Productivity and schooling").
 - 1 value — the ownership spread: how unevenly its dividends reach its people, in the same
   measure.
 - 1 value, with an inline `$` — the wealth per head. Its deciles hold it as unevenly as its
@@ -53,13 +54,14 @@ must be present for every population that `facilities.tsv` seeds, and is empty o
    weights from `populations.tsv`, so it follows them when they change. An inequality is a
    lognormal's with the polity's survey Gini, a polity of many countries its countries' combined
    by the Theil index with their consumption per head (`EARTH_CALIBRATION.md`, "Population"). The
-   spreads hold each population nearest its inequality over what its residents were paid in the
-   game's first decade, measured once, ownership's Gini a multiple of labor's from recall
-   (`SPREADS`; `EARTH_CALIBRATION.md`, "Population"). A wealth is, at the USA, the one at which
-   its residents' deciles buy their wants whole a year at start prices, public provision buying
-   its share (`--wealth`); at every other polity, the USA's times what its households spent a head
-   in 2015 against the USA's at market rates, from recall (`HOUSEHOLD_SPENDINGS`), since start
-   prices price a poorer polity's in-person services at the USA's wage. A saving rate
+   labor spread holds each population nearest its inequality over the game's first five years,
+   read from games at several spreads, and the ownership spread's Gini is a multiple of what the
+   wages' was seeded at before, from recall (`SPREADS`; `EARTH_CALIBRATION.md`, "Population").
+   A wealth is, at the USA, the one at which its residents' deciles buy their wants whole a year
+   at start prices, public provision buying its share (`--wealth`); at every other polity, the
+   USA's times what its households spent a head in 2015 against the USA's at market rates, from
+   recall (`HOUSEHOLD_SPENDINGS`), since start prices price a poorer polity's in-person services at
+   the USA's wage. A saving rate
    is what the polity's households saved in 2015, from recall (`SAVING_RATES`). The schooling is
    the polity's attainment by age in 2015, and its spread from the shares holding each level of
    school, from recall (`SCHOOLINGS`, `SCHOOLING_SPREADS`), which `seed_demography.py --schooling`
