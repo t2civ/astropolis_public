@@ -646,10 +646,9 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 
 
 ## Returns the prices, rising and in [method MarketProxy.get_price] units, that the desired flow's
-## curve of [param resource_type] is given at (see [method get_inventory_desired_flow_curve]): the
-## facility's own price between the lowest and the highest of half and twice it, the market's last
-## sale and the quotes its trader expects. NANs where the facility has no price at all; empty for an
-## index out of range.
+## curve of [param resource_type] is given at (see [method get_inventory_desired_flow_curve]): half
+## the facility's own price, that price and twice it. NANs where the facility has no price at all;
+## empty for an index out of range.
 @abstract func get_inventory_curve_prices(resource_type: int) -> PackedFloat64Array
 
 

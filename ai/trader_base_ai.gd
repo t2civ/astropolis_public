@@ -616,10 +616,10 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 			ask = maxi(-roundi(_get_wanted(desired_flows, curve_prices,
 					(ask_open - leg) / multiplier, foreseen, step, must, buys, sells) / multiplier
 					- netted), 0)
-		# A lot its facility's curve gives at no price on it is offered only back, as an exit: read
-		# off the curve's top, the market's price landed with its polity's tariff, it stood at twice
-		# the market, a buyer whose curve takes at every price took it, and a dormant market's price
-		# doubled each round (TRADE_MODEL.md, "Where it stands", a dormant market's price).
+		# A lot its facility's curve gives at no price on it is offered only back, as an exit: quoted
+		# at the curve's top, a price at which its facility still wouldn't give it, it was taken by a
+		# buyer whose curve takes at every price, and a dormant market's price doubled each round
+		# (TRADE_MODEL.md, "Where it stands", a dormant market's price).
 		var lot_given := _is_given_on_curve(desired_flows, (netted - lot) * multiplier - step,
 				foreseen)
 		if !(lot_given or is_current or position_quantity > 0.0):
