@@ -92,7 +92,8 @@ inequality, `facilities_populations.tsv`) takes the average over its deciles.
 - work_resources — ARRAY[TABLE_ROW] `resources.tsv`, the kinds of work the type makes, each a
   resource an operation's recipe or staffing draws. Its hours are shared among them, each kind
   offered and paid at its own price (`POPULATION_MODEL.md` in the development repository,
-  "Kinds of work, as built"). Default `LABOR`, which every operation draws.
+  "Kinds of work, as built"). Default `LABOR`, the work done in person, which nearly every
+  operation draws.
 - work_response_time — FLOAT in years, how long the type's people take to move their hours to a
   kind of work that pays better, as people change trades: a share moves at most its own size over
   this time. Read only where the type makes more than one kind. Default `5 y`.
@@ -131,11 +132,12 @@ that work at its owner's technology (`labor_saving` in `operations.tsv`).
   primary to six years, secondary to twelve and tertiary past it.
 - reference_schooling — FLOAT in years: the workforce's schooling at which an hour makes its
   type's factor at every kind of work, its people weighted as `work_stage_weights` counts them.
-  Base humans' is where the USA's workforce as seeded for 2015, its schooling spread over its
-  deciles, makes an hour of labor at its factor, what the recipes assume: above its mean of 13.57
-  years, since a return that compounds gives a spread more than its mean. A made type holds no
-  schooling and has none for its reference, so its hour makes its factor whatever its kind.
-  Default `13.99 y`.
+  Base humans' is where the hours the USA's plant draws of its workforce as seeded for 2015, its
+  schooling spread over its deciles and its people sorted among the kinds of work by it, make an
+  hour of work on average, what the recipes assume: above its mean of 13.57 years, since a return
+  that compounds gives a spread more than its mean, and since the work done at a terminal, whose
+  returns are steepest, makes more than an hour there. A made type holds no schooling and has none
+  for its reference, so its hour makes its factor whatever its kind. Default `14.72 y`.
 - productivity_factor — FLOAT: what an hour of the type does of a person's at its reference
   schooling, so that its productivity is this times what its schooling gives. For a made type it is a patch, until the technology system sets what an hour of
   each type does at each operation (`POPULATION_MODEL.md` in the development repository,
