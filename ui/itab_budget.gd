@@ -33,7 +33,9 @@ extends MarginContainer
 ## "Budgets"): its committed lines as shares of what it has to spend a year, and its discretionary
 ## lines as shares of what they leave, the rest of its budget last. At an administrative center or
 ## for a player it shows each of its player's treasuries' budgets, and at a facility its own budget,
-## below its owners' lines for it where it isn't its player's center. Each bar is its line's share,
+## below its owners' lines for it where it isn't its player's center and its credit, what its
+## lenders read of it: what it owes as a share of its debt capacity, and the income that carries its
+## debt, now and at its ten-year low (FINANCIAL_MODEL.md, "Risk"). Each bar is its line's share,
 ## marked on the same scale where the line drew last quarter and where its current trend, this
 ## quarter's pace, puts it; a line that funds all its counterparty lacks spans the width. The bar's
 ## tooltip gives both draws, beside a legend of its colors. A line its owner sets, a treasury's
@@ -673,8 +675,8 @@ func _collect_funding(proxy: Proxy) -> Array:
 	# share, line, draws, base, control], its draws what it drew last quarter and this quarter's
 	# pace, as rates a year (_get_draws), and its base what its share is of: at an administrative
 	# center or for a player, each of the player's treasuries that has a budget or a line; at a
-	# facility its own budget, after its owners' lines for it where it isn't its player's center
-	# and what its expansion borrows where it borrows. A control is empty where this machine's
+	# facility its own budget, after its owners' lines for it where it isn't its player's center,
+	# what its lenders read of it and what its expansion borrows where it borrows. A control is empty where this machine's
 	# human can't set the line or budget, and else [Controls, proxy name, index, is held, limit],
 	# its index a budget line's key, a treasury's account or the build share's operation, and its
 	# limit the most a line's share may be set at or a budget's total now. A polity's government
@@ -703,6 +705,9 @@ func _collect_funding(proxy: Proxy) -> Array:
 		return panels
 	if center and facility != center:
 		panels.append_array(_collect_owner_lines(facility, player, center, is_local))
+	var credit_panel := _collect_credit(facility)
+	if !credit_panel.is_empty():
+		panels.append(credit_panel)
 	var borrowing_panel := _collect_borrowing(facility)
 	if !borrowing_panel.is_empty():
 		panels.append(borrowing_panel)
@@ -904,6 +909,38 @@ func _collect_owner_lines(facility: FacilityProxy, player: PlayerProxy,
 	if rows.is_empty():
 		return []
 	return [[_item_keys[_item_funding_received], NAN, [], rows, []]]
+
+
+func _collect_credit(facility: FacilityProxy) -> Array:
+	# What [param facility]'s lenders read of its own account as one panel, or empty before its
+	# first interval or where it neither owes nor could: what it owes on the scale of its debt
+	# capacity, that capacity at its interest cover, and what carries its debt a year, now and at
+	# its least over the ten years before; and what the credit market remembers writing off it.
+	# What it owes and could are sums, not rates a year.
+	const READING_DEBT := FacilityProxy.CreditReadings.READING_DEBT
+	const READING_CARRIED := FacilityProxy.CreditReadings.READING_CARRIED
+	const READING_CARRIED_LOW := FacilityProxy.CreditReadings.READING_CARRIED_LOW
+	const READING_WRITTEN_OFF := FacilityProxy.CreditReadings.READING_WRITTEN_OFF
+	const READING_DEBT_CAPACITY := FacilityProxy.CreditReadings.READING_DEBT_CAPACITY
+	var debt := facility.get_credit_reading(READING_DEBT)
+	var capacity := facility.get_credit_reading(READING_DEBT_CAPACITY)
+	if is_nan(debt) or !(debt > 0.0 or capacity > 0.0):
+		return []
+	var carried := facility.get_credit_reading(READING_CARRIED)
+	var carried_low := facility.get_credit_reading(READING_CARRIED_LOW)
+	var written_off := facility.get_credit_reading(READING_WRITTEN_OFF)
+	var rows := [
+		["LABEL_DEBT_OWED", debt / capacity if capacity > 0.0 else NAN, debt, NO_DRAWS, capacity,
+				[]],
+		[["LABEL_DEBT_CAPACITY_AT_COVER", IVQFormat.number(facility.interest_cover, 2)], NAN,
+				capacity, NO_DRAWS, NAN, []],
+		["LABEL_DEBT_SERVICE_INCOME", NAN, carried, NO_DRAWS, NAN, []],
+		["LABEL_TEN_YEAR_LOW", carried_low / carried if carried > 0.0 else NAN, carried_low,
+				NO_DRAWS, carried, []],
+	]
+	if written_off > 0.0:
+		rows.append(["LABEL_WRITTEN_OFF", NAN, written_off, NO_DRAWS, NAN, []])
+	return ["LABEL_CREDIT", NAN, [], rows, []]
 
 
 func _collect_borrowing(facility: FacilityProxy) -> Array:

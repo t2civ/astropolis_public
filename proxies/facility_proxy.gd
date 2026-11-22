@@ -155,6 +155,20 @@ enum BudgetLines {
 }
 
 
+## What a facility's lenders read of its own account, which it reads as they do (see
+## [member credit_readings] and FINANCIAL_MODEL.md, "Risk", a borrower's default).
+enum CreditReadings {
+	READING_DEBT, ## What it owes, its builds' loans among it.
+	READING_CARRIED, ## What carries its debt a year: its income past its other committed lines.
+	READING_CARRIED_LOW, ## The least that carried its debt a year over the ten years before.
+	READING_WRITTEN_OFF, ## What the credit market remembers writing off it.
+	READING_SPREAD, ## Its spread over the interest rate, a year.
+	## Its debt capacity: the most it could owe with that least covering a year's interest
+	## [member interest_cover] times over. At it its builds borrow nothing more.
+	READING_DEBT_CAPACITY,
+}
+
+
 ## A buildout's kind, what its units are for (see [method get_operations_buildouts] and
 ## PRODUCTION_MODEL.md, "Buildouts").
 enum BuildoutKinds {
@@ -247,6 +261,11 @@ var required_return := 0.0
 ## (FINANCIAL_MODEL.md, "Budgets"; see [member budget_lines]); the server holds it below one. 0.0
 ## by default. Use [method set_expansion_share].
 var expansion_share := 0.0
+## Its interest cover: how many times over what carried its debt at its least must cover a year's
+## interest on what it owes, which sets its debt capacity and so what its builds may borrow
+## (FINANCIAL_MODEL.md, "Risk", a borrower's default; see [enum CreditReadings]). Its management's
+## preference; 1.0 by default. Use [method set_interest_cover].
+var interest_cover := 1.0
 ## Its available credit: what the facility may spend past what it holds, as of its last interval:
 ## its cash less what it owes, and what more it could owe before its interest at its own rate
 ## passed what its income carries, and what is left of each funding line that funds it, as far as
@@ -256,6 +275,9 @@ var credit := 0.0
 ## Its budget a year as of its last interval, by [enum BudgetLines]; NAN before its first.
 ## Server-authoritative. Use [method get_budget_line].
 var budget_lines := PackedFloat64Array()
+## What its lenders read of its own account as of its last interval, by [enum CreditReadings]; NAN
+## before its first. Server-authoritative. Use [method get_credit_reading].
+var credit_readings := PackedFloat64Array()
 ## The game time of the last interval its ledger is booked through, -INF before its first: what it
 ## booked this quarter, over the time from the quarter's start to this, is the pace it is on.
 var interval_time := -INF
@@ -408,6 +430,14 @@ func get_budget_line(line: int) -> float:
 	if line < 0 or line >= budget_lines.size():
 		return NAN
 	return budget_lines[line]
+
+
+## Returns [param reading], a [enum CreditReadings], of what its lenders read of its own account
+## (see [member credit_readings]), a rate a year or in money, or NAN before its first interval.
+func get_credit_reading(reading: int) -> float:
+	if reading < 0 or reading >= credit_readings.size():
+		return NAN
+	return credit_readings[reading]
 
 
 # Operations (facility-only). Facility-only reads, plus proxy-authoritative knobs
@@ -874,6 +904,11 @@ func get_market() -> MarketProxy:
 ## Sets [member required_return] (>= 0.0), a year. Proxy-authoritative: this change flows
 ## proxy -> server. No-op on a negative value or NAN.
 @abstract func set_required_return(value: float) -> void
+
+
+## Sets [member interest_cover] (> 0.0). Proxy-authoritative: this change flows proxy -> server.
+## No-op on a value of nothing or less or NAN.
+@abstract func set_interest_cover(value: float) -> void
 
 
 ## Sets [member expansion_share], from 0.0 to 1.0. Proxy-authoritative: this change flows proxy ->

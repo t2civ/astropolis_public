@@ -271,6 +271,12 @@ static var operation_strategy_defs: Array[Dictionary] = [
 ## require more, its owners taking what no borrower pays it for (FINANCIAL_MODEL.md, "A glut of
 ## saving").
 static var required_return := 0.0
+## The facility's interest cover: how many times over what carried its debt at its least must cover
+## a year's interest on what it owes before its builds borrow nothing more (see
+## [member FacilityProxy.interest_cover]). Three, from recall, what lenders ask of a sound firm; an
+## AI that borrows nearer to what a bad year leaves sets less, and one that builds on its own income
+## more (FINANCIAL_MODEL.md, "Risk", a borrower's default).
+static var interest_cover := 3.0
 
 static var _table_n_rows := IVTableData.table_n_rows
 static var _tradable_resources: PackedInt32Array
@@ -567,9 +573,10 @@ func _reconcile_facility_strategy() -> int:
 ## and elsewhere none. Where its human holds one, the other, with the payouts that are their
 ## residual where it isn't an agency's, fills what the held one leaves, in proportion to their
 ## shares (FINANCIAL_MODEL.md, "Budgets"). Leaves what is held alone. Sets the owners'
-## [member required_return].
+## [member required_return] and the facility's [member interest_cover].
 func _apply_facility_knobs(strategy: int) -> void:
 	proxy.set_required_return(required_return)
+	proxy.set_interest_cover(interest_cover)
 	var def := facility_strategy_defs[strategy]
 	var expansion_share: float = def.get(&"expansion_share", NAN)
 	var is_agency := proxy.get_player_class() == Enums.PlayerClasses.PLAYER_CLASS_AGENCY
