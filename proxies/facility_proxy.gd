@@ -853,7 +853,7 @@ func get_inventory_tariff(resource_type: int) -> float:
 ## through it, in sim time: its capacity over its members' gross throughput, each member at
 ## the larger of what the facility made and what it used of it. INF when nothing flowed, and
 ## before the first interval. Much less than an interval means the class's stock says little
-## about the next one (see PRODUCTION_MODEL.md, "Level plus rates times the period"). A
+## about the next one (see PRODUCTION_MODEL.md, principle 4). A
 ## resource with no storage class holds unbounded stock, as though its turnover were INF.
 @abstract func get_inventory_storage_turnover_time(storage_type: int) -> float
 

@@ -5,8 +5,8 @@ mix. An operation names one for its administration and one for its maintenance, 
 for its upkeep, each with a size (`operations.schema.md`, `modules.schema.md`), and what a sharer
 draws of each resource is the recipe's rate times its size. The facility sums what a recipe's
 sharers draw before the clear, which takes each resource on its own, and values a recipe once for
-all who share it (`PRODUCTION_MODEL.md` in the development repository, "What a facility is", shared
-recipes).
+all who share it (`PRODUCTION_MODEL.md` in the development repository, "Draws and their roles",
+shared recipes).
 
 The recipes are written by `tests/calibration/seed_services.py`, each with its first member at 1, so
 a sharer's size is what it draws of that member:
