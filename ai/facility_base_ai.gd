@@ -11,6 +11,15 @@ extends BaseAI
 ## Default AI for every facility. A human player's facilities run it too, and it sets whatever
 ## their human leaves on auto (see [Proxy]).
 ##
+## A facility's management (AI_ARCHITECTURE.md, "Who each AI is"). Each interval it authors its
+## trader's posture, a port's trader its merchant and any other its facility's support; a strategy
+## for each tradable resource, from what the facility can make and use, its own shortage and its
+## player's directives, which sets the resource's stock lever and what of it the facility may not
+## make or use; the facility's posture, from its player's directive for it, which sets its
+## expansion share and at an agency its research shares, a wind-down taking every module off auto
+## and cancelling every buildout; the owners' [member required_return] and the
+## [member interest_cover]; and its operations' run policy, from its posture.
+##
 ## To implement a custom facility AI, extend this class and add
 ## [code]const OVERRIDE_AI := true[/code].[br][br]
 ##
@@ -256,7 +265,7 @@ static var operation_strategy_defs: Array[Dictionary] = [
 	{}, # BASELOAD — steady rate (tuning TBD)
 	{}, # PEAKER — idle until spike (tuning TBD)
 	{&"availability": 0.0}, # MOTHBALL — idle, capacity preserved
-	{}, # DECOMMISSION — capacity wind-down is Tier 1/2; run as AUTO here
+	{}, # DECOMMISSION — capacity winds down by the facility's posture; run as AUTO here
 	{}, # DEMAND_FOLLOWING — no rule: local prices hold every run to use
 	{&"shortage_priority": true}, # SHORTAGE_RELIEF
 	{}, # LEARNING — run regardless to accumulate experience
@@ -664,7 +673,7 @@ func _set_operation_strategy(operation_type: int, strategy_id: int) -> void:
 	operation_strategy_changed.emit(operation_type, strategy_id)
 
 
-## Authors per-operation run-rate policy (Tier 3) and applies its server knobs — the
+## Authors per-operation run-rate policy and applies its server knobs — the
 ## operation analog of [method _author_resource_strategies]. v1 derives one
 ## posture-driven strategy for all of the facility's operations; the server's
 ## per-interval gating then acts on it. Called wherever the facility posture is

@@ -11,6 +11,10 @@ extends BaseAI
 ## Default AI for every player. A human player's runs too, and sets whatever its human leaves on
 ## auto (see [Proxy]).
 ##
+## Each interval, at every player, it sets its treasuries' budget lines at their table seeds, those
+## on auto filling what its human holds, a temporary patch until it weighs them, and has each
+## treasury spend what its revenue gives it (FINANCIAL_MODEL.md, "Budgets").
+##
 ## A polity's is its government (AI_ARCHITECTURE.md, "Who each AI is"). Once a year, on the year
 ## past, it decides its taxes and transfers (FINANCIAL_MODEL.md, "A government's taxes and
 ## transfers"), raising the line below which its reverse tax pays its residents' deciles by what its

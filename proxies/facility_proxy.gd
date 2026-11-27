@@ -70,8 +70,7 @@ enum InventoryFlags {
 	CAN_HAVE_INPUT = 1 << 6,
 	## A can-have operation at this facility produces or extracts this resource.
 	CAN_HAVE_OUTPUT = 1 << 7,
-	## The facility deals in this resource, and a port's trader keeps lots standing on it where it
-	## is also [constant TRADABLE]. For now the server sets it exactly where
+	## The facility deals in this resource. For now the server sets it exactly where
 	## [constant CAN_HAVE_INPUT] or [constant CAN_HAVE_OUTPUT] is; a port is to deal in
 	## resources it neither makes nor uses as well.
 	IS_MARKET = 1 << 9,
