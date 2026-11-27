@@ -95,8 +95,9 @@ var budgets := PackedFloat64Array()
 ## Its treasuries' lines a year, as of its administrative center's last interval, each kept under
 ## the key of the line item that books its use (see [method Utils.get_line_item_key]): each
 ## treasury's interest, a committed line, its funding by facility and appropriation by agency, and
-## a polity's public provision, INF where a line has no share (see [member budget_shares]).
-## Server-authoritative.
+## a polity's public provision and its public research; INF where a line funds all its
+## counterparty lacks, as an appropriation with no share does, and nothing where a funding line has
+## none (see [member budget_shares]). Server-authoritative.
 ## Resizable container — not threadsafe! Use [method get_budget_line].
 var budget_lines: Dictionary[int, float] = {}
 

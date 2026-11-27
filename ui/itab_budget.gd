@@ -37,11 +37,12 @@ extends MarginContainer
 ## lenders read of it: what it owes as a share of its debt capacity, and the income that carries its
 ## debt, now and at its ten-year low (FINANCIAL_MODEL.md, "Risk"). Each bar is its line's share,
 ## marked on the same scale where the line drew last quarter and where its current trend, this
-## quarter's pace, puts it; a line with no share spans the width, shown as unbounded. The bar's
-## tooltip gives both draws, beside a legend of its colors. A line its owner sets, a treasury's
-## funding of a facility, a polity's appropriation of an agency and its public provision and a
-## facility's R&D and expansion, shows the share it is set at, a facility by its short name. An agency's budgets, its treasury's
-## and its facilities', have no rest: what it is appropriated is spent.[br][br]
+## quarter's pace, puts it. The bar's tooltip gives both draws, beside a legend of its colors. A
+## line its owner sets, a treasury's funding of a facility, a polity's appropriation of an agency
+## and its public provision and a facility's R&D and expansion, shows the share it is set at, a
+## facility by its short name; with no share it shows what it funds: an appropriation all its
+## agency lacks, unbounded across the bar's width, and a funding line nothing. An agency's budgets,
+## its treasury's and its facilities', have no rest: what it is appropriated is spent.[br][br]
 ##
 ## Where this machine's human plays the player ([method PlayerProxy.is_local_human]), each line its
 ## owner sets has an Auto checkbox, checked while the player's AI sets it; unchecked, the line is
@@ -66,7 +67,7 @@ const SUBTOTAL_OPERATING_EXPENSE := 8
 const SUBTOTAL_TAX := 10
 
 const NO_VALUE := "—" ## Applies, but has no value now.
-const UNBOUNDED := "∞" ## A line with no share, or unlimited money.
+const UNBOUNDED := "∞" ## A line that funds all its counterparty lacks, or unlimited money.
 const NO_DRAWS: PackedFloat64Array = [NAN, NAN] # a line's draws where the ledger has none
 
 const FUNDING_TAB := 0
@@ -818,9 +819,10 @@ func _collect_treasury(player: PlayerProxy, center: FacilityProxy, account: int,
 		keys: Array[int], is_local: bool) -> Array:
 	# A treasury's budget, or empty where it has neither a budget nor a line. Its committed lines'
 	# shares are of what it has to spend, and its discretionary lines' of what they leave, its
-	# funding lines', appropriations' and provision's those they are set at, which its rest,
-	# transfers or dividends, takes last; an agency's has none. Those are controls where [param is_local], and
-	# its budget too with unlimited money.
+	# funding lines', appropriations' and provision's those they are set at, or the share of what a
+	# line with none funds, which its rest, transfers or dividends, takes last; an agency's has none.
+	# Those set at a share are controls where [param is_local], and its budget too with unlimited
+	# money.
 	var budget := player.budgets[account]
 	var committed_rows := []
 	var discretionary_rows := []
@@ -836,13 +838,14 @@ func _collect_treasury(player: PlayerProxy, center: FacilityProxy, account: int,
 			committed += line
 			committed_rows.append([_get_line_name(item, key), NAN, line, draws, NAN, []])
 			continue
-		var share := line / budget if budget > 0.0 else NAN
+		# What a line with no share funds differs by line, all its agency lacks for an appropriation
+		# and nothing for a funding line, so it shows the line as published.
+		var share := INF if is_inf(line) else (line / budget if budget > 0.0 else NAN)
 		var control := []
-		if _is_share_item(item, account):
+		if _is_share_item(item, account) and is_finite(player.get_budget_share(key)):
 			share = player.get_budget_share(key)
-			if is_finite(share):
-				line = share * budget
-			if is_local and is_finite(share):
+			line = share * budget
+			if is_local:
 				control = [Controls.CONTROL_BUDGET_SHARE, player.name, key,
 						player.is_budget_share_held(key), _get_share_cap(player, account, key)]
 		if is_finite(share):
@@ -890,22 +893,25 @@ func _collect_treasury(player: PlayerProxy, center: FacilityProxy, account: int,
 func _collect_owner_lines(facility: FacilityProxy, player: PlayerProxy,
 		center: FacilityProxy, is_local: bool) -> Array:
 	# The lines of [param facility]'s owners' treasuries that fund it, as one panel, each at the
-	# share it is set at, and controls where [param is_local].
+	# share it is set at, or with none at the nothing it funds (_collect_treasury); those set at a
+	# share are controls where [param is_local].
 	var rows := []
 	for account in player.budgets.size():
 		var key := Utils.get_line_item_key(_funding_items[account], facility.facility_id)
 		var line := player.get_budget_line(key)
 		if is_nan(line):
 			continue
-		var share := player.get_budget_share(key)
-		if is_finite(share):
-			line = share * player.budgets[account]
+		var budget := player.budgets[account]
+		var share := INF if is_inf(line) else (line / budget if budget > 0.0 else NAN)
 		var control := []
-		if is_local and is_finite(share):
-			control = [Controls.CONTROL_BUDGET_SHARE, player.name, key,
-					player.is_budget_share_held(key), _get_share_cap(player, account, key)]
+		if is_finite(player.get_budget_share(key)):
+			share = player.get_budget_share(key)
+			line = share * budget
+			if is_local:
+				control = [Controls.CONTROL_BUDGET_SHARE, player.name, key,
+						player.is_budget_share_held(key), _get_share_cap(player, account, key)]
 		rows.append([[_get_account_name(player, account), player.gui_name], share, line,
-				_get_draws(center, key, true), player.budgets[account], control])
+				_get_draws(center, key, true), budget, control])
 	if rows.is_empty():
 		return []
 	return [[_item_keys[_item_funding_received], NAN, [], rows, []]]
@@ -2104,7 +2110,7 @@ class FundingRow extends HBoxContainer:
 class FundingBar extends Control:
 	# A line as a horizontal bar: its share, from empty to the full width at 1.0, marked on the same
 	# scale where it drew last quarter and where its current trend, this quarter's pace, puts it. A
-	# line with no share is an outline across the width. A
+	# line that funds all its counterparty lacks, an INF share, is an outline across the width. A
 	# draggable bar's share follows the mouse, up to its cap, while a button is held, and is set on
 	# release. Its tooltip is a legend of its colors with both draws.
 
