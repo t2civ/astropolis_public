@@ -62,8 +62,9 @@ var human := false
 ## Its treasuries' budget lines, each kept under the key of the line item it funds by (see
 ## [method Utils.get_line_item_key]; FINANCIAL_MODEL.md, "Budgets"), each a share of the
 ## treasury's budget over a year: a facility's funding by facility, an agency's appropriation by
-## agency, and a polity's public provision. A line with no share funds all its counterparty lacks,
-## but provision, which a budget with no share for it doesn't buy.
+## agency, and a polity's public provision. A funding line with no share funds none of what its
+## facility lacks, which the facility borrows for itself; an appropriation with none funds all its
+## agency lacks; and provision with none buys nothing.
 ## Resizable container — not threadsafe! Use [method set_budget_share].
 var budget_shares: Dictionary[int, float] = {}
 ## What each of its treasuries is set to spend a year past its committed lines, by
@@ -94,7 +95,8 @@ var budgets := PackedFloat64Array()
 ## Its treasuries' lines a year, as of its administrative center's last interval, each kept under
 ## the key of the line item that books its use (see [method Utils.get_line_item_key]): each
 ## treasury's interest, a committed line, its funding by facility and appropriation by agency, and
-## a polity's public provision, INF where a line funds all its counterparty lacks. Server-authoritative.
+## a polity's public provision, INF where a line has no share (see [member budget_shares]).
+## Server-authoritative.
 ## Resizable container — not threadsafe! Use [method get_budget_line].
 var budget_lines: Dictionary[int, float] = {}
 
@@ -161,7 +163,7 @@ func get_facilities() -> Array[Proxy]:
 
 
 ## Returns the share the budget line kept under [param key] has (see [member budget_shares]), or
-## INF where it has none and funds all its counterparty lacks. proxy thread only!
+## INF where it has none. proxy thread only!
 func get_budget_share(key: int) -> float:
 	return budget_shares.get(key, INF)
 
@@ -321,7 +323,7 @@ func release_border() -> void:
 
 
 ## Sets the share of the budget line kept under [param key] (see [member budget_shares]) to
-## [param value] (>= 0.0), or INF to fund all its counterparty lacks.
+## [param value] (>= 0.0), or INF for no share (see [member budget_shares]).
 ## Proxy-authoritative: this change flows proxy -> server. No-op on a negative value or NAN, or
 ## where the line is held (see [method hold_budget_share]).
 @abstract func set_budget_share(key: int, value: float) -> void

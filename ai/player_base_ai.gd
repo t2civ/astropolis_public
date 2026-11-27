@@ -418,7 +418,8 @@ func process_ai_interval(delta: float) -> void:
 # facility's funding_share in facilities.tsv, those on auto filling what its human's held lines of
 # the same treasury leave, in proportion to their seeds, with the treasury's residual where it has
 # one. An agency's treasury has none, so its lines on auto fill its budget. A line no table seeds
-# funds all its counterparty lacks. TEMPORARY PATCH: each line is its table seed, read again each
+# has no share, so a nation's facility, which its tables give none, borrows for itself what it
+# lacks (PlayerProxy.budget_shares). TEMPORARY PATCH: each line is its table seed, read again each
 # interval so a line its human returns to auto goes back to it, until the AI weighs its lines.
 func _author_budget_shares() -> void:
 	const PLAYER_CLASS_AGENCY := Enums.PlayerClasses.PLAYER_CLASS_AGENCY

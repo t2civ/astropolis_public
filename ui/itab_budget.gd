@@ -37,7 +37,7 @@ extends MarginContainer
 ## lenders read of it: what it owes as a share of its debt capacity, and the income that carries its
 ## debt, now and at its ten-year low (FINANCIAL_MODEL.md, "Risk"). Each bar is its line's share,
 ## marked on the same scale where the line drew last quarter and where its current trend, this
-## quarter's pace, puts it; a line that funds all its counterparty lacks spans the width. The bar's
+## quarter's pace, puts it; a line with no share spans the width, shown as unbounded. The bar's
 ## tooltip gives both draws, beside a legend of its colors. A line its owner sets, a treasury's
 ## funding of a facility, a polity's appropriation of an agency and its public provision and a
 ## facility's R&D and expansion, shows the share it is set at, a facility by its short name. An agency's budgets, its treasury's
@@ -66,7 +66,7 @@ const SUBTOTAL_OPERATING_EXPENSE := 8
 const SUBTOTAL_TAX := 10
 
 const NO_VALUE := "—" ## Applies, but has no value now.
-const UNBOUNDED := "∞" ## A line that funds all its counterparty lacks, or unlimited money.
+const UNBOUNDED := "∞" ## A line with no share, or unlimited money.
 const NO_DRAWS: PackedFloat64Array = [NAN, NAN] # a line's draws where the ledger has none
 
 const FUNDING_TAB := 0
@@ -2104,7 +2104,7 @@ class FundingRow extends HBoxContainer:
 class FundingBar extends Control:
 	# A line as a horizontal bar: its share, from empty to the full width at 1.0, marked on the same
 	# scale where it drew last quarter and where its current trend, this quarter's pace, puts it. A
-	# line that funds all its counterparty lacks is an outline across the width. A
+	# line with no share is an outline across the width. A
 	# draggable bar's share follows the mouse, up to its cap, while a button is held, and is set on
 	# release. Its tooltip is a legend of its colors with both draws.
 
