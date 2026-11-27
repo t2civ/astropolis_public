@@ -70,14 +70,14 @@ residents' draw, as built" there).
    so they eat the cheapest. Animal products and packaged meals are also a want of their own
    beyond subsistence, under goods, and the biowaste of the food is split between the two by
    mass.
-3. The rates are sizing, recorded in the development repository's `EARTH_CALIBRATION.md`
-   ("Base humans' wants"): sustenance's food, water and air of the basket `URBAN_OPERATIONS`
-   drew per person before the model; food beyond subsistence, goods, private cars and household
-   electricity at the USA's consumption a head, the best-served polity's, since a want is a
-   saturation level; healthcare and education at the flat of the cross-section of countries,
-   where more stops buying longer lives or fewer births (`POPULATION_MODEL.md`, "Needs"); and the
-   other services at what the USA's households took of its seeded output per head, what firms
-   bought apart.
+3. The rates are sizing, recorded in the development repository's `EARTH_CALIBRATION.md` ("Base
+   humans' wants"): sustenance's food, water and air of the basket `URBAN_OPERATIONS` drew per
+   person before the model; food beyond subsistence, goods, private cars and household electricity
+   at the USA's consumption a head, the best-served polity's, since a want is a saturation level;
+   healthcare and education at the flat of the cross-section of countries, where more stops buying
+   longer lives or fewer births (`POPULATION_MODEL.md`, "The residents' draw, as built", the wants);
+   and the other services at what the USA's households took of its seeded output per head, what
+   firms bought apart.
 4. Base humans' spending shares are each want's value per head at start prices, over the
    world's life stages in 2015, as a share of all but their existence want's.
 5. Base humans' order is two wants, public administration, policing and the courts, which the
