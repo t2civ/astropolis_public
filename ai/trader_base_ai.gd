@@ -414,7 +414,7 @@ func process_ai_interval(_delta: float) -> void:
 ## way, each where its facility's flow over the quarter would trade it and no better for the other
 ## side than the market's price, where it has one. All are read off its facility's curve within the
 ## curve's range, and an ask stands only where the curve gives its lot at some price on it
-## (TRADE_MODEL.md, "Ports").
+## (TRADE_MODEL.md, "Ports, as built").
 func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 		standing_quarters: int) -> void:
 	var standing := standing_quarters > 0
@@ -459,7 +459,7 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 	var local_price := _facility.get_inventory_local_price(resource_type) * multiplier
 	# What an ask comes to at its facility is what its leg to the border leaves of it, so the curve
 	# is read there, and an ask stands that much above what its facility would take (TRADE_MODEL.md,
-	# "The costs of movement", the trader's accounting).
+	# "The costs of movement, as built", the trader's accounting).
 	var leg := _facility.get_inventory_leg(resource_type) * multiplier
 	# What a bid comes to at its facility is the bid landed with its polity's tariff, so the curve
 	# is read there, and a bid stands that much below what its facility would pay.
@@ -678,12 +678,12 @@ func _plan_resource(resource_type: int, market: MarketProxy, def: Dictionary,
 		else:
 			_ask_searches.erase(key)
 		# Quoted off the reference alone, a market whose traders' gaps had closed held its last
-		# trade's price while every facility's own moved away from it. A port's lot stands where
-		# its own plan would trade that lot, read off its facility's curve: stood between the
-		# market's price and its facility's local price, which its last fill had moved, the next lot
-		# filled on the other side, every other interval where nothing stores the resource
-		# (TRADE_MODEL.md, "Ports"). A standing quote stays clear of the trader's own on the
-		# other side, which wouldn't trade.
+		# trade's price while every facility's own moved away from it. A port's lot stands where its
+		# own plan would trade that lot, read off its facility's curve: stood between the market's
+		# price and its facility's local price, which its last fill had moved, the next lot filled
+		# on the other side, every other interval where nothing stores the resource (TRADE_MODEL.md,
+		# "Ports, as built"). A standing quote stays clear of the trader's own on the other side,
+		# which wouldn't trade.
 		var standing_ask_price := maxi(ceili(lot_ask_price), 1)
 		var standing_bid_price := floori(lot_bid_price)
 		if standing_ask:

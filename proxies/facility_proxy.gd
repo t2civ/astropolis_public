@@ -708,7 +708,7 @@ func is_inventory_research_share_held(resource_type: int) -> bool:
 ## costs it now, an export's leg: the local price of the service that carries it, over its share
 ## of [member haul] (resources.tsv, haul); 0.0 for a resource that moves for nothing. Its trader
 ## reads its curve at what an order comes to at the facility, an ask net of the leg
-## (TRADE_MODEL.md, "The costs of movement").
+## (TRADE_MODEL.md, "The costs of movement, as built", the trader's accounting).
 func get_inventory_leg(resource_type: int) -> float:
 	var carrier := _resource_carriers[resource_type]
 	if carrier == -1 or !(haul > 0.0):
@@ -719,8 +719,8 @@ func get_inventory_leg(resource_type: int) -> float:
 ## Returns the tariff the facility's polity sets on an import of [param resource_type], a share of
 ## the price it is bought at (see [member PlayerProxy.tariffs]). The facility expects it on all it
 ## imports, since it can't know who will deliver, so its trader reads its curve at what a bid comes
-## to there, the bid landed with the tariff (TRADE_MODEL.md, "The costs of movement"). proxy thread
-## only!
+## to there, the bid landed with the tariff (TRADE_MODEL.md, "The costs of movement, as built", the
+## trader's accounting). proxy thread only!
 func get_inventory_tariff(resource_type: int) -> float:
 	return polity.get_tariff(resource_type) if polity else 0.0
 

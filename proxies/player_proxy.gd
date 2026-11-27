@@ -75,7 +75,7 @@ var budget_targets := PackedFloat64Array()
 ## A polity's binds every player under it, and one on a polity reaches every player under that
 ## polity. Resizable container — not threadsafe! Use [method set_sanction].
 var sanctions: Dictionary[int, PackedByteArray] = {}
-## A polity's tariffs (FINANCIAL_MODEL.md, "Taxes"; TRADE_MODEL.md, "The costs of movement"): per
+## A polity's tariffs (FINANCIAL_MODEL.md, "Taxes"; TRADE_MODEL.md, "Tariffs"): per
 ## resource, a share of the price the cash leg pays that its players pay its government treasury on
 ## what a seller of another polity delivers them, the same whoever sells. Empty for a player that is
 ## not a polity, whose players pay their polity's. Not threadsafe! Use [method set_tariff].

@@ -71,7 +71,7 @@ var locus_id := -1  ## [member LocusProxy.locus_id] of [member locus].
 var cyber_market_id := -1  ## [member market_id] of the system cyber market (self if this is it).
 ## The market's price index: each resource delivered here weighed by its share of what was
 ## delivered at its price, chained each quarter since the game's start, 1.0 there; so its prices
-## over it are in game-start dollars (TRADE_MODEL.md, "The price index").
+## over it are in game-start dollars (TRADE_MODEL.md, "The price index, as built").
 var price_index := 1.0
 
 # *****************************************************************************
@@ -172,5 +172,5 @@ func get_market() -> MarketProxy:
 ## for the current quarter [method get_unit_price], and for a later one its own last real trade, its
 ## point on the forward curve, or where it has none the nearest sooner quarter's, or the market
 ## price, as its book last changed. 0 where it has none, nor any order (TRADE_MODEL.md, "Price
-## discovery").
+## discovery, as built").
 @abstract func get_instrument_unit_price(type: int, ordinal_quarter: int, player_id := -1) -> int
